@@ -1,0 +1,65 @@
+# Compiled source #
+###################
+*.com
+*.class
+*.dll
+*.exe
+*.o
+*.so
+*.pyc
+*.cpython*
+*.accdb
+*.mo
+
+# Packages #
+############
+# it's better to unpack these files and commit the raw source
+# git has its own built in compression methods
+*.7z
+*.dmg
+*.gz
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+
+# Logs and databases #
+######################
+*.log
+*.sql
+*.sqlite
+*.sqlite3
+
+# OS generated files #
+######################
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# misc folders #
+################
+/.idea/
+
+# Local config files #
+######################
+my_conf.py
+prod.cnf
+test_start_dart.bat
+
+.env
+/staticfiles
+node_modules/
+/dist
+/public
+webpack-stats.json
+tmp_*
+test_*
+/plots/
+/dart_env/
+/settings/
+/logs/*
