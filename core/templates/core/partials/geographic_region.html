@@ -1,0 +1,24 @@
+<div id="div_id_geographic_region">
+    <div class="row">
+        <div class="col">
+            <label for="id_geographic_region" class="form-label">Geographic Region</label>
+        </div>
+    </div>
+    <div class="row">
+        <div class="col">
+            <div id="div_id_geographic_region" class="mb-3">
+                <select name="geographic_region" hx-target="#div_id_geographic_region" hx-trigger="region_added from:body" hx-get="/en/core/update_regions" class="select form-select" id="id_geographic_region">
+                  <option value="">---------</option>
+                    {% for region in geographic_regions %}
+                  <option value="{{ region.pk }}"{% if selected == region.pk %} selected=""{% endif %}>{{ region.name }}</option>
+                    {% endfor %}
+                </select>
+                <div id="hint_id_geographic_region" class="form-text">Examples: Scotian Shelf, lower St. Lawrence Estuary</div>
+            </div>
+        </div>
+        <div class="col-1">
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#geographic_region_dialog">+
+            </button>
+        </div>
+    </div>
+</div>
