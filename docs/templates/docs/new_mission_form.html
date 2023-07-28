@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load static %}
+{% load i18n %}
+
+
+{% block content %}
+<div class="container-fluid">
+    <section id="top" class="card mb-3">
+        <div class="card-body">
+            <p>{% trans 'The new mission form allows the required, and many optional, values required for adding a mission to DART. The main required fields are Mission Name, Start Cruise Date, End Cruise Date and Data Center. The last three have usable default values' %}</p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/new_mission_form.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="mission_name" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Mission Name' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'The Mission Name field is the only blank required field. A unique name containing no spaces must be supplied to be used as a reference for DART' %}</p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/new_mission_form-mission_name.png' %}" />
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
