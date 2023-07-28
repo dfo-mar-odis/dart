@@ -1,0 +1,39 @@
+{% extends 'generic_filter.html' %}
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load i18n %}
+
+{% block header_buttons %}
+<span class=""><a class="btn btn-primary" href="{% url 'docs:index' %}">{% custom_icon 'question-circle' %}</a></span>{% endblock %}
+
+{% block extra_cols_header %}
+    <th class="col"></th>
+    <th class="col-1"></th>
+    <th class="col-1"></th>
+    <th class="col-1">{# blank column separating delete btn from other btns #}</th>
+    <th class="col-1"></th>{% endblock %}
+
+{% block extra_cols_table %}
+    <td></td>
+    <td><a class="btn btn-primary" href="{% url 'core:event_details' o.id %}">{% trans 'Events' %}</a></td>
+    <td><a class="btn btn-primary" href="{% url 'core:sample_details' o.id %}">{% trans 'Samples' %}</a></td>
+    <td>
+{#    {% if bio_chem_details_provided %}#}
+        <a class="btn btn-primary" href="{% url 'core:sample_uploads' o.id %}">{% trans 'BioChem' %}</a>
+{#    {% else %}#}
+{#        <button type="button" class="btn btn-secondary" onclick="window.alert('{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}')" title="{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}">{% trans 'BioChem' %}</button>#}
+{#    {% endif %}#}
+    </td>
+<td><a class="btn btn-primary" href="{% url 'core:mission_update' o.id %}">{% custom_icon 'gear' %}</a></td>
+    <td><span></span></td>
+<td><a class="btn btn-danger" onclick="delete_mission({{o.id}})">X</a></td>
+{% endblock %}
+
+{% block body_js %}
+<script type="application/javascript">
+    function delete_mission(id) {
+      userInput = confirm("{% trans 'are you sure you want to delete this mission?' %}");
+      if (userInput) window.location.href = "{% url 'core:mission_delete' %}?mission=" + id;
+    }
+</script>
+{% endblock %}

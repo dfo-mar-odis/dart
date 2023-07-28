@@ -1,21 +1,44 @@
 # we have to use Django3 because Django4 doesn't support Oracle12
-Django>=4.1.0, != 4.2.0
+Django<=4.2.0,>=4.1.0
+asgiref<4,>=3.6.0
 
 # useful helper extensions for database fields and admin functions https://django-extensions.readthedocs.io/en/latest/index.html
-django-extensions=3.2.1
+django-extensions==3.2.1
 
 # provides authentication/registration out of the box https://django-allauth.readthedocs.io/en/latest/
 django-allauth==0.52.0
 
+# tweaking of django forms
+django-crispy-forms
+crispy-bootstrap5
+
+# django-filters is used for easily creating filter pages to
+django-filter==2.4.0
+
+# Icons to make things pretty
+django_bootstrap_icons
+
+# used for partial page rendering with HTMX
+django-render-block
+
+# used for updating dynamic forms with HTMX
+django-forms-dynamic
+
 # daphne is a standalone python webserver used to run the Django application outside a development env.
 daphne==3.0.2
 
+# Channels allows for more advanced web layer communications, channels and daphne versions must be compatible
+channels==3.0.5
+
 # Whitenoise is used to track static content so that a user doesn't need to do 'python manage.py collectstatic'
 # as a setup requirement
-whitenoise>=6.5.0, != 6.6.0
+whitenoise<=6.6.0,>=6.5.0
 
 # used to read environment variables in the settings.py file
 django-environ~=0.9.0
+
+# django-bootstrap is a CSS library for displaying content in web browsers.
+django-bootstrap-v5==1.0.11
 
 # factory-boy and Faker are used for unit Testing
 Faker==5.0.1
@@ -36,6 +59,7 @@ pytz~=2022.6
 # math and data processing packages
 numpy~=1.23
 pandas~=1.5
+matplotlib~=3.6.2
 
 # xlrd is for working with legacy excel (.xls) files
 xlrd==2.0.1

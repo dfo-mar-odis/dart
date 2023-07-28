@@ -1,0 +1,25 @@
+{% extends 'base.html' %}
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+    <div class="container-fluid">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p>{% trans "If you can access this page then congratulations, you successfully managed to install and access the DFO At-sea Reporting Template." %}</p>
+                <p>{% trans "The purpose of this application is to allow DFO teams to compile logging and sample data to produce reports, likely but not necessarily at sea. Once back on land this application will allow other parties to use the same compiled data to create BioChem staging tables to load the relevant data into the main BioChem database where it will be safely archived for future generations" %}</p>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-body">
+                <div class="card-title"><h2>{% trans 'Table Of Contents' %}</h2></div>
+                <ul class="list-group">
+                    <li class="list-group-item"><a href="{% url 'docs:mission_filter' %}">{% trans 'Mission Filter' %}</a></li>
+                    <li class="list-group-item"><a href="{% url 'docs:new_mission_form' %}">{% trans 'New Mission Form' %}</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+{% endblock %}

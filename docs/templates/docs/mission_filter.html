@@ -1,0 +1,52 @@
+{% extends 'base.html' %}
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load static %}
+{% load i18n %}
+
+
+{% block content %}
+<div class="container-fluid">
+    <section id="top" class="card mb-3">
+        <div class="card-body">
+            <p>{% trans 'The mission filter is the home/landing page for the DART application. This page provides a list of missions that a user has in their local dart.sqlite3 database.' %}</p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="mission_list" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Mission List' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'From the mission list events, samples, BioChem loading and the mission settings can be accessed. As well missions can be deleted, careful with that button.' %}</p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mssion_filter-mission_list.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="mission_list_filter" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Filter' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'Above the mission list there is a filter box that can be used to filter down missions by their names, or parts of the mission names. This can be handy if you have lots of missions to scroll through.' %}</p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-filter.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="new_mission" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'New Mission' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'To the top-right of the page is the "New" button, whcih can be used to create new missions ' %}<a href="{% url 'docs:new_mission_form' %}">{% trans '(see New Mission Form)'%}</a></p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-new_mission.png' %}" />
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
