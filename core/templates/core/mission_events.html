@@ -1,0 +1,72 @@
+{% extends 'generic_details.html' %}
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+{% block content %}
+
+<div class="row">
+    <div id="div_events_id" class="col">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="card-title col">{% trans "Events" %}</div>
+                    <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'file-plus' %}</label></div>
+                    <div class="col-1"><button class="btn btn-primary" title="{% trans "Add" %}" name="{% trans "Add" %}">{% custom_icon 'plus-square' %}</button></div>
+                    <div class="col-1 me-3"><button class="btn btn-primary" title="{% trans "Edit" %}" name="{% trans "Edit" %}">{% custom_icon 'pencil-square' %}</button></div>
+                </div>
+            </div>
+            <div class="card-body">
+                {% block event_list %}
+                    <div id="div_event_list_id">
+                        <form name="elog_upload_file_form_id" id="elog_upload_file_form_id" hx-encoding="multipart/form-data"
+                              hx-post="{% url "core:upload_elog" object.pk %}" hx-target="#div_event_list_id" hx-swap="outerHTML" hx-trigger="change">
+                            {% csrf_token %}
+                            <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
+                        </form>
+                        <table id="event_table" class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Station</th>
+                                    <th>Instrument</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                            {% for event in object.events.all %}
+                                {% include 'core/partials/event_list_selected.html' with object=object event=event %}
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+    <div id="div_event_details_id" class="col">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">{% trans "Event Detials" %}</div>
+            </div>
+            <div class="card-body">
+                {% block selected_event_details %}
+                    <div id="div_selected_event_id">
+                    {% if selected_event %}
+                        Event: {{ selected_event.event_id }}
+                    {% endif %}
+                    </div>
+                {% endblock %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block body_js %}
+    <script>
+        function update_selected(event) {
+            $(".selectedBg").removeClass("selectedBg");
+            $("#event-" + event).addClass('selectedBg');
+        }
+    </script>
+{% endblock %}

@@ -23,10 +23,10 @@ class NoWhiteSpaceCharField(forms.CharField):
 class MissionSettingsForm(forms.ModelForm):
 
     name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
-    elog_dir = forms.CharField(max_length=255, label="Elog Directory", required=False,
-                               help_text="Folder location of Elog *.log files")
-    bottle_dir = forms.CharField(max_length=255, label="CTD Bottle Directory", required=False,
-                                 help_text="Folder location of Elog *.BTL files")
+    # elog_dir = forms.CharField(max_length=255, label="Elog Directory", required=False,
+    #                            help_text="Folder location of Elog *.log files")
+    # bottle_dir = forms.CharField(max_length=255, label="CTD Bottle Directory", required=False,
+    #                              help_text="Folder location of Elog *.BTL files")
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
 
     start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
@@ -34,7 +34,7 @@ class MissionSettingsForm(forms.ModelForm):
 
     class Meta:
         model = models.Mission
-        fields = ['name', 'start_date', 'end_date', 'elog_dir', 'bottle_dir', 'lead_scientist',
+        fields = ['name', 'start_date', 'end_date', 'lead_scientist',
                   'protocol', 'platform', 'geographic_region', 'mission_descriptor', 'collector_comments',
                   'more_comments', 'data_manager_comments', 'biochem_table', 'data_center']
 

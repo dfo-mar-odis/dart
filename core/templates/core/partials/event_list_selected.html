@@ -1,0 +1,11 @@
+{#<tr id="event-{{ event.event_id }}" hx-swap="outerHTML" hx-target="#event-{{ event.event_id }}"{% if selected %}#}
+{#hx-trigger='click deselect from:#event_table' hx-get="{% url 'core:select_event' object.pk event.pk 0 %}" class="selectedBg"#}
+{#{% else %}#}
+{#hx-trigger='click' hx-get="{% url 'core:select_event' object.pk event.pk 1 %}"#}
+{#{% endif %}>#}
+<tr id="event-{{ event.event_id }}" hx-swap="outerHTML"  hx-get="{% url 'core:select_event' object.pk event.pk %}" hx-target="#div_selected_event_id" hx-on="click: update_selected({{ event.event_id }})"
+    hx-get="{% url 'core:select_event' object.pk event.pk %}">
+    <th>{{ event.event_id }}</th>
+    <td>{{ event.station.name }}</td>
+    <td>{{ event.instrument.get_type_display }}</td>
+</tr>

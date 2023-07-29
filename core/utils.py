@@ -13,6 +13,8 @@ from core import models
 
 import logging
 
+from core.tests.CoreFactoryFloor import CTDEventFactory
+
 logger = logging.getLogger("dart")
 
 
@@ -58,4 +60,23 @@ def add_geo_region(request):
     response = HttpResponse(html)
     response['HX-Trigger'] = "region_added"
 
+    return response
+
+
+def upload_elog(request, mission_id):
+
+    files = request.FILES
+    mission = models.Mission.objects.get(pk=mission_id)
+    CTDEventFactory(mission=mission)
+    context = {'object': mission}
+    response = HttpResponse(render_block_to_string('core/mission_events.html', 'event_list', context))
+    return response
+
+
+def select_event(request, mission_id, event_id):
+    mission = models.Mission.objects.get(pk=mission_id)
+    event = models.Event.objects.get(pk=event_id)
+
+    context = {'object': mission, 'selected_event': event}
+    response = HttpResponse(render_block_to_string('core/mission_events.html', 'selected_event_details', context))
     return response

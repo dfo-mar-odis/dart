@@ -1,5 +1,5 @@
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView
+from django.views.generic import CreateView, UpdateView, DetailView
 from django_filters.views import FilterView
 
 from . import urls
@@ -67,3 +67,7 @@ class GenericUpdateView(GenericViewMixin, UpdateView):
 
     def get_success_url(self):
         return self.success_url
+
+
+class GenericDetailView(GenericViewMixin, DetailView):
+    pass

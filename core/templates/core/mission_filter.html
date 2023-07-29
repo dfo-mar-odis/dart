@@ -16,10 +16,10 @@
 {% block extra_cols_table %}
     <td></td>
     <td><a class="btn btn-primary" href="{% url 'core:event_details' o.id %}">{% trans 'Events' %}</a></td>
-    <td><a class="btn btn-primary" href="{% url 'core:sample_details' o.id %}">{% trans 'Samples' %}</a></td>
+{#    <td><a class="btn btn-primary" href="{% url 'core:sample_details' o.id %}">{% trans 'Samples' %}</a></td>#}
     <td>
 {#    {% if bio_chem_details_provided %}#}
-        <a class="btn btn-primary" href="{% url 'core:sample_uploads' o.id %}">{% trans 'BioChem' %}</a>
+{#        <a class="btn btn-primary" href="{% url 'core:sample_uploads' o.id %}">{% trans 'BioChem' %}</a>#}
 {#    {% else %}#}
 {#        <button type="button" class="btn btn-secondary" onclick="window.alert('{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}')" title="{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}">{% trans 'BioChem' %}</button>#}
 {#    {% endif %}#}
