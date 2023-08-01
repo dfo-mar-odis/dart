@@ -4,58 +4,99 @@
 {% load bootstrap_icons %}
 
 {% block content %}
-
-<div class="row">
-    <div id="div_events_id" class="col">
-        <div class="card">
-            <div class="card-header">
-                <div class="row">
-                    <div class="card-title col">{% trans "Events" %}</div>
-                    <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'file-plus' %}</label></div>
-                    <div class="col-1"><button class="btn btn-primary" title="{% trans "Add" %}" name="{% trans "Add" %}">{% custom_icon 'plus-square' %}</button></div>
-                    <div class="col-1 me-3"><button class="btn btn-primary" title="{% trans "Edit" %}" name="{% trans "Edit" %}">{% custom_icon 'pencil-square' %}</button></div>
+<div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="row">
+        <div id="div_events_id" class="col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="card-title col">{% trans "Events" %}</div>
+                        <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'file-plus' %}</label></div>
+                        <div class="col-1"><button class="btn btn-primary" title="{% trans "Add" %}" name="{% trans "Add" %}">{% custom_icon 'plus-square' %}</button></div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% block event_list %}
+                        <div id="div_event_list_id" class="vertical-scrollbar">
+                            <form name="elog_upload_file_form_id" id="elog_upload_file_form_id" hx-encoding="multipart/form-data"
+                                  hx-post="{% url "core:hx_upload_elog" object.pk %}" hx-target="#div_event_list_id" hx-swap="outerHTML" hx-trigger="change">
+                                {% csrf_token %}
+                                <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
+                            </form>
+                            <table id="event_table" class="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Event</th>
+                                        <th>Station</th>
+                                        <th>Instrument</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for event in object.events.all %}
+                                    {% include 'core/partials/event_list_selected.html' with object=object event=event %}
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% endblock %}
                 </div>
             </div>
-            <div class="card-body">
-                {% block event_list %}
-                    <div id="div_event_list_id">
-                        <form name="elog_upload_file_form_id" id="elog_upload_file_form_id" hx-encoding="multipart/form-data"
-                              hx-post="{% url "core:upload_elog" object.pk %}" hx-target="#div_event_list_id" hx-swap="outerHTML" hx-trigger="change">
-                            {% csrf_token %}
-                            <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
-                        </form>
-                        <table id="event_table" class="table table-striped">
-                            <thead>
-                                <tr>
-                                    <th>Event</th>
-                                    <th>Station</th>
-                                    <th>Instrument</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                            {% for event in object.events.all %}
-                                {% include 'core/partials/event_list_selected.html' with object=object event=event %}
-                            {% endfor %}
-                            </tbody>
-                        </table>
+        </div>
+        {% block selected_event_details %}
+        <div id="div_event_details_id" class="col">
+            <div class="card">
+                <div class="card-header">
+                    <div class="row">
+                        <div class="card-title col">{% trans "Event Detials" %}</div>
+                        {% if selected_event %}
+                        <div class="col-1 me-3"><a class="btn btn-primary" title="{% trans "Edit" %}" href="{% url 'core:event_edit' selected_event.pk %}">{% custom_icon 'pencil-square' %}</a></div>
+                        {% endif %}
                     </div>
-                {% endblock %}
+               </div>
+                <div class="card-body">
+                        <div id="div_selected_event_id" class="vertical-scrollbar">
+                        {% if selected_event %}
+                            {% include 'core/partials/event_details.html' with event=selected_event %}
+                        {% endif %}
+                        </div>
+                </div>
             </div>
         </div>
+        {% endblock %}
     </div>
-    <div id="div_event_details_id" class="col">
-        <div class="card">
-            <div class="card-header">
-                <div class="card-title">{% trans "Event Detials" %}</div>
-            </div>
-            <div class="card-body">
-                {% block selected_event_details %}
-                    <div id="div_selected_event_id">
-                    {% if selected_event %}
-                        Event: {{ selected_event.event_id }}
-                    {% endif %}
+    <div class="row mt-2" hx-ext="ws" ws-connect="/ws/notifications/">
+        <div id="div_notifications_id" class="col">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between">
+                    <div class="card-title">
+                        {% trans "Notifications" %}
                     </div>
-                {% endblock %}
+                    {% block status_block %}
+                    <div id="status">
+                        {{ msg }}
+                    </div>
+                    {% endblock %}
+                </div>
+                <div class="card-body vertical-scrollbar" hx-trigger="load" hx-target="#errors" hx-get="{% url 'core:hx_get_file_errors' object.pk %}">
+                    {% block error_block %}
+                    <div id="errors" hx-swap="outerHTML">
+                        {% for file, error_list in errors.items %}
+                            <div class="card mb-3">
+                                <div class="card-header">
+                                    <div class="card-title">{{ file }}</div>
+                                </div>
+                                <div class="card-body">
+                                    <ul>
+                                        {% for error in error_list %}
+                                            <li>{{ error.get_type_display }}: {{ error.message }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                    {% endblock %}
+               </div>
             </div>
         </div>
     </div>

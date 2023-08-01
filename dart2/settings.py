@@ -54,6 +54,7 @@ REGISTERED_APPS = REQUIRED_APPS + [
 
 # Application definition
 INSTALLED_APPS = [
+    'daphne',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -61,6 +62,7 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.sites',
+    'django.contrib.humanize',
 
     # adds pretty icons to the mix
     'django_bootstrap_icons',
@@ -76,6 +78,9 @@ INSTALLED_APPS = [
     # allows authentication, requires django.contrib.sites
     'allauth',
     'allauth.account',
+
+    # bi-directional communication with user
+    'channels',
 
     # bootstrap for css styling
     'bootstrap5',
@@ -97,6 +102,8 @@ MIDDLEWARE = [
 ]
 
 SITE_ID = 1
+# AUTH_USER_MODEL = 'core.User'
+LOGIN_REDIRECT_URL = ""
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
@@ -120,7 +127,11 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'dart2.wsgi.application'
-
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer"
+    }
+}
 
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
@@ -189,6 +200,13 @@ HANDLERS = {
         "backupCount": 5,
         "maxBytes": 1024 * 1024 * 5  # 5 MB
     },
+    "test_handler": {
+        "class": "logging.FileHandler",
+        "filename": f"{BASE_DIR}/logs/test.log",
+        "mode": "w",
+        "encoding": "utf-8",
+        "formatter": "verbose",
+    },
     "error_handler": {
         "class": "logging.handlers.RotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/error.log",
@@ -213,12 +231,17 @@ LOGGERS = (
             "propagate": False,
         },
         "dart": {
-            "handlers": ["console", "info_handler", "error_handler"],
-            "level": "INFO",
-            "propagate": False
+            "handlers": ["error_handler"],
+            "level": "WARNING",
+            "propagate": True
         },
         "dart.debug": {
             "handlers": ["console", "info_handler", "error_handler"],
+            "level": "DEBUG",
+            "propagate": True
+        },
+        "dart.test": {  # use this logger for unit testing
+            "handlers": ["console", "test_handler"],
             "level": "DEBUG",
             "propagate": False
         }
@@ -236,7 +259,7 @@ LOGGING = {
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'en'
 
 TIME_ZONE = env("TIME_ZONE", cast=str, default='UTC')
 

@@ -45,7 +45,7 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['geographic_region'].label = False
         self.fields['geographic_region'].widget.attrs["hx-target"] ='#div_id_geographic_region'
         self.fields['geographic_region'].widget.attrs["hx-trigger"] ='region_added from:body'
-        self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:update_regions')
+        self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
 
     def geographic_region_choices(form):
         regions = models.GeographicRegion.objects.all()

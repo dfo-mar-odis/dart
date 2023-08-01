@@ -42,7 +42,7 @@
                         <h5 class="modal-title" id="geographic_region_dialog_label">{% trans 'New Geographic Region' %}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form id="geographic_region_form" hx-post="{% url 'core:geo_region_add' %}" class="form-control">
+                    <form id="geographic_region_form" hx-post="{% url 'core:hx_geo_region_add' %}" class="form-control">
                         {% block geographic_region_form %}
                         <div class="modal-body">
                             <label class="form-label" for="new_region">

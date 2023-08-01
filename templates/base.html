@@ -23,19 +23,14 @@
   <title>{% block sitetitle %}DFO At-sea Reporting Template{% endblock %} {% block subtitle %}{% endblock %}</title>
   {% block header %}{% endblock header %}
 </head>
-<body hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<body>
 
+{% include 'navbar.html' %}
 {% block messages %}
   {% bootstrap_messages %}
 {% endblock %}
 
 <div class="container">
-    <div class="row mt-2">
-    {% block header_buttons %}
-        <span class=""><a class="btn btn-primary" href="{{ home_url }}">{% custom_icon 'house' %}</a>
-            <a class="btn btn-primary" href="{% url 'docs:index' %}">{% custom_icon 'question-circle' %}</a></span>
-    {% endblock %}
-    </div>
     <div id="page_title_area" class="row mt-2">
     {% block title %}{% if page_title %}<div class="h2 col">{{page_title}}</div>{% endif %}{% endblock title %}
     </div>
@@ -46,6 +41,7 @@
 
 <script type="text/javascript" src="{% static 'dart/js/jquery.min.js' %}"></script>
 
+<script type="text/javascript" src="{% static 'dart/js/htmx_web_sockets.js' %}"></script>
 {% block body_js %}{% endblock %}
 
 </body>

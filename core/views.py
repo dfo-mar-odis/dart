@@ -20,6 +20,7 @@ class EventMixin:
 class MissionFilterView(MissionMixin, GenericFlilterMixin):
     filterset_class = filters.MissionFilter
     new_url = reverse_lazy("core:mission_new")
+    home_url = ""
     fields = ["id", "name", "start_date", "end_date", "biochem_table"]
 
 
@@ -58,3 +59,7 @@ class MissionUpdateView(MissionCreateView, GenericUpdateView):
 class EventDetails(MissionMixin, GenericDetailView):
     page_title = _("Missions Events")
     template_name = "core/mission_events.html"
+
+
+class EventUpdateView(EventMixin, GenericUpdateView):
+    pass
