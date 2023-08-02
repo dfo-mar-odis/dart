@@ -288,6 +288,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                     if a.strip() != '':
                         if not event.attachments.filter(name=a).exists():
                             create_attachments.append(core_models.InstrumentSensor(event=event, name=a))
+                cur_event = event_id
 
             # this is a 'naive' date time with no time zone. But it should always be in UTC
             time_part = f"{time_position[1][0:2]}:{time_position[1][2:4]}:{time_position[1][4:6]}"
