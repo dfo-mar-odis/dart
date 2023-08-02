@@ -1,4 +1,5 @@
 import factory
+from django.utils import timezone
 from factory.django import DjangoModelFactory
 from faker import Faker
 
@@ -64,3 +65,16 @@ class CTDEventFactory(EventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     end_sample_id = factory.lazy_attribute(lambda o: (o.sample_id + faker.random.randint(0, 1000)))
     instrument = factory.SubFactory(CTDInstrumentFactory)
+
+
+class ActionFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Action
+
+    event = factory.SubFactory(CTDEventFactory)
+    date_time = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
+    latitude = factory.lazy_attribute(lambda o: faker.pyfloat())
+    longitude = factory.lazy_attribute(lambda o: faker.pyfloat())
+    file = factory.lazy_attribute(lambda o: faker.name() + '.log')
+    mid = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
+    type = factory.lazy_attribute(lambda o: faker.random.choice(models.ActionType.choices)[0])

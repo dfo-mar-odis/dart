@@ -129,35 +129,43 @@ def upload_elog(request, mission_id):
 
             errors = []
             # make note of missing required field errors in this file
-            for mid in message_objects[elog.ParserType.MID].keys():
+            for mid, error_buffer in message_objects[elog.ParserType.ERRORS].items():
                 # Report errors to the user if there are any, otherwise process the message objects you can
-
-                if mid in message_objects[elog.ParserType.ERRORS]:
-                    for error in message_objects[elog.ParserType.ERRORS][mid]:
-                        err = models.FileError(mission=mission, file_name=file_name, line=int(mid),
-                                               type=models.ErrorType.missing_field,
-                                               message=f'Elog message object ($@MID@$: {mid}) missing required '
-                                                       f'field [{error.args[0]["expected"]}]')
-                        errors.append(err)
-                        message_objects[elog.ParserType.MID].pop(mid)
-                        continue
+                for error in error_buffer:
+                    err = models.FileError(mission=mission, file_name=file_name, line=int(mid),
+                                           type=models.ErrorType.missing_field,
+                                           message=f'Elog message object ($@MID@$: {mid}) missing required '
+                                                   f'field [{error.args[0]["expected"]}]')
+                    errors.append(err)
+                    message_objects[elog.ParserType.MID].pop(mid)
+                    continue
 
             send_user_notification(group_name, mission, f"Process Stations {process_message}")
-            elog.process_stations(message_objects[elog.ParserType.STATIONS])
+            errors += elog.process_stations(message_objects[elog.ParserType.STATIONS])
 
             send_user_notification(group_name, mission, f"Process Instruments {process_message}")
-            elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
+            errors += elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
 
             send_user_notification(group_name, mission, f"Process Events {process_message}")
-            elog.process_events(message_objects[elog.ParserType.MID], mission)
+            errors += elog.process_events(message_objects[elog.ParserType.MID], mission)
 
             send_user_notification(group_name, mission, f"Process Actions and Attachments {process_message}")
-            elog.process_attachments_actions(message_objects[elog.ParserType.MID], mission, file_name)
+            errors += elog.process_attachments_actions(message_objects[elog.ParserType.MID], mission, file_name)
 
             send_user_notification(group_name, mission, f"Process Other Variables {process_message}")
-            elog.process_variables(message_objects[elog.ParserType.MID], mission)
+            errors += elog.process_variables(message_objects[elog.ParserType.MID], mission)
 
             if errors:
+                file_errors = []
+                for error in errors:
+                    file_error = models.FileError(file_name=file_name, line=error[0], message=error[1])
+                    if error[2] is KeyError:
+                        file_error.type = models.ErrorType.missing_id
+                    elif error[2] is ValueError:
+                        file_error.type = models.ErrorType.missing_field
+                    else:
+                        file_error.type = models.ErrorType.unknown
+                    file_errors.append(file_error)
                 models.FileError.objects.bulk_create(errors)
 
         except Exception as ex:

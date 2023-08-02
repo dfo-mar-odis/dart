@@ -1,8 +1,7 @@
-from django.contrib.auth.models import AnonymousUser
-from django.test import tag, RequestFactory, Client
+from django.test import tag, Client
 from django.urls import reverse_lazy
 
-from core import models, htmx
+from core import models
 
 from dart2.tests.DartTestCase import DartTestCase
 from . import CoreFactoryFloor as core_factory
@@ -29,7 +28,7 @@ class TestElogUpload(DartTestCase):
         with open(self.file_location+file_name, 'rb') as fp:
             self.client.post(self.url, {'event': fp})
 
-        errors = models.FileError.objects.filter(mission=self.mission)
+        errors = self.mission.file_errors.all()
         self.assertTrue(errors.exists())
         self.assertEquals(errors[0].type, models.ErrorType.missing_id)
 
@@ -44,7 +43,7 @@ class TestElogUpload(DartTestCase):
         with open(self.file_location+file_name, 'rb') as fp:
             self.client.post(self.url, {'event': fp})
 
-        errors = models.FileError.objects.filter(mission=self.mission)
+        errors = self.mission.file_errors.all()
         self.assertTrue(errors.exists())
 
         for error in errors:
@@ -57,7 +56,7 @@ class TestMissionDelete(DartTestCase):
     def setUp(self) -> None:
         self.mission_1 = core_factory.MissionFactory(name="test1")
         self.mission_2 = core_factory.MissionFactory(name="test2")
-        self.request_factory = RequestFactory()
+        self.client = Client()
 
     def test_hx_mission_delete(self):
         logger.info("Running test_hx_mission_delete")
@@ -66,12 +65,12 @@ class TestMissionDelete(DartTestCase):
         self.assertTrue(models.Mission.objects.filter(pk=self.mission_1.pk).exists())
         self.assertTrue(models.Mission.objects.filter(pk=self.mission_2.pk).exists())
 
-        request = self.request_factory.get(reverse_lazy('core:hx_mission_delete', args=(self.mission_1.pk,)))
-        request.user = AnonymousUser()
+        url = reverse_lazy('core:hx_mission_delete', args=(self.mission_1.pk,))
+        logger.info(f"URL: {url}")
 
-        response = htmx.hx_mission_delete(request, self.mission_1.pk)
-
+        response = self.client.post(url, {"mission_id": self.mission_1.pk})
         logger.info(response)
+
         content = response.content.decode('utf-8')
         self.assertTrue(content.strip().startswith('<tr class="table-row">\n'))
         self.assertFalse(models.Mission.objects.filter(pk=self.mission_1.pk).exists(),
