@@ -123,7 +123,7 @@ def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> di
     return message_objects
 
 
-def process_stations(station_queue: [str]):
+def process_stations(station_queue: [str]) -> None:
     # create any stations on the stations queue that don't exist in the DB
     stations = []
 
@@ -169,7 +169,7 @@ def get_instrument(instrument_name: str) -> core_models.Instrument:
     return core_models.Instrument.objects.get(name=instrument_name)
 
 
-def process_instruments(instrument_queue: [str]):
+def process_instruments(instrument_queue: [str]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
 
@@ -320,18 +320,17 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
 
             # if an event already contains this action, we'll update it
             if event.actions.filter(type=action_type).exists():
-                if core_models.ActionType.has_value(action_type_text):
-                    action = event.actions.get(type=core_models.ActionType.get(action_type_text))
-                else:
-                    action = event.actions.get(type=core_models.ActionType.other, action_type_other=action_type_text)
+                action = event.actions.get(mid=mid)
 
                 attrs = {
                     'latitude': lat,
                     'longitude': lon,
-                    'mid': mid,
                     'comment': comment,
                     'data_collector': data_collector,
                 }
+                if action_type == core_models.ActionType.other:
+                    attrs['action_type_other'] = action_type_text
+
                 update_attributes(action, attrs, update_actions)
 
             else:

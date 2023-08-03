@@ -67,6 +67,11 @@ class CTDEventFactory(EventFactory):
     instrument = factory.SubFactory(CTDInstrumentFactory)
 
 
+class NetEventFactory(EventFactory):
+    sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
+    instrument = factory.SubFactory(InstrumentFactory, name="RingNet", type=models.InstrumentType.net)
+
+
 class ActionFactory(DjangoModelFactory):
     class Meta:
         model = models.Action
@@ -75,6 +80,12 @@ class ActionFactory(DjangoModelFactory):
     date_time = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
     latitude = factory.lazy_attribute(lambda o: faker.pyfloat())
     longitude = factory.lazy_attribute(lambda o: faker.pyfloat())
-    file = factory.lazy_attribute(lambda o: faker.name() + '.log')
-    mid = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     type = factory.lazy_attribute(lambda o: faker.random.choice(models.ActionType.choices)[0])
+
+
+class AttachmentFactory(DjangoModelFactory):
+    class Meta:
+        model = models.InstrumentSensor
+
+    event = factory.SubFactory(CTDEventFactory)
+    name = factory.lazy_attribute(lambda o: faker.name())

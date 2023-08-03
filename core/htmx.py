@@ -17,6 +17,7 @@ from core import models
 import logging
 
 from core.parsers import elog
+from core import validation
 
 logger = logging.getLogger("dart")
 
@@ -106,6 +107,40 @@ def send_update_errors(group_name, mission):
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
+def htmx_validate_events(request, mission_id, file_name):
+    mission = models.Mission.objects.get(pk=mission_id)
+
+    group_name = 'mission_events'
+
+    try:
+        validation_errors = []
+
+        send_user_notification(group_name, mission, "Validating Events")
+        file_events = mission.events.filter(actions__file=file_name).exclude(
+            actions__type=models.ActionType.aborted).distinct()
+
+        models.ValidationError.objects.filter(event__in=file_events).delete()
+
+        for event in file_events:
+            validation_errors += validation.validate_event(event)
+
+        models.ValidationError.objects.bulk_create(validation_errors)
+        # clear the processing message
+        send_update_errors(group_name, mission)
+        send_user_notification(group_name, mission, '')
+    except Exception as ex:
+        # Something is really wrong with this file
+        logger.exception(ex)
+        err = models.Error(mission=mission, type=models.ErrorType.unknown,
+                           message=_("Unknown error during validation :") + f"{str(ex)}, " +
+                                   _("see error.log for details"))
+        err.save()
+        send_update_errors(group_name, mission)
+
+        # clear the processing message
+        send_user_notification(group_name, mission, _('An unknown error occurred, see error.log'))
+
+
 def upload_elog(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
     elog_configuration = models.ElogConfig.get_default_config(mission)
@@ -120,31 +155,33 @@ def upload_elog(request, mission_id):
         send_user_notification(group_name, mission, f'Processing file {process_message}')
 
         # remove any existing errors for a log file of this name and update the interface
-        models.FileError.objects.filter(mission=mission, file_name=file_name).delete()
+        mission.file_errors.filter(file_name=file_name).delete()
         send_update_errors(group_name, mission)
 
         try:
             data = file.read()
             message_objects = elog.parse(io.StringIO(data.decode('utf-8')), elog_configuration)
 
-            errors = []
+            file_errors: [models.FileError] = []
+            errors: [tuple] = []
             # make note of missing required field errors in this file
             for mid, error_buffer in message_objects[elog.ParserType.ERRORS].items():
                 # Report errors to the user if there are any, otherwise process the message objects you can
                 for error in error_buffer:
                     err = models.FileError(mission=mission, file_name=file_name, line=int(mid),
-                                           type=models.ErrorType.missing_field,
+                                           type=models.ErrorType.missing_value,
                                            message=f'Elog message object ($@MID@$: {mid}) missing required '
                                                    f'field [{error.args[0]["expected"]}]')
-                    errors.append(err)
-                    message_objects[elog.ParserType.MID].pop(mid)
-                    continue
+                    file_errors.append(err)
+
+                    if mid in message_objects[elog.ParserType.MID]:
+                        message_objects[elog.ParserType.MID].pop(mid)
 
             send_user_notification(group_name, mission, f"Process Stations {process_message}")
-            errors += elog.process_stations(message_objects[elog.ParserType.STATIONS])
+            elog.process_stations(message_objects[elog.ParserType.STATIONS])
 
             send_user_notification(group_name, mission, f"Process Instruments {process_message}")
-            errors += elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
+            elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
 
             send_user_notification(group_name, mission, f"Process Events {process_message}")
             errors += elog.process_events(message_objects[elog.ParserType.MID], mission)
@@ -155,18 +192,17 @@ def upload_elog(request, mission_id):
             send_user_notification(group_name, mission, f"Process Other Variables {process_message}")
             errors += elog.process_variables(message_objects[elog.ParserType.MID], mission)
 
-            if errors:
-                file_errors = []
-                for error in errors:
-                    file_error = models.FileError(file_name=file_name, line=error[0], message=error[1])
-                    if error[2] is KeyError:
-                        file_error.type = models.ErrorType.missing_id
-                    elif error[2] is ValueError:
-                        file_error.type = models.ErrorType.missing_field
-                    else:
-                        file_error.type = models.ErrorType.unknown
-                    file_errors.append(file_error)
-                models.FileError.objects.bulk_create(errors)
+            for error in errors:
+                file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
+                if error[2] is KeyError:
+                    file_error.type = models.ErrorType.missing_id
+                elif error[2] is ValueError:
+                    file_error.type = models.ErrorType.missing_value
+                else:
+                    file_error.type = models.ErrorType.unknown
+                file_errors.append(file_error)
+
+            models.FileError.objects.bulk_create(file_errors)
 
         except Exception as ex:
             if type(ex) is LookupError:
@@ -177,15 +213,14 @@ def upload_elog(request, mission_id):
                 # Something is really wrong with this file
                 logger.exception(ex)
                 err = models.FileError(mission=mission, type=models.ErrorType.unknown, file_name=file_name,
-                                       message=_("Unknown error :") + f"{str(ex)}, " +
-                                               _("see error.log for details"))
+                                       message=_("Unknown error :") + f"{str(ex)}, " + _("see error.log for details"))
             err.save()
             send_update_errors(group_name, mission)
+            send_user_notification(group_name, mission, "File Error")
 
             continue
 
-    # clear the processing message
-    send_user_notification(group_name, mission, '')
+        htmx_validate_events(request, mission.pk, file_name)
 
     context = {'object': mission}
     response = HttpResponse(render_block_to_string('core/mission_events.html', 'event_list', context))
@@ -215,9 +250,23 @@ def get_mission_elog_errors(mission):
     return error_dict
 
 
+def get_mission_validation_errors(mission):
+    errors = models.ValidationError.objects.filter(event__mission=mission).order_by('event')
+
+    error_dict = {}
+    events = [error.event for error in errors]
+    for event in events:
+        error_dict[event.event_id] = []
+        for error in event.validation_errors.all():
+            error_dict[event.event_id].append(error)
+
+    return error_dict
+
+
 def get_file_errors(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
-    context = {'errors': get_mission_elog_errors(mission)}
+    context = {'errors': get_mission_elog_errors(mission),
+               'validation_errors': get_mission_validation_errors(mission)}
     response = HttpResponse(render_block_to_string('core/mission_events.html', 'error_block', context))
 
     return response

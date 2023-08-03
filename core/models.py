@@ -148,7 +148,7 @@ class Instrument(models.Model):
     type = models.IntegerField(verbose_name=_("Instrument Type"), default=999, choices=InstrumentType.choices)
 
     def __str__(self):
-        return f"{self.type} - {self.name}"
+        return f"{self.get_type_display()} - {self.name}"
 
 
 class Station(models.Model):
@@ -319,7 +319,8 @@ class VariableField(models.Model):
 class ErrorType(models.IntegerChoices):
     unknown = 0, "Unknown"
     missing_id = 1, "Missing ID"
-    missing_field = 2, "Missing Field"
+    missing_value = 2, "Missing Value"
+    validation = 3, "Validation Error"
 
 
 class AbstractError(models.Model):
@@ -332,6 +333,14 @@ class AbstractError(models.Model):
 
 class Error(AbstractError):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='errors', verbose_name=_("Mission"))
+
+
+class ValidationError(AbstractError):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='validation_errors',
+                              verbose_name=_("Event"))
+
+    def __str__(self):
+        return f"{self.get_type_display()} : {self.message}"
 
 
 class FileError(AbstractError):

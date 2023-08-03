@@ -1,0 +1,16 @@
+.selectedBg {
+    --bs-table-striped-bg: #3c5943;
+    --bs-table-bg: #3c5943;
+}
+
+.eventErr {
+    --bs-table-striped-bg: #603a3a;
+    --bs-table-bg: #603a3a;
+}
+
+.eventErr.selectedBg {
+    --bs-table-striped-bg: #643665;
+    --bs-table-bg: #643665;
+}
+
+nav.nav

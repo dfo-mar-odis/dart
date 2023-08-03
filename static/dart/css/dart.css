@@ -36,10 +36,6 @@
     overflow: auto;
 }
 
-.selectedBg {
-    background: #8fd19e !important;
-}
-
 span.spinner-border {
     width: 1rem;
     height: 1rem;

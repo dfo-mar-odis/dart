@@ -1,0 +1,148 @@
+import datetime
+
+from dart2.tests.DartTestCase import DartTestCase
+from . import CoreFactoryFloor as core_factory
+from django.test import tag
+
+from core import models as core_models
+from core.models import ActionType as action_types
+from core.validation import validate_ctd_event, validate_net_event
+
+import logging
+
+logger = logging.getLogger('dart.test')
+
+
+@tag('validation', 'validation_ctd')
+class TestCTDEventValidation(DartTestCase):
+
+    def setUp(self) -> None:
+        self.start_date = datetime.datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.end_date = datetime.datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.mission = core_factory.MissionFactory(
+            start_date=self.start_date.date(),
+            end_date=self.end_date.date()
+        )
+
+    def test_validation_sample_ids(self):
+        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=None, end_sample_id=None)
+
+        # we're testing with the assumption the event was loaded from a log file so we need to create
+        # the expected actions with their message object ids and files they came from
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_ctd_event(event)
+        logger.debug(errors)
+        self.assertEquals(len(errors), 2)
+
+    def test_validation_end_sample_ids(self):
+        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=1000, end_sample_id=None)
+
+        # we're testing with the assumption the event was loaded from a log file so we need to create
+        # the expected actions with their message object ids and files they came from
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_ctd_event(event)
+        logger.debug(errors)
+        self.assertEquals(len(errors), 1)
+
+    # Don't validate aborted events
+    def test_aborted_validation_sample_ids(self):
+        event = core_factory.CTDEventFactory(sample_id=None, end_sample_id=None)
+
+        # we're testing with the assumption the event was loaded from a log file so we need to create
+        # the expected actions with their message object ids and files they came from
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.aborted, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_ctd_event(event)
+        logger.debug(errors)
+        self.assertEquals(len(errors), 0)
+
+    def test_validate_net_event_missing_sample_id(self):
+        expected_file = 'test.log'
+
+        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=None)
+        core_factory.AttachmentFactory(event=event, name='76um')
+
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_net_event(event)
+        logger.debug(errors)
+        self.assertTrue(errors)
+
+    def test_validate_net_missing_attachment(self):
+        expected_file = 'test.log'
+
+        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000)
+
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_net_event(event)
+        logger.debug(errors)
+        self.assertTrue(errors)
+
+    def test_validate_net_76_event_no_ctd_match(self):
+        expected_file = 'test.log'
+
+        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=40011)
+        core_factory.AttachmentFactory(event=event, name='76um')
+
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_net_event(event)
+        logger.debug(errors)
+        self.assertTrue(errors)
+
+    def test_validate_net_202_event_no_ctd_match(self):
+        expected_file = 'test.log'
+
+        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=40001)
+        core_factory.AttachmentFactory(event=event, name='202um')
+
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_net_event(event)
+        logger.debug(errors)
+        self.assertTrue(errors)

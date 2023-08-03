@@ -11,7 +11,7 @@
                 <div class="card-header">
                     <div class="row">
                         <div class="card-title col">{% trans "Events" %}</div>
-                        <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'file-plus' %}</label></div>
+                        <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label></div>
                         <div class="col-1"><button class="btn btn-primary" title="{% trans "Add" %}" name="{% trans "Add" %}">{% custom_icon 'plus-square' %}</button></div>
                     </div>
                 </div>
@@ -19,7 +19,8 @@
                     {% block event_list %}
                         <div id="div_event_list_id" class="vertical-scrollbar">
                             <form name="elog_upload_file_form_id" id="elog_upload_file_form_id" hx-encoding="multipart/form-data"
-                                  hx-post="{% url "core:hx_upload_elog" object.pk %}" hx-target="#div_event_list_id" hx-swap="outerHTML" hx-trigger="change">
+                                  hx-post="{% url "core:hx_upload_elog" object.pk %}"
+                                  hx-target="#div_event_list_id" hx-swap="outerHTML" hx-trigger="change">
                                 {% csrf_token %}
                                 <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
                             </form>
@@ -48,7 +49,7 @@
                 <div class="card-header">
                     <div class="row">
                         <div class="card-title col">{% trans "Event Detials" %}</div>
-                        {% if selected_event %}
+                        {% if selected_event and not selected_event.files %}
                         <div class="col-1 me-3"><a class="btn btn-primary" title="{% trans "Edit" %}" href="{% url 'core:event_edit' selected_event.pk %}">{% custom_icon 'pencil-square' %}</a></div>
                         {% endif %}
                     </div>
@@ -79,22 +80,7 @@
                 </div>
                 <div class="card-body vertical-scrollbar" hx-trigger="load" hx-target="#errors" hx-get="{% url 'core:hx_get_file_errors' object.pk %}">
                     {% block error_block %}
-                    <div id="errors" hx-swap="outerHTML">
-                        {% for file, error_list in errors.items %}
-                            <div class="card mb-3">
-                                <div class="card-header">
-                                    <div class="card-title">{{ file }}</div>
-                                </div>
-                                <div class="card-body">
-                                    <ul>
-                                        {% for error in error_list %}
-                                            <li>{{ error.get_type_display }}: {{ error.message }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
+                        {% include 'core/partials/event_errors.html' %}
                     {% endblock %}
                </div>
             </div>
