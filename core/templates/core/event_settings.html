@@ -4,4 +4,19 @@
 {% load crispy_forms_tags %}
 
 {% block content %}
+    {% crispy form %}
+    {% if object %}
+        <div id="div_actions_id" hx-target="#div_action_table" hx-get="{% url 'core:hx_get_blank_action' object.pk %}" hx-trigger="load" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+            {% block action_block %}
+                <div id="div_action_table">
+                    {% if actionform %}
+                    {% crispy actionform %}
+                    {% endif %}
+                    {% include 'core/partials/action_table.html' %}
+                </div>
+            {% endblock %}
+        </div>
+
+    {% endif %}
+
 {% endblock %}

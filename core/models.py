@@ -150,12 +150,18 @@ class Instrument(models.Model):
     def __str__(self):
         return f"{self.get_type_display()} - {self.name}"
 
+    class Meta:
+        ordering = ('type', 'name',)
+
 
 class Station(models.Model):
     name = models.CharField(max_length=20, verbose_name=_("Station"))
 
     def __str__(self):
         return self.name
+
+    class Meta:
+        ordering = ('name',)
 
 
 class Event(models.Model):
@@ -173,9 +179,13 @@ class Event(models.Model):
     def files(self):
         files = set()
         for action in self.actions.all():
-            files.add(action.file)
+            if action.file:
+                files.add(action.file)
 
-        return ",".join(files)
+        if len(files) > 0:
+            return ",".join(files)
+
+        return ''
 
     @property
     def total_samples(self):
@@ -215,6 +225,9 @@ class Event(models.Model):
 
         a1 = actions.first()
         a2 = actions.last()
+
+        if a1 == a2:
+            return ""
 
         lat1 = a1.latitude * math.pi / 180
         lat2 = a2.latitude * math.pi / 180

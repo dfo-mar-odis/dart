@@ -3,8 +3,10 @@ import time
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from crispy_forms.utils import render_crispy_form
 from django.contrib import messages
 from django.shortcuts import render
+from django.template.context_processors import csrf
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django.http import HttpResponseRedirect, HttpResponse
@@ -12,7 +14,7 @@ from django.http import HttpResponseRedirect, HttpResponse
 from render_block import render_block_to_string
 
 from biochem import models
-from core import models
+from core import models, forms
 
 import logging
 
@@ -268,5 +270,37 @@ def get_file_errors(request, mission_id):
     context = {'errors': get_mission_elog_errors(mission),
                'validation_errors': get_mission_validation_errors(mission)}
     response = HttpResponse(render_block_to_string('core/mission_events.html', 'error_block', context))
+
+    return response
+
+
+def event_action(request, event_id):
+    event = models.Event.objects.get(pk=event_id)
+    if request.method == 'GET':
+        context = {'actionform': forms.ActionForm(instance=event), "event": event}
+        response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_block', context))
+        response['HX-Trigger'] = "update_actions"
+        return response
+    elif request.method == 'POST':
+        form = forms.ActionForm(request.POST)
+        if form.is_valid():
+            form.save()
+            context = {'actionform': forms.ActionForm(instance=event), "event": event}
+            response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_block', context))
+            response['HX-Trigger'] = "update_actions"
+
+            return HttpResponse(response)
+
+        ctx = {'event': event}
+        ctx.update(csrf(request))
+        form_html = render_crispy_form(form, context=ctx)
+        response = HttpResponse(form_html)
+        return response
+
+
+def event_list_action(request, event_id):
+    event = models.Event.objects.get(pk=event_id)
+    context = {'event': event}
+    response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_table_block', context))
 
     return response
