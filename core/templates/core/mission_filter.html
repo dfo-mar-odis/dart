@@ -61,7 +61,7 @@
                     {#        <button type="button" class="btn btn-secondary" onclick="window.alert('{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}')" title="{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}">{% trans 'BioChem' %}</button>#}
                     {#    {% endif %}#}
                 </td>
-                <td><a class="btn btn-primary" href="{% url 'core:mission_update' mission.id %}">{% custom_icon 'gear' %}</a></td>
+                <td><a class="btn btn-primary" href="{% url 'core:mission_edit' mission.id %}">{% custom_icon 'gear' %}</a></td>
                 <td></td>
                 <td><button type="button" class="btn btn-danger"
                             hx-target="#mission_table" hx-post="{% url 'core:hx_mission_delete' mission.id %}"

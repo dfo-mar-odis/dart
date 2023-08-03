@@ -4,7 +4,7 @@ from django.urls import reverse_lazy
 from biochem import models
 from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
 
-from core import forms, filters, models
+from core import forms, filters, models, validation
 
 
 class MissionMixin:
@@ -33,32 +33,24 @@ class MissionCreateView(MissionMixin, GenericCreateView):
         success = reverse_lazy("core:event_details", args=(self.object.pk, ))
         return success
 
-    def form_valid(self, form):
-        response = super().form_valid(form)
-
-        data = form.cleaned_data
-
-        # if 'elog_dir' in data:
-        #     dfd = models.DataFileDirectory(mission=self.object, directory=data['elog_dir'],
-        #                                    file_type=models.FileType.log)
-        #     dfd.save()
-        #
-        #
-        # if 'bottle_dir' in data:
-        #     dfd = models.DataFileDirectory(mission=self.object, directory=data['bottle_dir'],
-        #                                    file_type=models.FileType.btl)
-        #     dfd.save()
-
-        return response
-
 
 class MissionUpdateView(MissionCreateView, GenericUpdateView):
-    pass
+
+    def form_valid(self, form):
+        events = self.object.events.all()
+        for event in events:
+            event.validation_errors.all().delete()
+            validation.validate_event(event)
+
+        return super().form_valid(form)
 
 
 class EventDetails(MissionMixin, GenericDetailView):
     page_title = _("Missions Events")
     template_name = "core/mission_events.html"
+
+    def get_settings_url(self):
+        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
 
 
 class EventUpdateView(EventMixin, GenericUpdateView):

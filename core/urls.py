@@ -8,10 +8,11 @@ app_name = 'core'
 urlpatterns = [
     path('mission/', views.MissionFilterView.as_view(), name="mission_filter"),
     path('mission/new/', views.MissionCreateView.as_view(), name="mission_new"),
-    path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_update"),
+    path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
+    path('mission/event/new/<int:pk>/', views.EventCreateView.as_view(), name="event_new"),
     path('mission/event/update/<int:pk>/', views.EventUpdateView.as_view(), name="event_edit"),
 ]
 

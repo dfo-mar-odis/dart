@@ -5,7 +5,7 @@
     <span class="navbar-toggler-icon"></span>
   </button>
 
-  <div class="collapse navbar-collapse" id="navbarSupportedContent">
+  <div class="collapse navbar-collapse d-flex" id="navbarSupportedContent">
     <ul class="navbar-nav">
     {% block header_buttons %}
         {% if home_url %}
@@ -17,6 +17,13 @@
             <a class="btn btn-primary" href="{% url 'docs:index' %}">{% custom_icon 'question-circle' %}</a>
         </li>
     {% endblock %}
+    </ul>
+    <ul class="navbar-nav ms-auto">
+        {% if settings_url %}
+        <li class="nav-item me-2">
+            <a class="btn btn-primary" href="{{ settings_url }}">{% custom_icon 'gear' %}</a>
+        </li>
+        {% endif %}
     </ul>
   </div>
 </nav>

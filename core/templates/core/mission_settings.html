@@ -32,7 +32,7 @@
                 {{ field|as_crispy_field }}
                 {% endif %}
             {% endfor %}
-            <input class="btn btn-primary" type="submit" value="Submit" />
+            <input class="btn btn-primary" type="submit" value="Submit" {% if object.events.all %}hx-on="click: notify_of_event_validation()"{% endif %} />
         </form>
         <!-- geographic region Modal -->
         <div class="modal fade" id="geographic_region_dialog" tabindex="-1" aria-hidden="true">
@@ -64,5 +64,8 @@
 {% block body_js %}
     <script>
 
+        function notify_of_event_validation() {
+            alert("{% trans "About to re-validate events, this may take a moment." %}");
+        }
     </script>
 {% endblock %}
