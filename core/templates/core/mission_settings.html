@@ -1,7 +1,6 @@
 {% extends 'generic_create.html' %}
 {% load i18n %}
 {% load bootstrap5 %}
-{% load crispy_forms_tags %}
 
 {% block content %}
     <div id="app">
@@ -18,7 +17,7 @@
                         <div class="row">
                         {% block geo_row %}
                             <div class="col" id="geo_row">
-                                {{ field|as_crispy_field }}
+                                {% bootstrap_field field %}
                             </div>
                             <div class="col-1">
                                 <button type="button" class="btn btn-primary" data-bs-toggle="modal"
@@ -29,7 +28,7 @@
                     {% endblock %}
                     </div>
                 {% else %}
-                {{ field|as_crispy_field }}
+                {% bootstrap_field field %}
                 {% endif %}
             {% endfor %}
             <input class="btn btn-primary" type="submit" value="Submit" {% if object.events.all %}hx-on="click: notify_of_event_validation()"{% endif %} />
@@ -42,7 +41,7 @@
                         <h5 class="modal-title" id="geographic_region_dialog_label">{% trans 'New Geographic Region' %}</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
-                    <form id="geographic_region_form" hx-post="{% url 'core:hx_geo_region_add' %}" class="form-control">
+                    <form id="geographic_region_form" hx-post="{% url 'core:hx_geo_region_add' %}" class="form-control" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' >
                         {% block geographic_region_form %}
                         <div class="modal-body">
                             <label class="form-label" for="new_region">

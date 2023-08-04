@@ -2,13 +2,13 @@ import datetime
 import re
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Submit, Layout, Row, Column
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models.expressions import Col
 from django.forms import inlineformset_factory, DateField
 from django.urls import reverse_lazy
 
-from django.utils.translation import gettext as _
 
 from . import models
 
@@ -74,58 +74,63 @@ class ActionForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        event_id = None
-        if 'instance' in kwargs:
-            event = kwargs['instance']
-            self.fields['event'].initial = event
-            event_id = event.pk
-        elif 'event' in args[0]:
-            event_id = args[0]['event']
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
 
-        self.helper = FormHelper()
-        # self.form_method = 'post'
-        # self.template = 'core/partials/action_formset.html'
-        self.helper.form_id = 'form_action_id'
-        self.helper.attrs = {
-            'hx-post': reverse_lazy("core:hx_add_action", args=(event_id,)),
-        }
+        event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
         self.helper.layout = Layout(
+            Hidden('event', event_pk),
             Row(
-                Column('event'),
                 Column('type'),
                 Column('date_time'),
                 Column('latitude'),
                 Column('longitude'),
-                Column(Submit('submit', "+"), css_class='align-self-end mb-3')
+                Column(Submit('submit', '+', hx_target="#actions_form_id",
+                              hx_post=reverse_lazy('core:action_new', args=(event_pk,)),
+                              ))
             )
         )
+        self.helper.form_show_labels = False
 
 
 class EventForm(forms.ModelForm):
+    initial_fields = ['mission', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
 
     class Meta:
         model = models.Event
         fields = ['mission', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
-        widgets = {
-            'mission': forms.HiddenInput()
-        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        self.helper = FormHelper()
+        if 'initial' in kwargs and 'mission' in kwargs['initial']:
+            mission_id = kwargs['initial']['mission']
+            mission = models.Mission.objects.get(pk=mission_id)
+            event = mission.events.order_by('event_id').last()
+            self.fields['event_id'].initial = event.event_id + 1 if event else 1
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
         self.helper.layout = Layout(
-            'mission',
-            'event_id',
+            Hidden('mission', self.initial['mission'] if 'mission' in self.initial else kwargs['initial']['mission']),
+            Hidden('event_id', self.initial['event_id']) if 'event_id' in self.initial else 'event_id',
             'station',
             'instrument',
-            Row(Column('sample_id'), Column('end_sample_id')),
+            Row(
+                Column('sample_id'),
+                Column('end_sample_id')
+            )
         )
-        self.helper.add_input(Submit('submit', _("Submit")))
+        if 'event_id' in self.initial:
+           submit = Submit('submit', 'Update', css_id='event_form_button_id',
+                           hx_post=reverse_lazy('core:event_update', args=(self.initial['event_id'],)),
+                           hx_swap="outerHTML", hx_target="#event_form_id")
+        else:
+            submit = Submit('submit', 'Submit', css_id='event_form_button_id',
+                            hx_post=reverse_lazy('core:event_new', args=(kwargs['initial']['mission'],)),
+                            hx_swap="outerHTML", hx_target="#event_form_id")
 
-    def is_valid(self):
-        valid = super().is_valid()
-        return valid
+        self.helper.add_input(submit)
 
 
 ActionFormSet = inlineformset_factory(

@@ -1,22 +1,42 @@
-{% extends 'generic_create.html' %}
+{% extends 'base.html' %}
 {% load i18n %}
 {% load bootstrap5 %}
 {% load crispy_forms_tags %}
 
 {% block content %}
-    {% crispy form %}
-    {% if object %}
-        <div id="div_actions_id" hx-target="#div_action_table" hx-get="{% url 'core:hx_get_blank_action' object.pk %}" hx-trigger="load" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-            {% block action_block %}
-                <div id="div_action_table">
-                    {% if actionform %}
-                    {% crispy actionform %}
-                    {% endif %}
-                    {% include 'core/partials/action_table.html' %}
-                </div>
-            {% endblock %}
-        </div>
+    {% block event_form %}
+        <form id="event_form_id">
+        {% crispy form %}
+        </form>
 
+    {% if event %}
+        {% block action_block %}
+            <form id="actions_form_id">
+            {% crispy actionform %}
+            </form>
+        {% endblock %}
+
+        {% block action_table_block %}
+            <table class="table table-striped" hx-trigger="update_actions from:body" hx-swap="outerHTML" hx-get="{% url 'core:action_list' event.pk %}">
+                <thead>
+                    <th>Action</th>
+                    <th>Date/Time</th>
+                    <th>Latitude</th>
+                    <th>Longitude</th>
+                </thead>
+                <tbody>
+                {% for action in event.actions.all %}
+                    <tr id="action_table_list">
+                        <td>{{ action.get_type_display }}</td>
+                        <td>{{ action.date_time }}</td>
+                        <td>{{ action.latitude }}</td>
+                        <td>{{ action.longitude }}</td>
+                    </tr>
+                {% endfor %}
+                </tbody>
+            </table>
+        {% endblock %}
     {% endif %}
+    {% endblock %}
 
 {% endblock %}

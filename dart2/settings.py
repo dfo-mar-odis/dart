@@ -231,7 +231,7 @@ LOGGERS = (
             "propagate": False,
         },
         "dart": {
-            "handlers": ["error_handler"],
+            "handlers": ["console", "error_handler"],
             "level": "WARNING",
             "propagate": True
         },

@@ -12,8 +12,13 @@ urlpatterns = [
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
-    path('mission/event/new/<int:mission_id>/', views.EventCreateView.as_view(), name="event_new"),
-    path('mission/event/update/<int:pk>/', views.EventUpdateView.as_view(), name="event_edit"),
+    # path('mission/event/new/<int:mission_id>/', views.EventCreateView.as_view(), name="event_new"),
+    # path('mission/event/update/<int:pk>/', views.EventUpdateView.as_view(), name="event_edit"),
+    path('mission/event/new/<int:mission_id>/', views.new_event, name="event_new"),
+    path('mission/event/update/<int:event_id>/', views.update_event, name="event_update"),
+    path('mission/event/action/new/<int:event_id>/', views.new_action, name="action_new"),
+    path('mission/event/action/update/', views.update_action, name="action_update"),
+    path('mission/event/action/list/<int:event_id>', views.list_action, name="action_list"),
 ]
 
 htmx_urlpatterns = [
@@ -25,7 +30,6 @@ htmx_urlpatterns = [
     path('mission/select/<int:mission_id>/<int:event_id>/', htmx.select_event, name="hx_select_event"),
     path('mission/errors/<int:mission_id>/', htmx.get_file_errors, name="hx_get_file_errors"),
     path('event/action/blank/<int:event_id>/', htmx.event_action, name="hx_get_blank_action"),
-    path('event/action/add/<int:event_id>/', htmx.event_action, name="hx_add_action"),
     path('event/action/list/<int:event_id>/', htmx.event_list_action, name="hx_list_actions"),
 
 ]
