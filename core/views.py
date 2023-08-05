@@ -80,6 +80,36 @@ class EventCreateView(EventMixin, GenericCreateView):
         return context
 
 
+def new_event(request, mission_id):
+    context = {}
+    context.update(csrf(request))
+
+    if request.method == "GET":
+        context['mission'] = models.Mission.objects.get(pk=mission_id)
+        form = forms.EventForm(initial={'mission': mission_id})
+        context['form'] = form
+        response = HttpResponse(render_to_string('core/event_settings.html', context=context))
+        return response
+    elif request.method == "POST":
+        form = forms.EventForm(request.POST, initial={'mission': mission_id})
+
+        if form.is_valid():
+            event = form.save()
+            form = forms.EventForm(instance=event)
+            context['form'] = form
+            context['event'] = event
+            context['actionform'] = forms.ActionForm(initial={'event': event.pk})
+            context['page_title'] = _("Event : ") + str(event.event_id)
+            response = HttpResponse(render_block_to_string('core/event_settings.html', 'content', context=context))
+            response['HX-Trigger'] = "event_updated"
+            response['HX-Push-Url'] = reverse_lazy('core:event_update', args=(event.pk,))
+            return response
+
+        context['form'] = form
+        response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
+        return response
+
+
 def update_event(request, event_id):
     context = {}
     context.update(csrf(request))
@@ -93,6 +123,7 @@ def update_event(request, event_id):
         context['actionform'] = forms.ActionForm(initial={'event': event_id})
         context['actions'] = event.actions.all()
 
+        # this is the initial page load so we need to load all elements on the page.
         response = HttpResponse(render_to_string('core/event_settings.html', context=context))
         response['HX-Trigger'] = 'update_actions'
         return response
@@ -103,37 +134,11 @@ def update_event(request, event_id):
         if form.is_valid():
             event = form.save()
             context['event'] = event
+            context['actionform'] = forms.ActionForm(initial={'event': event_id})
+            context['actions'] = event.actions.all()
             context['page_title'] = _("Event : ") + str(event.event_id)
             response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
             response['HX-Trigger'] = 'update_actions'
-            return response
-
-        response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
-        return response
-
-
-def new_event(request, mission_id):
-    context = {}
-    context.update(csrf(request))
-
-    if request.method == "GET":
-        context['mission'] = models.Mission.objects.get(pk=mission_id)
-        form = forms.EventForm(initial={'mission': mission_id})
-        context['form'] = form
-        response = HttpResponse(render_to_string('core/event_settings.html', context=context))
-        return response
-    elif request.method == "POST":
-        form = forms.EventForm(request.POST, initial={'mission': mission_id})
-        context['form'] = form
-
-        if form.is_valid():
-            event = form.save()
-            context['event'] = event
-            context['actionform'] = forms.ActionForm(initial={'event': event.pk})
-            context['page_title'] = _("Event : ") + str(event.event_id)
-            response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
-            response['HX-Trigger'] = "event_updated"
-            response['HX-Push-Url'] = reverse_lazy('core:event_update', args=(event.pk,))
             return response
 
         response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))

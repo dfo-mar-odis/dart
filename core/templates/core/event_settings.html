@@ -8,35 +8,36 @@
         <form id="event_form_id">
         {% crispy form %}
         </form>
-
-    {% if event %}
-        {% block action_block %}
-            <form id="actions_form_id">
-            {% crispy actionform %}
-            </form>
-        {% endblock %}
-
-        {% block action_table_block %}
-            <table class="table table-striped" hx-trigger="update_actions from:body" hx-swap="outerHTML" hx-get="{% url 'core:action_list' event.pk %}">
-                <thead>
-                    <th>Action</th>
-                    <th>Date/Time</th>
-                    <th>Latitude</th>
-                    <th>Longitude</th>
-                </thead>
-                <tbody>
-                {% for action in event.actions.all %}
-                    <tr id="action_table_list">
-                        <td>{{ action.get_type_display }}</td>
-                        <td>{{ action.date_time }}</td>
-                        <td>{{ action.latitude }}</td>
-                        <td>{{ action.longitude }}</td>
-                    </tr>
-                {% endfor %}
-                </tbody>
-            </table>
-        {% endblock %}
-    {% endif %}
     {% endblock %}
 
+    {% block action_block %}
+        <form id="actions_form_id">
+        {% if actionform %}
+        {% crispy actionform %}
+        {% endif %}
+        </form>
+    {% endblock %}
+
+    {% block action_table_block %}
+        {% if event %}
+        <table class="table table-striped" hx-trigger="update_actions from:body" hx-swap="outerHTML" hx-get="{% url 'core:action_list' event.pk %}">
+            <thead>
+                <th>Action</th>
+                <th>Date/Time</th>
+                <th>Latitude</th>
+                <th>Longitude</th>
+            </thead>
+            <tbody>
+            {% for action in event.actions.all %}
+                <tr id="action_table_list">
+                    <td>{{ action.get_type_display }}</td>
+                    <td>{{ action.date_time }}</td>
+                    <td>{{ action.latitude }}</td>
+                    <td>{{ action.longitude }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% endif %}
+    {% endblock %}
 {% endblock %}

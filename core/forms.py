@@ -121,9 +121,9 @@ class EventForm(forms.ModelForm):
                 Column('end_sample_id')
             )
         )
-        if 'event_id' in self.initial:
-           submit = Submit('submit', 'Update', css_id='event_form_button_id',
-                           hx_post=reverse_lazy('core:event_update', args=(self.initial['event_id'],)),
+        if self.instance.pk:
+            submit = Submit('submit', 'Update', css_id='event_form_button_id',
+                           hx_post=reverse_lazy('core:event_update', args=(self.instance.pk,)),
                            hx_swap="outerHTML", hx_target="#event_form_id")
         else:
             submit = Submit('submit', 'Submit', css_id='event_form_button_id',
