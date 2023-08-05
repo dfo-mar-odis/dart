@@ -12,10 +12,11 @@ urlpatterns = [
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
-    # path('mission/event/new/<int:mission_id>/', views.EventCreateView.as_view(), name="event_new"),
-    # path('mission/event/update/<int:pk>/', views.EventUpdateView.as_view(), name="event_edit"),
-    path('mission/event/new/<int:mission_id>/', views.new_event, name="event_new"),
-    path('mission/event/update/<int:event_id>/', views.update_event, name="event_update"),
+    path('mission/event/create/<int:mission_id>/', views.EventCreateView.as_view(), name="event_create"),
+    path('mission/event/update/<int:event_id>/', views.EventUpdateView.as_view(), name="event_edit"),
+
+    path('mission/event/hx/update/', views.hx_update_event, name="hx_update_event"),
+
     path('mission/event/action/new/<int:event_id>/', views.new_action, name="action_new"),
     path('mission/event/action/update/', views.update_action, name="action_update"),
     path('mission/event/action/list/<int:event_id>', views.list_action, name="action_list"),

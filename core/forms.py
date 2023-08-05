@@ -1,8 +1,9 @@
 import datetime
 import re
 
+from crispy_forms.bootstrap import InlineField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models.expressions import Col
@@ -75,19 +76,25 @@ class ActionForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
+
+        # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
+        # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
+        # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
         self.helper.form_tag = False
 
         event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
+        submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#actions_form_id",
+                              hx_post=reverse_lazy('core:action_new', args=(event_pk,)),
+                              )
         self.helper.layout = Layout(
             Hidden('event', event_pk),
             Row(
-                Column('type'),
-                Column('date_time'),
-                Column('latitude'),
-                Column('longitude'),
-                Column(Submit('submit', '+', hx_target="#actions_form_id",
-                              hx_post=reverse_lazy('core:action_new', args=(event_pk,)),
-                              ))
+                Column(Field('type', css_class='form-control-sm'), css_class='col-sm'),
+                Column(Field('date_time', css_class='form-control-sm'), css_class='col-sm'),
+                Column(Field('latitude', css_class='form-control-sm'), css_class='col-sm'),
+                Column(Field('longitude', css_class='form-control-sm'), css_class='col-sm'),
+                Column(submit_button, css_class='col-sm'),
+                css_class="input-group"
             )
         )
         self.helper.form_show_labels = False
@@ -110,27 +117,33 @@ class EventForm(forms.ModelForm):
             self.fields['event_id'].initial = event.event_id + 1 if event else 1
 
         self.helper = FormHelper(self)
+
+        # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
+        # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
+        # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
         self.helper.form_tag = False
+
+        event_element = Column(Field('event_id', css_class='form-control-sm'))
+        submit_label = 'Submit'
+        submit_url = reverse_lazy('core:hx_update_event')
+        if self.instance.pk:
+            event_element = Hidden('event_id', self.instance.event_id)
+            submit_label = 'Update'
+
+        submit = Submit('submit', submit_label, css_id='event_form_button_id', css_class='btn-sm input-group-append',
+                        hx_post=submit_url, hx_swap="outerHTML", hx_target="#event_form_id")
         self.helper.layout = Layout(
             Hidden('mission', self.initial['mission'] if 'mission' in self.initial else kwargs['initial']['mission']),
-            Hidden('event_id', self.initial['event_id']) if 'event_id' in self.initial else 'event_id',
-            'station',
-            'instrument',
             Row(
-                Column('sample_id'),
-                Column('end_sample_id')
+                event_element,
+                Column(Field('station', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md'),
+                Column(Field('instrument', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md'),
+                Column(Field('sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md'),
+                Column(Field('end_sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md'),
+                Column(submit, css_class='col-sm-12 col-md align-self-center mt-3'),
+                css_class="input-group input-group-sm"
             )
         )
-        if self.instance.pk:
-            submit = Submit('submit', 'Update', css_id='event_form_button_id',
-                           hx_post=reverse_lazy('core:event_update', args=(self.instance.pk,)),
-                           hx_swap="outerHTML", hx_target="#event_form_id")
-        else:
-            submit = Submit('submit', 'Submit', css_id='event_form_button_id',
-                            hx_post=reverse_lazy('core:event_new', args=(kwargs['initial']['mission'],)),
-                            hx_swap="outerHTML", hx_target="#event_form_id")
-
-        self.helper.add_input(submit)
 
 
 ActionFormSet = inlineformset_factory(

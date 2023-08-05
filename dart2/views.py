@@ -1,5 +1,5 @@
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView, DetailView
+from django.views.generic import CreateView, UpdateView, DetailView, TemplateView
 from django_filters.views import FilterView
 
 from . import urls
@@ -80,4 +80,8 @@ class GenericUpdateView(GenericViewMixin, UpdateView):
 
 
 class GenericDetailView(GenericViewMixin, DetailView):
+    pass
+
+
+class GenericTemplateView(GenericViewMixin, TemplateView):
     pass

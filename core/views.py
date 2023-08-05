@@ -9,7 +9,8 @@ from django.urls import reverse_lazy
 from render_block import render_block_to_string
 
 from biochem import models
-from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
+from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView, GenericViewMixin, \
+    GenericTemplateView
 
 from core import forms, filters, models, validation
 
@@ -61,37 +62,49 @@ class EventDetails(MissionMixin, GenericDetailView):
         return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
 
 
-class EventCreateView(EventMixin, GenericCreateView):
+# We get different data from kwargs depending on if this is a view to
+# create a new event or a view to update an existing event
+# so we have respective EventCreate and EventUpdate views
+class EventCreateView(EventMixin, GenericTemplateView):
     template_name = "core/event_settings.html"
-    form_class = forms.EventForm
-
-    def get_initial(self):
-        initial = super().get_initial()
-
-        mission = models.Mission.objects.get(pk=self.kwargs['mission_id'])
-        initial['mission'] = mission
-
-        return initial
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['form'] = forms.EventForm(initial={'mission': self.kwargs['mission_id']})
 
-        context['mission'] = models.Mission.objects.get(pk=self.kwargs['mission_id'])
         return context
 
 
-def new_event(request, mission_id):
-    context = {}
-    context.update(csrf(request))
+class EventUpdateView(EventMixin, GenericTemplateView):
+    template_name = "core/event_settings.html"
 
-    if request.method == "GET":
-        context['mission'] = models.Mission.objects.get(pk=mission_id)
-        form = forms.EventForm(initial={'mission': mission_id})
-        context['form'] = form
-        response = HttpResponse(render_to_string('core/event_settings.html', context=context))
-        return response
-    elif request.method == "POST":
-        form = forms.EventForm(request.POST, initial={'mission': mission_id})
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        event = models.Event.objects.get(pk=self.kwargs['event_id'])
+        context['event'] = event
+        context['form'] = forms.EventForm(instance=event)
+        context['actionform'] = forms.ActionForm(initial={'event': event.pk})
+
+        return context
+
+
+# This hx call assumes the form is on a Django view that has already laid out the page.
+# The method's job is to update the existing content on the page
+def hx_update_event(request):
+    context = {}
+
+    if request.method == "POST":
+        mission_id = request.POST['mission']
+        event_id = request.POST['event_id']
+        context.update(csrf(request))
+        update = models.Event.objects.filter(mission_id=mission_id, event_id=event_id).exists()
+
+        if update:
+            event = models.Event.objects.get(mission_id=mission_id, event_id=event_id)
+            form = forms.EventForm(request.POST, instance=event)
+            context['actions'] = event.actions.all()
+        else:
+            form = forms.EventForm(request.POST, initial={'mission': mission_id})
 
         if form.is_valid():
             event = form.save()
@@ -100,47 +113,18 @@ def new_event(request, mission_id):
             context['event'] = event
             context['actionform'] = forms.ActionForm(initial={'event': event.pk})
             context['page_title'] = _("Event : ") + str(event.event_id)
-            response = HttpResponse(render_block_to_string('core/event_settings.html', 'content', context=context))
-            response['HX-Trigger'] = "event_updated"
-            response['HX-Push-Url'] = reverse_lazy('core:event_update', args=(event.pk,))
+            if update:
+                # if updating an event, everything is already on the page, just update the event form area
+                response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
+                response['HX-Trigger'] = 'update_actions'
+            else:
+                # if creating a new event, update the entire event block to add other blocks to the page
+                response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_content', context=context))
+                response['HX-Trigger'] = "event_updated"
+                response['HX-Push-Url'] = reverse_lazy('core:event_edit', args=(event.pk,))
             return response
 
         context['form'] = form
-        response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
-        return response
-
-
-def update_event(request, event_id):
-    context = {}
-    context.update(csrf(request))
-
-    event = models.Event.objects.get(pk=event_id)
-    context['event'] = event
-    context['page_title'] = _("Event : ") + str(event.event_id)
-    if request.method == "GET":
-        form = forms.EventForm(instance=event, initial={'mission': event.mission.pk})
-        context['form'] = form
-        context['actionform'] = forms.ActionForm(initial={'event': event_id})
-        context['actions'] = event.actions.all()
-
-        # this is the initial page load so we need to load all elements on the page.
-        response = HttpResponse(render_to_string('core/event_settings.html', context=context))
-        response['HX-Trigger'] = 'update_actions'
-        return response
-    elif request.method == "POST":
-        form = forms.EventForm(request.POST, instance=event)
-        context['form'] = form
-
-        if form.is_valid():
-            event = form.save()
-            context['event'] = event
-            context['actionform'] = forms.ActionForm(initial={'event': event_id})
-            context['actions'] = event.actions.all()
-            context['page_title'] = _("Event : ") + str(event.event_id)
-            response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
-            response['HX-Trigger'] = 'update_actions'
-            return response
-
         response = HttpResponse(render_block_to_string('core/event_settings.html', 'event_form', context=context))
         return response
 

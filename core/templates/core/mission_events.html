@@ -12,7 +12,7 @@
                     <div class="row">
                         <div class="card-title col">{% trans "Events" %}</div>
                         <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label></div>
-                        <div class="col-1"><a href="{% url 'core:event_new' object.pk %}" class="btn btn-primary" title="{% trans "Add" %}">{% custom_icon 'plus-square' %}</a></div>
+                        <div class="col-1"><a href="{% url 'core:event_create' object.pk %}" class="btn btn-primary" title="{% trans "Add" %}">{% custom_icon 'plus-square' %}</a></div>
                     </div>
                 </div>
                 <div class="card-body">
