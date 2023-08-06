@@ -1,56 +1,5 @@
 {% extends 'base.html' %}
-{% load i18n %}
-{% load bootstrap5 %}
-{% load crispy_forms_tags %}
 
 {% block content %}
-    {% block event_content %}
-    {% block event_form %}
-        {# Have to disable the form tag in crispy forms because by default Cirspy will add a method to the form tag #}
-        {# that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #}
-        <form id="event_form_id">
-        {% crispy form %}
-        </form>
-    {% endblock %}
-
-    <div class="row">
-        <div class="col mt-5">
-            <h3>{% trans 'Add Actions' %}</h3>
-        </div>
-    </div>
-    {% block action_block %}
-        <form id="actions_form_id">
-        {% if actionform %}
-        {% crispy actionform %}
-        {% endif %}
-        </form>
-    {% endblock %}
-
-    {% block action_table_block %}
-        {% if event %}
-            <div class="row">
-            <div class="col">
-        <table class="table table-striped" hx-trigger="update_actions from:body" hx-swap="outerHTML" hx-get="{% url 'core:action_list' event.pk %}">
-            <thead>
-                <th>Action</th>
-                <th>Date/Time</th>
-                <th>Latitude</th>
-                <th>Longitude</th>
-            </thead>
-            <tbody>
-            {% for action in event.actions.all %}
-                <tr id="action_table_list">
-                    <td>{{ action.get_type_display }}</td>
-                    <td>{{ action.date_time }}</td>
-                    <td>{{ action.latitude }}</td>
-                    <td>{{ action.longitude }}</td>
-                </tr>
-            {% endfor %}
-            </tbody>
-        </table>
-            </div>
-            </div>
-        {% endif %}
-    {% endblock %}
-    {% endblock %}
+    {% include 'core/partials/event_edit_form.html' %}
 {% endblock %}

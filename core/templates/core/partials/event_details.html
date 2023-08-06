@@ -1,6 +1,7 @@
 {% load i18n %}
 {% load humanize %}
 
+<div id="div_event_content_id">
 {% if event %}
 <p><b>{% trans 'Instrument: ' %}</b><span>{{ event.instrument.name }}</span></p>
 {% if event.files %}<p><b>{% trans 'File: ' %}</b><span>{{ event.files }}</span></p>{% endif %}
@@ -28,5 +29,7 @@
 {% endif %}
 
 {% include 'core/partials/action_table.html' with event=event %}
+{% include 'core/partials/attachment_table.html' with event=event %}
 
 {% endif %}
+</div>

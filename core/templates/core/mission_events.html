@@ -12,34 +12,23 @@
                     <div class="row">
                         <div class="card-title col">{% trans "Events" %}</div>
                         <div class="col-1"><label for="event_file_input_id" class="btn btn-primary" title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label></div>
-                        <div class="col-1"><a href="{% url 'core:event_create' object.pk %}" class="btn btn-primary" title="{% trans "Add" %}">{% custom_icon 'plus-square' %}</a></div>
                     </div>
                 </div>
                 <div class="card-body">
-                    {% block event_list %}
-                        <div id="div_event_list_id" class="vertical-scrollbar">
-                            <form name="elog_upload_file_form_id" id="elog_upload_file_form_id" hx-encoding="multipart/form-data"
-                                  hx-post="{% url "core:hx_upload_elog" object.pk %}"
-                                  hx-target="#div_event_list_id" hx-swap="outerHTML" hx-trigger="change">
-                                {% csrf_token %}
-                                <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
-                            </form>
-                            <table id="event_table" class="table table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Event</th>
-                                        <th>Station</th>
-                                        <th>Instrument</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                {% for event in object.events.all %}
-                                    {% include 'core/partials/event_list_selected.html' with object=object event=event %}
-                                {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
+                    {% block event_import_form %}
+                    <form name="elog_upload_file_form_id" id="elog_upload_file_form_id" hx-encoding="multipart/form-data"
+                          hx-post="{% url "core:hx_upload_elog" object.pk %}"
+                          hx-target="this" hx-swap="outerHTML" hx-trigger="change">
+                        {% csrf_token %}
+                        <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
+                    </form>
                     {% endblock %}
+                    <div id="div_event_list_id" class="vertical-scrollbar" hx-trigger="load, event_updated from:body"
+                            hx-get="{% url 'core:hx_event_list' object.pk %}">
+                    {% block event_list %}
+                        {% include 'core/partials/table_event.html' %}
+                    {% endblock %}
+                    </div>
                 </div>
             </div>
         </div>
@@ -49,17 +38,25 @@
                 <div class="card-header">
                     <div class="row">
                         <div class="card-title col">{% trans "Event Detials" %}</div>
+                        <div class="col-1">
+                            <button hx-on="click: update_selected({{ 0 }})" hx-target="#div_event_content_id" hx-get="{% url 'core:hx_event_new' mission_id=object.pk %}" class="btn btn-primary" title="{% trans "Add" %}">{% custom_icon 'plus-square' %}</button></div>
                         {% if selected_event and not selected_event.files %}
                         <div class="col-1 me-3"><a class="btn btn-primary" title="{% trans "Edit" %}" href="{% url 'core:event_edit' selected_event.pk %}">{% custom_icon 'pencil-square' %}</a></div>
                         {% endif %}
                     </div>
                </div>
                 <div class="card-body">
-                        <div id="div_selected_event_id" class="vertical-scrollbar">
-                        {% if selected_event %}
-                            {% include 'core/partials/event_details.html' with event=selected_event %}
+                    <div id="div_selected_event_id" class="vertical-scrollbar">
+                        <div id="div_event_content_id">
+                    {% if selected_event %}
+                        {% if selected_event.files %}
+                        {% include 'core/partials/event_details.html' with event=selected_event %}
+                        {% else %}
+                        {% include 'core/partials/event_edit_form.html' with event=selected_event %}
                         {% endif %}
+                    {% endif %}
                         </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -93,7 +90,9 @@
     <script>
         function update_selected(event) {
             $(".selectedBg").removeClass("selectedBg");
-            $("#event-" + event).addClass('selectedBg');
+            if(event != 0) {
+                $("#event-" + event).addClass('selectedBg');
+            }
         }
     </script>
 {% endblock %}

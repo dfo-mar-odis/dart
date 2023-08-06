@@ -225,8 +225,8 @@ def upload_elog(request, mission_id):
         htmx_validate_events(request, mission.pk, file_name)
 
     context = {'object': mission}
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'event_list', context))
-
+    response = HttpResponse(render_block_to_string('core/mission_events.html', 'event_import_form', context))
+    response['HX-Trigger'] = 'event_updated'
     return response
 
 

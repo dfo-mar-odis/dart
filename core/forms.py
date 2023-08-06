@@ -1,15 +1,13 @@
 import datetime
 import re
 
-from crispy_forms.bootstrap import InlineField
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field, Reset
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models.expressions import Col
-from django.forms import inlineformset_factory, DateField
+from django.forms import inlineformset_factory
 from django.urls import reverse_lazy
-
+from django.utils.translation import gettext as _
 
 from . import models
 
@@ -22,7 +20,6 @@ class NoWhiteSpaceCharField(forms.CharField):
 
 
 class MissionSettingsForm(forms.ModelForm):
-
     name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
     # elog_dir = forms.CharField(max_length=255, label="Elog Directory", required=False,
     #                            help_text="Folder location of Elog *.log files")
@@ -30,8 +27,10 @@ class MissionSettingsForm(forms.ModelForm):
     #                              help_text="Folder location of Elog *.BTL files")
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
 
-    start_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
-    end_date = forms.DateField(widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
 
     class Meta:
         model = models.Mission
@@ -44,8 +43,8 @@ class MissionSettingsForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_show_labels = True
         self.fields['geographic_region'].label = False
-        self.fields['geographic_region'].widget.attrs["hx-target"] ='#div_id_geographic_region'
-        self.fields['geographic_region'].widget.attrs["hx-trigger"] ='region_added from:body'
+        self.fields['geographic_region'].widget.attrs["hx-target"] = '#div_id_geographic_region'
+        self.fields['geographic_region'].widget.attrs["hx-trigger"] = 'region_added from:body'
         self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
 
     def geographic_region_choices(form):
@@ -62,12 +61,12 @@ class MissionSettingsForm(forms.ModelForm):
 
 
 class ActionForm(forms.ModelForm):
-
-    date_time = forms.DateTimeField(widget=forms.DateTimeInput(attrs={'type': 'datetime-local', 'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
+    date_time = forms.DateTimeField(widget=forms.DateTimeInput(
+        attrs={'type': 'datetime-local', 'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
 
     class Meta:
         model = models.Action
-        fields = ['event', 'type', 'date_time', 'latitude', 'longitude']
+        fields = ['id', 'event', 'type', 'date_time', 'latitude', 'longitude', 'comment']
         widgets = {
             'event': forms.HiddenInput()
         }
@@ -84,18 +83,67 @@ class ActionForm(forms.ModelForm):
 
         event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
         submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#actions_form_id",
-                              hx_post=reverse_lazy('core:action_new', args=(event_pk,)),
-                              )
+                               hx_post=reverse_lazy('core:hx_action_new'),
+                               )
+        clear_button = Submit('reset', '0', css_class='btn btn-sm btn-secondary', hx_target='#actions_form_id',
+                              hx_get=reverse_lazy('core:hx_action_update', args=(event_pk,)))
+        action_id_element = None
+        if self.instance.pk:
+            action_id_element = Hidden('id', self.instance.pk)
+
         self.helper.layout = Layout(
+            action_id_element,
             Hidden('event', event_pk),
             Row(
                 Column(Field('type', css_class='form-control-sm'), css_class='col-sm'),
                 Column(Field('date_time', css_class='form-control-sm'), css_class='col-sm'),
-                Column(Field('latitude', css_class='form-control-sm'), css_class='col-sm'),
-                Column(Field('longitude', css_class='form-control-sm'), css_class='col-sm'),
-                Column(submit_button, css_class='col-sm'),
+                Column(Field('latitude', css_class='form-control-sm', placeholder=_('Latitude')), css_class='col-sm'),
+                Column(Field('longitude', css_class='form-control-sm', placeholder=_('Longitude')), css_class='col-sm'),
+                Column(submit_button, clear_button, css_class='col-sm'),
                 css_class="input-group"
-            )
+            ),
+            Row(Column(Field('comment', css_class='form-control-sm', placeholder=_('Comment'))), css_class='input-group')
+        )
+        self.helper.form_show_labels = False
+
+
+class AttachmentForm(forms.ModelForm):
+
+    class Meta:
+        model = models.InstrumentSensor
+        fields = ['id', 'event', 'name']
+        widgets = {
+            'event': forms.HiddenInput()
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper(self)
+
+        # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
+        # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
+        # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
+        self.helper.form_tag = False
+
+        event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
+        submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#attachments_form_id",
+                               hx_post=reverse_lazy('core:hx_attachment_new'),
+                               )
+        clear_button = Submit('reset', '0', css_class='btn btn-sm btn-secondary', hx_target='#attachments_form_id',
+                              hx_get=reverse_lazy('core:hx_attachment_update', args=(event_pk,)))
+        attachment_id_element = None
+        if self.instance.pk:
+            attachment_id_element = Hidden('id', self.instance.pk)
+
+        self.helper.layout = Layout(
+            attachment_id_element,
+            Hidden('event', event_pk),
+            Row(
+                Column(Field('name', css_class='form-control-sm'), css_class='col-sm'),
+                Column(submit_button, clear_button, css_class='col-sm'),
+                css_class="input-group"
+            ),
         )
         self.helper.form_show_labels = False
 
@@ -123,15 +171,16 @@ class EventForm(forms.ModelForm):
         # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
         self.helper.form_tag = False
 
-        event_element = Column(Field('event_id', css_class='form-control-sm'))
         submit_label = 'Submit'
         submit_url = reverse_lazy('core:hx_update_event')
+
+        event_element = Column(Field('event_id', css_class='form-control-sm'))
         if self.instance.pk:
             event_element = Hidden('event_id', self.instance.event_id)
             submit_label = 'Update'
 
         submit = Submit('submit', submit_label, css_id='event_form_button_id', css_class='btn-sm input-group-append',
-                        hx_post=submit_url, hx_swap="outerHTML", hx_target="#event_form_id")
+                        hx_post=submit_url, hx_target="#div_event_content_id")
         self.helper.layout = Layout(
             Hidden('mission', self.initial['mission'] if 'mission' in self.initial else kwargs['initial']['mission']),
             Row(
@@ -144,8 +193,3 @@ class EventForm(forms.ModelForm):
                 css_class="input-group input-group-sm"
             )
         )
-
-
-ActionFormSet = inlineformset_factory(
-    models.Event, models.Action, form=ActionForm, extra=1, can_delete=False,
-)

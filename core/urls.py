@@ -12,14 +12,25 @@ urlpatterns = [
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
-    path('mission/event/create/<int:mission_id>/', views.EventCreateView.as_view(), name="event_create"),
     path('mission/event/update/<int:event_id>/', views.EventUpdateView.as_view(), name="event_edit"),
 
-    path('mission/event/hx/update/', views.hx_update_event, name="hx_update_event"),
+    path('mission/event/hx/new/', views.hx_update_event, name="hx_event_new"),
+    path('mission/event/hx/new/<int:mission_id>/', views.hx_update_event, kwargs={'event_id': 0}, name="hx_event_new"),
+    path('mission/event/hx/update/', views.hx_update_event, kwargs={'mission_id': 0, 'event_id': 0}, name="hx_update_event"),
+    path('mission/event/hx/update/<int:event_id>/', views.hx_update_event, kwargs={'mission_id': 0}, name="hx_update_event"),
+    path('mission/event/hx/list/<int:mission_id>/', views.hx_list_event, name="hx_event_list"),
 
-    path('mission/event/action/new/<int:event_id>/', views.new_action, name="action_new"),
-    path('mission/event/action/update/', views.update_action, name="action_update"),
-    path('mission/event/action/list/<int:event_id>', views.list_action, name="action_list"),
+    path('mission/event/action/hx/new/', views.hx_new_action, name="hx_action_new"),
+    path('mission/event/action/hx/update/<int:action_id>/', views.hx_update_action, name="hx_action_update"),
+    path('mission/event/action/hx/delete/<int:action_id>/', views.hx_update_action, name="hx_action_delete"),
+    path('mission/event/action/hx/list/<int:event_id>/', views.hx_list_action, name="hx_action_list"),
+    path('mission/event/action/hx/list/<int:event_id>/<str:editable>/', views.hx_list_action, name="hx_action_list"),
+
+    path('mission/event/attachment/hx/new/', views.hx_new_attachment, name="hx_attachment_new"),
+    path('mission/event/attachment/hx/update/<int:action_id>/', views.hx_update_attachment, name="hx_attachment_update"),
+    path('mission/event/attachment/hx/delete/<int:action_id>/', views.hx_update_attachment, name="hx_attachment_delete"),
+    path('mission/event/attachment/hx/list/<int:event_id>/', views.hx_list_attachment, name="hx_attachment_list"),
+    path('mission/event/attachment/hx/list/<int:event_id>/<str:editable>/', views.hx_list_attachment, name="hx_attachment_list"),
 ]
 
 htmx_urlpatterns = [

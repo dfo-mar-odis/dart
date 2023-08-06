@@ -4,7 +4,7 @@
 {#hx-trigger='click' hx-get="{% url 'core:select_event' object.pk event.pk 1 %}"#}
 {#{% endif %}>#}
 <tr id="event-{{ event.event_id }}" hx-swap="outerHTML"
-    hx-get="{% url 'core:hx_select_event' object.pk event.pk %}"
+    hx-get="{% url 'core:hx_select_event' object.pk event.pk %}" hx-swap="outerHTML"
     hx-target="#div_event_details_id" hx-on="click: update_selected({{ event.event_id }})"
     {% if event.validation_errors.all %} class="eventErr" {% endif %}>
     <th>{{ event.event_id }}</th>

@@ -1,5 +1,5 @@
 import datetime
-import math
+from core.utils import distance
 
 from django.db.models.functions import Lower
 from django.utils import timezone
@@ -8,6 +8,10 @@ from django.db import models
 from django.utils.translation import gettext as _
 
 from bio_tables import models as bio_models
+
+import logging
+
+logger = logging.getLogger('dart')
 
 
 # Used to track a list of reusable names, should be extended to create separated tables
@@ -219,7 +223,7 @@ class Event(models.Model):
 
     @property
     def drift_distance(self):
-        actions = self.actions.order_by("date_time")
+        actions = self.actions.all()
         if not actions.exists():
             return ""
 
@@ -229,11 +233,8 @@ class Event(models.Model):
         if a1 == a2:
             return ""
 
-        lat1 = a1.latitude * math.pi / 180
-        lat2 = a2.latitude * math.pi / 180
-        lon = (a2.longitude - a1.longitude) * math.pi / 180
-        R = 6371e3
-        d = math.acos(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon)) * R
+        d = distance([a1.latitude, a1.longitude], [a2.latitude, a2.longitude])
+
         return round(d, 4)
 
     @property
@@ -281,24 +282,31 @@ class Action(models.Model):
 
     @property
     def drift_distance(self):
-        previous_action = self.event.actions.filter(pk__lt=self.pk).last()
-        if not previous_action:
-            return 0
+        previous_action = self.event.actions.filter(date_time__lt=self.date_time).last()
 
-        lat1 = previous_action.latitude * math.pi / 180
-        lat2 = self.latitude * math.pi / 180
-        lon = (self.longitude - previous_action.longitude) * math.pi / 180
-        R = 6371e3
-        d = math.acos(math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon)) * R
+        if not previous_action:
+            return ""
+
+        if previous_action == self:
+            return ""
+
+        d = distance([previous_action.latitude, previous_action.longitude], [self.latitude, self.longitude])
+
         return d
 
     @property
     def drift_time(self):
-        previous_action = self.event.actions.filter(pk__lt=self.pk).last()
+        previous_action = self.event.actions.filter(date_time__lt=self.date_time).last()
         if not previous_action:
             return 0
 
         return self.date_time - previous_action.date_time
+
+    def __str__(self):
+        return f'{self.pk}: {self.get_type_display()} - {self.date_time}'
+
+    class Meta:
+        ordering = ('date_time', )
 
 
 # In reality a sensor is physically attached to an instrument, but depending on a station's depth a sensor might be
