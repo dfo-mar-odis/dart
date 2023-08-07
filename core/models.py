@@ -176,8 +176,8 @@ class Event(models.Model):
     instrument = models.ForeignKey(Instrument, on_delete=models.DO_NOTHING, verbose_name=_("Instrument"),
                                    related_name="events")
 
-    sample_id = models.IntegerField(verbose_name=_("Sample ID"), null=True, blank=True)
-    end_sample_id = models.IntegerField(verbose_name=_("End Sample ID"), null=True, blank=True)
+    sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
+    end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
     @property
     def files(self):

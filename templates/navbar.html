@@ -1,9 +1,9 @@
 {% load bootstrap_icons %}
 
-<nav class="navbar navbar-expand-sm {% if theme == "dark" %}navbar-dark bg-body-tertiary{% else %}navbar-light bg-light{% endif %}">
+<nav class="navbar navbar-expand-lg navbar-expand-sm {% if theme == "dark" %}navbar-dark bg-body-tertiary{% else %}navbar-light bg-light{% endif %}">
 
-  <div class="d-flex" id="navbarSupportedContent">
-    <ul class="navbar-nav">
+  <div class="container-fluid">
+    <ul class="navbar-nav me-autocollapse navbar-collapse">
     {% block header_buttons %}
         {% if home_url %}
         <li class="nav-item ms-2">
@@ -15,12 +15,14 @@
         </li>
     {% endblock %}
     </ul>
-    {% if settings_url %}
     <ul class="navbar-nav ms-auto">
+    {% block nav_button_block %}
+        {% if settings_url %}
         <li class="nav-item me-2">
             <a class="btn btn-primary" href="{{ settings_url }}">{% custom_icon 'gear' %}</a>
         </li>
+        {% endif %}
+    {% endblock %}
     </ul>
-    {% endif %}
   </div>
 </nav>

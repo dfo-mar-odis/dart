@@ -89,24 +89,54 @@ class EventUpdateView(EventMixin, GenericTemplateView):
         return context
 
 
-# This hx call assumes the form is on a Django view that has already laid out the page.
-# The method's job is to update the existing content on the page
-def hx_update_event(request, mission_id, event_id):
+def hx_event_select(request, event_id):
+    event = models.Event.objects.get(pk=event_id)
+
     context = {}
+    context['object'] = event.mission
+    context['selected_event'] = event
+    if not event.files:
+        context['form'] = forms.EventForm(instance=event)
+        context['actionform'] = forms.ActionForm(initial={'event': event.pk})
+        context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
+
+    response = HttpResponse(render_block_to_string('core/mission_events.html', 'selected_event_details', context))
+    response['HX-Trigger'] = 'selected_event_updated'
+    return response
+
+
+def hx_event_new_delete(request, mission_id, event_id):
+
+    context = {}
+    context.update(csrf(request))
 
     if request.method == "GET":
-        if mission_id != 0 and event_id == 0:
-            context['form'] = forms.EventForm(initial={'mission': mission_id})
-            response = HttpResponse(render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
-            return response
-        else:
+        # called with no event id to create a blank instance of the event_edit_form
+        context['form'] = forms.EventForm(initial={'mission': mission_id})
+        response = HttpResponse(
+            render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
+        return response
+    elif request.method == "POST":
+        if event_id:
             event = models.Event.objects.get(pk=event_id)
-            context['event'] = event
-            context['form'] = forms.EventForm(instance=event)
-            context['actionform'] = forms.ActionForm(initial={'event': event.pk})
-            context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
-            response = HttpResponse(render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
+            context['object'] = event.mission
+            event.delete()
+            response = HttpResponse(render_block_to_string('core/mission_events.html', 'content', context=context))
             return response
+
+
+def hx_event_update(request, event_id):
+    context = {}
+    context.update(csrf(request))
+
+    if request.method == "GET":
+        event = models.Event.objects.get(pk=event_id)
+        context['event'] = event
+        context['form'] = forms.EventForm(instance=event)
+        context['actionform'] = forms.ActionForm(initial={'event': event.pk})
+        context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
+        response = HttpResponse(render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
+        return response
     if request.method == "POST":
         mission_id = request.POST['mission']
         event_id = request.POST['event_id']
@@ -167,7 +197,7 @@ def hx_update_action(request, action_id):
         return response
     elif request.method == "POST":
         action.delete()
-        response = HttpResponse(render_block_to_string('core/partials/action_table.html', 'action_table',
+        response = HttpResponse(render_block_to_string('core/partials/table_action.html', 'action_table',
                                                        context=context))
         return response
 
@@ -234,7 +264,7 @@ def hx_update_attachment(request, action_id):
         return response
     elif request.method == "POST":
         attachment.delete()
-        response = HttpResponse(render_block_to_string('core/partials/attachment_table.html', 'attachments_table',
+        response = HttpResponse(render_block_to_string('core/partials/table_attachment.html', 'attachments_table',
                                                        context=context))
         return response
 
@@ -280,14 +310,14 @@ def hx_new_attachment(request):
 def hx_list_action(request, event_id, editable=False):
     event = models.Event.objects.get(pk=event_id)
     context = {'event': event, 'editable': editable}
-    response = HttpResponse(render_block_to_string('core/partials/action_table.html', 'action_table', context=context))
+    response = HttpResponse(render_block_to_string('core/partials/table_action.html', 'action_table', context=context))
     return response
 
 
 def hx_list_attachment(request, event_id, editable=False):
     event = models.Event.objects.get(pk=event_id)
     context = {'event': event, 'editable': editable}
-    response = HttpResponse(render_block_to_string('core/partials/attachment_table.html', 'attachments_table',
+    response = HttpResponse(render_block_to_string('core/partials/table_attachment.html', 'attachments_table',
                                                    context=context))
     return response
 

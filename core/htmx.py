@@ -230,15 +230,6 @@ def upload_elog(request, mission_id):
     return response
 
 
-def select_event(request, mission_id, event_id):
-    mission = models.Mission.objects.get(pk=mission_id)
-    event = models.Event.objects.get(pk=event_id)
-
-    context = {'object': mission, 'selected_event': event}
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'selected_event_details', context))
-    return response
-
-
 def get_mission_elog_errors(mission):
     errors = mission.file_errors.filter(file_name__iendswith='.log').order_by('file_name')
     files = errors.values_list('file_name').distinct()

@@ -4,7 +4,8 @@
 {% load crispy_forms_tags %}
 {% load humanize %}
 
-<div id="div_event_content_id" hx-trigger="load" hx-get="{% url 'core:hx_update_event' event.pk %}">
+<div id="div_event_content_id">
+{#    hx-swap="outerHTML" hx-trigger="load" hx-get="{% url 'core:hx_event_update' event.pk %}">#}
 {% block event_content %}
     {% block event_block %}
         {% if event %}
@@ -21,6 +22,11 @@
         <form id="event_form_id">
         {% if form %}
         {% crispy form %}
+        {% if event.total_samples %}
+            {% trans "Total Bottles : " %} {{ event.total_samples }}
+        {% endif %}
+            {% else %}
+            No form
         {% endif %}
         </form>
     {% endblock %}
@@ -48,7 +54,7 @@
         <div class="row">
             <div class="col">
                 <div class="table table-striped" hx-trigger="update_actions from:body" hx-get="{% url 'core:hx_action_list' event.pk 'True' %}">
-                    {% include 'core/partials/action_table.html' with editable=True %}
+                    {% include 'core/partials/table_action.html' with editable=True %}
                 </div>
             </div>
         </div>
@@ -77,7 +83,7 @@
         <div class="row">
             <div class="col">
                 <div class="table table-striped" hx-trigger="update_attachments from:body" hx-get="{% url 'core:hx_attachment_list' event.pk 'True' %}">
-                    {% include 'core/partials/attachment_table.html' with editable=True %}
+                    {% include 'core/partials/table_attachment.html' with editable=True %}
                 </div>
             </div>
         </div>

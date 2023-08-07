@@ -1,10 +1,17 @@
-{% extends 'generic_details.html' %}
+{% extends 'base.html' %}
 {% load i18n %}
 {% load bootstrap5 %}
 {% load bootstrap_icons %}
 
+{% block nav_button_block %}
+    <li class="nav-item me-2">
+        <a href="" class="btn btn-primary" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
+    </li>
+    {{ block.super }}
+{% endblock %}
+
 {% block content %}
-<div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="row">
         <div id="div_events_id" class="col">
             <div class="card">
@@ -23,31 +30,40 @@
                         <input id="event_file_input_id" type="file" name="event" accept=".log" multiple="true" class="invisible"/>
                     </form>
                     {% endblock %}
-                    <div id="div_event_list_id" class="vertical-scrollbar" hx-trigger="load, event_updated from:body"
+                    <div id="div_event_list_id" class="vertical-scrollbar" hx-trigger="event_updated from:body"
                             hx-get="{% url 'core:hx_event_list' object.pk %}">
-                    {% block event_list %}
-                        {% include 'core/partials/table_event.html' %}
-                    {% endblock %}
+                        {% include 'core/partials/table_event.html' with mission=object%}
                     </div>
                 </div>
             </div>
         </div>
-        {% block selected_event_details %}
         <div id="div_event_details_id" class="col">
+        {% block selected_event_details %}
             <div class="card">
                 <div class="card-header">
                     <div class="row">
                         <div class="card-title col">{% trans "Event Detials" %}</div>
+                        {% if selected_event %}
                         <div class="col-1">
-                            <button hx-on="click: update_selected({{ 0 }})" hx-target="#div_event_content_id" hx-get="{% url 'core:hx_event_new' mission_id=object.pk %}" class="btn btn-primary" title="{% trans "Add" %}">{% custom_icon 'plus-square' %}</button></div>
-                        {% if selected_event and not selected_event.files %}
-                        <div class="col-1 me-3"><a class="btn btn-primary" title="{% trans "Edit" %}" href="{% url 'core:event_edit' selected_event.pk %}">{% custom_icon 'pencil-square' %}</a></div>
+                            <button class="btn btn-danger" title="{% trans "Delete" %}"
+                                    hx-on="click: update_selected({{ 0 }})"
+                                    hx-target="#div_content_block_id"
+                                    hx-swap="outerHTML"
+                                    hx-post="{% url 'core:hx_event_delete' selected_event.pk %}">{% custom_icon 'dash-square' %}</button>
+                        </div>
                         {% endif %}
+                        <div class="col-1 me-3">
+                            <button class="btn btn-primary" title="{% trans "Add" %}"
+                                    hx-on="click: update_selected({{ 0 }})"
+                                    hx-target="#div_event_content_id"
+                                    hx-get="{% url 'core:hx_event_new' mission_id=object.pk %}">{% custom_icon 'plus-square' %}</button>
+                        </div>
                     </div>
                </div>
                 <div class="card-body">
-                    <div id="div_selected_event_id" class="vertical-scrollbar">
-                        <div id="div_event_content_id">
+                    <div class="vertical-scrollbar">
+                    {% block event_details_block %}
+                    <div id="div_event_content_id">
                     {% if selected_event %}
                         {% if selected_event.files %}
                         {% include 'core/partials/event_details.html' with event=selected_event %}
@@ -55,12 +71,13 @@
                         {% include 'core/partials/event_edit_form.html' with event=selected_event %}
                         {% endif %}
                     {% endif %}
-                        </div>
+                    </div>
+                    {% endblock %}
                     </div>
                 </div>
             </div>
-        </div>
         {% endblock %}
+        </div>
     </div>
     <div class="row mt-2" hx-ext="ws" ws-connect="/ws/notifications/">
         <div id="div_notifications_id" class="col">

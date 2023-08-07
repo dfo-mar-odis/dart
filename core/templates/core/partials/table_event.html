@@ -9,10 +9,12 @@
     </thead>
     <tbody>
     {% for event in mission.events.all %}
-        <tr id="event-{{ event.event_id }}" hx-swap="outerHTML"
-            hx-get="{% url 'core:hx_select_event' mission.pk event.pk %}" hx-swap="outerHTML"
-            hx-target="#div_event_details_id" hx-on="click: update_selected({{ event.event_id }})"
-            {% if event.validation_errors.all %} class="eventErr" {% endif %}>
+        <tr id="event-{{ event.pk }}"
+            {% if event.validation_errors.all %}class="eventErr"{% endif %}
+            hx-get="{% url 'core:hx_event_select' event.pk %}"
+            hx-target="#div_event_details_id"
+            hx-on="click: update_selected({{ event.pk }})"
+        >
             <th>{{ event.event_id }}</th>
             <td>{{ event.station.name }}</td>
             <td>{{ event.instrument }}</td>

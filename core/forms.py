@@ -2,7 +2,7 @@ import datetime
 import re
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field, Reset
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field, Reset, HTML
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
@@ -172,23 +172,25 @@ class EventForm(forms.ModelForm):
         self.helper.form_tag = False
 
         submit_label = 'Submit'
-        submit_url = reverse_lazy('core:hx_update_event')
+        submit_url = reverse_lazy('core:hx_event_update')
+        target_id = "#div_event_content_id"
 
         event_element = Column(Field('event_id', css_class='form-control-sm'))
         if self.instance.pk:
             event_element = Hidden('event_id', self.instance.event_id)
             submit_label = 'Update'
+            target_id = "#event_form_id"
 
         submit = Submit('submit', submit_label, css_id='event_form_button_id', css_class='btn-sm input-group-append',
-                        hx_post=submit_url, hx_target="#div_event_content_id")
+                        hx_post=submit_url, hx_target=target_id)
         self.helper.layout = Layout(
             Hidden('mission', self.initial['mission'] if 'mission' in self.initial else kwargs['initial']['mission']),
             Row(
                 event_element,
-                Column(Field('station', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md'),
-                Column(Field('instrument', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md'),
-                Column(Field('sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md'),
-                Column(Field('end_sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md'),
+                Column(Field('station', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md-6'),
+                Column(Field('instrument', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md-6'),
+                Column(Field('sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md-6'),
+                Column(Field('end_sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md-6'),
                 Column(submit, css_class='col-sm-12 col-md align-self-center mt-3'),
                 css_class="input-group input-group-sm"
             )
