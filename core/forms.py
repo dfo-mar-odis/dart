@@ -2,7 +2,7 @@ import datetime
 import re
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field, Reset, HTML
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field, Reset, HTML, Div
 from django import forms
 from django.core.exceptions import ValidationError
 from django.forms import inlineformset_factory
@@ -102,13 +102,13 @@ class ActionForm(forms.ModelForm):
                 Column(submit_button, clear_button, css_class='col-sm'),
                 css_class="input-group"
             ),
-            Row(Column(Field('comment', css_class='form-control-sm', placeholder=_('Comment'))), css_class='input-group')
+            Row(Column(Field('comment', css_class='form-control-sm', placeholder=_('Comment'))),
+                css_class='input-group')
         )
         self.helper.form_show_labels = False
 
 
 class AttachmentForm(forms.ModelForm):
-
     class Meta:
         model = models.InstrumentSensor
         fields = ['id', 'event', 'name']
@@ -149,8 +149,6 @@ class AttachmentForm(forms.ModelForm):
 
 
 class EventForm(forms.ModelForm):
-    initial_fields = ['mission', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
-
     class Meta:
         model = models.Event
         fields = ['mission', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
@@ -193,5 +191,60 @@ class EventForm(forms.ModelForm):
                 Column(Field('end_sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md-6'),
                 Column(submit, css_class='col-sm-12 col-md align-self-center mt-3'),
                 css_class="input-group input-group-sm"
+            )
+        )
+
+
+class MissionSearchForm(forms.Form):
+
+    STATION_CHOICES = [(None, '--------')] + [(s.pk, s) for s in models.Station.objects.all()]
+    INSTRUMENT_CHOICES = [(None, '--------')] + [(i.pk, i) for i in models.Instrument.objects.all()]
+    ACTION_TYPE_CHOICES = [(None, '--------')] + [(a[0], a[1]) for a in models.ActionType.choices]
+    mission = forms.IntegerField(label=_("Mission"), required=True)
+    event_start = forms.IntegerField(label=_("Event Start"), required=False,
+                                     help_text=_("Finds a single event unless Event End is specified"))
+    event_end = forms.IntegerField(label=_("Event End"), required=False)
+
+    station = forms.ChoiceField(label=_("Station"), choices=STATION_CHOICES, required=False)
+    instrument = forms.ChoiceField(label=_("Instrument"), choices=INSTRUMENT_CHOICES, required=False)
+    action_type = forms.ChoiceField(label=_("Action"), choices=ACTION_TYPE_CHOICES, required=False)
+
+    sample_start = forms.IntegerField(label=_("Sample Start"), help_text=_("Finds events containing a single "
+                                                                           "Sample ID"), required=False)
+    sample_end = forms.IntegerField(label=_("Sample end"), required=False,
+                                    help_text=_("Used with Sample start to Find events containing a range of "
+                                                "Sample IDs"))
+
+    class Meta:
+        model = models.Event
+        fields = ['mission', 'event_start', 'event_end', 'station', 'instrument', 'action_type',
+                  'sample_start', 'sample_end']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if 'initial' in kwargs and 'mission' in kwargs['initial']:
+            self.fields['mission'].initial = kwargs['initial']['mission']
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(
+            Hidden('mission', 'mission'),
+            Div(
+                Row(
+                    Column(Field('event_start', css_class='form-control form-control-sm')),
+                    Column(Field('event_end', css_class='form-control form-control-sm')),
+                    css_class="justify-content-between"
+                ),
+                Row(
+                    Column(Field('sample_start', css_class='form-control form-control-sm'), css_class="col-6"),
+                    Column(Field('sample_end', css_class='form-control form-control-sm'), css_class="col-6"),
+                ),
+                Row(
+                    Column(Field('station', css_class='form-control form-select-sm'), css_class="col-4"),
+                    Column(Field('instrument', css_class='form-control form-select-sm'), css_class="col-4"),
+                    Column(Field('action_type', css_class='form-control form-select-sm'), css_class="col-4"),
+                )
             )
         )

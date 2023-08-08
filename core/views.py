@@ -61,31 +61,11 @@ class EventDetails(MissionMixin, GenericDetailView):
     def get_settings_url(self):
         return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
 
-
-# We get different data from kwargs depending on if this is a view to
-# create a new event or a view to update an existing event
-# so we have respective EventCreate and EventUpdate views
-class EventCreateView(EventMixin, GenericTemplateView):
-    template_name = "core/event_settings.html"
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['form'] = forms.EventForm(initial={'mission': self.kwargs['mission_id']})
 
-        return context
-
-
-class EventUpdateView(EventMixin, GenericTemplateView):
-    template_name = "core/event_settings.html"
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        event = models.Event.objects.get(pk=self.kwargs['event_id'])
-        context['event'] = event
-        context['form'] = forms.EventForm(instance=event)
-        context['actionform'] = forms.ActionForm(initial={'event': event.pk})
-        context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
-
+        context['search_form'] = forms.MissionSearchForm(initial={'mission': self.object.pk})
+        context['events'] = self.object.events.all()
         return context
 
 
@@ -121,7 +101,9 @@ def hx_event_new_delete(request, mission_id, event_id):
             event = models.Event.objects.get(pk=event_id)
             context['object'] = event.mission
             event.delete()
-            response = HttpResponse(render_block_to_string('core/mission_events.html', 'content', context=context))
+            response = HttpResponse(render_block_to_string('core/mission_events.html', 'content_details_block',
+                                                           context=context))
+            response['HX-Trigger-After-Swap'] = 'event_updated'
             return response
 
 
@@ -164,7 +146,7 @@ def hx_event_update(request, event_id):
             else:
                 # if creating a new event, update the entire event block to add other blocks to the page
                 response = HttpResponse(render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
-                response['HX-Trigger'] = "event_updated"
+                response['HX-Trigger-After-Swap'] = "event_updated"
                 # response['HX-Push-Url'] = reverse_lazy('core:event_edit', args=(event.pk,))
             return response
 
@@ -324,7 +306,41 @@ def hx_list_attachment(request, event_id, editable=False):
 
 def hx_list_event(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
-    context = {'mission': mission}
+    events = mission.events.all()
+    if request.method == 'GET':
+        if 'station' in request.GET and request.GET['station']:
+            events = events.filter(station=request.GET['station'])
+
+        if 'instrument' in request.GET and request.GET['instrument']:
+            events = events.filter(instrument=request.GET['instrument'])
+
+        if 'action_type' in request.GET and request.GET['action_type']:
+            events = events.filter(actions__type=request.GET['action_type'])
+
+        if 'event_start' in request.GET and request.GET['event_start']:
+            start_id = request.GET['event_start']
+
+            if 'event_end' in request.GET and request.GET['event_end']:
+                end_id = request.GET['event_end']
+                events = events.filter(event_id__lte=end_id, event_id__gte=start_id)
+            else:
+                events = events.filter(event_id=start_id)
+        elif 'event_end' in request.GET and request.GET['event_end']:
+            end_id = request.GET['event_end']
+            events = events.filter(event_id=end_id)
+
+        if 'sample_start' in request.GET and request.GET['sample_start']:
+            start_id = request.GET['sample_start']
+            if 'sample_end' in request.GET and request.GET['sample_end']:
+                end_id = request.GET['sample_end']
+                events = events.filter(sample_id__lte=end_id, end_sample_id__gte=start_id)
+            else:
+                events = events.filter(sample_id__lte=start_id, end_sample_id__gte=start_id)
+        elif 'sample_end' in request.GET and request.GET['sample_end']:
+            end_id = request.GET['sample_end']
+            events = events.filter(sample_id__lte=end_id, end_sample_id__gte=end_id)
+
+    context = {'mission': mission, 'events': events}
     response = HttpResponse(render_block_to_string('core/partials/table_event.html', 'event_table',
                                                    context=context))
     return response

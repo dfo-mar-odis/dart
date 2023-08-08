@@ -12,7 +12,6 @@ urlpatterns = [
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
-    path('mission/event/update/<int:event_id>/', views.EventUpdateView.as_view(), name="event_edit"),
 
     path('mission/event/hx/new/', views.hx_event_update, name="hx_event_new"),
     path('mission/event/hx/new/<int:mission_id>/', views.hx_event_new_delete, kwargs={'event_id': 0}, name="hx_event_new"),
