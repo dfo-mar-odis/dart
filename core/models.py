@@ -1,4 +1,6 @@
 import datetime
+
+import bio_tables.models
 from core.utils import distance
 
 from django.db.models.functions import Lower
@@ -342,6 +344,78 @@ class ErrorType(models.IntegerChoices):
     missing_id = 1, "Missing ID"
     missing_value = 2, "Missing Value"
     validation = 3, "Validation Error"
+
+
+class Bottle(models.Model):
+    event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="bottles", on_delete=models.CASCADE)
+    date_time = models.DateTimeField(verbose_name=_("Fired Date/Time"))
+
+    # the bottle number is its order from 1 to N in a series of bottles as opposed tot he bottle ID which is the
+    # label placed on the bottle linking it to all samples that come from that bottle.
+    bottle_id = models.IntegerField(verbose_name=_("Bottle ID"))
+
+    # the bottle number will not be present if this is a RingNet event
+    bottle_number = models.IntegerField(verbose_name=_("Bottle Number"), blank=True, null=True)
+
+    pressure = models.FloatField(verbose_name=_("Pressure"), default=0.0)
+
+    # TODO: Add a location for where the bottle was fired, this data should come from the bottle file, but
+    #  if it's not present, it should be the same as the event's location data
+    latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
+    longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
+
+    class Meta:
+        unique_together = ['event', 'bottle_number']
+        ordering = ['bottle_id']
+
+
+class SampleType(models.Model):
+    short_name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20,
+                                  help_text=_("The column name of a sensor or a short name commonly "
+                                              "used for the sample"))
+    name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
+                            help_text=_("Short descriptive name for this type of sample/sensor"))
+    priority = models.IntegerField(verbose_name=_("Priority"), default=1)
+
+    units = models.CharField(verbose_name=_("Units of Measure"), max_length=30, null=True, blank=True)
+    comments = models.CharField(verbose_name=_("Comments"), max_length=255, null=True, blank=True)
+
+    # Datatype may not be known by the user at the time they need to create this sensor, but it will
+    # have to be specified before BioChem tables can be created
+    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+                                 blank=True, related_name='sample_types', on_delete=models.SET_NULL)
+
+    def __str__(self):
+        return self.short_name + (f" - {self.name}" if self.name else "")
+
+
+class Sample(models.Model):
+    bottle = models.ForeignKey(Bottle, verbose_name=_("Bottle"), on_delete=models.CASCADE, related_name='samples')
+    type = models.ForeignKey(SampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='samples')
+
+    file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
+
+
+class DiscreteSampleValue(models.Model):
+    sample = models.ForeignKey(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,
+                               related_name='discrete_values')
+    replicate = models.IntegerField(verbose_name=_("Replicate #"), default=1,
+                                    help_text=_("Replicates occur when there are multiple samples of the same type "
+                                                "form the same bottle."))
+    value = models.FloatField(verbose_name=_("Value"))
+    flag = models.IntegerField(verbose_name=_("Data Quality Flag"), null=True, blank=True)
+
+    # Individual samples can have different datatype than the general datatype provided by the
+    # sample type. If this is blank the sample.type.datatype value should be used for the sample
+    sample_datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+                                        blank=True, on_delete=models.SET_NULL)
+
+    @property
+    def datatype(self):
+        return self.sample_datatype if self.sample_datatype else self.sample.type.datatype
 
 
 class AbstractError(models.Model):

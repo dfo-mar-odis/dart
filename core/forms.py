@@ -248,3 +248,50 @@ class MissionSearchForm(forms.Form):
                 )
             )
         )
+
+
+class NewSampleForm(forms.Form):
+
+    sample_name = forms.CharField(label=_('Sample Name'))
+
+    class Meta:
+        fields = ['sample_name']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(
+            Row(
+                Column(Field('sample_name', css_class='form-control form-control-sm'))
+            )
+        )
+
+
+class BottleSelection(forms.Form):
+    bottle_dir = forms.FileField(label=_("Bottle Directory"), required=True)
+    file_name = forms.MultipleChoiceField(label=_("File"), required=False)
+
+    class Meta:
+        fields = ['bottle_dir', 'file_name']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if 'initial' in kwargs and 'file_name' in kwargs['initial']:
+            self.fields['file_name'].choices = ((f, f,) for f in kwargs['initial']['file_name'])
+
+        self.helper = FormHelper(self)
+        # self.helper.form_tag = False
+        self.helper.attrs = {
+            "hx_post": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],))
+        }
+
+        self.helper.layout = Layout(
+            Hidden('bottle_dir', kwargs['initial']['bottle_dir']),
+            Row(Column('file_name')),
+        )
+
+        self.helper.add_input(Submit('submit', _("Submit")))

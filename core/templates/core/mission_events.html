@@ -7,18 +7,17 @@
 {% block nav_button_block %}
     <li class="nav-item me-2">
         <div class="btn btn-info col-auto" data-bs-toggle="collapse"
-             href="#search_form">{% custom_icon 'search' %}</div>
-        <div class="row">
+             href="#div_mission_search">{% custom_icon 'search' %}</div>
     </li>
     <li class="nav-item me-2">
-        <a href="" class="btn btn-primary" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
+        <a href="{% url 'core:sample_details' object.pk %}" class="btn btn-primary" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     {{ block.super }}
 {% endblock %}
 
 {% block content %}
     <div class="mb-2">
-        <div class="collapse col" id="search_form">
+        <div class="collapse col" id="div_mission_search">
             <div class="card">
                 <div class="card-body">
                     <div class="" hx-get="{% url 'core:hx_event_list' object.pk %}"
@@ -42,7 +41,6 @@
                     </div>
                 </div>
             </div>
-        </div>
         </div>
     </div>
     {% block content_details_block %}

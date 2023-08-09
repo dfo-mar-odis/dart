@@ -99,3 +99,16 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
             validation_errors.append(err)
 
     return validation_errors
+
+
+def validate_bottle_sample_range(event: core_models.Event, bottle_id: int) -> \
+        list[core_models.ValidationError]:
+    errors = []
+    if event.instrument.type == core_models.InstrumentType.ctd and \
+            (bottle_id > event.end_sample_id or bottle_id < event.sample_id):
+        message = f"Warning: Bottle ID ({bottle_id}) for event {event.event_id} " \
+                  f"is outside the ID range {event.sample_id} - {event.end_sample_id}"
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.missing_id)
+        errors.append(err)
+
+    return errors

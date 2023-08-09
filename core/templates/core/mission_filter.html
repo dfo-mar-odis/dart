@@ -36,10 +36,7 @@
             <th class="col">Start Date</th>
             <th class="col">End Date</th>
             <th class="col">Biochem Table</th>
-            <th class="col">{# Events #}</th>
-            <th class="col-1">{# Samples #}</th>
-            <th class="col-1">{# mission details #}</th>
-            <th class="col-1">{# blank column separating delete btn from other btns #}</th>
+            <th class="col-2">{# mission details #}</th>
             <th class="col-1">{# delete #}</th>
         </tr>
         </thead>
@@ -52,17 +49,11 @@
                 <td>{{ mission.start_date }}</td>
                 <td>{{ mission.end_date }}</td>
                 <td>{{ mission.biochem_table }}</td>
-                <td><a class="btn btn-primary" href="{% url 'core:event_details' mission.id %}">{% trans 'Events' %}</a></td>
-                {#    <td><a class="btn btn-primary" href="{% url 'core:sample_details' o.id %}">{% trans 'Samples' %}</a></td>#}
                 <td>
-                    {#    {% if bio_chem_details_provided %}#}
-                    {#        <a class="btn btn-primary" href="{% url 'core:sample_uploads' o.id %}">{% trans 'BioChem' %}</a>#}
-                    {#    {% else %}#}
-                    {#        <button type="button" class="btn btn-secondary" onclick="window.alert('{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}')" title="{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}">{% trans 'BioChem' %}</button>#}
-                    {#    {% endif %}#}
+                    <a class="btn btn-primary" href="{% url 'core:mission_edit' mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+                    <a class="btn btn-primary" href="{% url 'core:event_details' mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
+                    <a class="btn btn-primary" href="{% url 'core:sample_details' mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
                 </td>
-                <td><a class="btn btn-primary" href="{% url 'core:mission_edit' mission.id %}">{% custom_icon 'gear' %}</a></td>
-                <td></td>
                 <td><button type="button" class="btn btn-danger"
                             hx-target="#mission_table" hx-post="{% url 'core:hx_mission_delete' mission.id %}"
                             hx-confirm="{% trans 'This will permanently delete the mission and all loaded data, are you sure?' %}">X</button></td>

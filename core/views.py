@@ -1,18 +1,17 @@
+import os
+
 from crispy_forms.templatetags.crispy_forms_filters import as_crispy_form
-from crispy_forms.utils import render_crispy_form
-from django.forms import model_to_dict
-from django.http import HttpResponse, HttpResponseRedirect
+from django.http import HttpResponse
 from django.template.context_processors import csrf
-from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 from render_block import render_block_to_string
 
 from biochem import models
-from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView, GenericViewMixin, \
-    GenericTemplateView
+from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
 
 from core import forms, filters, models, validation
+from core.parsers import ctd
 
 
 class MissionMixin:
@@ -343,4 +342,56 @@ def hx_list_event(request, mission_id):
     context = {'mission': mission, 'events': events}
     response = HttpResponse(render_block_to_string('core/partials/table_event.html', 'event_table',
                                                    context=context))
+    return response
+
+
+class SampleDetails(MissionMixin, GenericDetailView):
+    page_title = _("Mission Samples")
+    template_name = "core/mission_samples.html"
+
+    def get_settings_url(self):
+        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+
+        return context
+
+
+def hx_sample_form(request, mission_id):
+    context = {}
+    if request.method == "GET":
+        form = forms.NewSampleForm(initial={"sample_name": "test"})
+        response = HttpResponse(as_crispy_form(form))
+
+        return response
+
+    return None
+
+
+def hx_sample_upload_ctd(request, mission_id):
+    context = {}
+    context.update(csrf(request))
+
+    if request.method == "GET":
+        bottle_dir = request.GET['bottle_dir']
+        files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl')]
+        files.sort(key=lambda fn: os.path.getmtime(os.path.join(bottle_dir, fn)))
+        context['file_form'] = forms.BottleSelection(initial={'mission': mission_id,
+                                                              'bottle_dir': bottle_dir,
+                                                              'file_name': files})
+        html = render_block_to_string('core/mission_samples.html', 'ctd_list', context=context)
+        response = HttpResponse(html)
+        return response
+    elif request.method == "POST":
+        bottle_dir = request.POST['bottle_dir']
+        files = request.POST.getlist('file_name')
+        mission = models.Mission.objects.get(pk=mission_id)
+        for file_name in files:
+            file = os.path.join(bottle_dir, file_name)
+            ctd.read_btl(mission, file)
+
+        response = HttpResponse("Success!")
+        return response
+    response = HttpResponse("Hi!")
     return response

@@ -11,12 +11,16 @@ urlpatterns = [
     path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
+    path('mission/sample/<int:pk>/', views.SampleDetails.as_view(), name="sample_details"),
+    path('mission/sample/form/<int:mission_id>/', views.hx_sample_form, name="hx_sample_form"),
+    path('mission/sample/ctd/<int:mission_id>/', views.hx_sample_upload_ctd, name="hx_sample_upload_ctd"),
+
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
 
     path('mission/event/hx/new/', views.hx_event_update, name="hx_event_new"),
     path('mission/event/hx/new/<int:mission_id>/', views.hx_event_new_delete, kwargs={'event_id': 0}, name="hx_event_new"),
-    path('mission/event/hx/select/<int:event_id>/', views.hx_event_select, name="hx_event_select"),
     path('mission/event/hx/delete/<int:event_id>', views.hx_event_new_delete, kwargs={'mission_id': 0}, name="hx_event_delete"),
+    path('mission/event/hx/select/<int:event_id>/', views.hx_event_select, name="hx_event_select"),
     path('mission/event/hx/update/', views.hx_event_update, kwargs={'event_id': 0}, name="hx_event_update"),
     path('mission/event/hx/update/<int:event_id>/', views.hx_event_update, name="hx_event_update"),
     path('mission/event/hx/list/<int:mission_id>/', views.hx_list_event, name="hx_event_list"),
