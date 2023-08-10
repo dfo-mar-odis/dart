@@ -39,11 +39,11 @@
     {% block header_buttons %}
         {% if home_url %}
         <li class="nav-item ms-2">
-            <a class="btn btn-primary" href="{{ home_url }}">{% custom_icon 'house' %}</a>
+            <a class="btn btn-primary" href="{{ home_url }}" title="{% trans "Missions" %}">{% custom_icon 'house' %}</a>
         </li>
         {% endif %}
-      <li class="nav-item ms-2">
-            <a class="btn btn-primary" href="{% url 'docs:index' %}">{% custom_icon 'question-circle' %}</a>
+        <li class="nav-item ms-2">
+            <a class="btn btn-primary" href="{% url 'docs:index' %}" title="{% trans "Help" %}">{% custom_icon 'question-circle' %}</a>
         </li>
     {% endblock %}
     </ul>

@@ -55,6 +55,7 @@ REGISTERED_APPS = REQUIRED_APPS + [
 # Application definition
 INSTALLED_APPS = [
     'daphne',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -232,8 +233,8 @@ LOGGERS = (
         },
         "dart": {
             "handlers": ["console", "error_handler"],
-            "level": "WARNING",
-            "propagate": True
+            "level": "INFO",
+            "propagate": False
         },
         "dart.debug": {
             "handlers": ["console", "info_handler", "error_handler"],

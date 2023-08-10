@@ -1,17 +1,24 @@
 import os
+from bs4 import BeautifulSoup
 
-from crispy_forms.templatetags.crispy_forms_filters import as_crispy_form
+from django_pandas.io import read_frame
+
 from django.http import HttpResponse
 from django.template.context_processors import csrf
 from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 from render_block import render_block_to_string
 
+import dart2.utils
 from biochem import models
 from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
 
 from core import forms, filters, models, validation
 from core.parsers import ctd
+
+import logging
+
+logger = logging.getLogger('dart')
 
 
 class MissionMixin:
@@ -360,9 +367,15 @@ class SampleDetails(MissionMixin, GenericDetailView):
 
 def hx_sample_form(request, mission_id):
     context = {}
+    context.update(csrf(request))
+
     if request.method == "GET":
-        form = forms.NewSampleForm(initial={"sample_name": "test"})
-        response = HttpResponse(as_crispy_form(form))
+
+        datatype_filter = request.GET['datatype_filter'] if 'datatype_filter' in request.GET else None
+
+        context['sample_form'] = forms.NewSampleForm(initial={"mission": mission_id, 'datatype_filter': datatype_filter})
+        html = render_block_to_string('core/mission_samples.html', 'new_sample_form_block', context)
+        response = HttpResponse(html)
 
         return response
 
@@ -382,16 +395,175 @@ def hx_sample_upload_ctd(request, mission_id):
                                                               'file_name': files})
         html = render_block_to_string('core/mission_samples.html', 'ctd_list', context=context)
         response = HttpResponse(html)
+
+        mission = models.Mission.objects.get(pk=mission_id)
+        mission.bottle_directory = bottle_dir
+        mission.save()
+
         return response
     elif request.method == "POST":
         bottle_dir = request.POST['bottle_dir']
         files = request.POST.getlist('file_name')
         mission = models.Mission.objects.get(pk=mission_id)
         for file_name in files:
+            logger.info(f"Loading file {file_name}")
             file = os.path.join(bottle_dir, file_name)
             ctd.read_btl(mission, file)
 
         response = HttpResponse("Success!")
         return response
     response = HttpResponse("Hi!")
+    return response
+
+
+def hx_list_samples(request, **kwargs):
+    context = {}
+
+    page = int(request.GET['page'] if 'page' in request.GET else 0)
+    page_limit = 50
+    page_start = page_limit * page
+
+    mission_id = kwargs['mission_id']
+    sensor_id = kwargs['sensor_id'] if 'sensor_id' in kwargs else None
+
+    mission = models.Mission.objects.get(pk=mission_id)
+    bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[page_start:(page_start+page_limit)]
+    headings = []
+    if sensor_id:
+        queryset = models.Sample.objects.filter(type_id=sensor_id, bottle__in=bottle_limit)
+        queryset = queryset.order_by('bottle__bottle_id')
+        queryset = queryset.values(
+            'type__short_name', 'bottle__bottle_id', 'bottle__pressure', 'discrete_value__value',
+            'discrete_value__flag', 'discrete_value__sample_datatype'
+        )
+        headings = ['Flag', 'Datatype']
+        df = read_frame(queryset)
+        df.columns = ["Sensor", "Sample", "Pressure", "Value"] + headings
+
+    else:
+        queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
+        queryset = queryset.order_by('bottle__bottle_id')
+        queryset = queryset.values(
+            'type__short_name', 'bottle__bottle_id', 'bottle__pressure', 'discrete_value__value'
+        )
+        df = read_frame(queryset)
+        df.columns = ["Sensor", "Sample", "Pressure", "Value"]
+
+    if not queryset.exists():
+        soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
+        response = HttpResponse(soup)
+        return response
+
+    df = df.pivot(index=['Sample', 'Pressure'], columns='Sensor')
+    # df = df.groupby(["Sample", 'Sensor']).count().reset_index()
+    html = df.to_html(classes=['table', 'table-striped', 'tscroll'])
+
+    # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
+    soup = BeautifulSoup(html, 'html.parser')
+    soup.find('table').attrs['id'] = "sample_table"
+
+
+    # remove the first table row pandas adds for the "Value" column header
+    soup.find("thead").find("tr").decompose()
+
+    # This row contains the headers we action want... Except for the 'Sensor' header
+    # fix the headers, then remove the 'index' table row
+    sensor_headers = soup.find("thead").find("tr")
+    index_headers = soup.find("thead").find("tr").find_next("tr")
+
+    column = sensor_headers.find('th')
+    index = index_headers.find('th')
+
+    column.string = index.string
+
+    column = column.find_next_sibling('th')
+    index = index.find_next_sibling('th')
+
+    column.string = index.string
+
+    index_headers.decompose()
+
+    column = column.find_next_sibling('th')
+    if sensor_id:
+        # if the sensor_id is present then we want to show the specific details for this sensor/sample
+        short_name = column.string
+        sensor = models.SampleType.objects.get(short_name=short_name)
+        sensor_row = soup.new_tag("tr")
+
+        td_back = soup.new_tag("td")
+        back_button = soup.new_tag('button')
+        svg = dart2.utils.load_svg('arrow-left-square')
+        icon = BeautifulSoup(svg, 'html.parser').svg
+
+        # create a button so the user can go back to viewing all loaded sensors/samples
+        back_button.attrs['class'] = 'btn btn-primary'
+        back_button.attrs['hx-trigger'] = 'click'
+        back_button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id,))
+        back_button.attrs['hx-target'] = "#sample_table"
+        back_button.attrs['hx-swap'] = 'outerHTML'
+        back_button.append(icon)
+
+        td_back.append(back_button)
+        sensor_row.append(td_back)
+
+        th_data_type = soup.new_tag("th")
+        th_data_type.string = _("Sensor Datatype")
+        td_back.insert_after(th_data_type)
+
+        td_data_type_value = soup.new_tag("td")
+        td_data_type_value.string = str(sensor.datatype.pk) if sensor.datatype else _("None")
+        th_data_type.insert_after(td_data_type_value)
+
+        th_data_type_des = soup.new_tag("th")
+        th_data_type_des.string = _("Datatype Description")
+        td_data_type_value.insert_after(th_data_type_des)
+
+        td_data_type_des_value = soup.new_tag("td")
+        td_data_type_des_value.string = sensor.datatype.description if sensor.datatype else _("None")
+        th_data_type_des.insert_after(td_data_type_des_value)
+
+        sensor_headers.insert_before(sensor_row)
+
+        col_span = -1
+        # if we're looking at a sensor then keep the first column label, but change the next two
+        column = column.find_next_sibling('th')
+        for heading in headings:
+            column.string = _(heading)
+            column = column.find_next_sibling('th')
+            col_span += 1
+
+        td_data_type_des_value.attrs['colspan'] = col_span
+    else:
+        # now add htmx tags to the rest of the TH elements in the row so the user
+        # can click that row for details on the sensor
+        while column:
+            short_name = column.string
+            sampletype = models.SampleType.objects.get(short_name=short_name)
+            button = soup.new_tag("button")
+            button.string = short_name
+            column.string = ''
+            button.attrs['class'] = 'btn btn-primary'
+            button.attrs['hx-trigger'] = 'click'
+            button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
+            button.attrs['hx-target'] = "#sample_table"
+            button.attrs['hx-swap'] = 'outerHTML'
+            button.attrs['title'] = sampletype.name
+
+            column.append(button)
+
+            column = column.find_next_sibling('th')
+
+    # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
+    # of samples will be loaded into the table.
+    args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
+    last_tr = soup.find('tbody').find_all('tr')[-1]
+    last_tr.attrs['hx-target'] = 'this'
+    last_tr.attrs['hx-trigger'] = 'intersect once'
+    last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page+1}"
+    last_tr.attrs['hx-swap'] = "afterend"
+
+    if page > 0:
+        response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
+    else:
+        response = HttpResponse(soup)
     return response

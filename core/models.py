@@ -1,5 +1,7 @@
 import datetime
 
+from pandas import DataFrame
+
 import bio_tables.models
 from core.utils import distance
 
@@ -74,6 +76,12 @@ class Mission(models.Model):
     biochem_table = models.CharField(verbose_name=_("Root BioChem Table Name"), max_length=100, null=True, blank=True,
                                      help_text=_("How BioChem staging tables will be named without pre or post fixes. "
                                                  "If blank, mission descriptor will be used."))
+
+    # this is provided for convince so the user won't have to re-enter the directory repeatedly. It may differ based
+    # on being 'At-sea' where data is collected or on land where collected data is loaded to BioChem
+    bottle_directory = models.FilePathField(verbose_name=_("BTL Directory"),
+                                            help_text=_("Location of the .BTL/.ROS fiels to be loaded."),
+                                            null=True, blank=True)
 
     @property
     def get_biochem_table_name(self):
@@ -398,10 +406,13 @@ class Sample(models.Model):
 
     file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
 
+    def __str__(self):
+        return f'{self.type}: {self.bottle.bottle_id}'
+
 
 class DiscreteSampleValue(models.Model):
-    sample = models.ForeignKey(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,
-                               related_name='discrete_values')
+    sample = models.OneToOneField(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,
+                                  related_name='discrete_value')
     replicate = models.IntegerField(verbose_name=_("Replicate #"), default=1,
                                     help_text=_("Replicates occur when there are multiple samples of the same type "
                                                 "form the same bottle."))
@@ -416,6 +427,9 @@ class DiscreteSampleValue(models.Model):
     @property
     def datatype(self):
         return self.sample_datatype if self.sample_datatype else self.sample.type.datatype
+
+    def __str__(self):
+        return f'{self.sample}: {self.value}'
 
 
 class AbstractError(models.Model):

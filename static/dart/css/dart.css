@@ -1,9 +1,17 @@
+
+table.dataframe thead {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #FFF;
+}
+
 .tscroll {
     height: 400px;
     overflow: scroll;
 }
 
-.tscroll table thead th {
+.tscroll table thead {
     position: sticky;
     top: 0;
     z-index: 2;
@@ -28,12 +36,12 @@
 .vertical-scrollbar {
     position: relative;
     height: 400px;
-    overflow: auto;
+    overflow-y: scroll;
 }
 
 .horizontal-scrollbar {
     position: relative;
-    overflow: auto;
+    overflow-x: scroll;
 }
 
 span.spinner-border {

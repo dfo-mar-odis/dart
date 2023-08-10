@@ -2,13 +2,13 @@ import datetime
 import re
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Button, Field, Reset, HTML, Div
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div
 from django import forms
 from django.core.exceptions import ValidationError
-from django.forms import inlineformset_factory
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
+import bio_tables.models
 from . import models
 
 
@@ -197,17 +197,14 @@ class EventForm(forms.ModelForm):
 
 class MissionSearchForm(forms.Form):
 
-    STATION_CHOICES = [(None, '--------')] + [(s.pk, s) for s in models.Station.objects.all()]
-    INSTRUMENT_CHOICES = [(None, '--------')] + [(i.pk, i) for i in models.Instrument.objects.all()]
-    ACTION_TYPE_CHOICES = [(None, '--------')] + [(a[0], a[1]) for a in models.ActionType.choices]
     mission = forms.IntegerField(label=_("Mission"), required=True)
     event_start = forms.IntegerField(label=_("Event Start"), required=False,
                                      help_text=_("Finds a single event unless Event End is specified"))
     event_end = forms.IntegerField(label=_("Event End"), required=False)
 
-    station = forms.ChoiceField(label=_("Station"), choices=STATION_CHOICES, required=False)
-    instrument = forms.ChoiceField(label=_("Instrument"), choices=INSTRUMENT_CHOICES, required=False)
-    action_type = forms.ChoiceField(label=_("Action"), choices=ACTION_TYPE_CHOICES, required=False)
+    station = forms.ChoiceField(label=_("Station"), required=False)
+    instrument = forms.ChoiceField(label=_("Instrument"), required=False)
+    action_type = forms.ChoiceField(label=_("Action"), required=False)
 
     sample_start = forms.IntegerField(label=_("Sample Start"), help_text=_("Finds events containing a single "
                                                                            "Sample ID"), required=False)
@@ -221,7 +218,15 @@ class MissionSearchForm(forms.Form):
                   'sample_start', 'sample_end']
 
     def __init__(self, *args, **kwargs):
+        STATION_CHOICES = [(None, '--------')] + [(s.pk, s) for s in models.Station.objects.all()]
+        INSTRUMENT_CHOICES = [(None, '--------')] + [(i.pk, i) for i in models.Instrument.objects.all()]
+        ACTION_TYPE_CHOICES = [(None, '--------')] + [(a[0], a[1]) for a in models.ActionType.choices]
+
         super().__init__(*args, **kwargs)
+
+        self.fields['station'].choices = STATION_CHOICES
+        self.fields['instrument'].choices = INSTRUMENT_CHOICES
+        self.fields['action_type'].choices = ACTION_TYPE_CHOICES
 
         if 'initial' in kwargs and 'mission' in kwargs['initial']:
             self.fields['mission'].initial = kwargs['initial']['mission']
@@ -250,22 +255,48 @@ class MissionSearchForm(forms.Form):
         )
 
 
-class NewSampleForm(forms.Form):
+class NewSampleForm(forms.ModelForm):
 
-    sample_name = forms.CharField(label=_('Sample Name'))
+    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False)
 
     class Meta:
-        fields = ['sample_name']
+        model = models.SampleType
+        fields = ['short_name', 'name', 'priority', 'datatype', 'datatype_filter']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+        mission_id = kwargs['initial']['mission']
         self.helper = FormHelper(self)
-        self.helper.form_tag = False
+        self.helper.attrs = {
+            "hx_post": reverse_lazy("core:hx_sample_upload_ctd", args=(mission_id,))
+        }
 
+        if 'datatype_filter' in kwargs['initial'] and kwargs['initial']['datatype_filter']:
+            filter = kwargs['initial']['datatype_filter']
+            self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in bio_tables.models.BCDataType.objects.filter(
+                description__icontains=filter
+            )]
+
+        datatype_filter = Field('datatype_filter', css_class='form-control form-control-sm')
+        datatype_filter.attrs = {
+            "hx-get": reverse_lazy('core:hx_sample_form', args=(mission_id,)),
+            "hx-target": "#div_id_datatype",
+            "hx-select": "#div_id_datatype",
+            "hx-trigger": "keyup changed delay:2s",
+            "hx-swap": 'outerHTML'
+        }
         self.helper.layout = Layout(
             Row(
-                Column(Field('sample_name', css_class='form-control form-control-sm'))
+                Column(Field('short_name', css_class='form-control form-control-sm')),
+                Column(Field('name', css_class='form-control form-control-sm')),
+                Column(Field('priority', css_class='form-control form-control-sm')),
+            ),
+            Row(
+                Column(datatype_filter)
+            ),
+            Row(
+                Column(Field('datatype', css_class='form-control form-control-sm')),
             )
         )
 

@@ -11,7 +11,7 @@
     {#    </li>#}
     <li class="nav-item me-2">
         <div class="btn btn-info col-auto" data-bs-toggle="collapse"
-             href="#div_new_sample"
+             href="#div_new_sample" title="{% trans "Add Sample" %}"
              hx-target="#new_sample_form"
              hx-get="{% url "core:hx_sample_form" object.pk %}">{% custom_icon 'plus-square' %}</div>
     </li>
@@ -23,23 +23,23 @@
 {% endblock %}
 
 {% block content %}
-    <div id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="row" id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {% block new_sample_block %}
-            <div class="mb-2">
-                <div class="collapse col" id="div_new_sample">
-                    <div class="card">
-                        <div class="card-body">
-                            {% block new_sample_form_block %}
-                                <form id="new_sample_form" class="">
-                                    <input type="submit" name="submit" value="Submit" class="btn btn-primary"/>
-                                </form>
-                            {% endblock %}
-                        </div>
+        <div class="mb-2 col">
+            <div class="collapse col" id="div_new_sample">
+                <div class="card">
+                    <div id="new_sample_form" class="card-body">
+                        {% block new_sample_form_block %}
+                            {% if sample_form %}
+                                {% crispy sample_form %}
+                            {% endif %}
+                        {% endblock %}
                     </div>
                 </div>
             </div>
-            </div>
+        </div>
         {% endblock %}
+    </div>
 
     {% block ctd_block %}
         <div class="row">
@@ -49,12 +49,12 @@
                         <div class="row">
                             <div class="card-title col-1">{% trans "CTD" %}</div>
                                 {% block ctd_import_form %}
-                                    <form class="col" name="ctd_upload_file_form_id" id="ctd_upload_file_form_id"
+                                    <form class="col" id="ctd_upload_file_form_id"
                                           hx-target="#div_ctd_list_id"
                                           hx-get="{% url "core:hx_sample_upload_ctd" object.pk %}">
                                         {% csrf_token %}
                                         <span class="input-group col-auto">
-                                        <input class="input-group-sm form-control form-control-sm" type="text" name="bottle_dir"/>
+                                            <input class="input-group-sm form-control form-control-sm" type="text" name="bottle_dir" value="{% if object.bottle_directory %}{{ object.bottle_directory }}{% endif %}" placeholder="{% trans "Location of the .BTL/.ROS fiels to be loaded." %}"/>
                                             <button class="btn btn-secondary btn-sm" type="submit" title="{% trans "Upload" %}" >{% custom_icon 'arrow-clockwise' %}</button>
                                         </span>
                                     </form>
@@ -66,6 +66,10 @@
                             {% block ctd_list %}
                                 {% if file_form %}
                                     {% crispy file_form %}
+                                {% else %}
+                                    <div hx-target="#sample_table" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url 'core:hx_sample_list' mission.pk %}">
+                                    {% include 'core/partials/table_sample.html' with mission=object %}
+                                    </div>
                                 {% endif %}
                             {% endblock %}
                         </div>

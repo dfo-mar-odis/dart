@@ -60,6 +60,10 @@ pytz~=2022.6
 numpy~=1.23
 pandas~=1.5
 matplotlib~=3.6.2
+django-pandas==0.6.6
+
+# Post pandas to_html table styling
+beautifulsoup4
 
 # xlrd is for working with legacy excel (.xls) files
 xlrd==2.0.1

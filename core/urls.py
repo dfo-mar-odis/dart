@@ -14,6 +14,8 @@ urlpatterns = [
     path('mission/sample/<int:pk>/', views.SampleDetails.as_view(), name="sample_details"),
     path('mission/sample/form/<int:mission_id>/', views.hx_sample_form, name="hx_sample_form"),
     path('mission/sample/ctd/<int:mission_id>/', views.hx_sample_upload_ctd, name="hx_sample_upload_ctd"),
+    path('mission/sample/hx/list/<int:mission_id>', views.hx_list_samples, name="hx_sample_list"),
+    path('mission/sample/hx/list/<int:mission_id>/<int:sensor_id>', views.hx_list_samples, name="hx_sample_list"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
 
