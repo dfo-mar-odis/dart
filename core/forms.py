@@ -1,10 +1,12 @@
 import datetime
 import re
+import csv
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
 from django import forms
 from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
@@ -257,11 +259,22 @@ class MissionSearchForm(forms.Form):
 
 class NewSampleForm(forms.ModelForm):
 
-    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False)
+    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
+                                      help_text=_("Filter the Datatype field on key terms"))
+
+    sample_id_col = forms.ChoiceField(label=_("Sample ID"),
+                                      help_text=_("Choose the column to use for the sample/bottle id"))
+    sample_value_col = forms.ChoiceField(label=_("Sample Value"),
+                                         help_text=_("Choose the column to use for the value of the sample"))
+
+    skip_lines = forms.IntegerField(label=_("Skip Lines"),
+                                    help_text=_("Number of lines to skip to find the header column"))
+    file = forms.FileField(label=_("Data File"), required=False)
 
     class Meta:
         model = models.SampleType
-        fields = ['short_name', 'name', 'priority', 'datatype', 'datatype_filter']
+        fields = ['short_name', 'name', 'priority', 'datatype', 'datatype_filter', 'file', 'sample_id_col',
+                  'sample_value_col', 'skip_lines']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -269,14 +282,20 @@ class NewSampleForm(forms.ModelForm):
         mission_id = kwargs['initial']['mission']
         self.helper = FormHelper(self)
         self.helper.attrs = {
-            "hx_post": reverse_lazy("core:hx_sample_upload_ctd", args=(mission_id,))
+            "hx_post": reverse_lazy("core:hx_sample_form", args=(mission_id,)),
+            "hx_encoding": "multipart/form-data",
+            "hx_target": "this",
+            "hx_swap": "outerHTML"
         }
 
         if 'datatype_filter' in kwargs['initial'] and kwargs['initial']['datatype_filter']:
-            filter = kwargs['initial']['datatype_filter']
-            self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in bio_tables.models.BCDataType.objects.filter(
-                description__icontains=filter
-            )]
+            filter = kwargs['initial']['datatype_filter'].split(" ")
+            queryset = bio_tables.models.BCDataType.objects.all()
+            for term in filter:
+                queryset = queryset.filter(description__icontains=term)
+
+            queryset = queryset.order_by('priority')
+            self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in queryset]
 
         datatype_filter = Field('datatype_filter', css_class='form-control form-control-sm')
         datatype_filter.attrs = {
@@ -286,6 +305,43 @@ class NewSampleForm(forms.ModelForm):
             "hx-trigger": "keyup changed delay:2s",
             "hx-swap": 'outerHTML'
         }
+
+        file_field = Field('file')
+        file_field.attrs = {
+            "hx-trigger": "change",
+            "hx-post": reverse_lazy('core:hx_sample_form', args=(mission_id,)),
+            "hx-target": "#file_properties_id",
+            "hx-select": "#file_properties_id",
+            "hx-swap": "outerHTML"
+        }
+
+        file_properties = Div(id="file_properties_id")
+        if 'file_name' in kwargs['initial'] and 'file_data' in kwargs['initial']:
+            if kwargs['initial']['file_name'].endswith(".csv"):
+                # we don't want to read the file if we already have the values we're looking for
+                data = kwargs['initial']['file_data'].split("\r\n")
+                csv_reader = csv.reader(data, delimiter=',')
+                skip = 0
+                lineone = next(csv_reader)
+                while '' in lineone:
+                    skip += 1
+                    lineone = next(csv_reader)
+
+                self.fields['skip_lines'].initial = skip
+                self.fields['sample_id_col'].choices = [(i, col) for i, col in enumerate(lineone)]
+                self.fields['sample_value_col'].choices = [(i, col) for i, col in enumerate(lineone)]
+
+                file_properties = Row(
+                    Column('skip_lines'),
+                    Column('sample_id_col'),
+                    Column('sample_value_col'),
+                    id="file_properties_id"
+                )
+            elif file.name.endswith(".xls") or file.name.endswith("xlsx"):
+                file_properties = Row(HTML("<p>xls detected</p>"), id="file_properties_id")
+            else:
+                file_properties = Row(HTML(f"<p>{_('Unexpected file type')}</p>"), id="file_properties_id")
+
         self.helper.layout = Layout(
             Row(
                 Column(Field('short_name', css_class='form-control form-control-sm')),
@@ -297,8 +353,14 @@ class NewSampleForm(forms.ModelForm):
             ),
             Row(
                 Column(Field('datatype', css_class='form-control form-control-sm')),
-            )
+            ),
+            Row(
+                Column(file_field)
+            ),
+            file_properties
         )
+
+        self.helper.add_input(Submit('submit', _("Submit")))
 
 
 class BottleSelection(forms.Form):

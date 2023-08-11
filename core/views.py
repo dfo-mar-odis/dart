@@ -1,4 +1,6 @@
 import os
+import io
+import pandas as pd
 from bs4 import BeautifulSoup
 
 from django_pandas.io import read_frame
@@ -372,14 +374,60 @@ def hx_sample_form(request, mission_id):
     if request.method == "GET":
 
         datatype_filter = request.GET['datatype_filter'] if 'datatype_filter' in request.GET else None
+        initial = {"mission": mission_id, 'datatype_filter': datatype_filter}
+        if request.FILES:
+            initial['file'] = request.FILES['file']
 
-        context['sample_form'] = forms.NewSampleForm(initial={"mission": mission_id, 'datatype_filter': datatype_filter})
+        context['sample_form'] = forms.NewSampleForm(initial=initial)
         html = render_block_to_string('core/mission_samples.html', 'new_sample_form_block', context)
         response = HttpResponse(html)
 
         return response
 
-    return None
+    elif request.method == "POST":
+        datatype_filter = request.GET['datatype_filter'] if 'datatype_filter' in request.GET else None
+        initial = {"mission": mission_id, 'datatype_filter': datatype_filter}
+
+        file_data = None
+        if request.FILES:
+            file = request.FILES['file']
+            initial['file_name'] = file.name
+            file_data = file.read().decode('utf-8')
+            initial['file_data'] = file_data
+
+        # A POST action is required to upload a file even to just read a couple lines of it, but if the POST
+        # request comes form a 'choose file' changed event then the 'submit' button won't be in the POST request
+        # so we can update the form the user sees here when they select a file and ask them to choose tabs and columns
+        # that we'll need to know when processing the file.
+        if 'submit' not in request.POST:
+            context['sample_form'] = forms.NewSampleForm(initial=initial)
+            html = render_block_to_string('core/mission_samples.html', 'new_sample_form_block', context)
+            response = HttpResponse(html)
+
+            return response
+
+        form = forms.NewSampleForm(request.POST, initial=initial)
+        if form.is_valid():
+            tab = int(request.POST['tab']) if 'tab' in request.POST else -1
+            skip_lines = int(request.POST['skip_lines']) if 'skip_lines' in request.POST else -1
+            sample_column = int(request.POST['sample_id_col']) if 'sample_id_col' in request.POST else -1
+            value_column = int(request.POST['sample_value_col']) if 'sample_value_col' in request.POST else -1
+
+            stream = io.StringIO(file_data)
+            df = pd.read_csv(filepath_or_buffer=stream, header=skip_lines)
+            dart2.utils.parse_csv_sample_file(df, sample_column, value_column)
+
+            logger.info(f"Processing file {file.name}")
+            context['sample_form'] = forms.NewSampleForm(initial={"mission": mission_id})
+            html = render_block_to_string('core/mission_samples.html', 'new_sample_form_block', context)
+            response = HttpResponse(html)
+
+            return response
+
+        context['sample_form'] = form
+        html = render_block_to_string('core/mission_samples.html', 'new_sample_form_block', context)
+        response = HttpResponse(html)
+        return response
 
 
 def hx_sample_upload_ctd(request, mission_id):

@@ -3,6 +3,7 @@ from django.utils import timezone
 from factory.django import DjangoModelFactory
 from faker import Faker
 
+import bio_tables.models
 from core import models
 
 faker = Faker()
@@ -89,3 +90,27 @@ class AttachmentFactory(DjangoModelFactory):
 
     event = factory.SubFactory(CTDEventFactory)
     name = factory.lazy_attribute(lambda o: faker.name())
+
+
+class OxygenSampleTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = models.SampleType
+
+    short_name = 'oxy'
+    name = 'Oxygen'
+    priority = 1
+    datatype = bio_tables.models.BCDataType.objects.get(data_type_seq=90000203)
+
+
+class BottleFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bottle
+
+    event = factory.SubFactory(CTDEventFactory)
+    date_time = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
+    bottle_id = factory.sequence(lambda n: n)
+    pressure = factory.lazy_attribute(lambda o: faker.pyfloat())
+
+    @classmethod
+    def _setup_next_sequence(cls):
+        return getattr(cls, 'start_bottle_seq', 0)
