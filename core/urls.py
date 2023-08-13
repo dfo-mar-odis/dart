@@ -6,6 +6,9 @@ from . import views, htmx
 app_name = 'core'
 
 urlpatterns = [
+    path('sample_type/', views.load_sample_type, name="load_sample_type"),
+    path('sample_type/<int:mission>/', views.load_sample_type, name="load_sample_type"),
+
     path('mission/', views.MissionFilterView.as_view(), name="mission_filter"),
     path('mission/new/', views.MissionCreateView.as_view(), name="mission_new"),
     path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),

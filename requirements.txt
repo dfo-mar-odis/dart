@@ -24,6 +24,9 @@ django-render-block
 # used for updating dynamic forms with HTMX
 django-forms-dynamic
 
+# used for detecting HTMX calls
+django-htmx==1.16.0
+
 # daphne is a standalone python webserver used to run the Django application outside a development env.
 daphne==3.0.2
 

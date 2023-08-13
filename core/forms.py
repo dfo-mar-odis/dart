@@ -257,6 +257,205 @@ class MissionSearchForm(forms.Form):
         )
 
 
+# Form for loading a file, connecting sample, value, flag and replica fields to the SampleType so a user
+# doesn't have to constantly re-enter columns. Ultimately the user will select a file, the file type with the
+# expected headers for sample and value fields will be used to determine what SampleTypes the file contains
+# which will be automatically loaded if they've been previously seen. Otherwise a user will be able to add
+# new sample types to the file configuration and load multiple columns instead of having to use the same file
+# multiple times to load different samples from the same file.
+#
+# If a sample_name argument is supplied then the ids for this form will be post fixed with the sample_name
+# so that this form can be embedded in a larger form
+class SampleFileConfigurationForm(forms.ModelForm):
+
+    sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
+    value_field = forms.CharField(help_text=_("Column that contains the value data"))
+    replicate_field = forms.CharField(required=False, help_text=_("Column indicating a replicate ids, if it exists"))
+    flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
+    comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
+
+    NONE_CHOICE = [(None, "------")]
+    class Meta:
+        model = models.SampleFileSettings
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+        # at the very least an initial file_type will be expected to determine if this
+        # form should show a tab field or not
+        # if 'initial' not in kwargs:
+        #     raise KeyError({'message': 'missing "initial" dictionary in form creation'})
+        #
+        # if 'file_type' not in kwargs['initial']:
+        #     raise KeyError({'message': 'missing initial "file_type"'})
+        #
+        choice_fields = ['sample_field', 'replicate_field', 'value_field', 'flag_field', 'comment_field']
+        if 'field_choices' in kwargs:
+            field_choices: list = kwargs.pop('field_choices')
+
+            for field in choice_fields:
+                s_field: forms.CharField = self.base_fields[field]
+                self.base_fields[field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
+                if not self.base_fields[field].required:
+                    self.base_fields[field].choices = self.NONE_CHOICE
+                self.base_fields[field].choices += field_choices
+        else:
+            for field in choice_fields:
+                self.base_fields[field] = self.declared_fields[field]
+
+        # if no post_url is supplied then it's expected the form is posting to whatever
+        # view (and it's url) that created the form
+        post_url = "."
+        if 'post_url' in kwargs:
+            post_url = kwargs.pop('post_url')
+
+        sample_name = None
+        if 'sample_name' in kwargs:
+            sample_name = kwargs.pop('sample_name')
+
+        file_type = None
+        if args and 'file_type' in args[0]:
+            file_type = args[0]['file_type']
+        elif 'initial' in kwargs and 'file_type' in kwargs['initial']:
+            file_type = kwargs['initial']['file_type']
+
+        sample_type = None
+        if args and 'sample_type' in args[0]:
+            sample_type = args[0]['sample_type']
+        elif 'initial' in kwargs and 'sample_type' in kwargs['initial']:
+            sample_type = kwargs['initial']['sample_type']
+
+        if file_type is None:
+            raise KeyError({'message': 'missing initial "file_type"'})
+
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout()
+
+        div = Div(
+            Field('sample_type', id=f"id_sample_type" + (f"_{sample_name}" if sample_name else ""),
+                  type="hidden"),
+            Field('file_type', id=f"id_file_type" + (f"_{sample_name}" if sample_name else ""),
+                  type="hidden"),
+            Row(
+                Column(Field('file_config_name',
+                             id=f"id_file_config_name" + (f"_{sample_name}" if sample_name else ""))),
+                # file type is hidden because it's taken care of by the form creation and
+                # the type of file a user is loading
+                Column(Field('header',
+                             id=f"id_header" + (f"_{sample_name}" if sample_name else ""))),
+                css_class="flex-fill"
+            ),
+            Row(
+                Column(Field('sample_field',
+                             id=f"id_sample_field" + (f"_{sample_name}" if sample_name else ""))),
+                Column(Field('replicate_field',
+                             id=f"id_replicate_field" + (f"_{sample_name}" if sample_name else ""))),
+                Column(Field('value_field',
+                             id=f"id_value_field" + (f"_{sample_name}" if sample_name else ""))),
+                Column(Field('flag_field',
+                             id=f"id_flag_field" + (f"_{sample_name}" if sample_name else ""))),
+                Column(Field('comment_field',
+                             id=f"id_comment_field" + (f"_{sample_name}" if sample_name else ""))),
+                css_class="flex-fill"
+            ),
+            id="div_id_file_attributes" + (f"_{sample_name}" if sample_name else ""),
+            css_class="form-control input-group mt-2"
+        )
+
+        if file_type.startswith('xls'):
+            tab_col = Column(Field('tab'),
+                             id=f"id_tab" + (f"_{sample_name}" if sample_name else ""))
+
+            div.fields[1].insert(1, tab_col)
+
+        root_div = Div(div, id=f"id_form_file_configuration" + (f"_{sample_name}" if sample_name else ""))
+        self.helper[0].layout.fields.append(root_div)
+
+
+class SampleTypeForm(forms.ModelForm):
+
+    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
+                                      help_text=_("Filter the Datatype field on key terms"))
+
+    class Meta:
+        model = models.SampleType
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+
+        # if no post_url is supplied then it's expected the form is posting to whatever
+        # view (and it's url) that created the form
+        post_url = "."
+        if "post_url" in kwargs:
+            post_url = kwargs.pop("post_url")
+
+        sample_name = None
+        if 'sample_name' in kwargs:
+            sample_name = kwargs.pop('sample_name')
+
+        super().__init__(*args, **kwargs)
+
+        if 'initial' in kwargs and 'datatype_filter' in kwargs['initial']:
+            filter = kwargs['initial']['datatype_filter'].split(" ")
+            queryset = bio_tables.models.BCDataType.objects.all()
+            for term in filter:
+                queryset = queryset.filter(description__icontains=term)
+
+            queryset = queryset.order_by('priority')
+            self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in queryset]
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        datatype_filter = Field('datatype_filter')
+        datatype_filter.attrs = {
+            "hx-get": post_url,
+            "hx-target": "#div_id_datatype",
+            "hx-select": "#div_id_datatype",  # natural id that crispy-forms assigns to the datatype div
+            "hx-trigger": "keyup changed delay:2s",
+            "hx-swap": 'outerHTML',
+            'class': "form-control form-control-sm"
+        }
+
+        self.helper.layout = Layout(
+            Div(
+                Row(
+                    Column(Field('short_name', css_class='form-control form-control-sm',
+                                 id="id_short_name" + (f"_{sample_name}" if sample_name else "")),
+                           css_class='col'),
+                    Column(Field('long_name', css_class='form-control form-control-sm',
+                                 id="id_long_name" + (f"_{sample_name}" if sample_name else "")),
+                           css_class='col'),
+                    Column(Field('priority', css_class='form-control form-control-sm',
+                                 id="id_priority" + (f"_{sample_name}" if sample_name else "")),
+                           css_class='col'),
+                    css_class='flex-fill ms-1'
+                ),
+                Row(
+                    Column(Field('comments', css_class='form-control form-control-sm',
+                                 id="id_comments" + (f"_{sample_name}" if sample_name else "")),
+                           css_class='col-12'),
+                    css_class=''
+                ),
+                Row(
+                    Column(datatype_filter, css_class='col-12'),
+                    css_class=''
+                ),
+                Row(
+                    Column(Field('datatype', css_class='form-control form-select-sm',
+                                 id="id_datatype" + (f"_{sample_name}" if sample_name else "")),
+                           css_class='col-12'),
+                    css_class="flex-fill"
+                ),
+                css_class="form-control mt-2", id="div_id_sample_type_form"
+            )
+        )
+
+
+
 class NewSampleForm(forms.ModelForm):
 
     datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
@@ -273,7 +472,7 @@ class NewSampleForm(forms.ModelForm):
 
     class Meta:
         model = models.SampleType
-        fields = ['short_name', 'name', 'priority', 'datatype', 'datatype_filter', 'file', 'sample_id_col',
+        fields = ['short_name', 'long_name', 'priority', 'datatype', 'datatype_filter', 'file', 'sample_id_col',
                   'sample_value_col', 'skip_lines']
 
     def __init__(self, *args, **kwargs):
@@ -317,6 +516,7 @@ class NewSampleForm(forms.ModelForm):
 
         file_properties = Div(id="file_properties_id")
         if 'file_name' in kwargs['initial'] and 'file_data' in kwargs['initial']:
+            file_name = kwargs['initial']['file_name']
             if kwargs['initial']['file_name'].endswith(".csv"):
                 # we don't want to read the file if we already have the values we're looking for
                 data = kwargs['initial']['file_data'].split("\r\n")
@@ -332,30 +532,30 @@ class NewSampleForm(forms.ModelForm):
                 self.fields['sample_value_col'].choices = [(i, col) for i, col in enumerate(lineone)]
 
                 file_properties = Row(
-                    Column('skip_lines'),
-                    Column('sample_id_col'),
-                    Column('sample_value_col'),
+                    Column('skip_lines', css_class="col"),
+                    Column('sample_id_col', css_class="col"),
+                    Column('sample_value_col', css_class="col"),
                     id="file_properties_id"
                 )
-            elif file.name.endswith(".xls") or file.name.endswith("xlsx"):
+            elif file_name.endswith(".xls") or file_name.endswith("xlsx"):
                 file_properties = Row(HTML("<p>xls detected</p>"), id="file_properties_id")
             else:
                 file_properties = Row(HTML(f"<p>{_('Unexpected file type')}</p>"), id="file_properties_id")
 
         self.helper.layout = Layout(
             Row(
-                Column(Field('short_name', css_class='form-control form-control-sm')),
-                Column(Field('name', css_class='form-control form-control-sm')),
-                Column(Field('priority', css_class='form-control form-control-sm')),
+                Column(Field('short_name', css_class='form-control form-control-sm'),  css_class="col"),
+                Column(Field('sample_type_name', css_class='form-control form-control-sm'), css_class="col"),
+                Column(Field('priority', css_class='form-control form-control-sm'), css_class="col"),
             ),
             Row(
-                Column(datatype_filter)
+                Column(datatype_filter, css_class="col")
             ),
             Row(
-                Column(Field('datatype', css_class='form-control form-control-sm')),
+                Column(Field('datatype', css_class='form-control form-select-sm'), css_class="col"),
             ),
             Row(
-                Column(file_field)
+                Column(file_field, css_class="col")
             ),
             file_properties
         )

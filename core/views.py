@@ -1,7 +1,10 @@
 import os
 import io
 import pandas as pd
+import csv
+
 from bs4 import BeautifulSoup
+from django.template.loader import render_to_string
 
 from django_pandas.io import read_frame
 
@@ -16,7 +19,7 @@ from biochem import models
 from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
 
 from core import forms, filters, models, validation
-from core.parsers import ctd
+from core.parsers import ctd, SampleParser
 
 import logging
 
@@ -615,3 +618,88 @@ def hx_list_samples(request, **kwargs):
     else:
         response = HttpResponse(soup)
     return response
+
+
+def get_csv_header(file_string: str) -> {}:
+    csv_reader = csv.reader(file_string, delimiter=',')
+    skip = 0
+    header_fields = next(csv_reader)
+    while '' in header_fields:
+        skip += 1
+        header_fields = next(csv_reader)
+
+    return skip, header_fields
+
+
+def load_sample_type(request, **kwargs):
+
+    context = {}
+    context.update(csrf(request))
+
+    # the mission id is used to determine if we're actually going to save anything or if we're just process
+    # and sending back updated forms
+    mission_id = kwargs['mission'] if 'mission' in kwargs else None
+
+    if request.method == "POST":
+
+        if 'sample_file' in request.FILES:
+            file = request.FILES['sample_file']
+            file_name = file.name
+            file_type = file_name.split('.')[-1].lower()
+
+            if not mission_id:
+                field_choices = []
+                skip = 0
+                if file_type == 'csv':
+                    data = file.read()
+                    csv_header = get_csv_header(data.decode('utf-8').split("\r\n"))
+                    skip = csv_header[0]
+                    field_choices = [(field.lower, field) for field in csv_header[1]]
+
+                sample_type_form = forms.SampleTypeForm(post_url=request.path)
+                file_config_form = forms.SampleFileConfigurationForm(
+                    initial={"file_type": file_type, "header": skip},
+                    field_choices=field_choices,
+                )
+                context['sample_type_form'] = sample_type_form
+                context['file_form'] = file_config_form
+                html = render_block_to_string("core/partials/form_sample_type.html", "file_input_form_block",
+                                              context=context)
+                return HttpResponse(html)
+
+            sample_type_form = forms.SampleTypeForm(request.POST)
+            if sample_type_form.is_valid():
+                sample_type: models.SampleType = sample_type_form.save()
+                config_args = request.POST.dict()
+                config_args['sample_type'] = sample_type
+                file_config_form = forms.SampleFileConfigurationForm(config_args)
+                if file_config_form.is_valid():
+                    file_settings: models.SampleFileSettings = file_config_form.save()
+
+                    context['mission_id'] = mission_id
+                    html = render_block_to_string("core/partials/form_sample_type.html", "file_input_form_block",
+                                                  context=context)
+                    return HttpResponse(html)
+                else:
+                    # if the file config isn't valid then remove the sample type too
+                    sample_type.delete()
+            context['sample_type_form'] = sample_type_form
+            context['file_form'] = file_config_form
+            context['mission_id'] = mission_id
+            # context['sample_file'] = request.FILES['sample_file']
+            html = render_block_to_string("core/partials/form_sample_type.html", "file_input_form_block", context=context)
+            return HttpResponse(html)
+
+    elif request.method == "GET":
+        if mission_id:
+            context['mission_id'] = mission_id
+            html = render_to_string("core/mission_samples_2.html", request=request, context=context)
+            return HttpResponse(html)
+
+        if request.htmx:
+            # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
+            # field after the Datatype_filter has been triggered.
+            sample_type_form = forms.SampleTypeForm(initial=request.GET, post_url=request.path)
+            context['sample_type_form'] = sample_type_form
+        html = render_block_to_string("core/partials/form_sample_type.html", "file_input_form_block", context=context)
+        return HttpResponse(html)

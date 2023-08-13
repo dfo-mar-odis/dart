@@ -1,3 +1,5 @@
+from enum import Enum
+
 import factory
 from django.utils import timezone
 from factory.django import DjangoModelFactory
@@ -92,14 +94,45 @@ class AttachmentFactory(DjangoModelFactory):
     name = factory.lazy_attribute(lambda o: faker.name())
 
 
-class OxygenSampleTypeFactory(DjangoModelFactory):
+class SampleTypeFactory(DjangoModelFactory):
     class Meta:
         model = models.SampleType
 
+    short_name = factory.lazy_attribute(lambda o: faker.word())
+    long_name = factory.lazy_attribute(lambda o: faker.name())
+
+    datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
+
+
+class SampleFileSettingsFactory(DjangoModelFactory):
+
+    FILE_TYPE_CHOICES = Enum('FILE_TYPE_CHOICES', ['csv', 'xls'])
+
+    class Meta:
+        model = models.SampleFileSettings
+        exclude = ('FILE_TYPE_CHOICES',)
+
+    sample_type = factory.SubFactory(SampleTypeFactory)
+    file_type = factory.lazy_attribute(lambda o: faker.random.choice(o.FILE_TYPE_CHOICES))
+    header = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
+    sample_field = factory.lazy_attribute(lambda o: faker.word())
+    value_field = factory.lazy_attribute(lambda o: faker.word())
+
+
+class SampleTypeFactoryOxygen(SampleTypeFactory):
     short_name = 'oxy'
-    name = 'Oxygen'
+    long_name = 'Oxygen'
     priority = 1
     datatype = bio_tables.models.BCDataType.objects.get(data_type_seq=90000203)
+
+
+class SampleFileSettingsFactoryOxygen(SampleFileSettingsFactory):
+
+    sample_type = factory.SubFactory(SampleTypeFactoryOxygen)
+    file_type = SampleFileSettingsFactory.FILE_TYPE_CHOICES.csv
+    header = 9
+    sample_field = "Sample"
+    value_field = "O2_Concentration(ml/l)"
 
 
 class BottleFactory(DjangoModelFactory):

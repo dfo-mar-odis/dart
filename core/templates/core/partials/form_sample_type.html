@@ -1,0 +1,43 @@
+{% load crispy_forms_tags %}
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<form hx-post="{% url 'core:load_sample_type' mission_id %}" hx-encoding="multipart/form-data">
+{% block file_input_form_block %}
+    <div class="row">
+        <div class="col">
+            <input type="file" name="sample_file" class="form-control form-control-sm" id="id_input_sample_file"
+                hx-trigger="change"
+                hx-post="{% url 'core:load_sample_type' %}"
+                hx-target="#div_id_sample_type"
+                hx-select="#div_id_sample_type"
+                hx-swap="outerHTML"
+                {% if sample_file %}value="{{ sample_file }}"{% endif %}
+            />
+        </div>
+    </div>
+        <div id="div_id_sample_type">
+    {% block sample_type_block %}
+        {% block sample_type_form_block %}
+        {% if sample_type_form %}
+        {% crispy sample_type_form %}
+        {% endif %}
+        {% endblock %}
+
+        {% block file_config_form_block %}
+        {% if file_form %}
+        {% crispy file_form %}
+        {% endif %}
+        {% endblock %}
+
+        {% if sample_type_form %}
+        <div class="row mt-2 justify-content-end">
+            <div class="col-auto ms-auto">
+                <button class="btn btn-primary btn-sm" type="submit" name="submit" value="{% trans 'Submit' %}" >{% custom_icon 'plus-square' %}</button>
+            </div>
+        </div>
+        {% endif %}
+    {% endblock %}
+        </div>
+{% endblock %}
+</form>

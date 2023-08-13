@@ -65,6 +65,9 @@ INSTALLED_APPS = [
     'django.contrib.sites',
     'django.contrib.humanize',
 
+    # used for interpreting HTMX calls
+    "django_htmx",
+
     # adds pretty icons to the mix
     'django_bootstrap_icons',
 
@@ -96,6 +99,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    # adds htmx attributes to GET/POST requests
+    "django_htmx.middleware.HtmxMiddleware",
     # locale middle ware for translations
     'django.middleware.locale.LocaleMiddleware',
     # whitenoise for serving static files

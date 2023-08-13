@@ -1,15 +1,87 @@
+import pandas as pd
 import io
+
+from django.core.files.uploadedfile import SimpleUploadedFile
+from pandas._typing import ReadCsvBuffer
+
+import core.tests.CoreFactoryFloor
 
 from django.test import tag
 from dart2.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
 from core.parsers import elog
+from core.parsers.SampleParser import parse_csv_sample_file
 from core.tests import CoreFactoryFloor as core_factory
 
 import logging
 
 logger = logging.getLogger('dart.test')
+
+
+@tag('parsers', 'parsers_sample')
+class TestSampleCSVParser(DartTestCase):
+
+    def setUp(self) -> None:
+        # by the time we get to the parser the mission should exist and the CTD Bottle file should have already
+        # been loaded so mission, events and bottles should already exist.
+
+        # this is a setup for the James Cook 2022 mission JC24301,
+        # all bottles are attached to one ctd event for simplicity
+        self.mission = core.tests.CoreFactoryFloor.MissionFactory(name='JC24301')
+        ctd_event = core.tests.CoreFactoryFloor.CTDEventFactory(mission=self.mission)
+
+        # bottles start with 495271
+        core.tests.CoreFactoryFloor.BottleFactory.start_bottle_seq = 495271
+        core.tests.CoreFactoryFloor.BottleFactory.create_batch(2000, event=ctd_event)
+
+    def test_parser_oxygen(self):
+        upload_file = open('dart2/tests/sample_data/JC24301_oxy.csv', 'rb')
+        file_name = upload_file.name
+        file = SimpleUploadedFile(file_name, upload_file.read())
+
+        skip_lines = 9
+        sample_column = "Sample"
+        value_column = "O2_Concentration(ml/l)"
+        comment_column = "Comments"
+
+        oxy_file_settings = core.tests.CoreFactoryFloor.SampleFileSettingsFactoryOxygen(
+            header=skip_lines, sample_field=sample_column, value_field=value_column, comment_field=comment_column
+        )
+        oxy_sample_type = oxy_file_settings.sample_type
+
+        stream = io.BytesIO(file.read())
+        df = pd.read_csv(filepath_or_buffer=stream, header=skip_lines)
+        parse_csv_sample_file(mission=self.mission, sample_type=oxy_sample_type, file_settings=oxy_file_settings,
+                              file_name=file_name, dataframe=df)
+
+        bottles = core_models.Bottle.objects.filter(event__mission=self.mission)
+
+        # check that a replicate was created for the first sample
+        bottle_with_replicate = bottles.get(bottle_id=495271)
+        self.assertIsNotNone(bottle_with_replicate)
+
+        sample = bottle_with_replicate.samples.get(type=oxy_sample_type)
+        self.assertIsNotNone(sample)
+
+        dv_value = sample.discrete_value.get(replicate=1).value
+        self.assertEquals(dv_value, 3.932)
+
+        dv_value = sample.discrete_value.get(replicate=2).value
+        self.assertEquals(dv_value, 3.835)
+
+        # check that the comment for bottle 495600 was captured
+        bottle_with_comment = bottles.get(bottle_id=495600)
+        self.assertIsNotNone(bottle_with_comment)
+
+        sample = bottle_with_comment.samples.get(type=oxy_sample_type)
+        self.assertIsNotNone(sample)
+
+        dv_value = sample.discrete_value.get(replicate=1).value
+        self.assertEquals(dv_value, 3.135)
+
+        dv_comment = sample.comment
+        self.assertEquals(dv_comment, "Dropped magnet in before H2SO4; sorry")
 
 
 @tag('parsers', 'parsers_elog')
