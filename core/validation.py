@@ -18,7 +18,12 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
         return validation_errors
 
     mission = event.mission
-    if event.start_date.date() < mission.start_date or event.start_date.date() > mission.end_date or \
+    if event.start_date is None or event.end_date is None:
+        message = _("Event is missing start and/or end date")
+
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+    elif event.start_date.date() < mission.start_date or event.start_date.date() > mission.end_date or \
             event.end_date.date() < mission.start_date or event.end_date.date() > mission.end_date:
         message = _("Action occurred outside of mission dates")
         message += " " + mission.start_date.strftime("%Y-%m-%d") + " - " + mission.end_date.strftime("%Y-%m-%d")

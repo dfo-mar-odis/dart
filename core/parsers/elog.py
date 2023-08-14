@@ -283,7 +283,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             comment_field = get_field(elog_configuration, 'comment', buffer)
             action_field = get_field(elog_configuration, 'action', buffer)
             data_collector_field = get_field(elog_configuration, 'data_collector', buffer)
-            sounding_field = get_field(elog_configuration, 'data_collector', buffer)
+            sounding_field = get_field(elog_configuration, 'sounding', buffer)
 
             event_id = buffer[event_field]
             action_type_text = buffer[action_field]
@@ -294,7 +294,8 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
 
             # if the time|position doesn't exist report the issue to the user, it may not have been set by mistake
             if re.search(".*\|.*\|.*\|.*", buffer[time_position_field]) is None:
-                raise ValueError({'message': _("Badly formatted or missing Time|Position"), 'key': 'time_position',
+                raise ValueError({'message': _("Badly formatted or missing Time|Position") + f"  $@MID@$ {mid}",
+                                  'key': 'time_position',
                                   'expected': time_position_field})
 
             time_position = buffer.pop(time_position_field).split(" | ")
@@ -358,11 +359,14 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             logger.error(ex)
             errors.append((mid, ex.args[0]["message"], ex,))
         except ValueError as ex:
-            message = _("Missing or improperly set attribute, see error.log for details")
+            message = _("Missing or improperly set attribute, see error.log for details") + f" $@MID@$ {mid}"
+            if 'message' in ex.args[0]:
+                message = ex.args[0]['message']
+
             logger.error(f"{message} - {ex}")
             errors.append((mid, message, ex,))
         except Exception as ex:
-            message = _("Error processing attachments, see error.log for details")
+            message = _("Error processing attachments, see error.log for details") + f" $@MID@$ {mid}"
             logger.exception(ex)
             errors.append((mid, message, ex,))
 

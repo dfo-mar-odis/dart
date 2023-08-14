@@ -172,23 +172,27 @@ class Event(models.Model):
 
     @property
     def start_location(self):
-        action = self.actions.all().order_by("date_time")[0]
-        return [action.latitude, action.longitude]
+        action = self.actions.order_by("date_time").first()
+        if action:
+            return [action.latitude, action.longitude]
 
     @property
     def end_location(self):
-        action = self.actions.all().order_by("-date_time")[0]
-        return [action.latitude, action.longitude]
+        action = self.actions.order_by("date_time").last()
+        if action:
+            return [action.latitude, action.longitude]
 
     @property
     def start_date(self) -> datetime.datetime:
-        action = self.actions.all().order_by("date_time")[0]
-        return action.date_time
+        action = self.actions.order_by("date_time").first()
+        if action:
+            return action.date_time
 
     @property
     def end_date(self) -> datetime.datetime:
-        action = self.actions.all().order_by("-date_time")[0]
-        return action.date_time
+        action = self.actions.order_by("date_time").last()
+        if action:
+            return action.date_time
 
     @property
     def drift_distance(self):
@@ -280,7 +284,7 @@ class Action(models.Model):
 
     # the data collector would bet he person who fired the event on the ship. For BIO this would be the 'Author' field
     data_collector = models.CharField(verbose_name=_("Data Collector"), max_length=100, blank=True, null=True)
-    sounding = models.IntegerField(verbose_name=_("Sounding"), blank=True, null=True)
+    sounding = models.FloatField(verbose_name=_("Sounding"), blank=True, null=True)
 
     comment = models.CharField(verbose_name=_("Comment"), max_length=255, blank=True, null=True)
 

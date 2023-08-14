@@ -7,6 +7,7 @@ from crispy_forms.utils import render_crispy_form
 from django.contrib import messages
 from django.shortcuts import render
 from django.template.context_processors import csrf
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django.http import HttpResponseRedirect, HttpResponse
@@ -68,11 +69,9 @@ def add_geo_region(request):
     region_name = request.POST.get('new_region')
 
     if region_name is None or region_name.strip() == "":
-        # TODO: This should be replaced with a notification using Django Channels
-        message = _("could not create geographic region, no name provided")
-        logger.error(message)
+        # if the region name is blank the user is just closing the dialog and nothing will happen.
 
-        html = render_block_to_string('core/mission_settings.html', 'geographic_region_block')
+        html = render_block_to_string('core/mission_settings.html', 'geographic_region_form')
         return HttpResponse(html)
 
     regs = models.GeographicRegion.objects.filter(name=region_name)
@@ -83,9 +82,13 @@ def add_geo_region(request):
 
         regs = models.GeographicRegion.objects.filter(name=region_name)
 
-    html = render_block_to_string('core/mission_settings.html', 'geographic_region_form')
+    context = {}
+    context.update(csrf(request))
+    context['form'] = forms.MissionSettingsForm(initial={'geographic_region': regs[0].pk})
+    html = render_to_string('core/mission_settings.html', context=context)
+
     response = HttpResponse(html)
-    response['HX-Trigger'] = "region_added"
+    # response['HX-Trigger'] = "region_added"
 
     return response
 
@@ -196,9 +199,9 @@ def upload_elog(request, mission_id):
 
             for error in errors:
                 file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
-                if error[2] is KeyError:
+                if isinstance(error[2], KeyError):
                     file_error.type = models.ErrorType.missing_id
-                elif error[2] is ValueError:
+                elif isinstance(error[2], ValueError):
                     file_error.type = models.ErrorType.missing_value
                 else:
                     file_error.type = models.ErrorType.unknown

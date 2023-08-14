@@ -3,7 +3,7 @@ import re
 import csv
 
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
 from django import forms
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import InMemoryUploadedFile
@@ -48,6 +48,93 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['geographic_region'].widget.attrs["hx-target"] = '#div_id_geographic_region'
         self.fields['geographic_region'].widget.attrs["hx-trigger"] = 'region_added from:body'
         self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
+        if 'initial' in kwargs and 'geographic_region' in kwargs['initial']:
+            self.fields['geographic_region'].initial = kwargs['initial']['geographic_region']
+
+        self.fields['protocol'].required = False
+        self.fields['lead_scientist'].required = False
+        self.fields['mission_descriptor'].required = False
+        self.fields['biochem_table'].required = False
+        self.fields['data_center'].required = False
+        self.fields['geographic_region'].required = False
+        self.fields['collector_comments'].required = False
+        self.fields['data_manager_comments'].required = False
+        self.fields['more_comments'].required = False
+        self.fields['platform'].required = False
+
+        # This button depends on a separate section being on the page with the ID 'geographic_region_dialog'
+        button_geo_add = HTML('<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#geographic_region_dialog">+</button>')
+
+        submit = Submit('submit', 'Submit')
+        if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
+            submit = Submit('submit', 'Submit', hx_on="click: notify_of_event_validation()")
+
+        self.helper.layout = Layout(
+            Row(
+                Column(Field('name')),
+            ),
+            Row(
+                Column(Field('start_date')),
+                Column(Field('end_date'))
+            ),
+            Row(
+                Column(
+                    Row(
+                        HTML(f'<label for="id_geographic_region" class=form-label">{_("Geographic Region")}</label>'),
+                        css_class="mb-2"
+                    ),
+                    Row(
+                        Column(Field('geographic_region'), css_class="col"),
+                        Column(button_geo_add, css_class="col-auto"),
+                    )
+                )
+            ),
+            Div(
+                Div(
+                    Div(
+                        HTML(f"<h4>{_('Optional')}</h4>"),
+                        css_class="card-title"
+                    ),
+                    css_class="card-header"
+                ),
+                Div(
+                    Row(
+                        HTML(f"{_('The following can be automatically acquired from elog files or entered later')}"),
+                        css_class="alert alert-info ms-1 me-1"
+                    ),
+                    Row(
+                        Column(Field('platform')),
+                        Column(Field('protocol')),
+                    ),
+                    Row(
+                        Column(Field('lead_scientist')),
+                        Column(Field('mission_descriptor')),
+                    ),
+                    Row(
+                        Column(Field('data_center')),
+                        Column(Field('biochem_table')),
+                    ),
+                    Row(
+                        Column(Field('collector_comments')),
+                    ),
+                    Row(
+                        Column(Field('data_manager_comments')),
+                    ),
+                    Row(
+                        Column(Field('more_comments')),
+                    ),
+                    css_class="card-body"
+                ),
+                css_class="card"
+            ),
+            Row(
+                Column(
+                    submit,
+                    css_class='col-auto mt-2'
+                ),
+                css_class='justify-content-end'
+            )
+        )
 
     def geographic_region_choices(form):
         regions = models.GeographicRegion.objects.all()
@@ -198,7 +285,6 @@ class EventForm(forms.ModelForm):
 
 
 class MissionSearchForm(forms.Form):
-
     mission = forms.IntegerField(label=_("Mission"), required=True)
     event_start = forms.IntegerField(label=_("Event Start"), required=False,
                                      help_text=_("Finds a single event unless Event End is specified"))
@@ -267,7 +353,6 @@ class MissionSearchForm(forms.Form):
 # If a sample_name argument is supplied then the ids for this form will be post fixed with the sample_name
 # so that this form can be embedded in a larger form
 class SampleFileConfigurationForm(forms.ModelForm):
-
     sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
     value_field = forms.CharField(help_text=_("Column that contains the value data"))
     replicate_field = forms.CharField(required=False, help_text=_("Column indicating a replicate ids, if it exists"))
@@ -275,6 +360,7 @@ class SampleFileConfigurationForm(forms.ModelForm):
     comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
 
     NONE_CHOICE = [(None, "------")]
+
     class Meta:
         model = models.SampleFileSettings
         fields = "__all__"
@@ -376,7 +462,6 @@ class SampleFileConfigurationForm(forms.ModelForm):
 
 
 class SampleTypeForm(forms.ModelForm):
-
     datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
                                       help_text=_("Filter the Datatype field on key terms"))
 
@@ -455,9 +540,7 @@ class SampleTypeForm(forms.ModelForm):
         )
 
 
-
 class NewSampleForm(forms.ModelForm):
-
     datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
                                       help_text=_("Filter the Datatype field on key terms"))
 
@@ -544,7 +627,7 @@ class NewSampleForm(forms.ModelForm):
 
         self.helper.layout = Layout(
             Row(
-                Column(Field('short_name', css_class='form-control form-control-sm'),  css_class="col"),
+                Column(Field('short_name', css_class='form-control form-control-sm'), css_class="col"),
                 Column(Field('sample_type_name', css_class='form-control form-control-sm'), css_class="col"),
                 Column(Field('priority', css_class='form-control form-control-sm'), css_class="col"),
             ),
