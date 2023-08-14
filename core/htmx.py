@@ -68,11 +68,11 @@ def add_geo_region(request):
     region_name = request.POST.get('new_region')
 
     if region_name is None or region_name.strip() == "":
+        # TODO: This should be replaced with a notification using Django Channels
         message = _("could not create geographic region, no name provided")
         logger.error(message)
 
         html = render_block_to_string('core/mission_settings.html', 'geographic_region_block')
-        # TODO: This should be replaced with a notification using Django Channels
         return HttpResponse(html)
 
     regs = models.GeographicRegion.objects.filter(name=region_name)

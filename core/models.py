@@ -128,35 +128,6 @@ class InstrumentType(models.IntegerChoices):
         return cls.__members__.__contains__(value.lower())
 
 
-class ActionType(models.IntegerChoices):
-    # make sure new option names are in lowercase with underscores instead of spaces
-    # Labels, in quotations marks, can be uppercase with spaces
-    deployed = 1, "Deployed"
-    bottom = 2, "Bottom"
-    recovered = 3, "Recovered"
-    aborted = 4, "Aborted"
-    attempt_comms = 5, "Attempted Comms"
-    release = 6, "Release"
-    on_deck = 7, "On Deck"
-    in_water = 8, "In Water"
-    start_deployment = 9, "Start Deployment"
-    on_bottom = 10, "On Bottom"
-    started = 11, "Started"
-
-    other = 999, "Other"
-
-    @classmethod
-    def get(cls, value: str):
-        if cls.has_value(value):
-            return cls.__getitem__(value.lower().replace(' ', '_'))
-
-        return cls.__getitem__('other')
-
-    @classmethod
-    def has_value(cls, value: str):
-        return cls.__members__.__contains__(value.lower().replace(' ', '_'))
-
-
 class Instrument(models.Model):
     name = models.CharField(max_length=50, verbose_name=_("Instrument"))
     type = models.IntegerField(verbose_name=_("Instrument Type"), default=999, choices=InstrumentType.choices)
@@ -266,6 +237,38 @@ class Event(models.Model):
         return f"{self.event_id} - {self.station.name}"
 
 
+class ActionType(models.IntegerChoices):
+    # make sure new option names are in lowercase with underscores instead of spaces
+    # Labels, in quotations marks, can be uppercase with spaces
+    deployed = 1, "Deployed"
+    bottom = 2, "Bottom"
+    recovered = 3, "Recovered"
+    aborted = 4, "Aborted"
+    attempt_comms = 5, "Attempted Comms"
+    release = 6, "Release"
+    on_deck = 7, "On Deck"
+    in_water = 8, "In Water"
+    start_deployment = 9, "Start Deployment"
+    on_bottom = 10, "On Bottom"
+    started = 11, "Started"
+
+    other = 999, "Other"
+
+    @classmethod
+    def get(cls, value: str):
+        if cls.has_value(value):
+            return cls.__getitem__(value.lower().replace(' ', '_'))
+
+        return cls.__getitem__('other')
+
+    @classmethod
+    def has_value(cls, value: str):
+        return cls.__members__.__contains__(value.lower().replace(' ', '_'))
+
+
+# Elog events are typically made up of multiple actions. A CTD is 'deployed', it's noted when it reaches 'bottom'
+# and then a final action once it's 'recovered'. The action model allows us to track when and where those actions
+# are noted so we can track information about them.
 class Action(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="actions", on_delete=models.CASCADE)
 
@@ -287,7 +290,10 @@ class Action(models.Model):
                                          help_text=_("if the action is an unknown type then leave a comment here "
                                                      "identifying what the 'other' type is"))
 
+    # the data collector would bet he person who fired the event on the ship. For BIO this would be the 'Author' field
     data_collector = models.CharField(verbose_name=_("Data Collector"), max_length=100, blank=True, null=True)
+    sounding = models.IntegerField(verbose_name=_("Sounding"), blank=True, null=True)
+
     comment = models.CharField(verbose_name=_("Comment"), max_length=255, blank=True, null=True)
 
     @property
@@ -340,6 +346,10 @@ class VariableName(SimpleLookupName):
         ordering = (Lower('name'),)
 
 
+# Variable fields are used to keep elog variables that we don't immediately use so that we can optionally query
+# them later. I feel like we should have a flag that can turn the processing of these on and off because
+# processing variables for an elog takes about 75% of the time required to process an elog. It would really speed
+# up the process to remove them if they aren't needed.
 class VariableField(models.Model):
     action = models.ForeignKey(Action, verbose_name=_("Action"), related_name="variables", on_delete=models.CASCADE)
     name = models.ForeignKey(VariableName, verbose_name=_("Field Name"), related_name="variables",
@@ -347,13 +357,7 @@ class VariableField(models.Model):
     value = models.CharField(verbose_name=_("Field Value"), max_length=255)
 
 
-class ErrorType(models.IntegerChoices):
-    unknown = 0, "Unknown"
-    missing_id = 1, "Missing ID"
-    missing_value = 2, "Missing Value"
-    validation = 3, "Validation Error"
-
-
+# Bottles keep track of CTD bottles that sensor and sample data will later be attached to.
 class Bottle(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="bottles", on_delete=models.CASCADE)
     date_time = models.DateTimeField(verbose_name=_("Fired Date/Time"))
@@ -367,8 +371,6 @@ class Bottle(models.Model):
 
     pressure = models.FloatField(verbose_name=_("Pressure"), default=0.0)
 
-    # TODO: Add a location for where the bottle was fired, this data should come from the bottle file, but
-    #  if it's not present, it should be the same as the event's location data
     latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
     longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
 
@@ -380,6 +382,9 @@ class Bottle(models.Model):
         ordering = ['bottle_id']
 
 
+# Sample types help us track sensors and samples that have been previously loaded for any mission, when we see a
+# sensor or sample with the same short name in the future we'll know what biochem data types to use as well as what
+# file configurations to use when loading that data.
 class SampleType(models.Model):
     short_name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20,
                                   help_text=_("The column name of a sensor or a short name commonly "
@@ -399,6 +404,12 @@ class SampleType(models.Model):
         return self.short_name + (f" - {self.long_name}" if self.long_name else "")
 
 
+# The SampleFileSettings model allows us to track what a file of a specific type with given headers for a specific
+# sample type should look like. Once a csv, with the columns 'Sample' and 'O2_Concentration (m/l)' for the 'Oxy'
+# sample type has been loaded, the next time we see that file we'll know what to pull out of it. This could be done
+# Once and fixtures created that will be distributed like the bio_table fixtures.
+# I was going to use the FileConfiguration model for this purpose, but Sensors and Samples are much more
+# complicated and require a more specialized approach.
 class SampleFileSettings(models.Model):
 
     sample_type = models.ForeignKey(SampleType,
@@ -437,17 +448,35 @@ class SampleFileSettings(models.Model):
                                      help_text=_("Lowercase name of the column containing comments, if it exists"))
 
 
+# BioChemUpload is a table for tracking the last time a sensor or sample was uploaded to biochem. This way we can
+# track the data per-mission and let the user know if a sample has been uploaded, was modified and needs
+# to be re-uploaded, or hasn't been loaded yet.
+class BioChemUpload(models.Model):
+    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), on_delete=models.CASCADE, related_name='uploads')
+    type = models.ForeignKey(SampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='uploads')
+
+    upload_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
+                                       help_text=_("The last time this sensor/sample was uploaded to biochem"))
+    modified_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
+                                         help_text=_("The last time this sensor/sample was modified"))
+
+
+# The Sample model tracks sample/sensor types that can or have been uploaded for a specific bottle. It can also
+# track the file data for the sensor was loaded from
 class Sample(models.Model):
     bottle = models.ForeignKey(Bottle, verbose_name=_("Bottle"), on_delete=models.CASCADE, related_name='samples')
     type = models.ForeignKey(SampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='samples')
 
     file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
-    comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
 
     def __str__(self):
         return f'{self.type}: {self.bottle.bottle_id}'
 
 
+# Most samples loaded are 'Discrete' chemical or mineral measurements. The DiscreteSampleValue table tracks those
+# values, but can also be used to keep track of replicates (when a sample has more than one value), data quality flags
+# individual BioChem datatypes (for when the data type is differenet or more descriptive than the sensor/sample
+# general datatype), and comments related to the sample.
 class DiscreteSampleValue(models.Model):
     sample = models.ForeignKey(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,
                                   related_name='discrete_value')
@@ -464,6 +493,8 @@ class DiscreteSampleValue(models.Model):
     sample_datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                         blank=True, on_delete=models.SET_NULL)
 
+    comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
+
     @property
     def datatype(self) -> bio_models.BCDataType:
         return self.sample_datatype if self.sample_datatype else self.sample.type.datatype
@@ -472,6 +503,17 @@ class DiscreteSampleValue(models.Model):
         return f'{self.sample}: {self.value}'
 
 
+# These are some of the common errors that occur when processing data and allow us to sort various errors depending
+# on what problems we're using the errors to solve.
+class ErrorType(models.IntegerChoices):
+    unknown = 0, "Unknown"
+    missing_id = 1, "Missing ID"
+    missing_value = 2, "Missing Value"
+    validation = 3, "Validation Error"
+
+
+# This is the basis for most errors that we want to report to the user. All errors should have at the very least
+# a message and what type of error it is.
 class AbstractError(models.Model):
     class Meta:
         abstract = True
@@ -480,10 +522,12 @@ class AbstractError(models.Model):
     type = models.IntegerField(verbose_name=_("Error type"), default=0, choices=ErrorType.choices)
 
 
+# General errors we want to keep track of and notify the user about
 class Error(AbstractError):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='errors', verbose_name=_("Mission"))
 
 
+# Errors that take place when validating an object. This might be something like a missing attachment, date or sample ID
 class ValidationError(AbstractError):
     event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='validation_errors',
                               verbose_name=_("Event"))
@@ -492,6 +536,8 @@ class ValidationError(AbstractError):
         return f"{self.get_type_display()} : {self.message}"
 
 
+# File errors occur when reading data from a file before an object is created, it's fundmentally something wrong with
+# the file itself like when columns or specific tags are missing or if a file is improperly formatted.
 class FileError(AbstractError):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='file_errors',
                                 verbose_name=_("Mission"))
@@ -544,7 +590,7 @@ class ElogConfig(FileConfiguration):
     # or a net will have a sample id, but no end sample id for example
     fields = [('lead_scientist', 'PI'), ('protocol', "Protocol"), ('cruise', "Cruise"), ("platform", "Platform"),
               ("attached", "Attached"), ("start_sample_id", "Sample ID"), ("end_sample_id", "End_Sample_ID"),
-              ("comment", "Comment"), ("data_collector", "Author")]
+              ("comment", "Comment"), ("data_collector", "Author"), ("sounding", "Sounding")]
 
     @staticmethod
     def get_default_config(mission):

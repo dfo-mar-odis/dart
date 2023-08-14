@@ -163,34 +163,34 @@ class BcdDReportModel(BcdD):
 
 
 class BcsD(models.Model):
-    dis_headr_collector_sample_id = models.CharField(primary_key=True, max_length=50)  # Done
+    dis_headr_collector_sample_id = models.CharField(primary_key=True, max_length=50)
 
-    dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)  # Done
-    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)  # Done
-    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_name = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_leader = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_sdate = models.DateField(blank=True, null=True)  # Done
-    mission_edate = models.DateField(blank=True, null=True)  # Done
+    dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
+    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
+    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
+    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
+    mission_name = models.CharField(max_length=50, blank=True, null=True)
+    mission_leader = models.CharField(max_length=50, blank=True, null=True)
+    mission_sdate = models.DateField(blank=True, null=True)
+    mission_edate = models.DateField(blank=True, null=True)
     mission_institute = models.CharField(max_length=50, blank=True, null=True)
-    mission_platform = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_protocol = models.CharField(max_length=50, blank=True, null=True)  # Done
+    mission_platform = models.CharField(max_length=50, blank=True, null=True)
+    mission_protocol = models.CharField(max_length=50, blank=True, null=True)
 
-    mission_geographic_region = models.CharField(max_length=100, blank=True, null=True)  # Done
-    mission_collector_comment1 = models.CharField(max_length=2000, blank=True, null=True)  # Done
-    mission_collector_comment2 = models.CharField(max_length=2000, blank=True, null=True)  # Done
-    mission_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)  # Done
+    mission_geographic_region = models.CharField(max_length=100, blank=True, null=True)
+    mission_collector_comment1 = models.CharField(max_length=2000, blank=True, null=True)
+    mission_collector_comment2 = models.CharField(max_length=2000, blank=True, null=True)
+    mission_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
 
-    event_sdate = models.DateField(blank=True, null=True)  # Done
-    event_edate = models.DateField(blank=True, null=True)  # Done
-    event_stime = models.IntegerField(blank=True, null=True)  # Done
-    event_etime = models.IntegerField(blank=True, null=True)  # Done
-    event_min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Done
-    event_max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Done
-    event_min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Done
-    event_max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Done
-    event_utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)  # Done
+    event_sdate = models.DateField(blank=True, null=True)
+    event_edate = models.DateField(blank=True, null=True)
+    event_stime = models.IntegerField(blank=True, null=True)
+    event_etime = models.IntegerField(blank=True, null=True)
+    event_min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    event_max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    event_min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    event_max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    event_utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
 
     event_collector_comment1 = models.CharField(max_length=2000, blank=True, null=True)
     event_collector_comment2 = models.CharField(max_length=2000, blank=True, null=True)
@@ -201,32 +201,32 @@ class BcsD(models.Model):
     #
     # ################  Lindsay would prefer if we used 90000002, Niskin of unknown size ###########
     dis_headr_gear_seq = models.IntegerField(blank=True, null=True)
-    dis_headr_sdate = models.DateField(blank=True, null=True)  # Done
-    dis_headr_edate = models.DateField(blank=True, null=True)  # Done
-    dis_headr_stime = models.IntegerField(blank=True, null=True)  # Done
-    dis_headr_etime = models.IntegerField(blank=True, null=True)  # Done
-    dis_headr_time_qc_code = models.CharField(max_length=2, blank=True, null=True)  # Done
-    dis_headr_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Partly done
-    dis_headr_elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Partly done
-    dis_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Partly done
-    dis_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Partly done
+    dis_headr_sdate = models.DateField(blank=True, null=True)
+    dis_headr_edate = models.DateField(blank=True, null=True)
+    dis_headr_stime = models.IntegerField(blank=True, null=True)
+    dis_headr_etime = models.IntegerField(blank=True, null=True)
+    dis_headr_time_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    dis_headr_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    dis_headr_elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    dis_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    dis_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     dis_headr_position_qc_code = models.CharField(max_length=2, blank=True, null=True)
-    dis_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)  # Done
-    dis_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)  # Done
-    dis_headr_sounding = models.IntegerField(blank=True, null=True)  # TODO: Do not currently pull sounding, fix it
-    dis_headr_collector_deplmt_id = models.CharField(max_length=50, blank=True, null=True)  # Done, value is null
+    dis_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    dis_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    dis_headr_sounding = models.IntegerField(blank=True, null=True)
+    dis_headr_collector_deplmt_id = models.CharField(max_length=50, blank=True, null=True),  # Done, value is null
 
     dis_headr_collector = models.CharField(max_length=50, blank=True, null=True)
     dis_headr_collector_comment1 = models.CharField(max_length=2000, blank=True, null=True)  # comes from Sample excel file
     dis_headr_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
     dis_headr_responsible_group = models.CharField(max_length=50, blank=True, null=True)
 
-    dis_headr_shared_data = models.CharField(max_length=50, blank=True, null=True)  # Done, value is null
-    created_by = models.CharField(max_length=30)  # Done
-    created_date = models.DateField()  # Done
-    data_center_code = models.IntegerField(blank=True, null=True)  # Done
-    process_flag = models.CharField(max_length=3, blank=True, null=True)  # Done
-    batch_seq = models.IntegerField(blank=True, null=True)  # Done
+    dis_headr_shared_data = models.CharField(max_length=50, blank=True, null=True),  # Done, value is null
+    created_by = models.CharField(max_length=30)
+    created_date = models.DateField()
+    data_center_code = models.IntegerField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3, blank=True, null=True)
+    batch_seq = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
@@ -240,26 +240,26 @@ class BcsDReportModel(BcsD):
 
 
 class BcdP(models.Model):
-    plank_data_num = models.IntegerField(primary_key=True)  # Done
-    plank_sample_key_value = models.CharField(max_length=50)  # Done
+    plank_data_num = models.IntegerField(primary_key=True)
+    plank_sample_key_value = models.CharField(max_length=50)
 
-    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)  # Done
-    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)  # Done
-    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)  # Done
-    pl_gen_national_taxonomic_seq = models.BigIntegerField(blank=True, null=True)  # Done
-    pl_gen_collector_taxonomic_id = models.CharField(max_length=20, blank=True, null=True)  # Done
-    pl_gen_life_history_seq = models.IntegerField(blank=True, null=True)  # Done
-    pl_gen_trophic_seq = models.IntegerField(blank=True, null=True)  # Done
-    pl_gen_min_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)  # Done
-    pl_gen_max_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)  # Done
-    pl_gen_split_fraction = models.DecimalField(max_digits=5, decimal_places=4, blank=True, null=True)  # Done
-    pl_gen_sex_seq = models.IntegerField(blank=True, null=True)  # Done
-    pl_gen_counts = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)  # Done
-    pl_gen_count_pct = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)  # Done
-    pl_gen_wet_weight = models.DecimalField(max_digits=9, decimal_places=4, blank=True, null=True)  # Done
-    pl_gen_dry_weight = models.DecimalField(max_digits=9, decimal_places=4, blank=True, null=True)  # Done
-    pl_gen_bio_volume = models.DecimalField(max_digits=8, decimal_places=3, blank=True, null=True)  # Done
-    pl_gen_presence = models.CharField(max_length=1, blank=True, null=True)  # Done
+    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
+    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
+    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
+    pl_gen_national_taxonomic_seq = models.BigIntegerField(blank=True, null=True)
+    pl_gen_collector_taxonomic_id = models.CharField(max_length=20, blank=True, null=True)
+    pl_gen_life_history_seq = models.IntegerField(blank=True, null=True)
+    pl_gen_trophic_seq = models.IntegerField(blank=True, null=True)
+    pl_gen_min_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
+    pl_gen_max_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
+    pl_gen_split_fraction = models.DecimalField(max_digits=5, decimal_places=4, blank=True, null=True)
+    pl_gen_sex_seq = models.IntegerField(blank=True, null=True)
+    pl_gen_counts = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
+    pl_gen_count_pct = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)
+    pl_gen_wet_weight = models.DecimalField(max_digits=9, decimal_places=4, blank=True, null=True)
+    pl_gen_dry_weight = models.DecimalField(max_digits=9, decimal_places=4, blank=True, null=True)
+    pl_gen_bio_volume = models.DecimalField(max_digits=8, decimal_places=3, blank=True, null=True)
+    pl_gen_presence = models.CharField(max_length=1, blank=True, null=True)
     pl_gen_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
     pl_gen_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
     pl_gen_source = models.CharField(max_length=30, blank=True, null=True)
@@ -280,11 +280,11 @@ class BcdP(models.Model):
     pl_indiv_data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
     pl_indiv_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
     pl_indiv_data_collector = models.CharField(max_length=50, blank=True, null=True)
-    created_by = models.CharField(max_length=30)  # Done
-    created_date = models.DateField()  # Done
-    data_center_code = models.IntegerField(blank=True, null=True)  # Done
-    process_flag = models.CharField(max_length=3, blank=True, null=True)  # Done
-    batch_seq = models.IntegerField(blank=True, null=True)  # Done
+    created_by = models.CharField(max_length=30)
+    created_date = models.DateField()
+    data_center_code = models.IntegerField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3, blank=True, null=True)
+    batch_seq = models.IntegerField(blank=True, null=True)
     pl_gen_modifier = models.CharField(max_length=50, blank=True, null=True)
     pl_gen_unit = models.IntegerField(blank=True, null=True)
 
@@ -298,31 +298,31 @@ class BcdPReportModel(BcdP):
 
 
 class BcsP(models.Model):
-    plank_sample_key_value = models.CharField(primary_key=True, max_length=50)  # Done
+    plank_sample_key_value = models.CharField(primary_key=True, max_length=50)
 
-    mission_name = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_leader = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_sdate = models.DateField(blank=True, null=True)  # Done
-    mission_edate = models.DateField(blank=True, null=True)  # Done
+    mission_name = models.CharField(max_length=50, blank=True, null=True)
+    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
+    mission_leader = models.CharField(max_length=50, blank=True, null=True)
+    mission_sdate = models.DateField(blank=True, null=True)
+    mission_edate = models.DateField(blank=True, null=True)
     mission_institute = models.CharField(max_length=50, blank=True, null=True)
-    mission_platform = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_protocol = models.CharField(max_length=50, blank=True, null=True)  # Done
-    mission_geographic_region = models.CharField(max_length=100, blank=True, null=True)  # Done
-    mission_collector_comment = models.CharField(max_length=2000, blank=True, null=True)  # Done
-    mission_more_comment = models.CharField(max_length=2000, blank=True, null=True)  # Done
-    mission_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)  # Done
-    event_sdate = models.DateField(blank=True, null=True)  # Done
-    event_edate = models.DateField(blank=True, null=True)  # Done
-    event_stime = models.IntegerField(blank=True, null=True)  # Done
-    event_etime = models.IntegerField(blank=True, null=True)  # Done
-    event_min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Done
-    event_max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Done
-    event_min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Done
-    event_max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Done
-    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)  # Done
-    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)  # Done
-    event_utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)  # Done
+    mission_platform = models.CharField(max_length=50, blank=True, null=True)
+    mission_protocol = models.CharField(max_length=50, blank=True, null=True)
+    mission_geographic_region = models.CharField(max_length=100, blank=True, null=True)
+    mission_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    mission_more_comment = models.CharField(max_length=2000, blank=True, null=True)
+    mission_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    event_sdate = models.DateField(blank=True, null=True)
+    event_edate = models.DateField(blank=True, null=True)
+    event_stime = models.IntegerField(blank=True, null=True)
+    event_etime = models.IntegerField(blank=True, null=True)
+    event_min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    event_max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    event_min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    event_max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
+    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
+    event_utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
     event_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
     event_more_comment = models.CharField(max_length=2000, blank=True, null=True)
     event_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
@@ -334,20 +334,20 @@ class BcsP(models.Model):
     # this value, but I think it could be a mission level option.
     #
     # ################  Lindsay would prefer if we used 90000002, Niskin of unknown size ###########
-    pl_headr_gear_seq = models.IntegerField(blank=True, null=True)  # Done
-    pl_headr_sdate = models.DateField(blank=True, null=True)  # Done
-    pl_headr_edate = models.DateField(blank=True, null=True)  # Done
-    pl_headr_stime = models.IntegerField(blank=True, null=True)  # Done
-    pl_headr_etime = models.IntegerField(blank=True, null=True)  # Done
+    pl_headr_gear_seq = models.IntegerField(blank=True, null=True)
+    pl_headr_sdate = models.DateField(blank=True, null=True)
+    pl_headr_edate = models.DateField(blank=True, null=True)
+    pl_headr_stime = models.IntegerField(blank=True, null=True)
+    pl_headr_etime = models.IntegerField(blank=True, null=True)
     pl_headr_phase_of_daylight = models.CharField(max_length=15, blank=True, null=True)
-    pl_headr_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Done
-    pl_headr_elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # Done
-    pl_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Done
-    pl_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # Done
-    pl_headr_time_qc_code = models.CharField(max_length=2, blank=True, null=True)  # Done
+    pl_headr_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    pl_headr_elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    pl_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    pl_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    pl_headr_time_qc_code = models.CharField(max_length=2, blank=True, null=True)
     pl_headr_position_qc_code = models.CharField(max_length=2, blank=True, null=True)
-    pl_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)  # Done
-    pl_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)  # Done
+    pl_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    pl_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
     pl_headr_sounding = models.IntegerField(blank=True, null=True)
     pl_headr_volume = models.DecimalField(max_digits=7, decimal_places=3, blank=True, null=True)
     pl_headr_volume_method_seq = models.IntegerField(blank=True, null=True)
@@ -365,11 +365,11 @@ class BcsP(models.Model):
     pl_headr_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
     pl_headr_responsible_group = models.CharField(max_length=50, blank=True, null=True)
     pl_headr_shared_data = models.CharField(max_length=50, blank=True, null=True)
-    created_by = models.CharField(max_length=30)  # Done
-    created_date = models.DateField()  # Done
-    data_center_code = models.IntegerField(blank=True, null=True)  # Done
-    process_flag = models.CharField(max_length=3, blank=True, null=True)  # Done
-    batch_seq = models.IntegerField(blank=True, null=True)  # Done
+    created_by = models.CharField(max_length=30)
+    created_date = models.DateField()
+    data_center_code = models.IntegerField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3, blank=True, null=True)
+    batch_seq = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False

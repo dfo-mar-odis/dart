@@ -1,22 +1,137 @@
+import os
+
 import pandas as pd
 import io
+import ctd
 
 from django.core.files.uploadedfile import SimpleUploadedFile
-from pandas._typing import ReadCsvBuffer
 
 import core.tests.CoreFactoryFloor
 
 from django.test import tag
 from dart2.tests.DartTestCase import DartTestCase
+from dart2 import settings
 
 from core import models as core_models
 from core.parsers import elog
+from core.parsers import ctd as ctd_parser
 from core.parsers.SampleParser import parse_csv_sample_file
 from core.tests import CoreFactoryFloor as core_factory
 
 import logging
 
 logger = logging.getLogger('dart.test')
+
+
+@tag('parsers', 'parsers_ctd')
+class TestCTDParser(DartTestCase):
+
+    def setUp(self) -> None:
+        self.test_file_location = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/')
+        self.test_file_001 = 'JC243a001.BTL'
+        self.ctd_data_frame_001 = ctd.from_btl(os.path.join(self.test_file_location, self.test_file_001))
+
+        self.test_file_006 = 'JC243a006.BTL'
+        self.ctd_data_frame_006 = ctd.from_btl(os.path.join(self.test_file_location, self.test_file_006))
+
+    def test_get_sensor_names(self):
+        # give a pandas dataframe loaded from the 3rd-part ctd package, get_sensor_names should return a list of
+        # sensors extracted from the dataframe columns, excluding common sensors we don't want to be returned,
+        # like time and lat/lon
+
+        # These are columns we either have no use for or we will specifically call and use later
+        exclude = ['Bottle', 'Bottle_', 'Date', 'Scan', 'TimeS', 'Statistic', "Longitude", "Latitude"]
+        col_headers = ctd_parser.get_sensor_names(self.ctd_data_frame_001, exclude=exclude)
+
+        for header in exclude:
+            self.assertFalse(header in col_headers)
+
+    def test_process_bottles(self):
+        # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
+        # process bottles should create core.models.Bottle objects and return validation errors for invalid
+        # bottles
+
+        # our sample file is for event 1, it should create 19 bottles with no errors
+        event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
+        errors = ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+
+        self.assertEquals(len(errors), 0)
+
+        bottles = core_models.Bottle.objects.filter(event=event)
+        self.assertTrue(bottles.exists())
+        self.assertEquals(len(bottles), 19)
+        self.assertEquals(bottles.first().bottle_id, event.sample_id)
+        self.assertEquals(bottles.last().bottle_id, event.end_sample_id)
+
+    def test_process_bottles_update(self):
+        # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
+        # process bottles should create core.models.Bottle objects and return validation errors for invalid
+        # bottles
+
+        # If a bottle already exists, it should be updated with the new data
+        bottle_id = 495271
+        initial_pressure = 143
+        updated_pressure = 145.155
+
+        # our sample file is for event 1, it should create 19 bottles with no errors
+        event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
+        core_factory.BottleFactory(event=event, bottle_number=1, bottle_id=bottle_id, pressure=initial_pressure)
+
+        bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
+        self.assertEquals(bottle.pressure, initial_pressure)
+
+        errors = ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+
+        self.assertEquals(len(errors), 0)
+
+        bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
+        self.assertEquals(bottle.pressure, updated_pressure)
+
+    def test_process_bottles_validation(self):
+        # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
+        # process bottles should create core.models.Bottle objects and return validation errors for invalid
+        # bottles
+
+        # For CTD event 6 of the JC24301 mission, as an after though, there were 10 extra bottle fired at the surface
+        # for calibration reasons. This meant that there were 10 bottles outside the intended sample ID range.
+        # Those errors should be reported as Validation errors to let someone know the bottle file has more bottles
+        # than are expected
+
+        # our sample file is for event 6, it should contain 10 errors
+        event = core_factory.CTDEventFactory(event_id=6, sample_id=495290, end_sample_id=495303)
+
+        errors = ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_006)
+
+        self.assertEquals(len(errors), 10)
+        for error in errors:
+            self.assertIsInstance(error, core_models.FileError)
+
+        # 14 bottles should have been created even though there are 24 bottles in the BTL file
+        bottles = core_models.Bottle.objects.filter(event=event)
+        self.assertEquals(len(bottles), 14)
+
+    def test_process_sensors(self):
+        # Todo:
+        #  test sensor names can be retrieved from ROS files
+        #  test sensors can be created from BTL column names
+        pass
+
+    def test_process_data(self):
+        # Todo:
+        #  test that bottles are created provided a datafarme
+        #  and that discrete data is added to those bottles
+        pass
+
+    def test_read_btl(self):
+        # this tests the overall result
+        event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
+        ctd_parser.read_btl(mission=event.mission, btl_file=os.path.join(self.test_file_location, self.test_file_001))
+
+        sample_types = core_models.SampleType.objects.all()
+        samples = core_models.Sample.objects.all()
+
+        self.assertTrue(sample_types.exists())
+        self.assertTrue(samples.exists())
 
 
 @tag('parsers', 'parsers_sample')
@@ -80,7 +195,7 @@ class TestSampleCSVParser(DartTestCase):
         dv_value = sample.discrete_value.get(replicate=1).value
         self.assertEquals(dv_value, 3.135)
 
-        dv_comment = sample.comment
+        dv_comment = sample.discrete_value.get(replicate=1).comment
         self.assertEquals(dv_comment, "Dropped magnet in before H2SO4; sorry")
 
 
@@ -314,7 +429,6 @@ class TestElogParser(DartTestCase):
         # The actual exception that occurred
         self.assertIsInstance(error[2], core_models.Station.DoesNotExist)
         logger.info(error)
-
 
     def test_process_events_no_instrument(self):
         expected_event_id = 1

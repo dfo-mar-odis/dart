@@ -171,8 +171,8 @@ def process_common_sensors(sensors: list[str], exclude_sensors: [str]):
 
 
 def process_sensors(btl_file: str, column_headers: list[str], exclude_sensors: list[str]):
-    """Given a Data File and a list of column, MissionSensors will be created if they do not already exist or aren't
-    part of a set of excluded sensors"""
+    """Given a Data File and a list of column, 'SampleType' objects will be created if they do not already exist
+    or aren't part of a set of excluded sensors"""
     ros_file = get_ros_file(btl_file=btl_file)
     process_ros_sensors(exclude_sensors=exclude_sensors, ros_file=ros_file)
 
@@ -241,6 +241,9 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
                                                 message=err.message, type=err.type, line=line))
 
         if core_models.Bottle.objects.filter(event=event, bottle_number=bottle_number).exists():
+            # If a bottle already exists for this event then we'll update it's fields rather than
+            # creating a whole new bottle. Reason being there may be samples attached to bottles that are
+            # being reloaded from a calibrated bottle file post mission.
             b = core_models.Bottle.objects.get(event=event, bottle_number=bottle_number)
 
             check_fields = {'bottle_id': bottle_id, 'date_time': date, 'pressure': pressure,
@@ -249,10 +252,8 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
             if len(updated_fields) > 0:
                 b_update['data'].append(b)
                 b_update['fields'] = b_update['fields'].union(updated_fields)
-            continue
-
-        # only create a new bottle if the bottle id is in a valid range.
-        if len(file_validation) <= 0:
+        elif len(file_validation) <= 0:
+            # only create a new bottle if the bottle id is in a valid range.
             new_bottle = core_models.Bottle(event=event, pressure=pressure, bottle_number=bottle_number, date_time=date,
                                             bottle_id=bottle_id, latitude=latitude, longitude=longitude)
             b_create.append(new_bottle)
@@ -276,41 +277,36 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         sensor_type = core_models.SampleType.objects.get(short_name__iexact=column_name)
 
         df = data_frame_avg[["Bottle", column_name]]
-        create_sensors: [core_models.Sample] = []
+        create_sensors: {int: core_models.Sample} = {}
         for data in df.iterrows():
-            try:
-                bottle = event.bottles.filter(bottle_number=data[1]["Bottle"])
-                if not bottle.exists():
-                    logger.warning(f"Bottle {data[1]['Bottle']} for event {event.event_id} does not exist, "
-                                   f"there should be a File Error")
-                    continue
-                bottle = bottle[0]
-                sensor = core_models.Sample.objects.filter(bottle=bottle, type=sensor_type, file=file_name)
-                if not sensor.exists():
-                    sensor = core_models.Sample(bottle=bottle, type=sensor_type, file=file_name)
-                    create_sensors.append(sensor)
-                else:
-                    sensor = sensor[0]
+            bottle = event.bottles.filter(bottle_number=data[1]["Bottle"])
+            if not bottle.exists():
+                logger.warning(f"Bottle {data[1]['Bottle']} for event {event.event_id} does not exist, "
+                               f"there should be a File Error")
+                continue
 
-                # .get_or_create returns a tuple, the first value is the object that was created or retrieved
-                # the second is 0 or 1 for if the object was created. If the object already exists, just update
-                # the DiscreteSampleValue
-                if hasattr(sensor, 'discrete_value'):
-                    discrete_value = sensor.discrete_value
-                    discrete_value.value = data[1][column_name]
-                    update_samples.append(discrete_value)
-                else:
-                    discrete_value = core_models.DiscreteSampleValue(sample=sensor, value=data[1][column_name])
-                    new_samples.append(discrete_value)
-            except core_models.Bottle.DoesNotExist as e:
-                logger.exception(e)
-                """ The bottle doesn't exist. The reason is probably because when creating bottles in the
-                 process_bottles method the bottle failed it's ID validation. So the question becomes what do we do
-                 here? Do we log another error, which was probably logged during the process_bottles or assume the
-                 issue was already captured and explained to the users."""
+            bottle = bottle[0]
+            sensor = core_models.Sample.objects.filter(bottle=bottle, type=sensor_type, file=file_name)
+            if sensor.exists():
+                sensor = sensor[0]
+            elif bottle.bottle_id in create_sensors:
+                sensor = create_sensors[bottle.bottle_id]
+            else:
+                sensor = core_models.Sample(bottle=bottle, type=sensor_type, file=file_name)
+                create_sensors[bottle.bottle_id] = sensor
+
+            # bottle files don't contain replicates for discrete values, there should only be one sample value
+            # per bottle per sensor type
+            if sensor.pk and sensor.discrete_value.all().exists():
+                discrete_value = sensor.discrete_value.get(replicate=1)
+                discrete_value.value = data[1][column_name]
+                update_samples.append(discrete_value)
+            else:
+                discrete_value = core_models.DiscreteSampleValue(sample=sensor, value=data[1][column_name])
+                new_samples.append(discrete_value)
 
         if create_sensors:
-            core_models.Sample.objects.bulk_create(create_sensors)
+            core_models.Sample.objects.bulk_create(create_sensors.values())
 
     core_models.DiscreteSampleValue.objects.bulk_create(new_samples)
     core_models.DiscreteSampleValue.objects.bulk_update(update_samples, fields=["value"])

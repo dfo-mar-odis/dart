@@ -283,6 +283,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             comment_field = get_field(elog_configuration, 'comment', buffer)
             action_field = get_field(elog_configuration, 'action', buffer)
             data_collector_field = get_field(elog_configuration, 'data_collector', buffer)
+            sounding_field = get_field(elog_configuration, 'data_collector', buffer)
 
             event_id = buffer[event_field]
             action_type_text = buffer[action_field]
@@ -317,6 +318,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             lon = convertDMS_degs(time_position[3])
 
             data_collector = buffer[data_collector_field]
+            sounding = buffer[sounding_field]
 
             # if an event already contains this action, we'll update it
             if event.actions.filter(type=action_type).exists():
@@ -327,6 +329,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                     'longitude': lon,
                     'comment': comment,
                     'data_collector': data_collector,
+                    'sounding': sounding
                 }
                 if action_type == core_models.ActionType.other:
                     attrs['action_type_other'] = action_type_text
@@ -334,9 +337,18 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                 update_attributes(action, attrs, update_actions)
 
             else:
-                action = core_models.Action(file=file_name, event=event, date_time=date_time, mid=mid, comment=comment,
-                                            latitude=lat, longitude=lon, type=action_type,
-                                            data_collector=data_collector)
+                action = core_models.Action(file=file_name, event=event, date_time=date_time, mid=mid,
+                                            latitude=lat, longitude=lon, type=action_type)
+
+                # add on our optional fields if they exist
+                if data_collector and data_collector != "":
+                    action.data_collector = data_collector
+
+                if comment and comment != "":
+                    action.comment = comment
+
+                if sounding and sounding != "":
+                    action.sounding = sounding
 
                 if action_type == core_models.ActionType.other:
                     action.action_type_other = action_type_text

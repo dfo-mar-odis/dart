@@ -23,11 +23,20 @@ def parse_csv_sample_file(mission: core_models.Mission, sample_type: core_models
         if bottle.bottle_id in create_samples:
             db_sample = create_samples[bottle.bottle_id]
 
-        if file_settings.comment_field:
-            db_sample.comment = dataframe[file_settings.comment_field][i]
-
         create_samples[bottle.bottle_id] = db_sample
-        new_sample_discrete = core_models.DiscreteSampleValue(sample=db_sample, value=value, replicate=sample[1])
+        new_sample_discrete = core_models.DiscreteSampleValue(sample=db_sample, value=value)
+
+        if file_settings.replicate_field:
+            new_sample_discrete.replicate = dataframe[file_settings.replicate_field][i]
+        elif len(sample) > 1:
+            new_sample_discrete.replicate = sample[1]
+
+        if file_settings.comment_field:
+            new_sample_discrete.comment = dataframe[file_settings.comment_field][i]
+
+        if file_settings.flag_field:
+            new_sample_discrete.flag = dataframe[file_settings.flag_field][i]
+
         create_discrete_values.append(new_sample_discrete)
 
     core_models.Sample.objects.bulk_create(create_samples.values())
