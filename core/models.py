@@ -95,18 +95,6 @@ class Mission(models.Model):
         return f'{self.name}'
 
 
-class FileType(models.IntegerChoices):
-    log = 1, ".LOG"
-    btl = 2, ".BTL"
-    ros = 3, ".ROS"
-
-
-class DataFileDirectory(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='files', verbose_name=_("Mission"))
-    directory = models.FileField(verbose_name=_("Directory"), help_text=_("Absolute Path to Directory"))
-    file_type = models.IntegerField(verbose_name=_("File Types"), choices=FileType.choices)
-
-
 class InstrumentType(models.IntegerChoices):
     ctd = 1, "CTD"
     net = 2, "Net"
