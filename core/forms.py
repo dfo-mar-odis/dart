@@ -659,15 +659,17 @@ class BottleSelection(forms.Form):
         if 'initial' in kwargs and 'file_name' in kwargs['initial']:
             self.fields['file_name'].choices = ((f, f,) for f in kwargs['initial']['file_name'])
 
+        self.fields['file_name'].widget.attrs={'size': 12}
         self.helper = FormHelper(self)
         # self.helper.form_tag = False
         self.helper.attrs = {
-            "hx_post": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],))
+            "hx_post": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],)),
+            "hx_swap": 'outerHTML'
         }
 
         self.helper.layout = Layout(
             Hidden('bottle_dir', kwargs['initial']['bottle_dir']),
-            Row(Column('file_name')),
+            Row(Column(Field('file_name'))),
         )
 
         self.helper.add_input(Submit('submit', _("Submit")))

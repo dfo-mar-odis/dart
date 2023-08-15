@@ -1,5 +1,6 @@
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer
+from django.template.loader import render_to_string
 
 from core.htmx import get_mission_elog_errors
 
@@ -28,7 +29,18 @@ class CoreConsumer(WebsocketConsumer):
             self.GROUP_NAME, self.channel_name
         )
 
-    def processing_message(self, event):
+    def process_render_block(self, event):
+        template = event['template']
+        block = event['block'] if 'block' in event else None
+        context = event['context']
+        if block:
+            html = render_block_to_string(template, block, context=context)
+        else:
+            html = render_to_string(template, context=context)
+
+        self.send(text_data=html)
+
+    def processing_elog_message(self, event):
         html = render_block_to_string('core/mission_events.html', 'status_block',
                                       context={'object': event['mission'], 'msg': event['message']})
         self.send(text_data=html)

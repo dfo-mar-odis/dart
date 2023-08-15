@@ -2,7 +2,7 @@
 {% load i18n %}
 {% load bootstrap_icons %}
 
-<form hx-post="{% url 'core:load_sample_type' mission_id %}" hx-encoding="multipart/form-data">
+<form hx-post="{% url 'core:load_sample_type' mission.pk %}" hx-encoding="multipart/form-data">
 {% block file_input_form_block %}
     <div class="row">
         <div class="col">

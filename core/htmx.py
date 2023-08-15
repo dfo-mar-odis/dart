@@ -93,10 +93,22 @@ def add_geo_region(request):
     return response
 
 
-def send_user_notification(group_name, mission, message):
+def send_render_block(group_name, template, context, block=None):
     channel_layer = get_channel_layer()
     event = {
-        'type': 'processing_message',
+        'type': 'process_render_block',
+        'template': template,
+        'context': context
+    }
+    if block:
+        event['block'] = block
+    async_to_sync(channel_layer.group_send)(group_name, event)
+
+
+def send_user_notification_elog(group_name, mission, message):
+    channel_layer = get_channel_layer()
+    event = {
+        'type': 'processing_elog_message',
         'mission': mission,
         'message': message
     }
@@ -120,7 +132,7 @@ def htmx_validate_events(request, mission_id, file_name):
     try:
         validation_errors = []
 
-        send_user_notification(group_name, mission, "Validating Events")
+        send_user_notification_elog(group_name, mission, "Validating Events")
         file_events = mission.events.filter(actions__file=file_name).exclude(
             actions__type=models.ActionType.aborted).distinct()
 
@@ -132,7 +144,7 @@ def htmx_validate_events(request, mission_id, file_name):
         models.ValidationError.objects.bulk_create(validation_errors)
         # clear the processing message
         send_update_errors(group_name, mission)
-        send_user_notification(group_name, mission, '')
+        send_user_notification_elog(group_name, mission, '')
     except Exception as ex:
         # Something is really wrong with this file
         logger.exception(ex)
@@ -143,7 +155,7 @@ def htmx_validate_events(request, mission_id, file_name):
         send_update_errors(group_name, mission)
 
         # clear the processing message
-        send_user_notification(group_name, mission, _('An unknown error occurred, see error.log'))
+        send_user_notification_elog(group_name, mission, _('An unknown error occurred, see error.log'))
 
 
 def upload_elog(request, mission_id):
@@ -157,7 +169,7 @@ def upload_elog(request, mission_id):
         file_name = file.name
         process_message = f'{index}/{len(files)}: {file_name}'
         # let the user know that we're about to start processing a file
-        send_user_notification(group_name, mission, f'Processing file {process_message}')
+        send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
 
         # remove any existing errors for a log file of this name and update the interface
         mission.file_errors.filter(file_name=file_name).delete()
@@ -182,19 +194,19 @@ def upload_elog(request, mission_id):
                     if mid in message_objects[elog.ParserType.MID]:
                         message_objects[elog.ParserType.MID].pop(mid)
 
-            send_user_notification(group_name, mission, f"Process Stations {process_message}")
+            send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
             elog.process_stations(message_objects[elog.ParserType.STATIONS])
 
-            send_user_notification(group_name, mission, f"Process Instruments {process_message}")
+            send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
             elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
 
-            send_user_notification(group_name, mission, f"Process Events {process_message}")
+            send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
             errors += elog.process_events(message_objects[elog.ParserType.MID], mission)
 
-            send_user_notification(group_name, mission, f"Process Actions and Attachments {process_message}")
+            send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
             errors += elog.process_attachments_actions(message_objects[elog.ParserType.MID], mission, file_name)
 
-            send_user_notification(group_name, mission, f"Process Other Variables {process_message}")
+            send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
             errors += elog.process_variables(message_objects[elog.ParserType.MID], mission)
 
             for error in errors:
@@ -221,7 +233,7 @@ def upload_elog(request, mission_id):
                                        message=_("Unknown error :") + f"{str(ex)}, " + _("see error.log for details"))
             err.save()
             send_update_errors(group_name, mission)
-            send_user_notification(group_name, mission, "File Error")
+            send_user_notification_elog(group_name, mission, "File Error")
 
             continue
 

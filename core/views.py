@@ -1,5 +1,10 @@
+import concurrent.futures
 import os
 import io
+import queue
+import threading
+import time
+
 import pandas as pd
 import csv
 
@@ -14,16 +19,22 @@ from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 from render_block import render_block_to_string
 
+import core.htmx
 import dart2.utils
 from biochem import models
 from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
 
 from core import forms, filters, models, validation
-from core.parsers import ctd, SampleParser
+from core.parsers import ctd
+
+from threading import Thread
 
 import logging
 
 logger = logging.getLogger('dart')
+
+# This queue is used for processing sample files in the hx_sample_upload_ctd function
+sample_file_queue = queue.Queue()
 
 
 class MissionMixin:
@@ -374,6 +385,7 @@ def hx_sample_form(request, mission_id):
     context = {}
     context.update(csrf(request))
 
+    mission = models.Mission.objects.get(pk=mission_id)
     if request.method == "GET":
 
         datatype_filter = request.GET['datatype_filter'] if 'datatype_filter' in request.GET else None
@@ -381,7 +393,8 @@ def hx_sample_form(request, mission_id):
         if request.FILES:
             initial['file'] = request.FILES['file']
 
-        context['sample_form'] = forms.NewSampleForm(initial=initial)
+        # context['sample_form'] = forms.NewSampleForm(initial=initial)
+        context['object'] = mission
         html = render_block_to_string('core/mission_samples.html', 'new_sample_form_block', context)
         response = HttpResponse(html)
 
@@ -437,6 +450,8 @@ def hx_sample_upload_ctd(request, mission_id):
     context = {}
     context.update(csrf(request))
 
+    thread_name = "load_ctd_files"
+
     if request.method == "GET":
         bottle_dir = request.GET['bottle_dir']
         files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl')]
@@ -456,15 +471,94 @@ def hx_sample_upload_ctd(request, mission_id):
         bottle_dir = request.POST['bottle_dir']
         files = request.POST.getlist('file_name')
         mission = models.Mission.objects.get(pk=mission_id)
-        for file_name in files:
-            logger.info(f"Loading file {file_name}")
-            file = os.path.join(bottle_dir, file_name)
-            ctd.read_btl(mission, file)
 
-        response = HttpResponse("Success!")
+        logger.info(sample_file_queue.empty())
+        for file in files:
+            sample_file_queue.put({"mission": mission, "file": file, "bottle_dir": bottle_dir})
+
+        start = True
+        for thread in threading.enumerate():
+            if thread.name == thread_name:
+                start = False
+
+        if start:
+            Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,)).start()
+
+        context['object'] = mission
+        html = render_block_to_string('core/mission_samples.html', 'ctd_list', context=context)
+        response = HttpResponse(html)
         return response
     response = HttpResponse("Hi!")
     return response
+
+
+def load_ctd_files(mission):
+
+    group_name = 'mission_events'
+
+    jobs = {}
+    completed = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+        while not sample_file_queue.empty():
+            processed = (len(completed) / (sample_file_queue.qsize() + len(completed))) * 100.0
+            processed = str(round(processed, 2))
+
+            kw = sample_file_queue.get()
+            jobs[executor.submit(load_ctd_file, **kw)] = kw['file']
+
+            logger.info(f"Processed {processed}")
+
+            core.htmx.send_render_block(group_name, template='core/partials/notifications_samples.html',
+                                        block='notifications',
+                                        context={'msg': f"Loading {kw['file']}", 'queue': processed})
+
+            done, not_done = concurrent.futures.wait(jobs)
+
+            # remove jobs from the job queue if they've been completed
+            for future in done:
+
+                file = jobs[future]
+                try:
+                    results = future.result()
+                except Exception as ex:
+                    logger.exception(ex)
+
+                completed.append(file)
+                del jobs[future]
+
+
+    time.sleep(2)
+    # The mission_samples.html page has a websocket notifications element on it. We can send messages
+    # to the notifications element to display progress to the user, but we can also use it to
+    # send an update request to the page when loading is complete.
+    hx = {
+        'get': reverse_lazy("core:hx_sample_list", args=(mission.pk,)),
+        'trigger': 'load',
+        'target': '#sample_table',
+        'swap': 'outerHTML'
+    }
+    core.htmx.send_render_block(group_name, template='core/partials/notifications_samples.html',
+                                block='notifications', context={'hx': hx})
+
+
+def load_ctd_file(mission, file, bottle_dir):
+    status = 'Success'
+    group_name = 'mission_events'
+
+    message = f"Loading file {file}"
+    logger.info(message)
+
+    # core.htmx.send_render_block(group_name, template='core/partials/notifications_samples.html',
+    #                             block='notifications', context={'msg': message})
+
+    ctd_file = os.path.join(bottle_dir, file)
+    try:
+        ctd.read_btl(mission, ctd_file)
+    except Exception as ex:
+        logger.exception(ex)
+        status = "Fail"
+
+    return status
 
 
 def hx_list_samples(request, **kwargs):
@@ -598,7 +692,7 @@ def hx_list_samples(request, **kwargs):
             button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
             button.attrs['hx-target'] = "#sample_table"
             button.attrs['hx-swap'] = 'outerHTML'
-            button.attrs['title'] = sampletype.name
+            button.attrs['title'] = sampletype.long_name
 
             column.append(button)
 

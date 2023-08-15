@@ -10,11 +10,9 @@
     {#             href="#search_form">{% custom_icon 'search' %}</div>#}
     {#    </li>#}
     <li class="nav-item me-2">
-        <div class="btn btn-info col-auto" data-bs-toggle="collapse"
-             href="#div_new_sample" title="{% trans "Add Sample" %}"
-             hx-target="#new_sample_form"
-             hx-get="{% url "core:hx_sample_form" object.pk %}">{% custom_icon 'plus-square' %}</div>
-    </li>
+         <div class="btn btn-info col-auto" data-bs-toggle="collapse"
+             href="#div_new_sample" title="{% trans "Add Sample" %}">{% custom_icon 'plus-square' %}</div>
+   </li>
     <li class="nav-item me-2">
         <a href="{% url 'core:event_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
@@ -30,9 +28,7 @@
                 <div class="card">
                     <div id="new_sample_form" class="card-body">
                         {% block new_sample_form_block %}
-                            {% if sample_form %}
-                                {% crispy sample_form %}
-                            {% endif %}
+                            {% include 'core/partials/form_sample_type.html' with mission=object %}
                         {% endblock %}
                     </div>
                 </div>
@@ -59,6 +55,12 @@
                                         </span>
                                     </form>
                                 {% endblock %}
+
+                                {# The Notifications element on this page allows us to recieve messages from the server  #}
+                                {# on what's happening, but it can also be used to push an update request to the page.   #}
+                                {# At some point I'll figure out how custom logger adapters work then we can use loggers #}
+                                {# to send messages to the user #}
+                                {% include 'core/partials/notifications_samples.html' %}
                         </div>
                     </div>
                     <div class="card-body">
@@ -67,9 +69,7 @@
                                 {% if file_form %}
                                     {% crispy file_form %}
                                 {% else %}
-                                    <div hx-target="#sample_table" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url 'core:hx_sample_list' mission.pk %}">
                                     {% include 'core/partials/table_sample.html' with mission=object %}
-                                    </div>
                                 {% endif %}
                             {% endblock %}
                         </div>
