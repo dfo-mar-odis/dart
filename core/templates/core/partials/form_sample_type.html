@@ -2,22 +2,52 @@
 {% load i18n %}
 {% load bootstrap_icons %}
 
-<form hx-post="{% url 'core:load_sample_type' mission.pk %}" hx-encoding="multipart/form-data">
+{# picking a file will initialize the Sample Type and File Config forms by retrieving the file header column #}
+{# Fill out the forms and use the add button to save the sample types for this kind of file #}
+{# Once samples have been defined for the file, use the load button to load all the samples #}
+
+{# Act 1: Form is included on a page. id_input_sample_file is visible #}
+{# Act 2: user selectes a file using id_input_sample_file input, Sample Type #}
+{#        and File config are returned and swapped in at div_id_sample_type #}
+{# Act 3: If a user types in the Filter Datatype field, the BioChem Datatype #}
+{#        field will be filtered based on space separated values of the field #}
+{#        in the BCDataType.description field #}
+{# Act 4: The user clicks the 'add' button to add the sample type to a list of #}
+{#        sample types to load from files with this type of header #}
+{# Act 5: The user clicks the 'load' button to submit all the sample types with the #}
+{#        file and the parsers use the file config settings to load data from the files #}
+<form id="id_form_load_samples" hx-encoding="multipart/form-data" onkeydown="return event.key != 'Enter';">
 {% block file_input_form_block %}
     <div class="row">
         <div class="col">
-            <input type="file" name="sample_file" class="form-control form-control-sm" id="id_input_sample_file"
+            <input id="id_input_sample_file" class="form-control form-control-sm"
+                   type="file" name="sample_file" accept=".csv,.xls,.xlsx,.xlsm"
                 hx-trigger="change"
-                hx-post="{% url 'core:load_sample_type' %}"
-                hx-target="#div_id_sample_type"
-                hx-select="#div_id_sample_type"
+                hx-get="{% url 'core:load_sample_type' mission.pk %}"
+                hx-target="#div_id_loaded_sample_type"
+                hx-select="#div_id_loaded_sample_type"
                 hx-swap="outerHTML"
                 {% if sample_file %}value="{{ sample_file }}"{% endif %}
             />
         </div>
+        <div class="col-auto">
+            <button class="btn btn-primary btn-sm"
+                name="add_sample"
+                hx-post="{% url 'core:load_sample_type' mission.pk%}"
+                hx-target="#div_id_sample_type"
+                hx-select="#div_id_sample_type"
+                hx-swap="outerHTML"
+            >{% custom_icon 'plus-square' %}</button>
+        </div>
     </div>
-        <div id="div_id_sample_type">
+    {% block loaded_samples_block %}
+        <div id="div_id_loaded_sample_type">
+            {% if file %}
     {% block sample_type_block %}
+        <div id="div_id_sample_type">
+            {% if message %}
+                <div class="alert alert-warning mt-2">{{ message }}</div>
+            {% endif %}
         {% block sample_type_form_block %}
         {% if sample_type_form %}
         {% crispy sample_type_form %}
@@ -30,14 +60,32 @@
         {% endif %}
         {% endblock %}
 
-        {% if sample_type_form %}
+        {% if mission and sample_type_form %}
         <div class="row mt-2 justify-content-end">
             <div class="col-auto ms-auto">
-                <button class="btn btn-primary btn-sm" type="submit" name="submit" value="{% trans 'Submit' %}" >{% custom_icon 'plus-square' %}</button>
+                <button
+                        hx-post="{% url 'core:save_sample_type' mission.pk %}"
+                        hx-target="#div_id_loaded_sample_type"
+                        hx-swap="outerHTML"
+                        class="btn btn-primary btn-sm" value="{% trans 'Add' %}" >{% custom_icon 'plus-square' %}</button>
             </div>
         </div>
         {% endif %}
-    {% endblock %}
         </div>
+    {% endblock %}
+        {# Give a file this should populate a list of sample types that match the header for the file #}
+        <div id="div_id_loaded_samples_list">
+            {% block loaded_sample_list_block %}
+                {% for file_config in file_configurations %}
+                    {% crispy file_config %}
+                {% endfor %}
+                {% if not file_configurations %}
+                    <div class="alert alert-warning mt-2">{% trans "No sample file configurations found" %}</div>
+                {% endif %}
+            {% endblock %}
+        </div>
+    {% endif %}
+    </div>
+    {% endblock %}
 {% endblock %}
 </form>

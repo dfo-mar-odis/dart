@@ -26,7 +26,7 @@ table.dataframe thead {
     background-color: #FFF;
 }
 
-.tscroll tbody th {
+.tscroll tbody th:first-child {
     position: sticky;
     left: 0;
     z-index: 1;

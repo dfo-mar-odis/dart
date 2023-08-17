@@ -6,11 +6,12 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
 from django import forms
 from django.core.exceptions import ValidationError
-from django.core.files.uploadedfile import InMemoryUploadedFile
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
 import bio_tables.models
+from dart2.utils import load_svg
+import dart2.utils
 from . import models
 
 
@@ -63,7 +64,8 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['platform'].required = False
 
         # This button depends on a separate section being on the page with the ID 'geographic_region_dialog'
-        button_geo_add = HTML('<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#geographic_region_dialog">+</button>')
+        button_geo_add = HTML(
+            '<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#geographic_region_dialog">+</button>')
 
         submit = Submit('submit', 'Submit')
         if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
@@ -355,7 +357,7 @@ class MissionSearchForm(forms.Form):
 class SampleFileConfigurationForm(forms.ModelForm):
     sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
     value_field = forms.CharField(help_text=_("Column that contains the value data"))
-    replicate_field = forms.CharField(required=False, help_text=_("Column indicating a replicate ids, if it exists"))
+    replicate_field = forms.CharField(required=False, help_text=_("Column indicating replicate ids, if it exists"))
     flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
     comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
 
@@ -366,14 +368,7 @@ class SampleFileConfigurationForm(forms.ModelForm):
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
-        # at the very least an initial file_type will be expected to determine if this
-        # form should show a tab field or not
-        # if 'initial' not in kwargs:
-        #     raise KeyError({'message': 'missing "initial" dictionary in form creation'})
-        #
-        # if 'file_type' not in kwargs['initial']:
-        #     raise KeyError({'message': 'missing initial "file_type"'})
-        #
+
         choice_fields = ['sample_field', 'replicate_field', 'value_field', 'flag_field', 'comment_field']
         if 'field_choices' in kwargs:
             field_choices: list = kwargs.pop('field_choices')
@@ -404,12 +399,6 @@ class SampleFileConfigurationForm(forms.ModelForm):
         elif 'initial' in kwargs and 'file_type' in kwargs['initial']:
             file_type = kwargs['initial']['file_type']
 
-        sample_type = None
-        if args and 'sample_type' in args[0]:
-            sample_type = args[0]['sample_type']
-        elif 'initial' in kwargs and 'sample_type' in kwargs['initial']:
-            sample_type = kwargs['initial']['sample_type']
-
         if file_type is None:
             raise KeyError({'message': 'missing initial "file_type"'})
 
@@ -420,27 +409,51 @@ class SampleFileConfigurationForm(forms.ModelForm):
 
         self.helper.layout = Layout()
 
+        hx_relaod_form_attributes = {
+            'hx-post': reverse_lazy('core:load_sample_type'),
+            'hx-select': "#div_id_file_attributes",
+            'hx-target': "#div_id_file_attributes",
+            'hx-swap': "outerHTML",
+            'hx-trigger': "keyup changed delay:1s, change"
+        }
+        # if the tab field is updated the form should reload looking for headers on the updated tab index
+        if file_type.startswith('xls'):
+            tab_field = Field('tab')
+            tab_field.attrs = hx_relaod_form_attributes
+            tab_col = Column(tab_field, id=f"id_tab" + (f"_{sample_name}" if sample_name else ""))
+        else:
+            tab_col = Hidden('tab', "0", id=f"id_tab" + (f"_{sample_name}" if sample_name else ""))
+
+        # if the header field is updated the form should reload looking for headers on the updated row
+        header_row_field = Field('header', id=f"id_header" + (f"_{sample_name}" if sample_name else ""))
+        header_row_field.attrs = hx_relaod_form_attributes
+
+        config_name_row = Row(
+            tab_col,
+            Column(header_row_field),
+            Column(Field('allow_blank', css_class='checkbox-primary',
+                         id=f"id_allow_blank" + (f"_{sample_name}" if sample_name else ""))),
+            Column(Field('allow_replicate', css_class='checkbox-primary',
+                         id=f"id_allow_replicate" + (f"_{sample_name}" if sample_name else ""))),
+            css_class="flex-fill"
+        )
         div = Div(
             Field('sample_type', id=f"id_sample_type" + (f"_{sample_name}" if sample_name else ""),
                   type="hidden"),
+            # file type is hidden because it's taken care of by the form creation and
+            # the type of file a user is loading
             Field('file_type', id=f"id_file_type" + (f"_{sample_name}" if sample_name else ""),
                   type="hidden"),
-            Row(
-                Column(Field('file_config_name',
-                             id=f"id_file_config_name" + (f"_{sample_name}" if sample_name else ""))),
-                # file type is hidden because it's taken care of by the form creation and
-                # the type of file a user is loading
-                Column(Field('header',
-                             id=f"id_header" + (f"_{sample_name}" if sample_name else ""))),
-                css_class="flex-fill"
-            ),
+
+            config_name_row,
+
             Row(
                 Column(Field('sample_field',
                              id=f"id_sample_field" + (f"_{sample_name}" if sample_name else ""))),
-                Column(Field('replicate_field',
-                             id=f"id_replicate_field" + (f"_{sample_name}" if sample_name else ""))),
                 Column(Field('value_field',
                              id=f"id_value_field" + (f"_{sample_name}" if sample_name else ""))),
+                Column(Field('replicate_field',
+                             id=f"id_replicate_field" + (f"_{sample_name}" if sample_name else ""))),
                 Column(Field('flag_field',
                              id=f"id_flag_field" + (f"_{sample_name}" if sample_name else ""))),
                 Column(Field('comment_field',
@@ -450,12 +463,6 @@ class SampleFileConfigurationForm(forms.ModelForm):
             id="div_id_file_attributes" + (f"_{sample_name}" if sample_name else ""),
             css_class="form-control input-group mt-2"
         )
-
-        if file_type.startswith('xls'):
-            tab_col = Column(Field('tab'),
-                             id=f"id_tab" + (f"_{sample_name}" if sample_name else ""))
-
-            div.fields[1].insert(1, tab_col)
 
         root_div = Div(div, id=f"id_form_file_configuration" + (f"_{sample_name}" if sample_name else ""))
         self.helper[0].layout.fields.append(root_div)
@@ -540,110 +547,84 @@ class SampleTypeForm(forms.ModelForm):
         )
 
 
-class NewSampleForm(forms.ModelForm):
-    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
-                                      help_text=_("Filter the Datatype field on key terms"))
-
-    sample_id_col = forms.ChoiceField(label=_("Sample ID"),
-                                      help_text=_("Choose the column to use for the sample/bottle id"))
-    sample_value_col = forms.ChoiceField(label=_("Sample Value"),
-                                         help_text=_("Choose the column to use for the value of the sample"))
-
-    skip_lines = forms.IntegerField(label=_("Skip Lines"),
-                                    help_text=_("Number of lines to skip to find the header column"))
-    file = forms.FileField(label=_("Data File"), required=False)
-
+# This form is used after sample types have been created and sample file configs have been assigned.
+# It's not a modifiable form, rather it lists information for the user to decide if this is what
+# they want to load.
+class SampleTypeLoadForm(forms.ModelForm):
     class Meta:
-        model = models.SampleType
-        fields = ['short_name', 'long_name', 'priority', 'datatype', 'datatype_filter', 'file', 'sample_id_col',
-                  'sample_value_col', 'skip_lines']
+        model = models.SampleFileSettings
+        fields = "__all__"
 
     def __init__(self, *args, **kwargs):
+        mission_id = kwargs.pop('mission_id')
         super().__init__(*args, **kwargs)
 
-        mission_id = kwargs['initial']['mission']
         self.helper = FormHelper(self)
-        self.helper.attrs = {
-            "hx_post": reverse_lazy("core:hx_sample_form", args=(mission_id,)),
-            "hx_encoding": "multipart/form-data",
-            "hx_target": "this",
-            "hx_swap": "outerHTML"
-        }
+        self.helper.form_tag = False
 
-        if 'datatype_filter' in kwargs['initial'] and kwargs['initial']['datatype_filter']:
-            filter = kwargs['initial']['datatype_filter'].split(" ")
-            queryset = bio_tables.models.BCDataType.objects.all()
-            for term in filter:
-                queryset = queryset.filter(description__icontains=term)
-
-            queryset = queryset.order_by('priority')
-            self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in queryset]
-
-        datatype_filter = Field('datatype_filter', css_class='form-control form-control-sm')
-        datatype_filter.attrs = {
-            "hx-get": reverse_lazy('core:hx_sample_form', args=(mission_id,)),
-            "hx-target": "#div_id_datatype",
-            "hx-select": "#div_id_datatype",
-            "hx-trigger": "keyup changed delay:2s",
-            "hx-swap": 'outerHTML'
-        }
-
-        file_field = Field('file')
-        file_field.attrs = {
-            "hx-trigger": "change",
-            "hx-post": reverse_lazy('core:hx_sample_form', args=(mission_id,)),
-            "hx-target": "#file_properties_id",
-            "hx-select": "#file_properties_id",
-            "hx-swap": "outerHTML"
-        }
-
-        file_properties = Div(id="file_properties_id")
-        if 'file_name' in kwargs['initial'] and 'file_data' in kwargs['initial']:
-            file_name = kwargs['initial']['file_name']
-            if kwargs['initial']['file_name'].endswith(".csv"):
-                # we don't want to read the file if we already have the values we're looking for
-                data = kwargs['initial']['file_data'].split("\r\n")
-                csv_reader = csv.reader(data, delimiter=',')
-                skip = 0
-                lineone = next(csv_reader)
-                while '' in lineone:
-                    skip += 1
-                    lineone = next(csv_reader)
-
-                self.fields['skip_lines'].initial = skip
-                self.fields['sample_id_col'].choices = [(i, col) for i, col in enumerate(lineone)]
-                self.fields['sample_value_col'].choices = [(i, col) for i, col in enumerate(lineone)]
-
-                file_properties = Row(
-                    Column('skip_lines', css_class="col"),
-                    Column('sample_id_col', css_class="col"),
-                    Column('sample_value_col', css_class="col"),
-                    id="file_properties_id"
-                )
-            elif file_name.endswith(".xls") or file_name.endswith("xlsx"):
-                file_properties = Row(HTML("<p>xls detected</p>"), id="file_properties_id")
-            else:
-                file_properties = Row(HTML(f"<p>{_('Unexpected file type')}</p>"), id="file_properties_id")
-
-        self.helper.layout = Layout(
+        id_postfix = f"_{self.instance.sample_type.short_name}_{self.instance.pk}"
+        body = Div(
             Row(
-                Column(Field('short_name', css_class='form-control form-control-sm'), css_class="col"),
-                Column(Field('sample_type_name', css_class='form-control form-control-sm'), css_class="col"),
-                Column(Field('priority', css_class='form-control form-control-sm'), css_class="col"),
+                Column(HTML(f'{_("Header Row")} : {self.instance.header}'), css_class="col-auto")
             ),
             Row(
-                Column(datatype_filter, css_class="col")
+                Column(HTML(f'<div class="h6 mt-2">{_("Columns")}</div>'))
             ),
             Row(
-                Column(Field('datatype', css_class='form-control form-select-sm'), css_class="col"),
-            ),
-            Row(
-                Column(file_field, css_class="col")
-            ),
-            file_properties
+                Column(HTML(f'{_("Bottle ID")} : "{self.instance.sample_field}"')),
+                Column(HTML(f'{_("Value")} : "{self.instance.value_field}"')),
+            )
         )
 
-        self.helper.add_input(Submit('submit', _("Submit")))
+        if self.instance.replicate_field:
+            body[2].fields.append(Column(HTML(f'{_("Replicate")} : "{self.instance.replicate_field}"')))
+
+        if self.instance.flag_field:
+            body[2].fields.append(Column(HTML(f'{_("Data Quality Flag")} : {self.instance.flag_field}')))
+
+        if self.instance.comment_field:
+            body[2].fields.append(Column(HTML(f'{_("Comment")} : "{self.instance.comment_field}"')))
+
+        if self.instance.file_type.startswith('xls'):
+            body[0].fields.insert(0, Column(HTML(f'{_("Tab #")} : {self.instance.tab}'), css_class="col-auto"))
+
+        url = reverse_lazy('core:load_samples', args=(mission_id, self.instance.pk,))
+        # upon successfully loading the content the 'core:load_samples' function should return the button
+        # as a 'btn btn-success btn-sm' button
+        load_button = HTML(
+            f'<button id="id_load_button" class="btn btn-primary btn-sm" type="button" name="load" '
+            f'hx-post="{url}" hx-swap="outerHTML" '
+            f'>{load_svg("folder-check")}</button>')
+
+        delete_button = HTML(
+            f'<button class="btn btn-danger btn-sm" type="button" name="delete" '
+            f'hx-post="{url}" hx-target="#div_id_loaded_samples_list" '
+            f'hx-confirm="{_("Are you sure?")}">{load_svg("dash-square")}</button>')
+        title_label = f'{self.instance.file_type} - {self.instance.sample_type.short_name}'
+        title_label += f' : {self.instance.sample_type.long_name}' if self.instance.sample_type.long_name else ''
+        title = Div(
+            Column(
+                HTML(f'<div class="h6">{title_label}</div>'),
+                css_class='col'
+            ),
+            Column(
+                delete_button,
+                css_class='col-auto'
+            ),
+            Column(
+                load_button,
+                css_class='col-auto'
+            ),
+            css_class='card-title row'
+        )
+
+        self.helper.layout = Layout(
+            Div(
+                Div(title, css_class='card-header'),
+                Div(body, css_class='card-body'),
+                css_class='card mt-2'
+            )
+        )
 
 
 class BottleSelection(forms.Form):
@@ -659,7 +640,7 @@ class BottleSelection(forms.Form):
         if 'initial' in kwargs and 'file_name' in kwargs['initial']:
             self.fields['file_name'].choices = ((f, f,) for f in kwargs['initial']['file_name'])
 
-        self.fields['file_name'].widget.attrs={'size': 12}
+        self.fields['file_name'].widget.attrs = {'size': 12}
         self.helper = FormHelper(self)
         # self.helper.form_tag = False
         self.helper.attrs = {

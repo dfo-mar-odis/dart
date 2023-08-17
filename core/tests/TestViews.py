@@ -22,8 +22,8 @@ class TestSampleTypeFormView(DartTestCase):
     def setUp(self) -> None:
         self.mission = CoreFactoryFloor.MissionFactory()
         self.client = Client()
-        self.url = reverse("core:load_sample_type")
-        self.form_submit_url = reverse("core:load_sample_type", args=(self.mission.pk,))
+        self.url = reverse("core:load_sample_type", args=(self.mission.pk,))
+        self.form_submit_url = reverse("core:save_sample_type", args=(self.mission.pk,))
         self.file_location = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/')
 
     def test_url_response(self):
@@ -38,7 +38,7 @@ class TestSampleTypeFormView(DartTestCase):
         self.assertIsNotNone(soup.find("input", {"id": "id_input_sample_file"}))
 
         # at this point the response should only have a form with the file input field on it.
-        swap_div = soup.find(id="div_id_sample_type")
+        swap_div = soup.find(id="div_id_loaded_sample_type")
         self.assertIsNotNone(swap_div)
         self.assertEquals(len(swap_div.findChildren()), 0)
 
@@ -57,7 +57,7 @@ class TestSampleTypeFormView(DartTestCase):
         logger.debug(soup)
         file_input = soup.find(id="id_input_sample_file")
         # at this point the response should only have a form with the file input field on it.
-        swap_div = soup.find(id="div_id_sample_type")
+        swap_div = soup.find(id="div_id_loaded_sample_type")
         self.assertIsNotNone(swap_div)
         self.assertGreater(len(swap_div.findChildren()), 0)
 
@@ -69,7 +69,7 @@ class TestSampleTypeFormView(DartTestCase):
         expected_short_name = 'oxy'
         expected_sample_field = "Sample"
         expected_value_field = "O2_Concentration(ml/l)"
-        details = {'short_name': expected_short_name, 'sample_type_name': 'Oxygen', 'priority': 1,
+        details = {'short_name': expected_short_name, 'sample_type_name': 'Oxygen', 'priority': 1, 'tab': 0,
                    'data_type': bc_datatype, 'file_config_name': 'csv - oxy', 'file_type': 'csv', 'header': 9,
                    'sample_field': expected_sample_field, 'value_field': expected_value_field}
 
@@ -82,12 +82,8 @@ class TestSampleTypeFormView(DartTestCase):
         soup = BeautifulSoup(response.content)
 
         logger.debug(soup)
-        self.assertIsNotNone(soup.find("input", {"id": "id_input_sample_file"}))
-
-        # at this point the response should only have a form with the file input field on it.
-        swap_div = soup.find(id="div_id_sample_type")
-        self.assertIsNotNone(swap_div)
-        self.assertEquals(len(swap_div.findChildren()), 0)
+        # We only get back the loaded_samples_block so that we aren't overriding the file input field
+        self.assertIsNotNone(soup.find(id="div_id_loaded_sample_type"))
 
         # The objects related to the sample data should also exist at this point
         sample_type = core_models.SampleType.objects.get(short_name=expected_short_name)

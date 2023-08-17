@@ -1,5 +1,5 @@
 {% block sample_block %}
-<div hx-target="#sample_table" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url 'core:hx_sample_list' mission.pk %}">
+<div hx-target="#sample_table" hx-swap="outerHTML" hx-trigger="load, update_samples from:body" hx-get="{% url 'core:hx_sample_list' mission.pk %}">
 {% block sample_table %}
     <table id="sample_table" class="table table-striped">
 

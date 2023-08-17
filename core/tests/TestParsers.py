@@ -1,5 +1,6 @@
 import os
 
+import numpy as np
 import pandas as pd
 import io
 import ctd
@@ -15,12 +16,44 @@ from dart2 import settings
 from core import models as core_models
 from core.parsers import elog
 from core.parsers import ctd as ctd_parser
-from core.parsers.SampleParser import parse_csv_sample_file
+from core.parsers import SampleParser
 from core.tests import CoreFactoryFloor as core_factory
 
 import logging
 
 logger = logging.getLogger('dart.test')
+
+
+@tag('parsers', 'parsers_xls')
+class TestSampleXLSParser(DartTestCase):
+    def test_open_file_oxygen(self):
+        expected_oxy_columns = ["Sample", "Bottle#", "O2_Concentration(ml/l)", "O2_Uncertainty(ml/l)",
+                                "Titrant_volume(ml)", "Titrant_uncertainty(ml)", "Analysis_date", "Data_file",
+                                "Standards(ml)", "Blanks(ml)", "Bottle_volume(ml)", "Initial_transmittance(%%)",
+                                "Standard_transmittance0(%%)", "Comments"]
+
+        upload_file = open('core/tests/sample_data/sample_oxy.xlsx', 'rb')
+        file_name = upload_file.name
+        file = SimpleUploadedFile(file_name, upload_file.read())
+
+        df = SampleParser.get_excel_dataframe(file, 0)
+        self.assertEquals(df.index.start, 9)
+        self.assertEquals([c for c in df.columns], expected_oxy_columns)
+
+    def test_open_file_oxygen_with_header_row(self):
+        expected_oxy_columns = ["488275_1", "141", "3.804", "0.01", "1.856", "0.002", "2021-09-17 09:31:43",
+                                "488275_1.tod", "2.012 2.014 2.010", "0.007 0.003 0.003", "137.06",
+                                "0", "0", 'nan']
+
+        # when provided a header row get_excel_dataframe should just skip to that row, even if it's not the real header
+        upload_file = open('core/tests/sample_data/sample_oxy.xlsx', 'rb')
+        file_name = upload_file.name
+        file = SimpleUploadedFile(file_name, upload_file.read())
+
+        expected_header_row = 10
+        df = SampleParser.get_excel_dataframe(file, 0, expected_header_row)
+        self.assertEquals(df.index.start, expected_header_row)
+        self.assertEquals([str(c) for c in df.columns], expected_oxy_columns)
 
 
 @tag('parsers', 'parsers_ctd')
@@ -144,13 +177,11 @@ class TestSampleCSVParser(DartTestCase):
         # this is a setup for the James Cook 2022 mission JC24301,
         # all bottles are attached to one ctd event for simplicity
         self.mission = core.tests.CoreFactoryFloor.MissionFactory(name='JC24301')
-        ctd_event = core.tests.CoreFactoryFloor.CTDEventFactory(mission=self.mission)
+        self.ctd_event = core.tests.CoreFactoryFloor.CTDEventFactory(mission=self.mission)
 
-        # bottles start with 495271
-        core.tests.CoreFactoryFloor.BottleFactory.start_bottle_seq = 495271
-        core.tests.CoreFactoryFloor.BottleFactory.create_batch(2000, event=ctd_event)
+    def test_missing_bottle_validation(self):
+        # no bottles were created for this test we should get a bunch of validation errors
 
-    def test_parser_oxygen(self):
         upload_file = open('dart2/tests/sample_data/JC24301_oxy.csv', 'rb')
         file_name = upload_file.name
         file = SimpleUploadedFile(file_name, upload_file.read())
@@ -167,8 +198,156 @@ class TestSampleCSVParser(DartTestCase):
 
         stream = io.BytesIO(file.read())
         df = pd.read_csv(filepath_or_buffer=stream, header=skip_lines)
-        parse_csv_sample_file(mission=self.mission, sample_type=oxy_sample_type, file_settings=oxy_file_settings,
-                              file_name=file_name, dataframe=df)
+        SampleParser.parse_data_frame(
+            mission=self.mission, sample_type=oxy_sample_type, file_settings=oxy_file_settings,
+            file_name=file_name, dataframe=df)
+
+        errors = core_models.FileError.objects.all()
+        self.assertTrue(errors.exists())
+
+    @tag('parsers_sample_split')
+    def test_data_frame_split_sample(self):
+        # some sample files, like oxygen, use a sample_id with an underscore to delimit replicates
+        # (i.e 495600_1, 495600_2). I want to split the sample column up into s_id and r_id before parsing
+
+        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value')
+        data = {
+            'sample id': ["495600_1", "495600_2", "495601_1", "495601_2", "495602_1", "495602_2"],
+            'value': [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+        }
+        dataframe = pd.DataFrame(data)
+        logger.debug(dataframe)
+
+        df = SampleParser.split_sample(dataframe, file_settings)
+        self.assertIn('s_id', df)
+        self.assertIn('r_id', df)
+        logger.debug(dataframe)
+
+    @tag('parsers_sample_split')
+    def test_data_frame_split_allow_blank(self):
+        # some sample files, like CHL, have every other sample id blank where the blank column is a replicate
+        # of the last id
+
+        expected_sample_ids = [495600, 495600, 495601, 495601, 495602, 495602]
+        expected_replicates = [1, 2, 1, 2, 1, 2]
+        expected_values = [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value')
+        data = {
+            'sample id': [495600, np.nan, 495601, np.nan, 495602, np.nan],
+            'value': expected_values
+        }
+        dataframe = pd.DataFrame(data)
+        logger.debug(dataframe)
+
+        df = SampleParser.split_sample(dataframe, file_settings)
+        logger.debug(df)
+        self.assertIn('s_id', df)
+        self.assertIn('r_id', df)
+
+        for i in range(len(expected_sample_ids)):
+            row = df.iloc[i, :]
+            self.assertEquals(row['value'], expected_values[i])
+            self.assertEquals(row['s_id'], expected_sample_ids[i])
+            self.assertEquals(row['r_id'], expected_replicates[i])
+
+    @tag('parsers_sample_split')
+    def test_data_frame_split_remove_calibration(self):
+        # some sample files, like salts, have calibration samples mixed in with bottle samples
+        # The calibraion samples should be removed
+
+        expected_sample_ids = [495600, 495600, 495601, 495601, 495602, 495602]
+        expected_replicates = [1, 2, 1, 2, 1, 2]
+        expected_values = [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value')
+        data = {
+            'sample id': ["p_012", np.nan, "495600", np.nan, "495601", np.nan, "495602", np.nan],
+            'value': [np.nan, np.nan, 1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+        }
+
+        dataframe = pd.DataFrame(data)
+        logger.debug(dataframe)
+
+        df = SampleParser.split_sample(dataframe, file_settings)
+        logger.debug(df)
+        self.assertIn('s_id', df)
+        self.assertIn('r_id', df)
+
+        for i in range(len(expected_sample_ids)):
+            row = df.iloc[i, :]
+            self.assertEquals(row['value'], expected_values[i])
+            self.assertEquals(row['s_id'], expected_sample_ids[i])
+            self.assertEquals(row['r_id'], expected_replicates[i])
+
+    @tag('parsers_sample_split')
+    def test_data_frame_split_no_blanks(self):
+        # some sample files, like salts, have lots of blanks in the sample column. If a replicate is present
+        # the sample ID will appear twice, but if a row has no sample id it shouldn't be kept
+
+        expected_sample_ids = [495600, 495600, 495601, 495602]
+        expected_replicates = [1, 2, 1, 1]
+        expected_values = [1.011, 1.01, 2.01, 3.01]
+        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value',
+                                                       allow_blank=False)
+        data = {
+            'sample id': ["p_012", "495600", "495600", np.nan, "495601", np.nan, "495602", np.nan],
+            'value': [np.nan, 1.011, 1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+        }
+
+        dataframe = pd.DataFrame(data)
+        logger.debug(dataframe)
+
+        df = SampleParser.split_sample(dataframe, file_settings)
+        logger.debug(df)
+        self.assertIn('s_id', df)
+        self.assertIn('r_id', df)
+
+        for i in range(len(expected_sample_ids)):
+            row = df.iloc[i, :]
+            self.assertEquals(row['value'], expected_values[i])
+            self.assertEquals(row['s_id'], expected_sample_ids[i])
+            self.assertEquals(row['r_id'], expected_replicates[i])
+
+    def test_data_frame_column_convert(self):
+        # it's expected that the file_settings fields will be lower case fields so the colums of the dataframe
+        # should also be all lowercase
+        data = {
+            'Sample ID': ["495600_1", "495600_2", "495601_1", "495601_2", "495602_1", "495602_2"],
+            'Value': [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+        }
+        dataframe = pd.DataFrame(data)
+
+        logger.debug(dataframe)
+        df: pd.DataFrame = dataframe.columns.str.lower()
+
+        self.assertIn('sample id', df)
+        self.assertIn('value', df)
+
+        logger.debug(dataframe)
+
+    def test_parser_oxygen(self):
+        # bottles start with 495271
+        core.tests.CoreFactoryFloor.BottleFactory.start_bottle_seq = 495271
+        core.tests.CoreFactoryFloor.BottleFactory.create_batch(2000, event=self.ctd_event)
+
+        upload_file = open('dart2/tests/sample_data/JC24301_oxy.csv', 'rb')
+        file_name = upload_file.name
+        file = SimpleUploadedFile(file_name, upload_file.read())
+
+        skip_lines = 9
+        sample_column = "Sample"
+        value_column = "O2_Concentration(ml/l)"
+        comment_column = "Comments"
+
+        oxy_file_settings = core.tests.CoreFactoryFloor.SampleFileSettingsFactoryOxygen(
+            header=skip_lines, sample_field=sample_column, value_field=value_column, comment_field=comment_column
+        )
+        oxy_sample_type = oxy_file_settings.sample_type
+
+        stream = io.BytesIO(file.read())
+        df = pd.read_csv(filepath_or_buffer=stream, header=skip_lines)
+        SampleParser.parse_data_frame(
+            mission=self.mission, sample_type=oxy_sample_type, file_settings=oxy_file_settings,
+            file_name=file_name, dataframe=df)
 
         bottles = core_models.Bottle.objects.filter(event__mission=self.mission)
 

@@ -9,10 +9,6 @@
     {#        <div class="btn btn-info col-auto" data-bs-toggle="collapse"#}
     {#             href="#search_form">{% custom_icon 'search' %}</div>#}
     {#    </li>#}
-    <li class="nav-item me-2">
-        <div class="btn btn-info col-auto" data-bs-toggle="collapse"
-             href="#div_new_sample" title="{% trans "Add Sample" %}">{% custom_icon 'plus-square' %}</div>
-    </li>
     {{ block.super }}
 {% endblock %}
 
@@ -20,11 +16,11 @@
     <div class="row" id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {% block new_sample_block %}
         <div class="mb-2 col">
-            <div class="collapse col" id="div_new_sample">
+            <div class="col" id="div_new_sample">
                 <div class="card">
                     <div id="new_sample_form" class="card-body">
                         {% block new_sample_form_block %}
-                            {% include 'core/partials/form_sample_type.html' %}
+                            {% include 'core/partials/form_sample_type.html' with mission=object%}
                         {% endblock %}
                     </div>
                 </div>

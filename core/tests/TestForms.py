@@ -34,39 +34,6 @@ class TestSampleFileConfiguration(DartTestCase):
         except KeyError as ex:
             self.assertEquals(ex.args[0]["message"], "missing initial \"file_type\"")
 
-    def test_div_attrs(self):
-        # if a sample_name is provided as an argument then the form should be wrapped in a div, instead of a form
-        # with the id as id_form_file_configuration_{sample_name}, and all fields should end with _{sample_name}
-        initial = self.initial
-        initial['file_type'] = 'xls'
-        expected_sample_name = "oxy"
-
-        file_form = forms.SampleFileConfigurationForm(
-            sample_name=expected_sample_name,
-            field_choices=self.field_choices,
-            initial=initial
-        )
-
-        context = {"file_form": file_form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-        div = soup.findChildren()[0]
-        self.assertIsNotNone(div)
-
-        # form should have htmx tags if it's a form
-        attrs = div.attrs
-        self.assertIn('id', attrs)
-        self.assertEquals(attrs['id'], f"id_form_file_configuration_{expected_sample_name}")
-
-        input_fields = ['file_config_name', 'file_type', 'header', 'sample_field', 'value_field', 'tab', 'flag_field',
-                        'replicate_field', 'comment_field']
-
-        for field in input_fields:
-            expected_id = f"id_{field}_{expected_sample_name}"
-            self.assertIsNotNone(soup.find(id=expected_id), f"could not find element with id {expected_id}")
-
     def test_form_exists(self):
         initial = self.initial
         initial['file_type'] = 'csv'
@@ -118,7 +85,7 @@ class TestSampleFileConfiguration(DartTestCase):
         div = soup.find(id="div_id_file_attributes")
         self.assertIsNotNone(div)
 
-        expected_ids = ["sample_field", "value_field", "flag_field", "replicate_field", "file_config_name",
+        expected_ids = ["sample_field", "value_field", "flag_field", "replicate_field",
                         "file_type", "header", "comment_field"]
 
         for field in expected_ids:
@@ -143,7 +110,7 @@ class TestSampleFileConfiguration(DartTestCase):
         div = soup.find(id="div_id_file_attributes")
         self.assertIsNotNone(div)
 
-        expected_ids = ["sample_field", "value_field", "flag_field", "replicate_field", "file_config_name",
+        expected_ids = ["sample_field", "value_field", "flag_field", "replicate_field",
                         "file_type", "tab", "header", "comment_field"]
 
         for field in expected_ids:

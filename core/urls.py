@@ -1,24 +1,27 @@
 from django.urls import path
 
-from . import views, htmx
+import core.views_mission_sample
+from . import views, views_mission_sample, htmx
 
 
 app_name = 'core'
 
 urlpatterns = [
-    path('sample_type/', views.load_sample_type, name="load_sample_type"),
-    path('sample_type/<int:mission>/', views.load_sample_type, name="load_sample_type"),
+    path('sample_type/', views_mission_sample.load_sample_type, name="load_sample_type"),
+    path('sample_type/save/<int:mission>/', views_mission_sample.save_sample_type, name="save_sample_type"),
+    path('sample_type/<int:mission>/', views_mission_sample.load_sample_type, name="load_sample_type"),
+    path('sample_type/load/<int:mission>/<int:config>/', views_mission_sample.load_samples, name="load_samples"),
+
+    path('mission/sample/<int:pk>/', views.SampleDetails.as_view(), name="sample_details"),
+    path('mission/sample/form/<int:mission_id>/', views_mission_sample.hx_sample_form, name="hx_sample_form"),
+    path('mission/sample/ctd/<int:mission_id>/', views_mission_sample.hx_sample_upload_ctd, name="hx_sample_upload_ctd"),
+    path('mission/sample/hx/list/<int:mission_id>', views_mission_sample.hx_list_samples, name="hx_sample_list"),
+    path('mission/sample/hx/list/<int:mission_id>/<int:sensor_id>', views_mission_sample.hx_list_samples, name="hx_sample_list"),
 
     path('mission/', views.MissionFilterView.as_view(), name="mission_filter"),
     path('mission/new/', views.MissionCreateView.as_view(), name="mission_new"),
     path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
-
-    path('mission/sample/<int:pk>/', views.SampleDetails.as_view(), name="sample_details"),
-    path('mission/sample/form/<int:mission_id>/', views.hx_sample_form, name="hx_sample_form"),
-    path('mission/sample/ctd/<int:mission_id>/', views.hx_sample_upload_ctd, name="hx_sample_upload_ctd"),
-    path('mission/sample/hx/list/<int:mission_id>', views.hx_list_samples, name="hx_sample_list"),
-    path('mission/sample/hx/list/<int:mission_id>/<int:sensor_id>', views.hx_list_samples, name="hx_sample_list"),
 
     path('mission/event/<int:pk>/', views.EventDetails.as_view(), name="event_details"),
 
