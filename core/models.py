@@ -392,6 +392,9 @@ class SampleType(models.Model):
     datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, related_name='sample_types', on_delete=models.SET_NULL)
 
+    class Meta:
+        unique_together = ('short_name', 'priority')
+
     def __str__(self):
         return self.short_name + (f" - {self.long_name}" if self.long_name else "")
 

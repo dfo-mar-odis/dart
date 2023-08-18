@@ -1,10 +1,18 @@
+import os
+
+import bs4
 from bs4 import BeautifulSoup
-from django.template.loader import render_to_string
+
 from django.test import tag, Client
+from django.urls import reverse
+
 from render_block import render_block_to_string
 
+from dart2 import settings
 from dart2.tests.DartTestCase import DartTestCase
+
 from core import forms
+from core.tests import CoreFactoryFloor as core_factory
 
 import logging
 
@@ -15,9 +23,9 @@ logger = logging.getLogger("dart.test")
 class TestSampleFileConfiguration(DartTestCase):
 
     def setUp(self) -> None:
-        self.template_name = 'core/partials/form_sample_type.html'
-        self.form_block = "file_config_form_block"
-        self.initial = {'get_post_url': ''}
+        self.client = Client()
+        self.mission = core_factory.MissionFactory()
+        self.sample_oxy_xlsx_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/sample_oxy.xlsx')
         # if field choices are supplied the sample, value, flag and replicate fields should all be selection fields
         self.field_choices = [(i, f"Choice ({i})") for i in range(10)]
 
@@ -35,146 +43,160 @@ class TestSampleFileConfiguration(DartTestCase):
             self.assertEquals(ex.args[0]["message"], "missing initial \"file_type\"")
 
     def test_form_exists(self):
-        initial = self.initial
-        initial['file_type'] = 'csv'
+        url = reverse("core:load_sample_type") + f"?mission={self.mission.pk}"
+        response = self.client.get(url)
 
-        file_form = forms.SampleFileConfigurationForm(field_choices=self.field_choices, initial=initial)
-
-        context = {"file_form": file_form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
+        soup = BeautifulSoup(response.content, 'html.parser')
         logger.debug(soup)
-        form = soup.find(id="id_form_file_configuration")
+        form = soup.find(id="id_form_load_samples")
 
         self.assertIsNotNone(form)
 
-    def test_input_choice_fields_csv(self):
-        # a file has been chosen, now the input fields should be visible to the user
-        initial = self.initial
-        initial['get_post_url'] = ""
+        # the form should consist of the hidden mission_id, a row containing the input field
+        # a div_id_sample_type object for messages (empty) and a div_id_loaded_sample_type object
+        # for loaded configurations (empty
+        elm: bs4.Tag = form.findChildren()[0]
+        self.assertEquals(elm.attrs['name'], 'mission_id')
+        self.assertEquals(elm.attrs['value'], str(self.mission.pk))
 
-        # if the file has been chosen, pass the file type to the form. This should enable a different layout
-        # based on the type of file
-        initial['file_type'] = 'csv'
+        elm = elm.find_next_sibling()
+        self.assertEquals(elm.attrs['class'], ['row'])
 
-        file_form = forms.SampleFileConfigurationForm(field_choices=self.field_choices, initial=initial)
+        elm = elm.find_next_sibling()
+        self.assertEquals(elm.attrs['id'], 'div_id_sample_type')
 
-        context = {"file_form": file_form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
+        elm = elm.find_next_sibling()
+        self.assertEquals(elm.attrs['id'], 'div_id_loaded_sample_type')
 
-        soup = BeautifulSoup(html, 'html.parser')
+    def test_input_field(self):
+        # first action is for a user to choose a file, which should send back an 'alert alert-info' element
+        # stating that loading is taking place and will post the file to the 'load_sample_type' url
+
+        url = reverse("core:load_sample_type") + "?sample_file=''"
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
         logger.debug(soup)
+        message = soup.find(id="div_id_loaded_sample_type_message")
 
-    def test_input_fields_csv(self):
-        # a file has been chosen, now the input fields should be visible to the user
-        initial = self.initial
-        initial['get_post_url'] = ""
+        self.assertIsNotNone(message)
+        self.assertEquals(message.attrs['hx-trigger'], 'load')
+        self.assertEquals(message.attrs['hx-post'], reverse("core:load_sample_type"))
 
-        # if the file has been chosen, pass the file type to the form. This should enable a different layout
-        # based on the type of file
-        initial['file_type'] = 'csv'
+        alert = message.find('div')
+        self.assertEquals(alert.string, "Loading")
 
-        file_form = forms.SampleFileConfigurationForm(field_choices=self.field_choices, initial=initial)
+    def test_input_file_no_config(self):
+        # provided a file, if no configs are available the div_id_sample_type
+        # tag should contain a message that no configs were found
 
-        context = {"file_form": file_form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
+        url = reverse("core:load_sample_type")
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            response = self.client.post(url, {'sample_file': fp})
 
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-        div = soup.find(id="div_id_file_attributes")
+        soup = BeautifulSoup(response.content, 'html.parser')
+        samples_list = soup.find(id='div_id_sample_type')
+        msg_div = samples_list.findChild('div')
+
+        self.assertIsNotNone(msg_div)
+        self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-warning', 'mt-2'])
+        self.assertEquals(msg_div.string, "No File Configurations Found")
+
+    def test_input_file_with_config(self):
+        # provided a file, if a config is available a card with an id like 'id_oxy_1' should be returned
+        # with a blank div_id_sample_type. The div_id_sample_type is used to clear the message/new sampletype form
+        # the id_oxy_1 card will be swapped into the div_id_loaded_sample_type_list
+
+        oxy_sample_type = core_factory.SampleTypeFactory(short_name="oxy", long_name="Oxygen")
+        oxy_file_config = core_factory.SampleFileSettingsFactory(
+            sample_type=oxy_sample_type,
+            header=9,
+            sample_field='sample',
+            value_field='o2_concentration(ml/l)',
+            comment_field='comment',
+            file_type='xlsx'
+        )
+
+        url = reverse("core:load_sample_type")
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            response = self.client.post(url, {'sample_file': fp})
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        samples_type = soup.find(id='div_id_sample_type')
+        self.assertIsNotNone(samples_type)
+        self.assertIsNone(samples_type.string)
+
+        msg_div = soup.find(id=f'div_id_oxy_{oxy_file_config.pk}')
+        self.assertIsNotNone(msg_div)
+
+    def test_new_blank_form_no_file(self):
+        # When the 'add' sample_type button is clicked if no file has been selected a message should be
+        # swapped into the div_id_sample_type tag saying no file has been selected
+
+        url = reverse("core:new_sample_type")
+
+        # anything that requres accss to a file will need to be a post method
+        response = self.client.post(url, {'sample_file': ''})
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        div = soup.find(id="div_id_sample_type")
         self.assertIsNotNone(div)
+        msg_div = div.findChild('div')
+        self.assertIsNotNone(msg_div)
+        self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-warning', 'mt-2'])
+        self.assertEquals(msg_div.string, "File is required before adding sample")
 
-        expected_ids = ["sample_field", "value_field", "flag_field", "replicate_field",
-                        "file_type", "header", "comment_field"]
+    def test_new_blank_form_with_file(self):
+        # When the 'add' sample_type button is clicked if no file has been selected a message should be
+        # swapped into the div_id_sample_type tag saying no file has been selected
 
-        for field in expected_ids:
-            self.assertIsNotNone(div.find(id=f"id_{field}"), f"Could not find id field id_{field}")
+        url = reverse("core:new_sample_type")
 
-    def test_input_fields_xls(self):
-        # a file has been chosen, now the input fields should be visible to the user
-        initial = self.initial
-        initial['get_post_url'] = ""
+        # anything that requres accss to a file will need to be a post method
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            response = self.client.post(url, {'sample_file': fp})
 
-        # if the file has been chosen, pass the file type to the form. This should enable a different layout
-        # based on the type of file
-        initial['file_type'] = 'xls'
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-        file_form = forms.SampleFileConfigurationForm(field_choices=self.field_choices, initial=initial)
-
-        context = {"file_form": file_form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-        div = soup.find(id="div_id_file_attributes")
+        div = soup.find(id="div_id_sample_type")
         self.assertIsNotNone(div)
+        msg_div = div.findChild('div')
+        self.assertIsNotNone(msg_div)
+        self.assertEquals(msg_div.attrs['id'], 'div_id_sample_type_form')
 
-        expected_ids = ["sample_field", "value_field", "flag_field", "replicate_field",
-                        "file_type", "tab", "header", "comment_field"]
+        # I'm only going to test the one field for now to make sure it's blank, might do more later
+        input = div.find(id="id_short_name")
+        self.assertNotIn('value', input.attrs)
 
-        for field in expected_ids:
-            self.assertIsNotNone(div.find(id=f"id_{field}"), f"Could not find id field id_{field}")
+    def test_new_with_config_with_file(self):
+        # if the new_sample_type url contains an argument with 'config' the form should load with the
+        # existing config. This is called via the load_sample_type url
 
+        oxy_sample_type = core_factory.SampleTypeFactory(short_name="oxy", long_name="Oxygen")
+        oxy_file_config = core_factory.SampleFileSettingsFactory(
+            sample_type=oxy_sample_type,
+            header=9,
+            sample_field='sample',
+            value_field='o2_concentration(ml/l)',
+            comment_field='comment',
+            file_type='xlsx'
+        )
+        url = reverse("core:load_sample_type", args=(oxy_file_config.pk,))
 
-@tag('forms', 'form_sample_type')
-class TestSampleTypeForm(DartTestCase):
+        # anything that requres accss to a file will need to be a post method
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            response = self.client.post(url, {'sample_file': fp})
 
-    def setUp(self) -> None:
-        self.template_name = 'core/partials/form_sample_type.html'
-        self.form_block = "sample_type_form_block"
-        self.initial = {'get_post_url': ''}
+        soup = BeautifulSoup(response.content, 'html.parser')
 
-    def test_form_exists(self):
-        form = forms.SampleTypeForm()
+        div = soup.find(id="div_id_sample_type")
+        self.assertIsNotNone(div)
+        msg_div = div.findChild('div')
+        self.assertIsNotNone(msg_div)
+        self.assertEquals(msg_div.attrs['id'], 'div_id_sample_type_form')
 
-        context = {"sample_type_form": form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-
-        self.assertIsNotNone(soup.find(id="div_id_sample_type_form"))
-
-    def test_form_fields(self):
-        # the form should have a datatype filter field on it that can help filter down the 'id_datatype' select
-        form = forms.SampleTypeForm()
-
-        context = {"sample_type_form": form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-
-        expected_input_fields = ['short_name', 'long_name', 'priority', 'comments']
-        for field in expected_input_fields:
-            self.assertIsNotNone(soup.find(id=f"id_{field}"), f"Could not find id field id_{field}")
-
-    def test_form_fields_sample_name(self):
-        # if a sample name is provided as an argument then all fields should be post fixed with the sample_name
-        expected_sample_name = "oxy"
-        form = forms.SampleTypeForm(sample_name=expected_sample_name)
-
-        context = {"sample_type_form": form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-
-        expected_input_fields = ['short_name', 'long_name', 'priority', 'comments']
-        for field in expected_input_fields:
-            self.assertIsNotNone(soup.find(id=f"id_{field}_{expected_sample_name}"),
-                                 f"Could not find id field id_{field}_{expected_sample_name}")
-
-    def test_datatype_filter(self):
-        # the form should have a datatype filter field on it that can help filter down the 'id_datatype' select
-        form = forms.SampleTypeForm()
-
-        context = {"sample_type_form": form}
-        html = render_block_to_string(self.template_name, self.form_block, context=context)
-
-        soup = BeautifulSoup(html, 'html.parser')
-        logger.debug(soup)
-
-        input_datatype_filter = soup.find("input", {"id": "id_datatype_filter"})
-        self.assertIsNotNone(input_datatype_filter)
+        # I'm only going to test the one field for now to make sure it's blank, might do more later
+        input = div.find(id="id_short_name")
+        self.assertIn('value', input.attrs)
+        self.assertEquals(input.attrs['value'], oxy_file_config.sample_type.short_name)

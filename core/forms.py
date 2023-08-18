@@ -385,16 +385,14 @@ class SampleFileConfigurationForm(forms.ModelForm):
 
         # if no post_url is supplied then it's expected the form is posting to whatever
         # view (and it's url) that created the form
-        post_url = "."
-        if 'post_url' in kwargs:
-            post_url = kwargs.pop('post_url')
-
         sample_name = None
         if 'sample_name' in kwargs:
             sample_name = kwargs.pop('sample_name')
 
         file_type = None
-        if args and 'file_type' in args[0]:
+        if 'instance' in kwargs:
+            file_type = kwargs['instance'].file_type
+        elif args and 'file_type' in args[0]:
             file_type = args[0]['file_type']
         elif 'initial' in kwargs and 'file_type' in kwargs['initial']:
             file_type = kwargs['initial']['file_type']
@@ -437,6 +435,9 @@ class SampleFileConfigurationForm(forms.ModelForm):
                          id=f"id_allow_replicate" + (f"_{sample_name}" if sample_name else ""))),
             css_class="flex-fill"
         )
+        if self.instance.pk:
+            config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
+
         div = Div(
             Field('sample_type', id=f"id_sample_type" + (f"_{sample_name}" if sample_name else ""),
                   type="hidden"),
@@ -478,12 +479,6 @@ class SampleTypeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
 
-        # if no post_url is supplied then it's expected the form is posting to whatever
-        # view (and it's url) that created the form
-        post_url = "."
-        if "post_url" in kwargs:
-            post_url = kwargs.pop("post_url")
-
         sample_name = None
         if 'sample_name' in kwargs:
             sample_name = kwargs.pop('sample_name')
@@ -504,17 +499,15 @@ class SampleTypeForm(forms.ModelForm):
 
         datatype_filter = Field('datatype_filter')
         datatype_filter.attrs = {
-            "hx-get": post_url,
+            "hx-get": reverse_lazy('core:load_sample_type'),
             "hx-target": "#div_id_datatype",
             "hx-select": "#div_id_datatype",  # natural id that crispy-forms assigns to the datatype div
-            "hx-trigger": "keyup changed delay:2s",
+            "hx-trigger": "keyup changed delay:1s",
             "hx-swap": 'outerHTML',
             'class': "form-control form-control-sm"
         }
 
-        self.helper.layout = Layout(
-            Div(
-                Row(
+        name_row = Row(
                     Column(Field('short_name', css_class='form-control form-control-sm',
                                  id="id_short_name" + (f"_{sample_name}" if sample_name else "")),
                            css_class='col'),
@@ -525,7 +518,13 @@ class SampleTypeForm(forms.ModelForm):
                                  id="id_priority" + (f"_{sample_name}" if sample_name else "")),
                            css_class='col'),
                     css_class='flex-fill ms-1'
-                ),
+                )
+        if self.instance.pk:
+            name_row.fields.insert(0, Hidden('id', self.instance.pk))
+
+        self.helper.layout = Layout(
+            Div(
+                name_row,
                 Row(
                     Column(Field('comments', css_class='form-control form-control-sm',
                                  id="id_comments" + (f"_{sample_name}" if sample_name else "")),
@@ -556,13 +555,12 @@ class SampleTypeLoadForm(forms.ModelForm):
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
-        mission_id = kwargs.pop('mission_id')
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
 
-        id_postfix = f"_{self.instance.sample_type.short_name}_{self.instance.pk}"
+        card_id = f"div_id_{self.instance.sample_type.short_name}_{self.instance.pk}"
         body = Div(
             Row(
                 Column(HTML(f'{_("Header Row")} : {self.instance.header}'), css_class="col-auto")
@@ -588,20 +586,30 @@ class SampleTypeLoadForm(forms.ModelForm):
         if self.instance.file_type.startswith('xls'):
             body[0].fields.insert(0, Column(HTML(f'{_("Tab #")} : {self.instance.tab}'), css_class="col-auto"))
 
-        url = reverse_lazy('core:load_samples', args=(mission_id, self.instance.pk,))
+        load_url = reverse_lazy('core:load_samples', args=(self.instance.pk,))
+        delete_url = reverse_lazy('core:delete_config', args=(self.instance.pk,))
+        edit_url = reverse_lazy('core:load_sample_type', args=(self.instance.pk,))
         # upon successfully loading the content the 'core:load_samples' function should return the button
         # as a 'btn btn-success btn-sm' button
         load_button = HTML(
             f'<button id="id_load_button" class="btn btn-primary btn-sm" type="button" name="load" '
-            f'hx-post="{url}" hx-swap="outerHTML" '
+            f'hx-post="{load_url}" hx-swap="outerHTML" '
             f'>{load_svg("folder-check")}</button>')
+
+        edit_button = HTML(
+            f'<button class="btn btn-primary btn-sm me-1" type="button" name="edit" '
+            f'hx-post="{edit_url}" hx-select="#div_id_sample_type" hx-target="#div_id_sample_type" '
+            f'hx-swap="outerHTML">{load_svg("pencil-square")}</button>')
 
         delete_button = HTML(
             f'<button class="btn btn-danger btn-sm" type="button" name="delete" '
-            f'hx-post="{url}" hx-target="#div_id_loaded_samples_list" '
+            f'hx-post="{delete_url}" hx-target="#{card_id}" hx-swap="delete" '
             f'hx-confirm="{_("Are you sure?")}">{load_svg("dash-square")}</button>')
+
         title_label = f'{self.instance.file_type} - {self.instance.sample_type.short_name}'
         title_label += f' : {self.instance.sample_type.long_name}' if self.instance.sample_type.long_name else ''
+        title_label += f' - {self.instance.sample_type.priority}'
+
         title = Div(
             Column(
                 HTML(f'<div class="h6">{title_label}</div>'),
@@ -612,6 +620,7 @@ class SampleTypeLoadForm(forms.ModelForm):
                 css_class='col-auto'
             ),
             Column(
+                edit_button,
                 load_button,
                 css_class='col-auto'
             ),
@@ -622,7 +631,8 @@ class SampleTypeLoadForm(forms.ModelForm):
             Div(
                 Div(title, css_class='card-header'),
                 Div(body, css_class='card-body'),
-                css_class='card mt-2'
+                css_class='card mt-2',
+                id=f"{card_id}"
             )
         )
 

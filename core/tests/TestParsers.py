@@ -41,11 +41,11 @@ class TestSampleXLSParser(DartTestCase):
         self.assertEquals([c for c in df.columns], expected_oxy_columns)
 
     def test_open_file_oxygen_with_header_row(self):
+        # when provided a header row get_excel_dataframe should just skip to that row, even if it's not the real header
         expected_oxy_columns = ["488275_1", "141", "3.804", "0.01", "1.856", "0.002", "2021-09-17 09:31:43",
                                 "488275_1.tod", "2.012 2.014 2.010", "0.007 0.003 0.003", "137.06",
-                                "0", "0", 'nan']
+                                "0", "0.1", 'Unnamed: 13']
 
-        # when provided a header row get_excel_dataframe should just skip to that row, even if it's not the real header
         upload_file = open('core/tests/sample_data/sample_oxy.xlsx', 'rb')
         file_name = upload_file.name
         file = SimpleUploadedFile(file_name, upload_file.read())
@@ -179,31 +179,107 @@ class TestSampleCSVParser(DartTestCase):
         self.mission = core.tests.CoreFactoryFloor.MissionFactory(name='JC24301')
         self.ctd_event = core.tests.CoreFactoryFloor.CTDEventFactory(mission=self.mission)
 
+        self.file_name = "sample_oxy.csv"
+        self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)
+
+        self.oxy_sample_type = core_models.SampleType = core_factory.SampleTypeFactory(short_name='oxy',
+                                                                                       long_name="Oxygen")
+
+        self.oxy_file_settings: core_models.SampleFileSettings = core_factory.SampleFileSettingsFactory(
+            sample_type=self.oxy_sample_type, file_type='csv',
+            header=9, sample_field="sample", value_field="o2_concentration(ml/l)", comment_field="comments",
+            allow_blank=False, allow_replicate=True
+        )
+
+        self.salt_sample_type = core_models.SampleType = core_factory.SampleTypeFactory(short_name='salts',
+                                                                                        long_name="Salinity")
+
+        self.salt_file_settings: core_models.SampleFileSettings = core_factory.SampleFileSettingsFactory(
+            sample_type=self.salt_sample_type, file_type='xlsx',
+            header=1, sample_field="bottle label", value_field="calculated salinity", comment_field="comments",
+            allow_blank=False, allow_replicate=True
+        )
+
+    def test_no_duplicate_samples(self):
+        # if a sample already exists the parser should update the discrete value, but not create a new sample
+        bottle = core_factory.BottleFactory(event__mission=self.mission, bottle_id=495271)
+        self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
+
+        sample_type = self.oxy_file_settings.sample_type
+
+        core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
+
+        sample = core_models.Sample.objects.filter(bottle=bottle)
+        self.assertEquals(len(sample), 1)
+
+        data = {
+            self.oxy_file_settings.sample_field: ['495271_1', '495271_2'],
+            self.oxy_file_settings.value_field: [3.932, 3.835],
+            self.oxy_file_settings.comment_field: [np.nan, 'hello?']
+        }
+        df = pd.DataFrame(data)
+
+        different_file = 'some_other_file.csv'
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, different_file, df)
+
+        sample = core_models.Sample.objects.filter(bottle=bottle)
+        self.assertEquals(len(sample), 1)
+        self.assertEquals(sample.first().file, different_file)
+
+    def test_no_duplicate_discrete(self):
+        # if a discrete value for a sample already exists the parser should update the discrete value,
+        # but not create a new one
+        bottle = core_factory.BottleFactory(event=self.ctd_event, bottle_id=495271)
+        self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
+
+        sample_type = self.oxy_file_settings.sample_type
+
+        sample = core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
+        core_factory.DiscreteValueFactory(sample=sample, replicate=1, value=0.001, comment="some comment")
+
+        discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
+        self.assertEquals(len(discrete), 1)
+
+        # this should update one discrete value and attach a second to the sample
+        data = {
+            self.oxy_file_settings.sample_field: ['495271_1', '495271_2'],
+            self.oxy_file_settings.value_field: [3.932, 3.835],
+            self.oxy_file_settings.comment_field: [np.nan, 'hello?']
+        }
+        df = pd.DataFrame(data)
+
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
+
+        discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
+        self.assertEquals(len(discrete), 2)
+        self.assertEquals(discrete[0].replicate, 1)
+        self.assertEquals(discrete[0].value, 3.932)
+        self.assertEquals(discrete[0].comment, None)
+
+        self.assertEquals(discrete[1].replicate, 2)
+        self.assertEquals(discrete[1].value, 3.835)
+        self.assertEquals(discrete[1].comment, 'hello?')
+
     def test_missing_bottle_validation(self):
         # no bottles were created for this test we should get a bunch of validation errors
 
-        upload_file = open('dart2/tests/sample_data/JC24301_oxy.csv', 'rb')
-        file_name = upload_file.name
-        file = SimpleUploadedFile(file_name, upload_file.read())
+        file_name = "fake_file.csv"
 
-        skip_lines = 9
-        sample_column = "Sample"
-        value_column = "O2_Concentration(ml/l)"
-        comment_column = "Comments"
+        bottle_id = 495600
+        bottle = core_factory.BottleFactory(bottle_id=bottle_id)
+        sample = core_factory.SampleFactory(bottle=bottle, type=self.oxy_file_settings.sample_type)
+        core_factory.DiscreteValueFactory(sample=sample)
 
-        oxy_file_settings = core.tests.CoreFactoryFloor.SampleFileSettingsFactoryOxygen(
-            header=skip_lines, sample_field=sample_column, value_field=value_column, comment_field=comment_column
-        )
-        oxy_sample_type = oxy_file_settings.sample_type
+        data = {
+            self.oxy_file_settings.sample_field: [f"{bottle_id}_1"],
+            self.oxy_file_settings.value_field: [0.38]
+        }
+        df = pd.DataFrame(data)
+        SampleParser.parse_data_frame(mission=self.mission, file_settings=self.oxy_file_settings, file_name=file_name,
+                                      dataframe=df)
 
-        stream = io.BytesIO(file.read())
-        df = pd.read_csv(filepath_or_buffer=stream, header=skip_lines)
-        SampleParser.parse_data_frame(
-            mission=self.mission, sample_type=oxy_sample_type, file_settings=oxy_file_settings,
-            file_name=file_name, dataframe=df)
-
-        errors = core_models.FileError.objects.all()
-        self.assertTrue(errors.exists())
+        samples = core_models.Sample.objects.filter(bottle__bottle_id=bottle_id)
+        self.assertEquals(len(samples), 1)
 
     @tag('parsers_sample_split')
     def test_data_frame_split_sample(self):
@@ -326,36 +402,28 @@ class TestSampleCSVParser(DartTestCase):
 
     def test_parser_oxygen(self):
         # bottles start with 495271
-        core.tests.CoreFactoryFloor.BottleFactory.start_bottle_seq = 495271
-        core.tests.CoreFactoryFloor.BottleFactory.create_batch(2000, event=self.ctd_event)
 
-        upload_file = open('dart2/tests/sample_data/JC24301_oxy.csv', 'rb')
-        file_name = upload_file.name
-        file = SimpleUploadedFile(file_name, upload_file.read())
+        core_factory.BottleFactory(event=self.ctd_event, bottle_id=495271)
+        core_factory.BottleFactory(event=self.ctd_event, bottle_id=495600)
 
-        skip_lines = 9
-        sample_column = "Sample"
-        value_column = "O2_Concentration(ml/l)"
-        comment_column = "Comments"
+        data = {
+            self.oxy_file_settings.sample_field: ['495271_1', '495271_2', '495600_1'],
+            self.oxy_file_settings.value_field: [3.932, 3.835, 3.135],
+            self.oxy_file_settings.comment_field: [np.nan, np.nan, 'Dropped magnet in before H2SO4; sorry']
+        }
+        df = pd.DataFrame(data)
 
-        oxy_file_settings = core.tests.CoreFactoryFloor.SampleFileSettingsFactoryOxygen(
-            header=skip_lines, sample_field=sample_column, value_field=value_column, comment_field=comment_column
-        )
-        oxy_sample_type = oxy_file_settings.sample_type
+        errors = SampleParser.parse_data_frame(mission=self.mission, file_settings=self.oxy_file_settings,
+                                               file_name=self.file_name, dataframe=df)
 
-        stream = io.BytesIO(file.read())
-        df = pd.read_csv(filepath_or_buffer=stream, header=skip_lines)
-        SampleParser.parse_data_frame(
-            mission=self.mission, sample_type=oxy_sample_type, file_settings=oxy_file_settings,
-            file_name=file_name, dataframe=df)
-
-        bottles = core_models.Bottle.objects.filter(event__mission=self.mission)
+        self.assertEquals(len(errors), 0)
+        bottles = core_models.Bottle.objects.filter(event=self.ctd_event)
 
         # check that a replicate was created for the first sample
         bottle_with_replicate = bottles.get(bottle_id=495271)
         self.assertIsNotNone(bottle_with_replicate)
 
-        sample = bottle_with_replicate.samples.get(type=oxy_sample_type)
+        sample = bottle_with_replicate.samples.get(type=self.oxy_file_settings.sample_type)
         self.assertIsNotNone(sample)
 
         dv_value = sample.discrete_value.get(replicate=1).value
@@ -368,7 +436,7 @@ class TestSampleCSVParser(DartTestCase):
         bottle_with_comment = bottles.get(bottle_id=495600)
         self.assertIsNotNone(bottle_with_comment)
 
-        sample = bottle_with_comment.samples.get(type=oxy_sample_type)
+        sample = bottle_with_comment.samples.get(type=self.oxy_file_settings.sample_type)
         self.assertIsNotNone(sample)
 
         dv_value = sample.discrete_value.get(replicate=1).value
@@ -646,6 +714,7 @@ class TestElogParser(DartTestCase):
         expected_event_id = 1
         expected_station = "HL_02"
         expected_instrument = "CTD"
+        expected_sounding = 181
         expected_sample_id = 490000
         expected_end_sample_id = 490012
         expected_attached_field = "SBE34 | pH"
@@ -659,6 +728,7 @@ class TestElogParser(DartTestCase):
                 "Instrument": expected_instrument,
                 "Sample ID": str(expected_sample_id),
                 "End_Sample_ID": str(expected_end_sample_id),
+                "Sounding": expected_sounding,
                 "Action": core_models.ActionType.deployed.label,
                 "Attached": expected_attached_field,
                 "Time|Position": expected_time_position_field,
@@ -671,6 +741,7 @@ class TestElogParser(DartTestCase):
                 "Instrument": expected_instrument,
                 "Sample ID": str(expected_sample_id),
                 "End_Sample_ID": str(expected_end_sample_id),
+                "Sounding": expected_sounding,
                 "Action": core_models.ActionType.bottom.label,
                 "Attached": expected_attached_field,
                 "Time|Position": expected_time_position_field,
@@ -683,6 +754,7 @@ class TestElogParser(DartTestCase):
                 "Instrument": expected_instrument,
                 "Sample ID": str(expected_sample_id),
                 "End_Sample_ID": str(expected_end_sample_id),
+                "Sounding": expected_sounding,
                 "Action": core_models.ActionType.recovered.label,
                 "Attached": expected_attached_field,
                 "Time|Position": expected_time_position_field,

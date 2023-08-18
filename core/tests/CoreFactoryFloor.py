@@ -106,7 +106,7 @@ class SampleTypeFactory(DjangoModelFactory):
 
 class SampleFileSettingsFactory(DjangoModelFactory):
 
-    FILE_TYPE_CHOICES = Enum('FILE_TYPE_CHOICES', ['csv', 'xls'])
+    FILE_TYPE_CHOICES = Enum('FILE_TYPE_CHOICES', ['csv', 'xls', 'xlsx'])
 
     class Meta:
         model = models.SampleFileSettings
@@ -117,22 +117,6 @@ class SampleFileSettingsFactory(DjangoModelFactory):
     header = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
     sample_field = factory.lazy_attribute(lambda o: faker.word())
     value_field = factory.lazy_attribute(lambda o: faker.word())
-
-
-class SampleTypeFactoryOxygen(SampleTypeFactory):
-    short_name = 'oxy'
-    long_name = 'Oxygen'
-    priority = 1
-    datatype = bio_tables.models.BCDataType.objects.get(data_type_seq=90000203)
-
-
-class SampleFileSettingsFactoryOxygen(SampleFileSettingsFactory):
-
-    sample_type = factory.SubFactory(SampleTypeFactoryOxygen)
-    file_type = SampleFileSettingsFactory.FILE_TYPE_CHOICES.csv
-    header = 9
-    sample_field = "Sample"
-    value_field = "O2_Concentration(ml/l)"
 
 
 class BottleFactory(DjangoModelFactory):
@@ -147,3 +131,22 @@ class BottleFactory(DjangoModelFactory):
     @classmethod
     def _setup_next_sequence(cls):
         return getattr(cls, 'start_bottle_seq', 0)
+
+
+class SampleFactory(DjangoModelFactory):
+
+    class Meta:
+        model = models.Sample
+
+    bottle = factory.SubFactory(BottleFactory)
+    type = factory.SubFactory(SampleTypeFactory, **{'file_type': 'csv'})
+    file = factory.lazy_attribute(lambda o: faker.word() + ".csv")
+
+
+class DiscreteValueFactory(DjangoModelFactory):
+
+    class Meta:
+        model = models.DiscreteSampleValue
+
+    sample = factory.SubFactory(SampleFactory)
+    value = factory.lazy_attribute(lambda o: faker.pyfloat())
