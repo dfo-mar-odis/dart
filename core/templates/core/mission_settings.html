@@ -9,33 +9,6 @@
             {% csrf_token %}
             {%  crispy form %}
         </form>
-{#            {% for field in form %}#}
-{#                {% if field.name == 'geographic_region' %}#}
-{#                    <div id="div_id_geographic_region">#}
-{#                        <div class="row">#}
-{#                            <div class="col">#}
-{#                                <label for="id_geographic_region" class="form-label">Geographic Region</label>#}
-{#                            </div>#}
-{#                        </div>#}
-{#                        <div class="row">#}
-{#                        {% block geo_row %}#}
-{#                            <div class="col" id="geo_row">#}
-{#                                {% bootstrap_field field %}#}
-{#                            </div>#}
-{#                            <div class="col-1">#}
-{#                                <button type="button" class="btn btn-primary" data-bs-toggle="modal"#}
-{#                                        data-bs-target="#{{ field.name }}_dialog">+#}
-{#                                </button>#}
-{#                            </div>#}
-{#                        </div>#}
-{#                    {% endblock %}#}
-{#                    </div>#}
-{#                {% else %}#}
-{#                {% bootstrap_field field %}#}
-{#                {% endif %}#}
-{#            {% endfor %}#}
-{#            <input class="btn btn-primary" type="submit" value="Submit" {% if object.events.all %}hx-on="click: notify_of_event_validation()"{% endif %} />#}
-{#        </form>#}
         <!-- geographic region Modal -->
         <div class="modal fade" id="geographic_region_dialog" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog">

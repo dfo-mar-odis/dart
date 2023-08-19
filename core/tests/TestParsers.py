@@ -52,7 +52,7 @@ class TestSampleXLSParser(DartTestCase):
 
         expected_header_row = 10
         df = SampleParser.get_excel_dataframe(file, 0, expected_header_row)
-        self.assertEquals(df.index.start, expected_header_row)
+        self.assertEquals(df.index.start, expected_header_row-1)
         self.assertEquals([str(c) for c in df.columns], expected_oxy_columns)
 
 
@@ -275,7 +275,7 @@ class TestSampleCSVParser(DartTestCase):
             self.oxy_file_settings.value_field: [0.38]
         }
         df = pd.DataFrame(data)
-        SampleParser.parse_data_frame(mission=self.mission, file_settings=self.oxy_file_settings, file_name=file_name,
+        SampleParser.parse_data_frame(mission=self.mission, settings=self.oxy_file_settings, file_name=file_name,
                                       dataframe=df)
 
         samples = core_models.Sample.objects.filter(bottle__bottle_id=bottle_id)
@@ -413,9 +413,10 @@ class TestSampleCSVParser(DartTestCase):
         }
         df = pd.DataFrame(data)
 
-        errors = SampleParser.parse_data_frame(mission=self.mission, file_settings=self.oxy_file_settings,
+        SampleParser.parse_data_frame(mission=self.mission, settings=self.oxy_file_settings,
                                                file_name=self.file_name, dataframe=df)
 
+        errors = core_models.FileError.objects.filter(file_name=self.file_name)
         self.assertEquals(len(errors), 0)
         bottles = core_models.Bottle.objects.filter(event=self.ctd_event)
 
@@ -444,6 +445,26 @@ class TestSampleCSVParser(DartTestCase):
 
         dv_comment = sample.discrete_value.get(replicate=1).comment
         self.assertEquals(dv_comment, "Dropped magnet in before H2SO4; sorry")
+
+    def test_duplicate_error(self):
+        # if there are multiple samples with the same replicate id there should be a 'duplicate' error.
+        # this will normally occur in a file like Oxygen where the sample ID column is formatted as
+        # 495294_1, where the 1 is the replicate value. In samples like salts the sample column doesn't
+        # contain a replicate, we just add a new replicate if an ID is found more than once.
+
+        core_factory.BottleFactory(event=self.ctd_event, bottle_id=491)
+        data = {
+            self.oxy_file_settings.sample_field: ['491_1', '491_1'],
+            self.oxy_file_settings.value_field: [3.9, 3.88],
+        }
+
+        df = pd.DataFrame(data)
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
+
+        errors = core_models.FileError.objects.filter(file_name=self.file_name)
+        self.assertEquals(len(errors), 1)
+        self.assertIsInstance(errors[0], core_models.FileError)
+        self.assertEquals(errors[0].message, 'Duplicate replicate id found for sample 491')
 
 
 @tag('parsers', 'parsers_elog')

@@ -116,9 +116,8 @@ def save_sample_type(request, **kwargs):
         if 'id' in request.POST:
             file_config_instance = models.SampleFileSettings.objects.get(pk=request.POST['id'])
 
-        if 'short_name' in request.POST and 'priority' in request.POST:
-            sample_type_instance = models.SampleType.objects.filter(short_name=request.POST['short_name'],
-                                                                    priority=request.POST['priority'])
+        if 'short_name' in request.POST:
+            sample_type_instance = models.SampleType.objects.filter(short_name=request.POST['short_name'])
             sample_type_instance = sample_type_instance[0] if sample_type_instance.exists() else None
 
         if file_config_instance:
@@ -147,7 +146,7 @@ def save_sample_type(request, **kwargs):
                     file_settings.save()
 
                 html = '<div id="div_id_sample_type"></div>'  # used to clear the message saying a file has to be loaded
-                html += render_crispy_form(forms.SampleTypeLoadForm(mission_id=mission_id, instance=file_settings))
+                html += render_crispy_form(forms.SampleTypeLoadForm(instance=file_settings))
 
                 return HttpResponse(html)
             else:
@@ -352,7 +351,9 @@ def load_samples(request, **kwargs):
 
             button_class = "btn btn-success btn-sm"
             try:
-                parse_data_frame(mission=mission, file_settings=file_config, file_name=file_name, dataframe=dataframe)
+                errors = parse_data_frame(mission=mission, settings=file_config, file_name=file_name, dataframe=dataframe)
+                if errors:
+                    models.FileError.objects.bulk_create(errors)
 
                 errors = models.FileError.objects.filter(file_name=file_name)
                 if errors.exists():
@@ -467,104 +468,124 @@ def hx_list_samples(request, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
     bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[page_start:(page_start+page_limit)]
     headings = []
+    columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
     if sensor_id:
         queryset = models.Sample.objects.filter(type_id=sensor_id, bottle__in=bottle_limit)
         queryset = queryset.order_by('bottle__bottle_id')
         queryset = queryset.values(
-            'type__short_name', 'type__priority', 'bottle__bottle_id', 'bottle__pressure', 'discrete_value__value',
-            'discrete_value__replicate', 'discrete_value__flag', 'discrete_value__sample_datatype'
+            'bottle__bottle_id',
+            'bottle__pressure',
+            'type__id',
+            'discrete_value__replicate',
+            'discrete_value__value',
+            'discrete_value__flag',
+            'discrete_value__sample_datatype',
         )
         headings = ['Flag', 'Datatype']
         df = read_frame(queryset)
-        df.columns = ["Sensor", "Priority", "Sample", "Pressure", "Value", 'Replicate',] + headings
+        df.columns = columns + headings
 
     else:
         queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
         queryset = queryset.order_by('bottle__bottle_id')
         queryset = queryset.values(
-            'type__short_name',
-            'type__priority',
             'bottle__bottle_id',
             'bottle__pressure',
+            'type__id',
+            'discrete_value__replicate',
             'discrete_value__value',
-            'discrete_value__replicate'
         )
         df = read_frame(queryset)
-        df.columns = ["Sensor", "Priority", "Sample", "Pressure", "Value", "Replicate"]
+        df.columns = columns
 
     if not queryset.exists():
         soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
         response = HttpResponse(soup)
         return response
 
-    df = df.pivot(index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate', 'Priority'])
-    # df = df.groupby(["Sample", 'Sensor']).count().reset_index()
-    html = '<div id="sample_table">' + df.to_html(classes=['table', 'table-striped', 'tscroll']) + "</div>"
+    df = df.pivot(index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+    if not sensor_id:
+        df = df.reindex(sorted(df.columns), axis=1)
+    # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
+    html = '<div id="sample_table">' + df.to_html() + "</div>"
 
     # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
     soup = BeautifulSoup(html, 'html.parser')
 
+    # this will be a big table add scrolling
+    sample_table = soup.find(id="sample_table")
+    sample_table.attrs['class'] = "vertical-scrollbar"
+
+    # add styles to the table so it's consistant with the rest of the application
     table = soup.find('table')
+    table.attrs['class'] = 'dataframe table table-striped tscroll'
 
     # remove the first table row pandas adds for the "Value" column header
     soup.find("thead").find("tr").decompose()
 
-    # This row contains the headers we actually want... Except for the 'Sensor' header
-    # fix the headers, then remove the 'index' table row
+    # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
+    # followed by the 'replicate' row that describes if this is a single, double, triple sample.
+
+    # We're going to flatten the headers down to one row then remove the others.
+
     sensor_headers = soup.find("thead").find("tr")
 
     # this is the replicate column, get rid of it for now
     replicate_headers = sensor_headers.findNext("tr")
+
+    # we aren't doing anything else with these for now.
     replicate_headers.decompose()
 
-    # this is the priority column, get rid of it for now
-    priority_headers = sensor_headers.findNext("tr")
-    priority_headers.decompose()
+    # we now have two header rows. The first contains all the sensor/sample names. The second contains the "Sample"
+    # and "Pressure" labels. I want to copy the first two columns from the second header to the first two columns
+    # of the first header (because the labels might be translated) then delete the second row
+    index_headers = soup.find('tr').findNext('tr')
+    index_column = index_headers.find('th')
 
-    index_headers = soup.find("thead").find("tr").find_next("tr")
+    sensor_column = sensor_headers.find('th')
+    sensor_column.string = index_column.string
 
-    column = sensor_headers.find('th')  # blank column
-    index = index_headers.find('th')  # Sample column
-
-    column.string = index.string
-
-    column = column.find_next_sibling('th')  # blank column
-    index = index.find_next_sibling('th')  # Pressure Column
-
-    column.string = index.string
+    index_column = index_column.findNext('th')
+    sensor_column = sensor_column.findNext('th')
+    sensor_column.string = index_column.string
 
     index_headers.decompose()
 
-    column = column.find_next_sibling('th')  # Sensor column
+    column = sensor_column.findNext('th')  # Sensor column
 
     if sensor_id:
 
         # if the sensor_id is present then we want to show the specific details for this sensor/sample
-        short_name = column.string
-        sensor = models.SampleType.objects.get(short_name=short_name)
-
-        sensor_row = soup.new_tag("div")
-        sensor_row.attrs['class'] = "row alert alert-info mt-2"
+        pk = column.string
+        sampletype = models.SampleType.objects.get(pk=pk)
+        column.string = f'{sampletype.short_name}'
 
         data_type_label = soup.new_tag("div")
-        data_type_label.attrs['class'] = 'col-auto'
-        data_type_label.string = _("Sensor Datatype")
-        sensor_row.append(data_type_label)
+        data_type_label.attrs['class'] = 'col-auto fw-bold'
+        data_type_label.string = _("Sensor Datatype") + " : "
 
         data_type_value = soup.new_tag("div")
         data_type_value.attrs['class'] = "col-auto"
-        data_type_value.string = str(sensor.datatype.pk) if sensor.datatype else _("None")
-        sensor_row.append(data_type_value)
+        data_type_value.string = str(sampletype.datatype.pk) if sampletype.datatype else _("None")
 
         data_type_des_des = soup.new_tag("div")
-        data_type_des_des.attrs['class'] = "col-auto"
-        data_type_des_des.string = _("Datatype Description")
-        sensor_row.append(data_type_des_des)
+        data_type_des_des.attrs['class'] = "col-auto fw-bold"
+        data_type_des_des.string = _("Datatype Description") + " : "
 
         data_type_des_value = soup.new_tag("div")
         data_type_des_value.attrs['class'] = "col"
-        data_type_des_value.string = sensor.datatype.description if sensor.datatype else _("None")
-        sensor_row.append(data_type_des_value)
+        data_type_des_value.string = sampletype.datatype.description if sampletype.datatype else _("None")
+
+        sensor_details_row = soup.new_tag("div")
+        sensor_details_row.attrs['class'] = "row alert alert-secondary mt-2"
+        sensor_details_row.append(data_type_label)
+        sensor_details_row.append(data_type_value)
+        sensor_details_row.append(data_type_des_des)
+        sensor_details_row.append(data_type_des_value)
+
+        sensor_row_container = soup.new_tag("div")
+        sensor_row_container.attrs['class'] = "container-fluid"
+        sensor_row_container.append(sensor_details_row)
 
         col_span = -1
         # if we're looking at a sensor then keep the first column label, but change the next two
@@ -627,24 +648,26 @@ def hx_list_samples(request, **kwargs):
         button_row.append(col_2)
 
         root.append(button_row)
-        root.append(sensor_row)
+        root.append(sensor_row_container)
         root.append(table)
 
     else:
-        tds = table.find_all('td')
-        for td in tds:
-            td['class'] = 'text-center'
+        # if the sensor_id is not present then we're showing all of the sensor/sample tables with each
+        # column label to take the user to the sensor details page
+
         # now add htmx tags to the rest of the TH elements in the row so the user
         # can click that row for details on the sensor
         while column:
             column['class'] = 'text-center text-nowrap'
 
-            short_name = column.string
-            sampletype = models.SampleType.objects.get(short_name=short_name)
+            pk = column.string
+            sampletype = models.SampleType.objects.get(pk=pk)
+
             button = soup.new_tag("button")
-            button.string = short_name
+            button.string = f'{sampletype.short_name}'
             column.string = ''
             button.attrs['class'] = 'btn btn-primary'
+            button.attrs['style'] = 'width: 100%'
             button.attrs['hx-trigger'] = 'click'
             button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
             button.attrs['hx-target'] = "#sample_table"
@@ -654,6 +677,11 @@ def hx_list_samples(request, **kwargs):
             column.append(button)
 
             column = column.find_next_sibling('th')
+
+        # finally, align all text in each column to the center of the cell
+        tds = table.find_all('td')
+        for td in tds:
+            td['class'] = 'text-center'
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.

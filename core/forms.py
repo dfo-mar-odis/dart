@@ -65,7 +65,8 @@ class MissionSettingsForm(forms.ModelForm):
 
         # This button depends on a separate section being on the page with the ID 'geographic_region_dialog'
         button_geo_add = HTML(
-            '<button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#geographic_region_dialog">+</button>')
+            '<button class="btn btn-primary" type="button" data-bs-toggle="modal" '
+            'data-bs-target="#geographic_region_dialog">+</button>')
 
         submit = Submit('submit', 'Submit')
         if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
@@ -491,7 +492,6 @@ class SampleTypeForm(forms.ModelForm):
             for term in filter:
                 queryset = queryset.filter(description__icontains=term)
 
-            queryset = queryset.order_by('priority')
             self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in queryset]
 
         self.helper = FormHelper(self)
@@ -508,17 +508,15 @@ class SampleTypeForm(forms.ModelForm):
         }
 
         name_row = Row(
-                    Column(Field('short_name', css_class='form-control form-control-sm',
-                                 id="id_short_name" + (f"_{sample_name}" if sample_name else "")),
-                           css_class='col'),
-                    Column(Field('long_name', css_class='form-control form-control-sm',
-                                 id="id_long_name" + (f"_{sample_name}" if sample_name else "")),
-                           css_class='col'),
-                    Column(Field('priority', css_class='form-control form-control-sm',
-                                 id="id_priority" + (f"_{sample_name}" if sample_name else "")),
-                           css_class='col'),
-                    css_class='flex-fill ms-1'
-                )
+            Hidden('priority', 1),
+            Column(Field('short_name', css_class='form-control form-control-sm',
+                         id="id_short_name" + (f"_{sample_name}" if sample_name else "")),
+                   css_class='col'),
+            Column(Field('long_name', css_class='form-control form-control-sm',
+                         id="id_long_name" + (f"_{sample_name}" if sample_name else "")),
+                   css_class='col'),
+            css_class='flex-fill ms-1'
+        )
         if self.instance.pk:
             name_row.fields.insert(0, Hidden('id', self.instance.pk))
 
@@ -608,7 +606,6 @@ class SampleTypeLoadForm(forms.ModelForm):
 
         title_label = f'{self.instance.file_type} - {self.instance.sample_type.short_name}'
         title_label += f' : {self.instance.sample_type.long_name}' if self.instance.sample_type.long_name else ''
-        title_label += f' - {self.instance.sample_type.priority}'
 
         title = Div(
             Column(

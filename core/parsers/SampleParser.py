@@ -1,7 +1,9 @@
 import csv
 import pandas as pd
 import numpy as np
+from django.db import transaction
 
+from django.utils.translation import gettext as _
 from core import models as core_models
 from dart2.utils import updated_value
 
@@ -91,7 +93,7 @@ def get_excel_dataframe(stream, sheet_number=-1, header_row=-1):
         df = find_header(df, header_row)
     else:
         df = pd.read_excel(io=stream, sheet_name=sheet_number, header=header_row)
-        df = df[header_row:]
+        df = df[(header_row-1):]
 
     return df
 
@@ -184,7 +186,7 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleFileS
 
 # once all the options are figured out (e.g what tab, what's the sample row, what's the value column)
 # this function will convert the dataframe into a sample
-def parse_data_frame(mission: core_models.Mission, file_settings: core_models.SampleFileSettings,
+def parse_data_frame(mission: core_models.Mission, settings: core_models.SampleFileSettings,
                      file_name: str, dataframe: pd.DataFrame):
     # clear errors for this file
     core_models.FileError.objects.filter(file_name=file_name).delete()
@@ -194,7 +196,7 @@ def parse_data_frame(mission: core_models.Mission, file_settings: core_models.Sa
     create_samples = {}
     update_samples = {'fields': set(), 'models': []}
 
-    create_discrete_values = []
+    create_discrete_values = {}
     update_discrete_values = {'fields': set(), 'models': []}
 
     errors: [core_models.FileError] = []
@@ -203,13 +205,17 @@ def parse_data_frame(mission: core_models.Mission, file_settings: core_models.Sa
         # convert column names to lower case because it's expected that the file_settings fields will be lowercase
         dataframe.columns = dataframe.columns.str.lower()
         # prep the dataframe by splitting the samples, adding replicates
-        dataframe = split_sample(dataframe, file_settings)
+        dataframe = split_sample(dataframe, settings)
         sample_id_field = 's_id'
         replicate_id_field = 'r_id'
+        sample_type = settings.sample_type
+        value_field = settings.value_field
+        flag_field = settings.flag_field
+        comment_field = settings.comment_field
         for row in dataframe.iterrows():
             replicate = 1  # All samples will have at least one 'replicate'
             sample_id = row[1][sample_id_field]
-            value = row[1][file_settings.value_field]
+            value = row[1][value_field]
 
             bottles = core_models.Bottle.objects.filter(event__mission=mission, bottle_id=int(sample_id))
             if not bottles.exists():
@@ -221,9 +227,8 @@ def parse_data_frame(mission: core_models.Mission, file_settings: core_models.Sa
 
             bottle = bottles[0]
 
-            db_sample = core_models.Sample(bottle=bottle, type=file_settings.sample_type, file=file_name)
-            existing_sample = existing_samples.filter(bottle=bottle, type=file_settings.sample_type)
-            if existing_sample.exists():
+            db_sample = core_models.Sample(bottle=bottle, type=sample_type, file=file_name)
+            if (existing_sample := existing_samples.filter(bottle=bottle, type=sample_type)).exists():
                 # if the sample exists then we want to update it. Not create a new one
                 db_sample = existing_sample[0]
                 update_samples['fields'].add(updated_value(db_sample, 'file', file_name))
@@ -238,30 +243,37 @@ def parse_data_frame(mission: core_models.Mission, file_settings: core_models.Sa
             else:
                 create_samples[bottle.bottle_id] = db_sample
 
-            if file_settings.replicate_field:
-                replicate = row[1][file_settings.replicate_field]
+            if settings.replicate_field:
+                replicate = row[1][settings.replicate_field]
             elif replicate_id_field:
                 replicate = row[1][replicate_id_field]
 
                 # if replicates aren't allowed on this datatype then there should be an error here if the
                 # replicate values is greater than 1
-            if not file_settings.allow_replicate and replicate > 1:
-                message = f"Duplicate bottle found for {sample_id} in file {file_name}"
+            if not settings.allow_replicate and replicate > 1:
+                message = _("Duplicate bottle found for sample ") + sample_id
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
                 logger.warning(message)
                 continue
 
             comment = None
-            if file_settings.comment_field and row[1][file_settings.comment_field] is not np.nan:
-                comment = row[1][file_settings.comment_field]
+            if comment_field and comment_field in row[1] and row[1][comment_field] is not np.nan:
+                comment = row[1][settings.comment_field]
 
             flag = None
-            if file_settings.flag_field:
-                flag = row[1][file_settings.flag_field]
+            if flag_field and flag_field in row[1]:
+                flag = row[1][flag_field]
 
             # if db_sample doesn't have a pk, then it hasn't been created yet
-            if db_sample.pk and db_sample.discrete_value.filter(replicate=replicate):
+            if db_sample.pk and (replicates := db_sample.discrete_value.filter(replicate=replicate)).exists():
+                if len(replicates) > 1:
+                    message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
+                    error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                    errors.append(error)
+                    logger.warning(message)
+                    continue
+
                 discrete_sample = db_sample.discrete_value.get(replicate=replicate)
                 update_discrete_values['fields'].add(updated_value(discrete_sample, 'value', value))
                 update_discrete_values['fields'].add(updated_value(discrete_sample, 'comment', comment))
@@ -272,27 +284,32 @@ def parse_data_frame(mission: core_models.Mission, file_settings: core_models.Sa
 
                 if len(update_discrete_values['fields']) > 0:
                     update_discrete_values['models'].append(discrete_sample)
-            # elif there are multiple discrete values in the same dataframe with the same id and replicate id
-            # We should probably log an error
+            elif f'{db_sample.bottle_id}_{replicate}' in create_discrete_values:
+                message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                errors.append(error)
+                logger.warning(message)
+                continue
             else:
                 discrete_sample = core_models.DiscreteSampleValue(sample=db_sample, value=value)
                 discrete_sample.replicate = replicate
                 discrete_sample.comment = comment
                 discrete_sample.flag = flag
 
-                create_discrete_values.append(discrete_sample)
+                create_discrete_values[f'{db_sample.bottle_id}_{replicate}'] = discrete_sample
 
-        core_models.Sample.objects.bulk_create(create_samples.values())
-        if len(update_samples['models']) > 0:
-            core_models.Sample.objects.bulk_update(update_samples['models'], update_samples['fields'])
+        with transaction.atomic():
+            core_models.Sample.objects.bulk_create(create_samples.values())
+            if len(update_samples['models']) > 0:
+                core_models.Sample.objects.bulk_update(update_samples['models'], update_samples['fields'])
 
-        core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values)
-        if len(update_discrete_values['models']) > 0:
-            core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_values['models'],
-                                                                update_discrete_values['fields'])
+            core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values.values())
+            if len(update_discrete_values['models']) > 0:
+                core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_values['models'],
+                                                                    update_discrete_values['fields'])
 
     except ValueError as ex:
-        message = f"Could not parse sample id column '{file_settings.sample_field}', " \
+        message = f"Could not parse sample id column '{settings.sample_field}', " \
                   f"make sure the right column was selected"
         logger.error(message)
         logger.exception(ex)
@@ -305,6 +322,4 @@ def parse_data_frame(mission: core_models.Mission, file_settings: core_models.Sa
         error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message)
         errors.append(error)
 
-    # I would bulk create errors instead of returning them, but that seems to cause a
-    # "you can't update inside an atomic block" issue
-    return errors
+    core_models.FileError.objects.bulk_create(errors)

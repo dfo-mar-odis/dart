@@ -380,7 +380,7 @@ class Bottle(models.Model):
 class SampleType(models.Model):
     short_name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20,
                                   help_text=_("The column name of a sensor or a short name commonly "
-                                              "used for the sample"))
+                                              "used for the sample"), unique=True)
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
                             help_text=_("Short descriptive name for this type of sample/sensor"))
     priority = models.IntegerField(verbose_name=_("Priority"), default=1)
