@@ -27,17 +27,15 @@
             {# choose file input #}
             <input id="id_input_sample_file" class="form-control form-control-sm"
                    type="file" name="sample_file" accept=".csv,.xls,.xlsx,.xlsm"
-                hx-trigger="change"
-                hx-get="{% url 'core:load_sample_type' %}?mission_id={{ mission.pk }}"
-                hx-target="#div_id_loaded_sample_type"
-                hx-select-oob="#div_id_loaded_samples_list:afterbegin, #div_id_sample_type:outerHTML"
+                   hx-trigger="change"
+                   hx-get="{% url 'core:load_sample_type' %}?mission_id={{ mission.pk }}"
+                   hx-select-oob="#div_id_sample_type:outerHTML, #div_id_loaded_sample_type:outerHTML"
             />
         </div>
         <div class="col-auto">
             <button class="btn btn-primary btn-sm" name="add_sample"
-                hx-post="{% url 'core:new_sample_type' %}"
+                hx-get="{% url 'core:new_sample_type' %}"
                 hx-target="#div_id_sample_type"
-                hx-swap="outerHTML"
             >{% custom_icon 'plus-square' %}</button>
         </div>
     </div>

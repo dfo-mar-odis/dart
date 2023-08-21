@@ -1,4 +1,4 @@
-import io
+import numpy as np
 import os
 import threading
 from threading import Thread
@@ -21,11 +21,13 @@ from biochem import models
 from core import forms
 from core import models
 from core.parsers.SampleParser import get_headers, get_file_configs, parse_data_frame, get_excel_dataframe
-from core.views import logger, sample_file_queue, load_ctd_files
+from core.views import logger, sample_file_queue, load_ctd_files, MissionMixin
 
 from dart2.utils import load_svg
 
 import logging
+
+from dart2.views import GenericDetailView
 
 logger = logging.getLogger('dart')
 
@@ -40,6 +42,30 @@ def process_file(file) -> [str, str, str]:
     return file_name, file_type, data
 
 
+def get_alert(soup, message, alert_type):
+    # creates an alert dialog with an animated progress bar to let the user know we're saving or loading something
+
+    # type should be a bootstrap css type, (danger, info, warning, success, etc.)
+
+    # create an alert area saying we're loading
+    alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
+    alert_div.string = message
+
+    # create a progress bar to give the user something to stare at while they wait.
+    progress_bar = soup.new_tag("div")
+    progress_bar.attrs = {
+        'class': "progress-bar progress-bar-striped progress-bar-animated",
+        'role': "progressbar",
+        'style': "width: 100%"
+    }
+    progress_bar_div = soup.new_tag("div", attrs={'class': "progress"})
+    progress_bar_div.append(progress_bar)
+
+    alert_div.append(progress_bar_div)
+
+    return alert_div
+
+
 def get_file_config_forms(data, file_type) -> [forms.SampleTypeLoadForm]:
     config_forms = []
     file_configs = get_file_configs(data, file_type)
@@ -49,41 +75,6 @@ def get_file_config_forms(data, file_type) -> [forms.SampleTypeLoadForm]:
             config_forms.append(forms.SampleTypeLoadForm(instance=config))
 
     return config_forms
-
-
-def create_div_id_sample_type_form(sample_type_form, file_config_form, **kwargs):
-    html = render_crispy_form(sample_type_form)
-    html += render_crispy_form(file_config_form)
-    html = f'<div id="div_id_sample_type">{html}</div>'
-
-    soup = BeautifulSoup(html, 'html.parser')
-    submit_button = soup.new_tag('button')
-    submit_button.attrs['hx-get'] = reverse_lazy('core:load_sample_type')
-    submit_button.attrs['hx-target'] = "#div_id_loaded_sample_type"
-    submit_button.attrs['hx-select'] = "#div_id_loaded_sample_type_message"
-    submit_button.attrs['hx-swap'] = "afterbegin"
-
-    submit_button.attrs['class'] = "btn btn-primary btn-sm"
-    submit_button.attrs['name'] = "save"
-    if 'config' in kwargs:
-        submit_button.attrs['value'] = kwargs['config']
-
-    svg = load_svg('plus-square')
-    icon = BeautifulSoup(svg, 'html.parser').svg
-
-    submit_button.append(icon)
-
-    div_col = soup.new_tag('div')
-    div_col['class'] = "col-auto ms-auto"
-    div_col.append(submit_button)
-
-    div_row = soup.new_tag('div')
-    div_row.attrs['class'] = "row mt-2 justify-content-end"
-    div_row.append(div_col)
-
-    soup.find(id="div_id_sample_type").append(div_row)
-
-    return soup
 
 
 def save_sample_type(request, **kwargs):
@@ -97,8 +88,35 @@ def save_sample_type(request, **kwargs):
     context = {}
     context.update(csrf(request))
 
-    if request.method == "POST":
-        mission_id = request.POST['mission_id']
+    if request.method == "GET":
+        if 'sample_type_id' in kwargs:
+            sample_type = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+            url = reverse_lazy("core:save_sample_type", args=(sample_type.pk,))
+            oob_select = f"#div_id_sample_type, #div_id_{sample_type.pk}:outerHTML"
+        else:
+            url = reverse_lazy("core:save_sample_type")
+            oob_select = "#div_id_sample_type, #div_id_loaded_samples_list:beforeend"
+
+        soup = BeautifulSoup('', "html.parser")
+
+        root_div = soup.new_tag("div")
+        alert_div = get_alert(soup, _("Saving"), 'info')
+
+        root_div.attrs = {
+            'id': "div_id_loaded_sample_type_message",
+            'hx-trigger': "load",
+            'hx-target': "#div_id_sample_type",
+            'hx-select-oob': oob_select,
+            'hx-post': url,
+        }
+
+        root_div.append(alert_div)
+        soup.append(root_div)
+
+        return HttpResponse(soup)
+    elif request.method == "POST":
+        # mission_id is a hidden field in the 'core/partials/form_sample_type.html' template, if it's needed
+        # mission_id = request.POST['mission_id']
 
         # I don't know how to tell the user what is going on here if no sample_file has been chosen
         # They shouldn't even be able to view the rest of the form with out it.
@@ -106,62 +124,54 @@ def save_sample_type(request, **kwargs):
         file_name, file_type, data = process_file(file)
 
         tab = int(request.POST['tab']) if 'tab' in request.POST else 0
-        skip = int(request.POST['header']) if 'header' in request.POST else 0
+        skip = int(request.POST['skip']) if 'skip' in request.POST else 0
 
         tab, skip, field_choices = get_headers(data, file_type, tab, skip)
 
-        file_config_instance = None
-        sample_type_instance = None
-
-        if 'id' in request.POST:
-            file_config_instance = models.SampleFileSettings.objects.get(pk=request.POST['id'])
-
-        if 'short_name' in request.POST:
-            sample_type_instance = models.SampleType.objects.filter(short_name=request.POST['short_name'])
-            sample_type_instance = sample_type_instance[0] if sample_type_instance.exists() else None
-
-        if file_config_instance:
-            sample_type_instance = sample_type_instance if sample_type_instance else file_config_instance.sample_type
-            sample_type_form = forms.SampleTypeForm(request.POST, instance=sample_type_instance)
-            file_config_form = forms.SampleFileConfigurationForm(request.POST, instance=file_config_instance,
-                                                                 field_choices=field_choices)
-        elif sample_type_instance:
-            sample_type_form = forms.SampleTypeForm(request.POST, instance=sample_type_instance)
-            file_config_form = forms.SampleFileConfigurationForm(request.POST, field_choices=field_choices)
+        if 'sample_type_id' in kwargs:
+            sample_type = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+            sample_type_form = forms.SampleTypeForm(request.POST, instance=sample_type, field_choices=field_choices)
         else:
-            sample_type_form = forms.SampleTypeForm(request.POST)
-            file_config_form = forms.SampleFileConfigurationForm(request.POST, field_choices=field_choices)
+            sample_type_form = forms.SampleTypeForm(request.POST, field_choices=field_choices)
 
         if sample_type_form.is_valid():
             sample_type: models.SampleType = sample_type_form.save()
-            config_args = request.POST.dict()
-            config_args['sample_type'] = sample_type
-            if 'id' not in request.POST:
-                file_config_form = forms.SampleFileConfigurationForm(config_args)
+            # the load form is immutable to the user it just allows them the delete, send for edit or load the
+            # sample into the mission
+            load_form = render_crispy_form(forms.SampleTypeLoadForm(instance=sample_type))
+            html = f'<div id="div_id_loaded_samples_list">{load_form}</div>'
+            return HttpResponse(html)
 
-            if file_config_form.is_valid():
-                file_settings: models.SampleFileSettings = file_config_form.save()
-                if file_settings.sample_type != sample_type:
-                    file_settings.sample_type = sample_type
-                    file_settings.save()
-
-                html = '<div id="div_id_sample_type"></div>'  # used to clear the message saying a file has to be loaded
-                html += render_crispy_form(forms.SampleTypeLoadForm(instance=file_settings))
-
-                return HttpResponse(html)
-            else:
-                # if the file config isn't valid then remove the sample type too
-                sample_type.delete()
-
-        soup = create_div_id_sample_type_form(sample_type_form, file_config_form, **kwargs)
-        return HttpResponse(soup)
+        html = render_crispy_form(sample_type_form)
+        return HttpResponse(html)
 
 
 def new_sample_type(request, **kwargs):
     context = {}
     context.update(csrf(request))
 
-    if request.method == "POST":
+    if request.method == "GET":
+        # return a loading alert that calls this methods post request
+        # Let's make some soup
+        url = reverse_lazy("core:new_sample_type")
+
+        soup = BeautifulSoup('', "html.parser")
+
+        root_div = soup.new_tag("div")
+        alert_div = get_alert(soup, _("Loading"), 'info')
+
+        root_div.attrs = {
+            'id': "div_id_loaded_sample_type_message",
+            'hx-trigger': "load",
+            'hx-post': url,
+            'hx-target': "#div_id_sample_type",
+        }
+
+        root_div.append(alert_div)
+        soup.append(root_div)
+
+        return HttpResponse(soup)
+    elif request.method == "POST":
 
         if 'sample_file' not in request.FILES:
             soup = BeautifulSoup('<div id="div_id_sample_type"></div>', 'html.parser')
@@ -178,34 +188,17 @@ def new_sample_type(request, **kwargs):
         tab = 0
         skip = -1
 
-        field_choices = []
+        tab, skip, field_choices = get_headers(data, file_type, tab, skip)
 
-        try:
-            tab, skip, field_choices = get_headers(data, file_type, tab, skip)
-        except IndexError as ex:
-            # there's a chance we couldn't automatically detect a header row
-            # in which case the user should be able to manually find it.
-            logger.error(f"Could not detect header row for file {file_name}")
-            logger.exception(ex)
-
-        if 'config' in kwargs:
-            config = models.SampleFileSettings.objects.get(pk=kwargs['config'])
-            sample_type_form = forms.SampleTypeForm(instance=config.sample_type)
-            file_config_form = forms.SampleFileConfigurationForm(
-                field_choices=field_choices,
-                instance=config
-            )
+        if 'sample_type_id' in kwargs:
+            config = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+            sample_type_form = forms.SampleTypeForm(instance=config, field_choices=field_choices)
         else:
-            file_initial = {"file_type": file_type, "header": skip, "tab": tab}
+            file_initial = {"file_type": file_type, "skip": skip, "tab": tab}
+            sample_type_form = forms.SampleTypeForm(initial=file_initial, field_choices=field_choices)
 
-            sample_type_form = forms.SampleTypeForm()
-            file_config_form = forms.SampleFileConfigurationForm(
-                initial=file_initial,
-                field_choices=field_choices,
-            )
-
-        soup = create_div_id_sample_type_form(sample_type_form, file_config_form, **kwargs)
-        return HttpResponse(soup)
+        html = render_crispy_form(sample_type_form)
+        return HttpResponse(html)
 
 
 def load_sample_type(request, **kwargs):
@@ -215,51 +208,18 @@ def load_sample_type(request, **kwargs):
 
     if request.method == "GET":
         mission_id = request.GET['mission'] if 'mission' in request.GET else None
-        saving = 'save' in request.GET
         loading = 'sample_file' in request.GET
 
-        if saving or loading:
-            # when the file changes we want to quickly clear the form and let the user know we're loading stuff
-
+        if loading:
             # Let's make some soup
-            soup = BeautifulSoup('', "html.parser")
+            url = reverse_lazy("core:load_sample_type")
+            oob_select = "#div_id_loaded_samples_list:outerHTML, #div_id_sample_type:outerHTML"
 
-            # create an alert area saying we're loading
-            alert_div = soup.new_tag("div", attrs={'class': "alert alert-info mt-2"})
-            alert_div.string = _("Loading") if loading else _("Saving") if saving else "Why are you even here?"
+            soup = BeautifulSoup('<div id="div_id_loaded_sample_type"><div id=div_id_loaded_samples_list></div</div>',
+                                 "html.parser")
 
-            # create a progress bar to give the user something to stare at while they wait.
-            progress_bar = soup.new_tag("div")
-            progress_bar.attrs = {
-                'class': "progress-bar progress-bar-striped progress-bar-animated",
-                'role': "progressbar",
-                'style': "width: 100%"
-            }
-            progress_bar_div = soup.new_tag("div", attrs={'class': "progress"})
-            progress_bar_div.append(progress_bar)
-
-            # create the root 'div_id_loaded_sample_type' element that the 'sample_file' input is replacing
-            # and set it up so as soon as it's on the page it'll send an htmx request to load sample types
-            # that match the file the file input field contains, then this div will replace itself with the results
-            url = None
             root_div = soup.new_tag("div")
-            if loading:
-                url = reverse_lazy("core:load_sample_type")
-                oob_select = "#div_id_loaded_samples_list:afterbegin, #div_id_sample_type:outerHTML"
-            elif saving:
-                # when the form is loaded using the edit button, the 'core/partials/form_sample_type.html'
-                # template gets a config id which is added to the save button for the new sample form
-                # if the config id is present we're updating a config, otherwise creating a new sampletype/config
-                if request.GET['save']:
-                    config = models.SampleFileSettings.objects.get(pk=int(request.GET['save']))
-                    url = reverse_lazy("core:save_sample_type", args=(config.pk,))
-                    card_id = f"div_id_{config.sample_type.short_name}_{config.pk}"
-                    oob_select = f"#{card_id}:outerHTML, #div_id_sample_type:outerHTML"
-                else:
-                    url = reverse_lazy("core:save_sample_type")
-                    oob_select = "#div_id_sample_type:outerHTML"
-            else:
-                raise Http404("Why are you here?")
+            alert_div = get_alert(soup, _("Loading"), 'info')
 
             root_div.attrs = {
                 'id': "div_id_loaded_sample_type_message",
@@ -271,15 +231,14 @@ def load_sample_type(request, **kwargs):
             }
 
             root_div.append(alert_div)
-            root_div.append(progress_bar_div)
-            soup.append(root_div)
+            soup.find(id="div_id_loaded_sample_type").append(root_div)
 
             return HttpResponse(soup)
 
         if request.htmx:
             # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
             # field after the Datatype_filter has been triggered.
-            sample_type_form = forms.SampleTypeForm(initial=request.GET)
+            sample_type_form = forms.SampleTypeForm(file_type="", field_choices=[], initial=request.GET)
             html = render_crispy_form(sample_type_form)
             return HttpResponse(html)
 
@@ -308,9 +267,13 @@ def load_sample_type(request, **kwargs):
 
         html = '<div id="div_id_sample_type"></div>'  # used to clear the message saying a file has to be loaded
         if config_forms:
+            html += '<div id=div_id_loaded_samples_list>'
             for config in config_forms:
                 html += render_crispy_form(config)
+            html += "</div>"
         else:
+            html += '<div id=div_id_loaded_samples_list></div>'
+
             soup = BeautifulSoup(html, 'html.parser')
             alert_div = soup.new_tag("div", attrs={'class': "alert alert-warning mt-2"})
             alert_div.string = _("No File Configurations Found")
@@ -327,11 +290,36 @@ def load_samples(request, **kwargs):
     context = {}
     context.update(csrf(request))
 
-    config_id = kwargs['config']
+    if 'sample_type_id' not in kwargs:
+        raise Http404("Missing Sample ID")
+
+    sample_type_id = kwargs['sample_type_id']
     load_block = "loaded_sample_list_block"
 
-    if request.method == "POST":
+    if request.method == "GET":
+
+        message_div_id = f'div_id_{sample_type_id}'
+        soup = BeautifulSoup(f'', 'html.parser')
+        root_div = soup.new_tag("div")
+
+        url = reverse_lazy("core:load_samples", args=(sample_type_id,))
+        root_div.attrs = {
+            'id': f'div_id_loading_{message_div_id}',
+            'hx-trigger': "load",
+            'hx-post': url,
+            'hx-target': f'#div_id_loading_{message_div_id}',
+            'hx-swap': "outerHTML",
+            'hx-select-oob': f"#{message_div_id}_load_button, #{message_div_id}_message"
+        }
+
+        root_div.append(get_alert(soup, _("Loading"), 'info'))
+        soup.append(root_div)
+
+        return HttpResponse(soup)
+
+    elif request.method == "POST":
         mission_id = request.POST['mission_id']
+        message_div_id = f'div_id_{sample_type_id}'
 
         # Todo: Add a unit test to test that the message block gets shown if no file is
         #  present when this function is active
@@ -344,49 +332,84 @@ def load_samples(request, **kwargs):
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
-        if 'load' in request.POST:
-            file_config = models.SampleFileSettings.objects.get(pk=config_id)
-            mission = models.Mission.objects.get(pk=mission_id)
-            dataframe = get_excel_dataframe(stream=data, sheet_number=file_config.tab, header_row=file_config.header)
+        sample_type = models.SampleType.objects.get(pk=sample_type_id)
+        mission = models.Mission.objects.get(pk=mission_id)
 
-            button_class = "btn btn-success btn-sm"
-            try:
-                errors = parse_data_frame(mission=mission, settings=file_config, file_name=file_name, dataframe=dataframe)
-                if errors:
-                    models.FileError.objects.bulk_create(errors)
+        mission_sample_type = models.MissionSampleType(mission=mission, type=sample_type)
+        mission_sample_type.save()
 
-                errors = models.FileError.objects.filter(file_name=file_name)
-                if errors.exists():
-                    button_class = "btn btn-warning btn-sm"
-            except Exception as ex:
-                logger.error(f"Failed to load file {file_name}")
-                logger.exception(ex)
-                button_class = "btn btn-danger btn-sm"
+        dataframe = get_excel_dataframe(stream=data, sheet_number=sample_type.tab, header_row=sample_type.skip)
 
-            url = reverse_lazy('core:load_samples', args=(file_config.pk,))
-            soup = BeautifulSoup('', 'html.parser')
-            button = soup.new_tag('button')
-            button.attrs = {
-                'id': "id_load_button",
-                'name': "load",
-                'hx-post': url,
-                'hx-swap': "outerHTML",
-                'class': button_class
-            }
+        soup = BeautifulSoup('', 'html.parser')
 
-            soup.append(button)
-            icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
-            button.append(icon)
-            response = HttpResponse(soup)
-            response['HX-Trigger'] = 'update_samples'
-            return response
+        button_class = "btn btn-success btn-sm"
+        try:
+            parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
+
+            errors = models.FileError.objects.filter(file_name=file_name)
+
+            if errors.exists():
+                button_class = "btn btn-warning btn-sm"
+
+                msg_div = soup.new_tag('div')
+                msg_div.attrs['class'] = ''
+                msg_div.attrs['id'] = f'{message_div_id}_message'
+                soup.append(msg_div)
+
+                msg_div_error_card = soup.new_tag('div')
+                msg_div_error_card.attrs['class'] = 'card mt-2'
+                msg_div.append(msg_div_error_card)
+
+                msg_div_error_card_header = soup.new_tag('div')
+                msg_div_error_card_header.attrs['class'] = 'card-header text-bg-warning'
+                msg_div_error_card.append(msg_div_error_card_header)
+
+                msg_div_error_title = soup.new_tag('div')
+                msg_div_error_title.string = _("Warnings")
+                msg_div_error_title.attrs['class'] = 'card-title'
+                msg_div_error_card_header.append(msg_div_error_title)
+
+                msg_div_error_card_body = soup.new_tag('div')
+                msg_div_error_card_body.attrs['class'] = 'card-body vertical-scrollbar'
+                msg_div_error_card.append(msg_div_error_card_body)
+
+                ul_list = soup.new_tag('ul')
+                ul_list['id'] = f'{message_div_id}_error_list'
+                ul_list['class'] = 'list-group'
+                msg_div_error_card_body.append(ul_list)
+                for error in errors:
+                    li = soup.new_tag('li')
+                    li['class'] = 'list-group-item'
+                    li.string = error.message
+                    ul_list.append(li)
+        except Exception as ex:
+            logger.error(f"Failed to load file {file_name}")
+            logger.exception(ex)
+            button_class = "btn btn-danger btn-sm"
+
+        # url = reverse_lazy('core:load_samples', args=(file_config.pk,))
+        button = soup.new_tag('button')
+        button.attrs = {
+            'id': f"{message_div_id}_load_button",
+            'name': "load",
+            'hx-get': reverse_lazy('core:load_samples', args=(sample_type_id,)),
+            'hx-target': f"#{message_div_id}_message",
+            'class': button_class
+        }
+
+        soup.append(button)
+        icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
+        button.append(icon)
+        response = HttpResponse(soup)
+        response['HX-Trigger'] = 'update_samples'
+        return response
 
 
-def delete_config(request, **kwargs):
+def delete_sample_type(request, **kwargs):
 
-    config_id = kwargs['config']
+    config_id = kwargs['sample_type_id']
     if request.method == "POST":
-        models.SampleFileSettings.objects.get(pk=config_id).delete()
+        models.SampleType.objects.get(pk=config_id).delete()
 
     return HttpResponse()
 
@@ -466,27 +489,26 @@ def hx_list_samples(request, **kwargs):
     page_start = page_limit * page
 
     mission = models.Mission.objects.get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[page_start:(page_start+page_limit)]
-    headings = []
-    columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
     if sensor_id:
-        queryset = models.Sample.objects.filter(type_id=sensor_id, bottle__in=bottle_limit)
-        queryset = queryset.order_by('bottle__bottle_id')
+        queryset = models.Sample.objects.filter(type_id=sensor_id).order_by('bottle__bottle_id')[page_start:(page_start+page_limit)]
         queryset = queryset.values(
             'bottle__bottle_id',
             'bottle__pressure',
-            'type__id',
             'discrete_value__replicate',
             'discrete_value__value',
             'discrete_value__flag',
             'discrete_value__sample_datatype',
+            'discrete_value__comment',
         )
-        headings = ['Flag', 'Datatype']
+        headings = ['Flag', 'Datatype', 'Comments']
         df = read_frame(queryset)
-        df.columns = columns + headings
+        df.columns = ["Sample", "Pressure", "Replicate", "Value"] + headings
 
     else:
-        queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
+        bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
+                       page_start:(page_start + page_limit)]
+        sensors = models.SampleType.objects.filter(samples__bottle__event__mission=mission)
+        queryset = models.Sample.objects.filter(type__in=sensors, bottle__in=bottle_limit)
         queryset = queryset.order_by('bottle__bottle_id')
         queryset = queryset.values(
             'bottle__bottle_id',
@@ -496,16 +518,55 @@ def hx_list_samples(request, **kwargs):
             'discrete_value__value',
         )
         df = read_frame(queryset)
-        df.columns = columns
+        df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
 
     if not queryset.exists():
         soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
         response = HttpResponse(soup)
         return response
 
-    df = df.pivot(index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
-    if not sensor_id:
-        df = df.reindex(sorted(df.columns), axis=1)
+    if sensor_id:
+        df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
+        soup = format_sensor_table(df, mission_id, sensor_id)
+    else:
+        try:
+            df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+            missing = np.setdiff1d([s.pk for s in sensors.order_by('pk').distinct()], [v[0] for v in df.columns.values])
+            if len(missing) > 0:
+                for m in missing:
+                    df[m] = df.apply(lambda _: np.nan, axis=1)
+            soup = format_all_sensor_table(df, mission_id)
+        except Exception as ex:
+            logger.exception(ex)
+
+    # add styles to the table so it's consistant with the rest of the application
+    table = soup.find('table')
+    table.attrs['class'] = 'dataframe table table-striped tscroll'
+
+    # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
+    # of samples will be loaded into the table.
+    args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
+    last_tr = table.find('tbody').find_all('tr')[-1]
+    last_tr.attrs['hx-target'] = 'this'
+    last_tr.attrs['hx-trigger'] = 'intersect once'
+    last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page+1}"
+    last_tr.attrs['hx-swap'] = "afterend"
+
+    # finally, align all text in each column to the center of the cell
+    tds = soup.find('table').find_all('td')
+    for td in tds:
+        td['class'] = 'text-center'
+
+
+    if page > 0:
+        response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
+    else:
+        response = HttpResponse(soup)
+
+    return response
+
+
+def format_all_sensor_table(df, mission_id):
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
     html = '<div id="sample_table">' + df.to_html() + "</div>"
 
@@ -516,12 +577,8 @@ def hx_list_samples(request, **kwargs):
     sample_table = soup.find(id="sample_table")
     sample_table.attrs['class'] = "vertical-scrollbar"
 
-    # add styles to the table so it's consistant with the rest of the application
-    table = soup.find('table')
-    table.attrs['class'] = 'dataframe table table-striped tscroll'
-
     # remove the first table row pandas adds for the "Value" column header
-    soup.find("thead").find("tr").decompose()
+    # soup.find("thead").find("tr").decompose()
 
     # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
     # followed by the 'replicate' row that describes if this is a single, double, triple sample.
@@ -553,150 +610,150 @@ def hx_list_samples(request, **kwargs):
 
     column = sensor_column.findNext('th')  # Sensor column
 
-    if sensor_id:
+    # if the sensor_id is not present then we're showing all of the sensor/sample tables with each
+    # column label to take the user to the sensor details page
 
-        # if the sensor_id is present then we want to show the specific details for this sensor/sample
+    # now add htmx tags to the rest of the TH elements in the row so the user
+    # can click that row for details on the sensor
+    while column:
+        column['class'] = 'text-center text-nowrap'
+
         pk = column.string
         sampletype = models.SampleType.objects.get(pk=pk)
-        column.string = f'{sampletype.short_name}'
 
-        data_type_label = soup.new_tag("div")
-        data_type_label.attrs['class'] = 'col-auto fw-bold'
-        data_type_label.string = _("Sensor Datatype") + " : "
+        button = soup.new_tag("button")
+        button.string = f'{sampletype.short_name}'
+        column.string = ''
+        button.attrs['class'] = 'btn btn-primary'
+        button.attrs['style'] = 'width: 100%'
+        button.attrs['hx-trigger'] = 'click'
+        button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
+        button.attrs['hx-target'] = "#sample_table"
+        button.attrs['hx-swap'] = 'outerHTML'
+        button.attrs['title'] = sampletype.long_name
 
-        data_type_value = soup.new_tag("div")
-        data_type_value.attrs['class'] = "col-auto"
-        data_type_value.string = str(sampletype.datatype.pk) if sampletype.datatype else _("None")
-
-        data_type_des_des = soup.new_tag("div")
-        data_type_des_des.attrs['class'] = "col-auto fw-bold"
-        data_type_des_des.string = _("Datatype Description") + " : "
-
-        data_type_des_value = soup.new_tag("div")
-        data_type_des_value.attrs['class'] = "col"
-        data_type_des_value.string = sampletype.datatype.description if sampletype.datatype else _("None")
-
-        sensor_details_row = soup.new_tag("div")
-        sensor_details_row.attrs['class'] = "row alert alert-secondary mt-2"
-        sensor_details_row.append(data_type_label)
-        sensor_details_row.append(data_type_value)
-        sensor_details_row.append(data_type_des_des)
-        sensor_details_row.append(data_type_des_value)
-
-        sensor_row_container = soup.new_tag("div")
-        sensor_row_container.attrs['class'] = "container-fluid"
-        sensor_row_container.append(sensor_details_row)
-
-        col_span = -1
-        # if we're looking at a sensor then keep the first column label, but change the next two
-
-        column = soup_split_column(soup, column)
+        column.append(button)
 
         column = column.find_next_sibling('th')
 
-        for heading in headings:
-            column.string = heading
-            span = 1
-            if 'colspan' in column.attrs:
-                span = int(column.attrs['colspan'])
+    return soup
 
-            column = soup_split_column(soup, column)
 
-            column = column.find_next_sibling('th')
-            col_span += span
+def format_sensor_table(df, mission_id, sensor_id):
+    # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
+    html = '<div id="sample_table">' + df.to_html() + "</div>"
 
-        root = soup.findChildren()[0]
+    # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
+    soup = BeautifulSoup(html, 'html.parser')
 
-        # create a button so the user can go back to viewing all loaded sensors/samples
-        back_button = soup.new_tag('button')
-        back_button.attrs['class'] = 'btn btn-primary'
-        back_button.attrs['hx-trigger'] = 'click'
-        back_button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id,))
-        back_button.attrs['hx-target'] = "#sample_table"
-        back_button.attrs['hx-swap'] = 'outerHTML'
-        back_button.attrs['title'] = _("Back")
-        back_button.attrs['name'] = 'back'
-        svg = dart2.utils.load_svg('arrow-left-square')
-        icon = BeautifulSoup(svg, 'html.parser').svg
-        back_button.append(icon)
+    # this will be a big table add scrolling
+    sample_table = soup.find(id="sample_table")
+    sample_table.attrs['class'] = "vertical-scrollbar"
 
-        # create a button to remove discrete samples
-        delete_button = soup.new_tag('button')
-        delete_button.attrs['class'] = 'btn btn-danger'
-        delete_button.attrs['hx-trigger'] = 'click'
-        delete_button.attrs['hx-post'] = reverse_lazy('core:hx_sample_delete', args=(mission_id, sensor_id,))
-        delete_button.attrs['hx-target'] = "#sample_table"
-        delete_button.attrs['hx-swap'] = 'outerHTML'
-        delete_button.attrs['hx-confirm'] = _("Are you sure?")
-        delete_button.attrs['title'] = _("Delete")
-        delete_button.attrs['name'] = 'delete'
-        svg = dart2.utils.load_svg('dash-square')
-        icon = BeautifulSoup(svg, 'html.parser').svg
-        delete_button.append(icon)
+    # delete the row with the 'replicates' labels
+    # soup.find("thead").find('tr').findNext('tr').decompose()
 
-        col_1 = soup.new_tag('div')
-        col_1.attrs['class'] = 'col'
-        col_1.append(back_button)
+    # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
+    # followed by the 'replicate' row that describes if this is a single, double, triple sample.
 
-        col_2 = soup.new_tag('div')
-        col_2.attrs['class'] = 'col-auto'
-        col_2.append(delete_button)
+    # We're going to flatten the headers down to one row then remove the others.
 
-        button_row = soup.new_tag('div')
-        button_row.attrs['class'] = 'row justify-content-between'
-        button_row.append(col_1)
-        button_row.append(col_2)
+    sensor_headers = soup.find("thead").find("tr")
 
-        root.append(button_row)
-        root.append(sensor_row_container)
-        root.append(table)
+    # we now have two header rows. The first contains all the sensor/sample names. The second contains the "Sample"
+    # and "Pressure" labels. I want to copy the first two columns from the second header to the first two columns
+    # of the first header (because the labels might be translated) then delete the second row
+    replicate_header = soup.find('tr').findNext('tr')
+    replicate_header.decompose()
 
-    else:
-        # if the sensor_id is not present then we're showing all of the sensor/sample tables with each
-        # column label to take the user to the sensor details page
+    sensor_column = sensor_headers.find('th')
+    column = sensor_column.findNext('th')  # 'Value' column
 
-        # now add htmx tags to the rest of the TH elements in the row so the user
-        # can click that row for details on the sensor
-        while column:
-            column['class'] = 'text-center text-nowrap'
+    # if the sensor_id is present then we want to show the specific details for this sensor/sample
+    sampletype = models.SampleType.objects.get(pk=sensor_id)
+    column.string = f'{sampletype.short_name}'
 
-            pk = column.string
-            sampletype = models.SampleType.objects.get(pk=pk)
+    data_type_label = soup.new_tag("div")
+    data_type_label.attrs['class'] = 'col-auto fw-bold'
+    data_type_label.string = _("Sensor Datatype") + " : "
 
-            button = soup.new_tag("button")
-            button.string = f'{sampletype.short_name}'
-            column.string = ''
-            button.attrs['class'] = 'btn btn-primary'
-            button.attrs['style'] = 'width: 100%'
-            button.attrs['hx-trigger'] = 'click'
-            button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
-            button.attrs['hx-target'] = "#sample_table"
-            button.attrs['hx-swap'] = 'outerHTML'
-            button.attrs['title'] = sampletype.long_name
+    data_type_value = soup.new_tag("div")
+    data_type_value.attrs['class'] = "col-auto"
+    data_type_value.string = str(sampletype.datatype.pk) if sampletype.datatype else _("None")
 
-            column.append(button)
+    data_type_des_des = soup.new_tag("div")
+    data_type_des_des.attrs['class'] = "col-auto fw-bold"
+    data_type_des_des.string = _("Datatype Description") + " : "
 
-            column = column.find_next_sibling('th')
+    data_type_des_value = soup.new_tag("div")
+    data_type_des_value.attrs['class'] = "col"
+    data_type_des_value.string = sampletype.datatype.description if sampletype.datatype else _("None")
 
-        # finally, align all text in each column to the center of the cell
-        tds = table.find_all('td')
-        for td in tds:
-            td['class'] = 'text-center'
+    sensor_details_row = soup.new_tag("div")
+    sensor_details_row.attrs['class'] = "row alert alert-secondary mt-2"
+    sensor_details_row.append(data_type_label)
+    sensor_details_row.append(data_type_value)
+    sensor_details_row.append(data_type_des_des)
+    sensor_details_row.append(data_type_des_value)
 
-    # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
-    # of samples will be loaded into the table.
-    args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
-    last_tr = table.find('tbody').find_all('tr')[-1]
-    last_tr.attrs['hx-target'] = 'this'
-    last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page+1}"
-    last_tr.attrs['hx-swap'] = "afterend"
+    sensor_row_container = soup.new_tag("div")
+    sensor_row_container.attrs['class'] = "container-fluid"
+    sensor_row_container.append(sensor_details_row)
 
-    if page > 0:
-        response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
-    else:
-        response = HttpResponse(soup)
-    return response
+    root = soup.findChildren()[0]
+
+    # create a button so the user can go back to viewing all loaded sensors/samples
+    back_button = soup.new_tag('button')
+    back_button.attrs['class'] = 'btn btn-primary'
+    back_button.attrs['hx-trigger'] = 'click'
+    back_button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id,))
+    back_button.attrs['hx-target'] = "#sample_table"
+    back_button.attrs['hx-swap'] = 'outerHTML'
+    back_button.attrs['title'] = _("Back")
+    back_button.attrs['name'] = 'back'
+    svg = dart2.utils.load_svg('arrow-left-square')
+    icon = BeautifulSoup(svg, 'html.parser').svg
+    back_button.append(icon)
+
+    # create a button to remove discrete samples
+    delete_button = soup.new_tag('button')
+    delete_button.attrs['class'] = 'btn btn-danger'
+    delete_button.attrs['hx-trigger'] = 'click'
+    delete_button.attrs['hx-post'] = reverse_lazy('core:hx_sample_delete', args=(mission_id, sensor_id,))
+    delete_button.attrs['hx-target'] = "#sample_table"
+    delete_button.attrs['hx-swap'] = 'outerHTML'
+    delete_button.attrs['hx-confirm'] = _("Are you sure?")
+    delete_button.attrs['title'] = _("Delete")
+    delete_button.attrs['name'] = 'delete'
+    svg = dart2.utils.load_svg('dash-square')
+    icon = BeautifulSoup(svg, 'html.parser').svg
+    delete_button.append(icon)
+
+    col_1 = soup.new_tag('div')
+    col_1.attrs['class'] = 'col'
+    col_1.append(back_button)
+
+    col_2 = soup.new_tag('div')
+    col_2.attrs['class'] = 'col-auto'
+    col_2.append(delete_button)
+
+    button_row = soup.new_tag('div')
+    button_row.attrs['class'] = 'row justify-content-between'
+    button_row.append(col_1)
+    button_row.append(col_2)
+
+    table = soup.find('table')
+    th = table.find('tr').find('th')
+    th.attrs['class'] = 'text-center'
+    #center all of the header text
+    while (th := th.findNext('th')):
+        th.attrs['class'] = 'text-center'
+
+    root.append(button_row)
+    root.append(sensor_row_container)
+    root.append(table)
+
+    return soup
 
 
 def hx_sample_delete(request, **kwargs):
@@ -707,3 +764,17 @@ def hx_sample_delete(request, **kwargs):
         models.Sample.objects.filter(type=sample_type).delete()
 
     return hx_list_samples(request, mission_id=mission)
+
+
+# Used in testing the mission samples type form
+class SampleDetails(MissionMixin, GenericDetailView):
+    page_title = _("Mission Samples")
+    template_name = "core/mission_samples_test.html"
+
+    def get_settings_url(self):
+        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['mission'] = self.object
+        return context

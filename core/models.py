@@ -314,7 +314,7 @@ class Action(models.Model):
         return f'{self.pk}: {self.get_type_display()} - {self.date_time}'
 
     class Meta:
-        ordering = ('date_time', )
+        ordering = ('date_time',)
 
 
 # In reality a sensor is physically attached to an instrument, but depending on a station's depth a sensor might be
@@ -333,7 +333,6 @@ class InstrumentSensor(models.Model):
 # 50 times in the VariableField. Integers take up less space than strings. SimpleLookupName can also be used
 # later on to add bilingual support
 class VariableName(SimpleLookupName):
-
     class Meta:
         ordering = (Lower('name'),)
 
@@ -382,7 +381,7 @@ class SampleType(models.Model):
                                   help_text=_("The column name of a sensor or a short name commonly "
                                               "used for the sample"), unique=True)
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
-                            help_text=_("Short descriptive name for this type of sample/sensor"))
+                                 help_text=_("Short descriptive name for this type of sample/sensor"))
     priority = models.IntegerField(verbose_name=_("Priority"), default=1)
 
     comments = models.CharField(verbose_name=_("Comments"), max_length=255, null=True, blank=True)
@@ -392,32 +391,12 @@ class SampleType(models.Model):
     datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, related_name='sample_types', on_delete=models.SET_NULL)
 
-    class Meta:
-        unique_together = ('short_name', 'priority')
-
-    def __str__(self):
-        return self.short_name + (f" - {self.long_name}" if self.long_name else "")
-
-
-# The SampleFileSettings model allows us to track what a file of a specific type with given headers for a specific
-# sample type should look like. Once a csv, with the columns 'Sample' and 'O2_Concentration (m/l)' for the 'Oxy'
-# sample type has been loaded, the next time we see that file we'll know what to pull out of it. This could be done
-# Once and fixtures created that will be distributed like the bio_table fixtures.
-# I was going to use the FileConfiguration model for this purpose, but Sensors and Samples are much more
-# complicated and require a more specialized approach.
-class SampleFileSettings(models.Model):
-
-    sample_type = models.ForeignKey(SampleType,
-                                    verbose_name=_("Sample Type"), on_delete=models.CASCADE,
-                                    related_name="sample_file_configs",
-                                    help_text=_("The sample type this configuration describes"))
-
     file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
                                  help_text=_("file type extension e.g csv, xls, xlsx, dat"))
 
-    header = models.IntegerField(verbose_name=_("Header Row"), default=0,
-                                 help_text=_("The row containing headers is often not the first row of a file. "
-                                             "This value indicates what row it is normally located on."))
+    skip = models.IntegerField(verbose_name=_("Header Row"), default=0,
+                               help_text=_("The row containing headers is often not the first row of a file. "
+                                           "This value indicates what row it is normally located on."))
 
     sample_field = models.CharField(verbose_name=_("Sample Column"), max_length=50,
                                     help_text=_("Lowercase name of the column that contains the bottle ids"))
@@ -442,6 +421,20 @@ class SampleFileSettings(models.Model):
 
     allow_replicate = models.BooleanField(verbose_name=_("Allow Replicate Samples?"), default=True,
                                           help_text=_("Can this sample have replicate sample values?"))
+
+    class Meta:
+        unique_together = ('short_name', 'priority')
+
+    def __str__(self):
+        return self.short_name + (f" - {self.long_name}" if self.long_name else "")
+
+
+class MissionSampleType(models.Model):
+    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
+                                on_delete=models.CASCADE, help_text=_("Mission a sample type was loaded for"))
+    type = models.ForeignKey(SampleType, verbose_name="Sample Type", related_name="mission_sample_types",
+                             on_delete=models.DO_NOTHING, help_text=_("Sample Type used in a mission"))
+
 
 # BioChemUpload is a table for tracking the last time a sensor or sample was uploaded to biochem. This way we can
 # track the data per-mission and let the user know if a sample has been uploaded, was modified and needs
@@ -474,8 +467,8 @@ class Sample(models.Model):
 # general datatype), and comments related to the sample.
 class DiscreteSampleValue(models.Model):
     sample = models.ForeignKey(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,
-                                  related_name='discrete_value')
-    value = models.FloatField(verbose_name=_("Value"))
+                               related_name='discrete_value')
+    value = models.FloatField(verbose_name=_("Value"), null=True)  # values can be null, but must not be blank
 
     replicate = models.IntegerField(verbose_name=_("Replicate #"), default=1,
                                     help_text=_("Replicates occur when there are multiple samples of the same type "

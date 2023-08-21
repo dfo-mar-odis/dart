@@ -16,21 +16,21 @@ excel_extensions = ['xls', 'xlsx', 'xlsm']
 
 
 def get_file_configs(data, file_type):
-    file_configs = core_models.SampleFileSettings.objects.filter(file_type=file_type)
+    sample_types = core_models.SampleType.objects.filter(file_type=file_type)
 
     # It's expensive to read headers.
     # If a config file matches a sample_field and a value_filed to a file then we'll assume we found
     # the correct header row for the correct tab, then we can narrow down our configs using the same settings
     lowercase_fields = []
     matching_config = None
-    for config in file_configs:
+    for sample_type in sample_types:
         if not lowercase_fields:
             # get the field choices, then see if they match the file_config's sample_type fields
-            tab, skip, field_choices = get_headers(data, file_type, config.tab, config.header)
+            tab, skip, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
             lowercase_fields = [field[0] for field in field_choices]
 
-        if config.sample_field in lowercase_fields and config.value_field in lowercase_fields:
-            matching_config = config
+        if sample_type.sample_field in lowercase_fields and sample_type.value_field in lowercase_fields:
+            matching_config = sample_type
             break
 
         lowercase_fields = []
@@ -39,7 +39,7 @@ def get_file_configs(data, file_type):
         # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row with
         # values fields in the available columns should give us all file configurations for this type of file that
         # the user can load samples from.
-        file_configs = file_configs.filter(tab=matching_config.tab, header=matching_config.header,
+        file_configs = sample_types.filter(tab=matching_config.tab, skip=matching_config.skip,
                                            sample_field=matching_config.sample_field,
                                            value_field__in=lowercase_fields)
         return file_configs
@@ -93,7 +93,10 @@ def get_excel_dataframe(stream, sheet_number=-1, header_row=-1):
         df = find_header(df, header_row)
     else:
         df = pd.read_excel(io=stream, sheet_name=sheet_number, header=header_row)
-        df = df[(header_row-1):]
+        if header_row > 0:
+            df = df[(header_row-1):]
+        else:
+            df = df[(header_row):]
 
     return df
 
@@ -122,9 +125,9 @@ def find_header(df, header_row):
 
             return temp_df
 
-    elif header_row > 0:
-        header = df.iloc[header_row - 1]
-        df = df[header_row:]
+    elif header_row >= 0:
+        header = df.iloc[header_row]
+        df = df[header_row + 1:]
         df.columns = header
 
         # if the user says this is the header line then it's the header line
@@ -153,7 +156,7 @@ def _split_function(x):
     return s_id, r_id
 
 
-def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleFileSettings) -> pd.DataFrame:
+def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleType) -> pd.DataFrame:
     """ if the sample column of the dataframe is of a string type and contains an underscore
         it should be split into s_id and r_id columns """
 
@@ -186,8 +189,9 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleFileS
 
 # once all the options are figured out (e.g what tab, what's the sample row, what's the value column)
 # this function will convert the dataframe into a sample
-def parse_data_frame(mission: core_models.Mission, settings: core_models.SampleFileSettings,
-                     file_name: str, dataframe: pd.DataFrame):
+def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, dataframe: pd.DataFrame):
+
+    mission = settings.mission
     # clear errors for this file
     core_models.FileError.objects.filter(file_name=file_name).delete()
 
@@ -205,13 +209,14 @@ def parse_data_frame(mission: core_models.Mission, settings: core_models.SampleF
         # convert column names to lower case because it's expected that the file_settings fields will be lowercase
         dataframe.columns = dataframe.columns.str.lower()
         # prep the dataframe by splitting the samples, adding replicates
-        dataframe = split_sample(dataframe, settings)
+        sample_type = settings.type
+
+        dataframe = split_sample(dataframe, sample_type)
         sample_id_field = 's_id'
         replicate_id_field = 'r_id'
-        sample_type = settings.sample_type
-        value_field = settings.value_field
-        flag_field = settings.flag_field
-        comment_field = settings.comment_field
+        value_field = sample_type.value_field
+        flag_field = sample_type.flag_field
+        comment_field = sample_type.comment_field
         for row in dataframe.iterrows():
             replicate = 1  # All samples will have at least one 'replicate'
             sample_id = row[1][sample_id_field]
@@ -243,14 +248,14 @@ def parse_data_frame(mission: core_models.Mission, settings: core_models.SampleF
             else:
                 create_samples[bottle.bottle_id] = db_sample
 
-            if settings.replicate_field:
-                replicate = row[1][settings.replicate_field]
+            if settings.type.replicate_field:
+                replicate = row[1][settings.type.replicate_field]
             elif replicate_id_field:
                 replicate = row[1][replicate_id_field]
 
                 # if replicates aren't allowed on this datatype then there should be an error here if the
                 # replicate values is greater than 1
-            if not settings.allow_replicate and replicate > 1:
+            if not settings.type.allow_replicate and replicate > 1:
                 message = _("Duplicate bottle found for sample ") + sample_id
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
@@ -259,7 +264,7 @@ def parse_data_frame(mission: core_models.Mission, settings: core_models.SampleF
 
             comment = None
             if comment_field and comment_field in row[1] and row[1][comment_field] is not np.nan:
-                comment = row[1][settings.comment_field]
+                comment = row[1][comment_field]
 
             flag = None
             if flag_field and flag_field in row[1]:
@@ -309,7 +314,7 @@ def parse_data_frame(mission: core_models.Mission, settings: core_models.SampleF
                                                                     update_discrete_values['fields'])
 
     except ValueError as ex:
-        message = f"Could not parse sample id column '{settings.sample_field}', " \
+        message = f"Could not parse sample id column '{settings.type.sample_field}', " \
                   f"make sure the right column was selected"
         logger.error(message)
         logger.exception(ex)
