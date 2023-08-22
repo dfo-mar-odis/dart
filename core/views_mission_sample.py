@@ -21,13 +21,13 @@ from biochem import models
 from core import forms
 from core import models
 from core.parsers.SampleParser import get_headers, get_file_configs, parse_data_frame, get_excel_dataframe
-from core.views import logger, sample_file_queue, load_ctd_files, MissionMixin
+from core.views import sample_file_queue, load_ctd_files, MissionMixin
 
 from dart2.utils import load_svg
 
-import logging
-
 from dart2.views import GenericDetailView
+
+import logging
 
 logger = logging.getLogger('dart')
 
@@ -77,6 +77,43 @@ def get_file_config_forms(data, file_type) -> [forms.SampleTypeLoadForm]:
     return config_forms
 
 
+def get_error_list(soup, card_id, errors):
+
+    msg_div = soup.find(id=f'{card_id}_message')
+    if not msg_div:
+        msg_div = soup.new_tag('div')
+        msg_div.attrs['class'] = ''
+        msg_div.attrs['id'] = f'{card_id}_message'
+        soup.append(msg_div)
+
+    msg_div_error_card = soup.new_tag('div')
+    msg_div_error_card.attrs['class'] = 'card mt-2'
+    msg_div.append(msg_div_error_card)
+
+    msg_div_error_card_header = soup.new_tag('div')
+    msg_div_error_card_header.attrs['class'] = 'card-header text-bg-warning'
+    msg_div_error_card.append(msg_div_error_card_header)
+
+    msg_div_error_title = soup.new_tag('div')
+    msg_div_error_title.string = _("Warnings")
+    msg_div_error_title.attrs['class'] = 'card-title'
+    msg_div_error_card_header.append(msg_div_error_title)
+
+    msg_div_error_card_body = soup.new_tag('div')
+    msg_div_error_card_body.attrs['class'] = 'card-body vertical-scrollbar-sm'
+    msg_div_error_card.append(msg_div_error_card_body)
+
+    ul_list = soup.new_tag('ul')
+    ul_list['id'] = f'{card_id}_error_list'
+    ul_list['class'] = 'list-group'
+    msg_div_error_card_body.append(ul_list)
+    for error in errors:
+        li = soup.new_tag('li')
+        li['class'] = 'list-group-item'
+        li.string = error.message
+        ul_list.append(li)
+
+
 def save_sample_type(request, **kwargs):
     # Validate and save the mission form once the user has filled out the details
     #
@@ -89,7 +126,7 @@ def save_sample_type(request, **kwargs):
     context.update(csrf(request))
 
     if request.method == "GET":
-        if 'sample_type_id' in kwargs:
+        if 'sample_type_id' in kwargs and 'update_sample_type' in request.GET:
             sample_type = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
             url = reverse_lazy("core:save_sample_type", args=(sample_type.pk,))
             oob_select = f"#div_id_sample_type, #div_id_{sample_type.pk}:outerHTML"
@@ -185,15 +222,15 @@ def new_sample_type(request, **kwargs):
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
-        tab = 0
-        skip = -1
-
-        tab, skip, field_choices = get_headers(data, file_type, tab, skip)
-
         if 'sample_type_id' in kwargs:
             config = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+            tab, skip, field_choices = get_headers(data, config.file_type, config.tab, config.skip)
             sample_type_form = forms.SampleTypeForm(instance=config, field_choices=field_choices)
         else:
+            tab = int(request.POST['tab']) if 'tab' in request.POST else 0
+            skip = int(request.POST['skip']) if 'skip' in request.POST else -1
+
+            tab, skip, field_choices = get_headers(data, file_type, tab, skip)
             file_initial = {"file_type": file_type, "skip": skip, "tab": tab}
             sample_type_form = forms.SampleTypeForm(initial=file_initial, field_choices=field_choices)
 
@@ -202,7 +239,6 @@ def new_sample_type(request, **kwargs):
 
 
 def load_sample_type(request, **kwargs):
-
     context = {}
     context.update(csrf(request))
 
@@ -269,8 +305,16 @@ def load_sample_type(request, **kwargs):
         if config_forms:
             html += '<div id=div_id_loaded_samples_list>'
             for config in config_forms:
-                html += render_crispy_form(config)
+                form_html = render_crispy_form(config)
+                if (errors := models.FileError.objects.filter(file_name=file_name)).exists():
+                    soup = BeautifulSoup(form_html, 'html.parser')
+                    get_error_list(soup, config.get_card_id(), errors)
+                    form_html = str(soup)
+                html += form_html
             html += "</div>"
+
+            # if a sample type has already been loaded I want there to be an indication like a different button icon
+            soup = BeautifulSoup(html, 'html.parser')
         else:
             html += '<div id=div_id_loaded_samples_list></div>'
 
@@ -335,6 +379,9 @@ def load_samples(request, **kwargs):
         sample_type = models.SampleType.objects.get(pk=sample_type_id)
         mission = models.Mission.objects.get(pk=mission_id)
 
+        # at the moment this will just prevent a user for accidentally deleting a sample_type that's used
+        # across multiple missions. Eventually I'd like this to be a deep copy of the sample_type
+        # where it can be edited from one mission to another without affecting settings for other missions
         mission_sample_type = models.MissionSampleType(mission=mission, type=sample_type)
         mission_sample_type.save()
 
@@ -346,42 +393,10 @@ def load_samples(request, **kwargs):
         try:
             parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
 
-            errors = models.FileError.objects.filter(file_name=file_name)
-
-            if errors.exists():
+            if (errors := models.FileError.objects.filter(file_name=file_name)).exists():
                 button_class = "btn btn-warning btn-sm"
+                get_error_list(soup, message_div_id, errors)
 
-                msg_div = soup.new_tag('div')
-                msg_div.attrs['class'] = ''
-                msg_div.attrs['id'] = f'{message_div_id}_message'
-                soup.append(msg_div)
-
-                msg_div_error_card = soup.new_tag('div')
-                msg_div_error_card.attrs['class'] = 'card mt-2'
-                msg_div.append(msg_div_error_card)
-
-                msg_div_error_card_header = soup.new_tag('div')
-                msg_div_error_card_header.attrs['class'] = 'card-header text-bg-warning'
-                msg_div_error_card.append(msg_div_error_card_header)
-
-                msg_div_error_title = soup.new_tag('div')
-                msg_div_error_title.string = _("Warnings")
-                msg_div_error_title.attrs['class'] = 'card-title'
-                msg_div_error_card_header.append(msg_div_error_title)
-
-                msg_div_error_card_body = soup.new_tag('div')
-                msg_div_error_card_body.attrs['class'] = 'card-body vertical-scrollbar'
-                msg_div_error_card.append(msg_div_error_card_body)
-
-                ul_list = soup.new_tag('ul')
-                ul_list['id'] = f'{message_div_id}_error_list'
-                ul_list['class'] = 'list-group'
-                msg_div_error_card_body.append(ul_list)
-                for error in errors:
-                    li = soup.new_tag('li')
-                    li['class'] = 'list-group-item'
-                    li.string = error.message
-                    ul_list.append(li)
         except Exception as ex:
             logger.error(f"Failed to load file {file_name}")
             logger.exception(ex)
@@ -401,12 +416,13 @@ def load_samples(request, **kwargs):
         icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
         button.append(icon)
         response = HttpResponse(soup)
+
+        # This will trigger the Sample table on the 'core/mission_samples.html' template to update
         response['HX-Trigger'] = 'update_samples'
         return response
 
 
 def delete_sample_type(request, **kwargs):
-
     config_id = kwargs['sample_type_id']
     if request.method == "POST":
         models.SampleType.objects.get(pk=config_id).delete()
@@ -490,7 +506,8 @@ def hx_list_samples(request, **kwargs):
 
     mission = models.Mission.objects.get(pk=mission_id)
     if sensor_id:
-        queryset = models.Sample.objects.filter(type_id=sensor_id).order_by('bottle__bottle_id')[page_start:(page_start+page_limit)]
+        queryset = models.Sample.objects.filter(type_id=sensor_id).order_by('bottle__bottle_id')[
+                   page_start:(page_start + page_limit)]
         queryset = queryset.values(
             'bottle__bottle_id',
             'bottle__pressure',
@@ -504,6 +521,9 @@ def hx_list_samples(request, **kwargs):
         df = read_frame(queryset)
         df.columns = ["Sample", "Pressure", "Replicate", "Value"] + headings
 
+        df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
+
+        soup = format_sensor_table(df, mission_id, sensor_id)
     else:
         bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
                        page_start:(page_start + page_limit)]
@@ -520,24 +540,22 @@ def hx_list_samples(request, **kwargs):
         df = read_frame(queryset)
         df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
 
-    if not queryset.exists():
-        soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
-        response = HttpResponse(soup)
-        return response
-
-    if sensor_id:
-        df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
-        soup = format_sensor_table(df, mission_id, sensor_id)
-    else:
         try:
             df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
             missing = np.setdiff1d([s.pk for s in sensors.order_by('pk').distinct()], [v[0] for v in df.columns.values])
             if len(missing) > 0:
                 for m in missing:
                     df[m] = df.apply(lambda _: np.nan, axis=1)
+
+            df = df.reindex(sorted(df.columns), axis=1)
             soup = format_all_sensor_table(df, mission_id)
         except Exception as ex:
             logger.exception(ex)
+
+    if not queryset.exists():
+        soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
+        response = HttpResponse(soup)
+        return response
 
     # add styles to the table so it's consistant with the rest of the application
     table = soup.find('table')
@@ -549,14 +567,13 @@ def hx_list_samples(request, **kwargs):
     last_tr = table.find('tbody').find_all('tr')[-1]
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page+1}"
+    last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page + 1}"
     last_tr.attrs['hx-swap'] = "afterend"
 
     # finally, align all text in each column to the center of the cell
     tds = soup.find('table').find_all('td')
     for td in tds:
         td['class'] = 'text-center'
-
 
     if page > 0:
         response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
@@ -664,7 +681,8 @@ def format_sensor_table(df, mission_id, sensor_id):
     # and "Pressure" labels. I want to copy the first two columns from the second header to the first two columns
     # of the first header (because the labels might be translated) then delete the second row
     replicate_header = soup.find('tr').findNext('tr')
-    replicate_header.decompose()
+    if replicate_header:
+        replicate_header.decompose()
 
     sensor_column = sensor_headers.find('th')
     column = sensor_column.findNext('th')  # 'Value' column
@@ -745,7 +763,7 @@ def format_sensor_table(df, mission_id, sensor_id):
     table = soup.find('table')
     th = table.find('tr').find('th')
     th.attrs['class'] = 'text-center'
-    #center all of the header text
+    # center all of the header text
     while (th := th.findNext('th')):
         th.attrs['class'] = 'text-center'
 
@@ -757,7 +775,6 @@ def format_sensor_table(df, mission_id, sensor_id):
 
 
 def hx_sample_delete(request, **kwargs):
-
     mission = kwargs['mission_id']
     sample_type = kwargs['sample_type_id']
     if request.method == "POST":
@@ -772,7 +789,7 @@ class SampleDetails(MissionMixin, GenericDetailView):
     template_name = "core/mission_samples_test.html"
 
     def get_settings_url(self):
-        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
+        return reverse_lazy("core:mission_edit", args=(self.object.pk,))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

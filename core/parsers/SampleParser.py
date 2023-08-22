@@ -56,7 +56,7 @@ def get_headers(data, file_type: str, tab: int = 0, skip: int = -1) -> [int, int
         # users won't understand indexing starts at 0 so whatever we're showing them
         # make sure to subtract one
         df = get_excel_dataframe(data, tab, skip)
-        skip = df.index.start
+        skip = df.index.start if skip == -1 else skip
         field_choices = [(str(column).lower(), column) for column in df.columns]
 
     return [tab, skip, field_choices]
@@ -219,7 +219,7 @@ def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, da
         comment_field = sample_type.comment_field
         for row in dataframe.iterrows():
             replicate = 1  # All samples will have at least one 'replicate'
-            sample_id = row[1][sample_id_field]
+            sample_id = int(row[1][sample_id_field])
             value = row[1][value_field]
 
             bottles = core_models.Bottle.objects.filter(event__mission=mission, bottle_id=int(sample_id))
@@ -263,11 +263,11 @@ def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, da
                 continue
 
             comment = None
-            if comment_field and comment_field in row[1] and row[1][comment_field] is not np.nan:
+            if comment_field and comment_field in row[1] and not pd.isna(row[1][comment_field]):
                 comment = row[1][comment_field]
 
             flag = None
-            if flag_field and flag_field in row[1]:
+            if flag_field and flag_field in row[1] and not pd.isna(row[1][flag_field]):
                 flag = row[1][flag_field]
 
             # if db_sample doesn't have a pk, then it hasn't been created yet

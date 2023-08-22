@@ -2,6 +2,7 @@ import datetime
 import re
 import csv
 
+from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
 from django import forms
@@ -442,7 +443,7 @@ class SampleTypeForm(forms.ModelForm):
                     css_class=''
                 ),
                 Row(
-                    Column(datatype_filter, css_class='col-12'),  css_class=''
+                    Column(datatype_filter, css_class='col-12'), css_class=''
                 ),
                 Row(
                     Column(Field('datatype', css_class='form-control form-select-sm'), css_class='col-12'),
@@ -453,7 +454,7 @@ class SampleTypeForm(forms.ModelForm):
         )
 
         hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:load_sample_type'),
+            'hx-post': reverse_lazy('core:new_sample_type'),
             'hx-select': "#div_id_file_attributes",
             'hx-target': "#div_id_file_attributes",
             'hx-swap': "outerHTML",
@@ -490,7 +491,7 @@ class SampleTypeForm(forms.ModelForm):
                 Column(Field('sample_field')),
                 Column(Field('value_field')),
                 Column(Field('replicate_field')),
-                Column(Field('flag_field',)),
+                Column(Field('flag_field', )),
                 Column(Field('comment_field')),
                 css_class="flex-fill"
             ),
@@ -500,22 +501,28 @@ class SampleTypeForm(forms.ModelForm):
 
         self.helper[0].layout.fields.append(div)
 
-        if self.instance.pk:
-            url = reverse_lazy("core:save_sample_type", args=(self.instance.pk,))
-        else:
-            url = reverse_lazy("core:save_sample_type")
-
-        button = '<button type="button" class="btn btn-primary btn-sm" name="add_sample_type"'
-        button += f' hx-get="{url}"'
-        button += f' hx-target="#button_row"'
-        button += f' hx-select="#div_id_loaded_sample_type_message"'
-        button += ">"
-        button += load_svg('plus-square')
-        button += "</button>"
-        submit = HTML(button)
         button_row = Row(
-            Column(submit, css_class='col text-end'), css_class="mt-2", id="button_row"
+            Column(css_class='col text-end'), css_class="mt-2", id="button_row"
         )
+
+        attrs = {
+            'css_class': "btn btn-primary btn-sm ms-2",
+            'name': "add_sample_type",
+            'hx_get': reverse_lazy("core:save_sample_type"),
+            'hx_target': "#button_row",
+            'hx_select': "#div_id_loaded_sample_type_message",
+        }
+
+        button_new = StrictButton(load_svg('plus-square'), **attrs)
+        button_row.fields[0].insert(0, button_new)
+
+        if self.instance.pk:
+            attrs['hx_get'] = reverse_lazy("core:save_sample_type", args=(self.instance.pk,))
+            attrs['name'] = "update_sample_type"
+
+            button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
+            button_row.fields[0].insert(0, button_update)
+
         self.helper[0].layout.fields.append(button_row)
 
 
@@ -527,13 +534,16 @@ class SampleTypeLoadForm(forms.ModelForm):
         model = models.SampleType
         fields = "__all__"
 
+    def get_card_id(self):
+        return f"div_id_{self.instance.pk}"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
 
-        card_id = f"div_id_{self.instance.pk}"
+        card_id = self.get_card_id()
         body = Div(
             Row(
                 Column(HTML(f'{_("Header Row")} : {self.instance.skip}'), css_class="col-auto")
@@ -545,7 +555,7 @@ class SampleTypeLoadForm(forms.ModelForm):
                 Column(HTML(f'{_("Bottle ID")} : "{self.instance.sample_field}"')),
                 Column(HTML(f'{_("Value")} : "{self.instance.value_field}"')),
             ),
-            Row(id=f"{card_id}_message")
+            Div(id=f"{card_id}_message")
         )
 
         if self.instance.replicate_field:
@@ -561,23 +571,37 @@ class SampleTypeLoadForm(forms.ModelForm):
             body[0].fields.insert(0, Column(HTML(f'{_("Tab #")} : {self.instance.tab}'), css_class="col-auto"))
 
         # upon successfully loading the content the 'core:load_samples' function should return the button
-        # as a 'btn btn-success btn-sm' button
+        # as a 'btn btn-success btn-sm' button or 'btn btn-warning btn-sm' if there are errors/warnings
+        load_btn_svg = load_svg('folder')
+        load_btn_class = 'btn btn-secondary btn-sm'
+        if self.instance.pk and (samples := models.Sample.objects.filter(type__id=self.instance.pk)).exists():
+            files = samples.values_list('file', flat=True).distinct()
+            errors = models.FileError.objects.filter(file_name__in=files).exists()
+
+            if errors:
+                load_btn_svg = load_svg('folder-x')
+                load_btn_class = 'btn btn-warning btn-sm'
+            else:
+                load_btn_svg = load_svg('folder-check')
+                load_btn_class = 'btn btn-primary btn-sm'
+
         load_url = reverse_lazy('core:load_samples', args=(self.instance.pk,))
-        load_button = HTML(
-            f'<button id="{card_id}_load_button" class="btn btn-primary btn-sm" type="button" name="load" '
-            f'hx-get="{load_url}" hx-target="#{card_id}_message"'
-            f'>{load_svg("folder-check")}</button>')
+        load_button = StrictButton(load_btn_svg, id=f"{self.get_card_id()}_load_button",
+                                   name='load', css_class=load_btn_class,
+                                   hx_get=load_url, hx_target=f"#{card_id}_message")
 
         edit_url = reverse_lazy('core:new_sample_type', args=(self.instance.pk,))
-        edit_button = HTML(
-            f'<button class="btn btn-primary btn-sm me-1" type="button" name="edit" '
-            f'hx-post="{edit_url}" hx-target="#div_id_sample_type">{load_svg("pencil-square")}</button>')
+        edit_button = StrictButton(load_svg('pencil-square'),
+                                   name='edit', css_class='btn btn-primary btn-sm me-1',
+                                   hx_post=edit_url, hx_target="#div_id_sample_type",
+                                   # just a little javascript to scroll back to the new sample type form
+                                   hx_on="htmx:afterRequest: window.location.href = '#div_id_sample_type';")
 
         delete_url = reverse_lazy('core:delete_sample_type', args=(self.instance.pk,))
-        delete_button = HTML(
-            f'<button class="btn btn-danger btn-sm" type="button" name="delete" '
-            f'hx-post="{delete_url}" hx-target="#{card_id}" hx-swap="delete" '
-            f'hx-confirm="{_("Are you sure?")}">{load_svg("dash-square")}</button>')
+        delete_button = StrictButton(load_svg('dash-square'),
+                                     name='delete', css_class='btn btn-danger btn-sm',
+                                     hx_post=delete_url, hx_target=f"#{card_id}",
+                                     hx_swap="delete", hx_confirm=_("Are you sure?"))
 
         title_label = f'{self.instance.file_type} - {self.instance.short_name}'
         title_label += f' : {self.instance.long_name}' if self.instance.long_name else ''
@@ -587,15 +611,8 @@ class SampleTypeLoadForm(forms.ModelForm):
                 HTML(f'<div class="h6">{title_label}</div>'),
                 css_class='col'
             ),
-            Column(
-                delete_button,
-                css_class='col-auto'
-            ),
-            Column(
-                edit_button,
-                load_button,
-                css_class='col-auto'
-            ),
+            Column(delete_button, css_class='col-auto'),
+            Column(edit_button, load_button, css_class='col-auto'),
             css_class='card-title row'
         )
 

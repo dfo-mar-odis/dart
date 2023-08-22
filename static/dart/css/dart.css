@@ -39,6 +39,12 @@ table.dataframe thead {
     overflow-y: scroll;
 }
 
+.vertical-scrollbar-sm {
+    position: relative;
+    height: 150px;
+    overflow-y: scroll;
+}
+
 .horizontal-scrollbar {
     position: relative;
     overflow-x: scroll;

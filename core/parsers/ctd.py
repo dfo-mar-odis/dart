@@ -110,7 +110,14 @@ def process_ros_sensors(exclude_sensors: [str], ros_file: str):
             continue
 
         sensor_type_string, priority, units, other = parse_sensor(sensor_mapping[1])
-        sensor_type = core_models.SampleType(short_name=sensor_mapping[0])
+        long_name = sensor_type_string
+        if other:
+            long_name += f", {other}"
+
+        if units:
+            long_name += f" [{units}]"
+
+        sensor_type = core_models.SampleType(short_name=sensor_mapping[0], long_name=long_name)
         sensor_type.name = sensor_type_string
         sensor_type.priority = priority if priority else 1
         sensor_type.units = units if units else None
@@ -155,12 +162,12 @@ def process_common_sensors(sensors: list[str], exclude_sensors: [str]):
             continue
 
         # if the sensor exists, skip it
-        if core_models.SampleType.objects.filter(short_name__exact=sensor).exists():
+        if core_models.SampleType.objects.filter(short_name=sensor).exists():
             continue
 
         details = parse_sensor_name(sensor)
-
-        sensor_details = core_models.SampleType(short_name=details[0])
+        long_name = details[2]  # basically all we have at the moment is the units of measure
+        sensor_details = core_models.SampleType(short_name=details[0], long_name=long_name)
         sensor_details.priority = details[1]
         sensor_details.units = details[2]
 
@@ -274,39 +281,42 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
     new_samples: [core_models.DiscreteSampleValue] = []
     update_samples: [core_models.DiscreteSampleValue] = []
     for column_name in column_headers:
-        sensor_type = core_models.SampleType.objects.get(short_name__iexact=column_name)
+        try:
+            sensor_type = core_models.SampleType.objects.get(short_name__iexact=column_name)
 
-        df = data_frame_avg[["Bottle", column_name]]
-        create_sensors: {int: core_models.Sample} = {}
-        for data in df.iterrows():
-            bottle = event.bottles.filter(bottle_number=data[1]["Bottle"])
-            if not bottle.exists():
-                logger.warning(f"Bottle {data[1]['Bottle']} for event {event.event_id} does not exist, "
-                               f"there should be a File Error")
-                continue
+            df = data_frame_avg[["Bottle", column_name]]
+            create_sensors: {int: core_models.Sample} = {}
+            for data in df.iterrows():
+                bottle = event.bottles.filter(bottle_number=data[1]["Bottle"])
+                if not bottle.exists():
+                    logger.warning(f"Bottle {data[1]['Bottle']} for event {event.event_id} does not exist, "
+                                   f"there should be a File Error")
+                    continue
 
-            bottle = bottle[0]
-            sensor = core_models.Sample.objects.filter(bottle=bottle, type=sensor_type, file=file_name)
-            if sensor.exists():
-                sensor = sensor[0]
-            elif bottle.bottle_id in create_sensors:
-                sensor = create_sensors[bottle.bottle_id]
-            else:
-                sensor = core_models.Sample(bottle=bottle, type=sensor_type, file=file_name)
-                create_sensors[bottle.bottle_id] = sensor
+                bottle = bottle[0]
+                sensor = core_models.Sample.objects.filter(bottle=bottle, type=sensor_type, file=file_name)
+                if sensor.exists():
+                    sensor = sensor[0]
+                elif bottle.bottle_id in create_sensors:
+                    sensor = create_sensors[bottle.bottle_id]
+                else:
+                    sensor = core_models.Sample(bottle=bottle, type=sensor_type, file=file_name)
+                    create_sensors[bottle.bottle_id] = sensor
 
-            # bottle files don't contain replicates for discrete values, there should only be one sample value
-            # per bottle per sensor type
-            if sensor.pk and sensor.discrete_value.all().exists():
-                discrete_value = sensor.discrete_value.get(replicate=1)
-                discrete_value.value = data[1][column_name]
-                update_samples.append(discrete_value)
-            else:
-                discrete_value = core_models.DiscreteSampleValue(sample=sensor, value=data[1][column_name])
-                new_samples.append(discrete_value)
+                # bottle files don't contain replicates for discrete values, there should only be one sample value
+                # per bottle per sensor type
+                if sensor.pk and sensor.discrete_value.all().exists():
+                    discrete_value = sensor.discrete_value.get(replicate=1)
+                    discrete_value.value = data[1][column_name]
+                    update_samples.append(discrete_value)
+                else:
+                    discrete_value = core_models.DiscreteSampleValue(sample=sensor, value=data[1][column_name])
+                    new_samples.append(discrete_value)
 
-        if create_sensors:
-            core_models.Sample.objects.bulk_create(create_sensors.values())
+            if create_sensors:
+                core_models.Sample.objects.bulk_create(create_sensors.values())
+        except Exception as ex:
+            logger.exception(ex)
 
     core_models.DiscreteSampleValue.objects.bulk_create(new_samples)
     core_models.DiscreteSampleValue.objects.bulk_update(update_samples, fields=["value"])
