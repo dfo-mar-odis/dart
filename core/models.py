@@ -467,7 +467,7 @@ class Sample(models.Model):
 # general datatype), and comments related to the sample.
 class DiscreteSampleValue(models.Model):
     sample = models.ForeignKey(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,
-                               related_name='discrete_value')
+                               related_name='discrete_values')
     value = models.FloatField(verbose_name=_("Value"), null=True)  # values can be null, but must not be blank
 
     replicate = models.IntegerField(verbose_name=_("Replicate #"), default=1,

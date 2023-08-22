@@ -271,7 +271,7 @@ def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, da
                 flag = row[1][flag_field]
 
             # if db_sample doesn't have a pk, then it hasn't been created yet
-            if db_sample.pk and (replicates := db_sample.discrete_value.filter(replicate=replicate)).exists():
+            if db_sample.pk and (replicates := db_sample.discrete_values.filter(replicate=replicate)).exists():
                 if len(replicates) > 1:
                     message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
                     error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
@@ -279,7 +279,7 @@ def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, da
                     logger.warning(message)
                     continue
 
-                discrete_sample = db_sample.discrete_value.get(replicate=replicate)
+                discrete_sample = db_sample.discrete_values.get(replicate=replicate)
                 update_discrete_values['fields'].add(updated_value(discrete_sample, 'value', value))
                 update_discrete_values['fields'].add(updated_value(discrete_sample, 'comment', comment))
                 update_discrete_values['fields'].add(updated_value(discrete_sample, 'flag', flag))

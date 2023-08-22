@@ -305,8 +305,8 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
                 # bottle files don't contain replicates for discrete values, there should only be one sample value
                 # per bottle per sensor type
-                if sensor.pk and sensor.discrete_value.all().exists():
-                    discrete_value = sensor.discrete_value.get(replicate=1)
+                if sensor.pk and sensor.discrete_values.all().exists():
+                    discrete_value = sensor.discrete_values.get(replicate=1)
                     discrete_value.value = data[1][column_name]
                     update_samples.append(discrete_value)
                 else:

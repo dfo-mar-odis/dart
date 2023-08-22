@@ -302,6 +302,11 @@ class TestSampleFileConfiguration(DartTestCase):
         # if the new_sample_type url contains an argument with a 'sample_type' id the form should load with the
         # existing config.
 
+        # Todo: This was changed. The edit form expects a 'update_sample_type' in the request.POST to update
+        #       a sample type. Otherwise it makes a copy of the settings and creates a new sample type, checking
+        #       that the short_name is unique. This way we can quickly copy previous sample types that use
+        #       the same file tab, header, columns without having to reset them all
+
         oxy_sample_type = core_factory.SampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",

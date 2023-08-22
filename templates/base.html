@@ -32,10 +32,10 @@
 <body>
 
 {% block nav_bar_block %}
-<nav class="navbar navbar-expand-lg navbar-expand-sm {% if theme == "dark" %}navbar-dark bg-body-tertiary{% else %}navbar-light bg-light{% endif %}">
+<nav class="navbar  justify-content-between navbar-expand {% if theme == "dark" %}navbar-dark bg-body-tertiary{% else %}navbar-light bg-light{% endif %}">
 
   <div class="container-fluid">
-    <ul class="navbar-nav me-autocollapse navbar-collapse">
+    <ul class="navbar-nav">
     {% block header_buttons %}
         {% if home_url %}
         <li class="nav-item ms-2">
@@ -47,7 +47,21 @@
         </li>
     {% endblock %}
     </ul>
-    <ul class="navbar-nav ms-auto">
+    {% if reports %}
+    <ul class="navbar-nav">
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+            {% trans 'Download Report' %}
+          </a>
+          <ul class="dropdown-menu">
+              {% for key,report in reports.items %}
+                  <li><a class="dropdown-item" href="{{ report }}">{{ key }}</a></li>
+              {% endfor %}
+          </ul>
+        </li>
+    </ul>
+    {% endif %}
+    <ul class="navbar-nav">
     {% block nav_button_block %}
         {% if settings_url %}
         <li class="nav-item me-2">

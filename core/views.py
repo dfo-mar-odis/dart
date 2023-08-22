@@ -23,6 +23,15 @@ logger = logging.getLogger('dart')
 # This queue is used for processing sample files in the hx_sample_upload_ctd function
 sample_file_queue = queue.Queue()
 
+reports = {
+    "Chlorophyll Summary": "core:hx_report_chl",
+    "Oxygen Summary": "core:hx_report_oxygen",
+    "Salinity Summary": "core:hx_report_salt",
+    "Profile Summary": "core:hx_report_profile",
+    "Elog Report": "core:hx_report_elog",
+    "Error Report": "core:hx_report_error",
+}
+
 
 class MissionMixin:
     model = models.Mission
@@ -75,6 +84,9 @@ class EventDetails(MissionMixin, GenericDetailView):
 
         context['search_form'] = forms.MissionSearchForm(initial={'mission': self.object.pk})
         context['events'] = self.object.events.all()
+
+        context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,)) for key in reports.keys()}
+
         return context
 
 
@@ -364,6 +376,7 @@ class SampleDetails(MissionMixin, GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,)) for key in reports.keys()}
 
         return context
 

@@ -427,10 +427,10 @@ class TestSampleCSVParser(DartTestCase):
         sample = bottle_with_replicate.samples.get(type=self.oxy_file_settings.sample_type)
         self.assertIsNotNone(sample)
 
-        dv_value = sample.discrete_value.get(replicate=1).value
+        dv_value = sample.discrete_values.get(replicate=1).value
         self.assertEquals(dv_value, 3.932)
 
-        dv_value = sample.discrete_value.get(replicate=2).value
+        dv_value = sample.discrete_values.get(replicate=2).value
         self.assertEquals(dv_value, 3.835)
 
         # check that the comment for bottle 495600 was captured
@@ -440,10 +440,10 @@ class TestSampleCSVParser(DartTestCase):
         sample = bottle_with_comment.samples.get(type=self.oxy_file_settings.sample_type)
         self.assertIsNotNone(sample)
 
-        dv_value = sample.discrete_value.get(replicate=1).value
+        dv_value = sample.discrete_values.get(replicate=1).value
         self.assertEquals(dv_value, 3.135)
 
-        dv_comment = sample.discrete_value.get(replicate=1).comment
+        dv_comment = sample.discrete_values.get(replicate=1).comment
         self.assertEquals(dv_comment, "Dropped magnet in before H2SO4; sorry")
 
     def test_duplicate_error(self):

@@ -1,7 +1,7 @@
 from django.urls import path
 
 import core.views_mission_sample
-from . import views, views_mission_sample, htmx
+from . import views, views_mission_sample, htmx, reports
 
 app_name = 'core'
 
@@ -88,4 +88,13 @@ htmx_urlpatterns = [
 
 ]
 
-urlpatterns = urlpatterns + htmx_urlpatterns
+htmx_report_urls = [
+    path('mission/report/elog/<int:mission_id>/', reports.elog, name="hx_report_elog"),
+    path('mission/report/error/<int:mission_id>/', reports.error_report, name="hx_report_error"),
+    path('mission/report/profile_sumamry/<int:mission_id>/', reports.profile_summary, name="hx_report_profile"),
+    path('mission/report/oxygen/<int:mission_id>/', reports.oxygen_report, name="hx_report_oxygen"),
+    path('mission/report/salinity/<int:mission_id>/', reports.salt_report, name="hx_report_salt"),
+    path('mission/report/chl/<int:mission_id>/', reports.chl_report, name="hx_report_chl"),
+]
+
+urlpatterns = urlpatterns + htmx_urlpatterns + htmx_report_urls

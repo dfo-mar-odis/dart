@@ -7,6 +7,7 @@ import bs4
 import pandas as pd
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
+from django.db.models import Max
 from django.http import HttpResponse, Http404
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
@@ -21,7 +22,7 @@ from biochem import models
 from core import forms
 from core import models
 from core.parsers.SampleParser import get_headers, get_file_configs, parse_data_frame, get_excel_dataframe
-from core.views import sample_file_queue, load_ctd_files, MissionMixin
+from core.views import sample_file_queue, load_ctd_files, MissionMixin, reports
 
 from dart2.utils import load_svg
 
@@ -511,11 +512,11 @@ def hx_list_samples(request, **kwargs):
         queryset = queryset.values(
             'bottle__bottle_id',
             'bottle__pressure',
-            'discrete_value__replicate',
-            'discrete_value__value',
-            'discrete_value__flag',
-            'discrete_value__sample_datatype',
-            'discrete_value__comment',
+            'discrete_values__replicate',
+            'discrete_values__value',
+            'discrete_values__flag',
+            'discrete_values__sample_datatype',
+            'discrete_values__comment',
         )
         headings = ['Flag', 'Datatype', 'Comments']
         df = read_frame(queryset)
@@ -527,25 +528,30 @@ def hx_list_samples(request, **kwargs):
     else:
         bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
                        page_start:(page_start + page_limit)]
-        sensors = models.SampleType.objects.filter(samples__bottle__event__mission=mission)
-        queryset = models.Sample.objects.filter(type__in=sensors, bottle__in=bottle_limit)
+        queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
         queryset = queryset.order_by('bottle__bottle_id')
         queryset = queryset.values(
             'bottle__bottle_id',
             'bottle__pressure',
             'type__id',
-            'discrete_value__replicate',
-            'discrete_value__value',
+            'discrete_values__replicate',
+            'discrete_values__value',
         )
         df = read_frame(queryset)
         df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
 
         try:
+            sensors = models.SampleType.objects.filter(samples__bottle__event__mission=mission).distinct()
             df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+
+            # if the initial sample/sensor doesn't have any values on the first page, then they won't be in the
+            # table header. So add in blank columns for them, which pandas/Django is smart enough to fill in later.
             missing = np.setdiff1d([s.pk for s in sensors.order_by('pk').distinct()], [v[0] for v in df.columns.values])
             if len(missing) > 0:
                 for m in missing:
-                    df[m] = df.apply(lambda _: np.nan, axis=1)
+                    replicate_count = sensors.get(pk=m).samples.aggregate(replicates=Max('discrete_values__replicate'))
+                    for i in range(replicate_count['replicates']):
+                        df[m, i] = df.apply(lambda _: np.nan, axis=1)
 
             df = df.reindex(sorted(df.columns), axis=1)
             soup = format_all_sensor_table(df, mission_id)
@@ -557,7 +563,7 @@ def hx_list_samples(request, **kwargs):
         response = HttpResponse(soup)
         return response
 
-    # add styles to the table so it's consistant with the rest of the application
+    # add styles to the table so it's consistent with the rest of the application
     table = soup.find('table')
     table.attrs['class'] = 'dataframe table table-striped tscroll'
 
@@ -794,4 +800,5 @@ class SampleDetails(MissionMixin, GenericDetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['mission'] = self.object
+
         return context
