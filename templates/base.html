@@ -63,11 +63,7 @@
     {% endif %}
     <ul class="navbar-nav">
     {% block nav_button_block %}
-        {% if settings_url %}
-        <li class="nav-item me-2">
-            <a class="btn btn-primary" href="{{ settings_url }}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
-        </li>
-        {% endif %}
+
     {% endblock %}
     </ul>
   </div>

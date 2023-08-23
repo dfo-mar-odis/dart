@@ -17,7 +17,14 @@
         <a href="{% url 'core:event_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
-    {{ block.super }}
+    <li class="nav-item me-2">
+        <a href="{% url 'core:event_details' object.pk %}" class="btn btn-danger"
+           title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' object.pk %}"
+           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+    </li>
 {% endblock %}
 
 {% block content %}
