@@ -391,6 +391,15 @@ class SampleType(models.Model):
     datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, related_name='sample_types', on_delete=models.SET_NULL)
 
+    def __str__(self):
+        return self.short_name + (f" - {self.long_name}" if self.long_name else "")
+
+
+class SampleTypeConfig(models.Model):
+
+    sample_type = models.ForeignKey(SampleType, verbose_name=_("Sample Type"),
+                                    related_name="configs", on_delete=models.CASCADE,
+                                    help_text=_("The sample type this config is intended for"))
     file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
                                  help_text=_("file type extension e.g csv, xls, xlsx, dat"))
 
@@ -422,18 +431,16 @@ class SampleType(models.Model):
     allow_replicate = models.BooleanField(verbose_name=_("Allow Replicate Samples?"), default=True,
                                           help_text=_("Can this sample have replicate sample values?"))
 
-    class Meta:
-        unique_together = ('short_name', 'priority')
-
     def __str__(self):
-        return self.short_name + (f" - {self.long_name}" if self.long_name else "")
+        return f"{self.sample_type} - {self.file_type}"
 
 
-class MissionSampleType(models.Model):
+class MissionSampleConfig(models.Model):
     mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
                                 on_delete=models.CASCADE, help_text=_("Mission a sample type was loaded for"))
-    type = models.ForeignKey(SampleType, verbose_name="Sample Type", related_name="mission_sample_types",
-                             on_delete=models.DO_NOTHING, help_text=_("Sample Type used in a mission"))
+    config = models.ForeignKey(SampleTypeConfig, verbose_name="Sample Configuration",
+                               related_name="mission_sample_configs",
+                               on_delete=models.DO_NOTHING, help_text=_("Sample configuration used in a mission"))
 
 
 # BioChemUpload is a table for tracking the last time a sensor or sample was uploaded to biochem. This way we can

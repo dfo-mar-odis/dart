@@ -22,7 +22,7 @@ from biochem import models
 from core import forms
 from core import models
 from core.parsers.SampleParser import get_headers, get_file_configs, parse_data_frame, get_excel_dataframe
-from core.views import sample_file_queue, load_ctd_files, MissionMixin, reports
+from core.views import sample_file_queue, load_ctd_files, MissionMixin
 
 from dart2.utils import load_svg
 
@@ -79,7 +79,6 @@ def get_file_config_forms(data, file_type) -> [forms.SampleTypeLoadForm]:
 
 
 def get_error_list(soup, card_id, errors):
-
     msg_div = soup.find(id=f'{card_id}_message')
     if not msg_div:
         msg_div = soup.new_tag('div')
@@ -115,7 +114,24 @@ def get_error_list(soup, card_id, errors):
         ul_list.append(li)
 
 
-def save_sample_type(request, **kwargs):
+def new_sample_type(request, **kwargs):
+
+    response = None
+    if request.method == "GET":
+        if request.htmx:
+            # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
+            # field after the Datatype_filter has been triggered.
+            sample_type_form = forms.SampleTypeForm(initial=request.GET)
+            html = render_crispy_form(sample_type_form)
+            return HttpResponse(html)
+
+        html = render_crispy_form(forms.SampleTypeForm())
+        response = HttpResponse(html)
+
+    return response
+
+
+def save_sample_config(request, **kwargs):
     # Validate and save the mission form once the user has filled out the details
     #
     # Template: 'core/partials/form_sample_type.html template
@@ -127,13 +143,13 @@ def save_sample_type(request, **kwargs):
     context.update(csrf(request))
 
     if request.method == "GET":
-        if 'sample_type_id' in kwargs and 'update_sample_type' in request.GET:
-            sample_type = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
-            url = reverse_lazy("core:save_sample_type", args=(sample_type.pk,))
-            oob_select = f"#div_id_sample_type, #div_id_{sample_type.pk}:outerHTML"
+        if 'config_id' in kwargs and 'update_sample_type' in request.GET:
+            sample_type = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
+            url = reverse_lazy("core:save_sample_config", args=(sample_type.pk,))
+            oob_select = f"#div_id_sample_type_holder, #div_id_{sample_type.pk}:outerHTML"
         else:
-            url = reverse_lazy("core:save_sample_type")
-            oob_select = "#div_id_sample_type, #div_id_loaded_samples_list:beforeend"
+            url = reverse_lazy("core:save_sample_config")
+            oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
 
         soup = BeautifulSoup('', "html.parser")
 
@@ -143,7 +159,7 @@ def save_sample_type(request, **kwargs):
         root_div.attrs = {
             'id': "div_id_loaded_sample_type_message",
             'hx-trigger': "load",
-            'hx-target': "#div_id_sample_type",
+            'hx-target': "#div_id_sample_type_holder",
             'hx-select-oob': oob_select,
             'hx-post': url,
         }
@@ -153,6 +169,12 @@ def save_sample_type(request, **kwargs):
 
         return HttpResponse(soup)
     elif request.method == "POST":
+
+        if 'new_sample' in request.POST:
+            sample_form = forms.SampleTypeForm(request.POST)
+            if sample_form.is_valid():
+                sample_type = sample_form.save()
+                return new_sample_config(request, sample_type=sample_type.pk)
         # mission_id is a hidden field in the 'core/partials/form_sample_type.html' template, if it's needed
         # mission_id = request.POST['mission_id']
 
@@ -166,32 +188,93 @@ def save_sample_type(request, **kwargs):
 
         tab, skip, field_choices = get_headers(data, file_type, tab, skip)
 
-        if 'sample_type_id' in kwargs:
-            sample_type = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
-            sample_type_form = forms.SampleTypeForm(request.POST, instance=sample_type, field_choices=field_choices)
+        config = None
+        if 'config_id' in kwargs:
+            config = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
+            sample_type_config_form = forms.SampleTypeConfigForm(request.POST, instance=config,
+                                                                 field_choices=field_choices)
         else:
-            sample_type_form = forms.SampleTypeForm(request.POST, field_choices=field_choices)
+            sample_type_config_form = forms.SampleTypeConfigForm(request.POST, field_choices=field_choices)
 
-        if sample_type_form.is_valid():
-            sample_type: models.SampleType = sample_type_form.save()
+        if sample_type_config_form.is_valid():
+            sample_type_config: models.SampleTypeConfig = sample_type_config_form.save()
             # the load form is immutable to the user it just allows them the delete, send for edit or load the
             # sample into the mission
-            load_form = render_crispy_form(forms.SampleTypeLoadForm(instance=sample_type))
+            load_form = render_crispy_form(forms.SampleTypeLoadForm(instance=sample_type_config))
             html = f'<div id="div_id_loaded_samples_list">{load_form}</div>'
             return HttpResponse(html)
 
-        html = render_crispy_form(sample_type_form)
+        html = render_crispy_form(sample_type_config_form)
         return HttpResponse(html)
 
 
-def new_sample_type(request, **kwargs):
+def new_sample_config(request, **kwargs):
     context = {}
     context.update(csrf(request))
 
     if request.method == "GET":
+
+        if 'sample_type' in request.GET:
+            sample_type = request.GET['sample_type']
+            if sample_type == '-1':
+                config_form = render_crispy_form(forms.SampleTypeConfigForm(file_type="", field_choices=[]))
+                soup = BeautifulSoup(config_form, 'html.parser')
+                sample_drop_div = soup.find(id='div_id_sample_type')
+
+                children = sample_drop_div.findChildren()
+                for child in children:
+                    child.decompose()
+
+                new_sample_form = render_crispy_form(forms.SampleTypeForm())
+                new_form_div = BeautifulSoup(new_sample_form, 'html.parser')
+                sample_drop_div.append(new_form_div)
+
+                btn_row = soup.new_tag('div')
+                btn_row.attrs = {'class': 'row mt-2'}
+                sample_drop_div.append(btn_row)
+
+                btn_col = soup.new_tag('div')
+                btn_col.attrs = {'class': 'col text-end'}
+                btn_row.append(btn_col)
+
+                url = reverse_lazy('core:new_sample_config') + "?sample_type="
+                back_button = soup.new_tag('button')
+                back_button.attrs = {
+                    'id': 'id_new_sample_back',
+                    'class': 'btn btn-primary btn-sm ms-2',
+                    'name': 'back_sample',
+                    'hx-target': '#div_id_sample_type',
+                    'hx-select': '#div_id_sample_type',
+                    'hx-swap': 'outerHTML',
+                    'hx-get': url
+                }
+                icon = BeautifulSoup(load_svg('arrow-left-square'), 'html.parser').svg
+                back_button.append(icon)
+                btn_col.append(back_button)
+
+                url = reverse_lazy('core:save_sample_config')
+                submit_button = soup.new_tag('button')
+                submit_button.attrs = {
+                    'id': 'id_new_sample_submit',
+                    'class': 'btn btn-primary btn-sm ms-2',
+                    'name': 'new_sample',
+                    'hx-target': '#div_id_sample_type',
+                    'hx-swap': 'outerHTML',
+                    'hx-post': url
+                }
+                icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
+                submit_button.append(icon)
+                btn_col.append(submit_button)
+
+                return HttpResponse(soup)
+            else:
+                config_form = render_crispy_form(forms.SampleTypeConfigForm(file_type="", field_choices=[],
+                                                                            initial={'sample_type': sample_type}))
+                return HttpResponse(config_form)
+
         # return a loading alert that calls this methods post request
         # Let's make some soup
-        url = reverse_lazy("core:new_sample_type")
+        url = reverse_lazy("core:new_sample_config")
 
         soup = BeautifulSoup('', "html.parser")
 
@@ -202,7 +285,7 @@ def new_sample_type(request, **kwargs):
             'id': "div_id_loaded_sample_type_message",
             'hx-trigger': "load",
             'hx-post': url,
-            'hx-target': "#div_id_sample_type",
+            'hx-target': "#div_id_sample_type_holder",
         }
 
         root_div.append(alert_div)
@@ -212,34 +295,36 @@ def new_sample_type(request, **kwargs):
     elif request.method == "POST":
 
         if 'sample_file' not in request.FILES:
-            soup = BeautifulSoup('<div id="div_id_sample_type"></div>', 'html.parser')
+            soup = BeautifulSoup('<div id="div_id_sample_type_holder"></div>', 'html.parser')
 
             div = soup.new_tag('div')
             div.attrs['class'] = 'alert alert-warning mt-2'
             div.string = _("File is required before adding sample")
-            soup.find(id="div_id_sample_type").append(div)
+            soup.find(id="div_id_sample_type_holder").append(div)
             return HttpResponse(soup)
 
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
-        if 'sample_type_id' in kwargs:
-            config = models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+        if 'config_id' in kwargs:
+            config = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
             tab, skip, field_choices = get_headers(data, config.file_type, config.tab, config.skip)
-            sample_type_form = forms.SampleTypeForm(instance=config, field_choices=field_choices)
+            sample_config_form = forms.SampleTypeConfigForm(instance=config, field_choices=field_choices)
         else:
             tab = int(request.POST['tab']) if 'tab' in request.POST else 0
             skip = int(request.POST['skip']) if 'skip' in request.POST else -1
 
             tab, skip, field_choices = get_headers(data, file_type, tab, skip)
             file_initial = {"file_type": file_type, "skip": skip, "tab": tab}
-            sample_type_form = forms.SampleTypeForm(initial=file_initial, field_choices=field_choices)
+            if 'sample_type' in kwargs:
+                file_initial['sample_type'] = kwargs['sample_type']
+            sample_config_form = forms.SampleTypeConfigForm(initial=file_initial, field_choices=field_choices)
 
-        html = render_crispy_form(sample_type_form)
+        html = render_crispy_form(sample_config_form)
         return HttpResponse(html)
 
 
-def load_sample_type(request, **kwargs):
+def load_sample_config(request, **kwargs):
     context = {}
     context.update(csrf(request))
 
@@ -249,8 +334,8 @@ def load_sample_type(request, **kwargs):
 
         if loading:
             # Let's make some soup
-            url = reverse_lazy("core:load_sample_type")
-            oob_select = "#div_id_loaded_samples_list:outerHTML, #div_id_sample_type:outerHTML"
+            url = reverse_lazy("core:load_sample_config")
+            oob_select = "#div_id_loaded_samples_list:outerHTML, #div_id_sample_type_holder:outerHTML"
 
             soup = BeautifulSoup('<div id="div_id_loaded_sample_type"><div id=div_id_loaded_samples_list></div</div>',
                                  "html.parser")
@@ -275,8 +360,8 @@ def load_sample_type(request, **kwargs):
         if request.htmx:
             # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
             # field after the Datatype_filter has been triggered.
-            sample_type_form = forms.SampleTypeForm(file_type="", field_choices=[], initial=request.GET)
-            html = render_crispy_form(sample_type_form)
+            sample_config_form = forms.SampleTypeConfigForm(file_type="", field_choices=[], initial=request.GET)
+            html = render_crispy_form(sample_config_form)
             return HttpResponse(html)
 
         if mission_id is None:
@@ -293,7 +378,7 @@ def load_sample_type(request, **kwargs):
             return HttpResponse(html)
 
         if 'config' in kwargs:
-            return new_sample_type(request, config=kwargs['config'])
+            return new_sample_config(request, config=kwargs['config'])
 
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
@@ -302,7 +387,7 @@ def load_sample_type(request, **kwargs):
         # We want to locate file configurations that match this file_type
         config_forms: [forms.SampleTypeLoadForm] = get_file_config_forms(data, file_type)
 
-        html = '<div id="div_id_sample_type"></div>'  # used to clear the message saying a file has to be loaded
+        html = '<div id="div_id_sample_type_holder"></div>'  # used to clear the message saying a file has to be loaded
         if config_forms:
             html += '<div id=div_id_loaded_samples_list>'
             for config in config_forms:
@@ -322,7 +407,7 @@ def load_sample_type(request, **kwargs):
             soup = BeautifulSoup(html, 'html.parser')
             alert_div = soup.new_tag("div", attrs={'class': "alert alert-warning mt-2"})
             alert_div.string = _("No File Configurations Found")
-            soup.find(id="div_id_sample_type").append(alert_div)
+            soup.find(id="div_id_sample_type_holder").append(alert_div)
             return HttpResponse(soup)
 
         # html = render_block_to_string("core/partials/form_sample_type.html", "loaded_samples_block",
@@ -335,19 +420,19 @@ def load_samples(request, **kwargs):
     context = {}
     context.update(csrf(request))
 
-    if 'sample_type_id' not in kwargs:
+    if 'config_id' not in kwargs:
         raise Http404("Missing Sample ID")
 
-    sample_type_id = kwargs['sample_type_id']
+    config_id = kwargs['config_id']
     load_block = "loaded_sample_list_block"
 
     if request.method == "GET":
 
-        message_div_id = f'div_id_{sample_type_id}'
+        message_div_id = f'div_id_{config_id}'
         soup = BeautifulSoup(f'', 'html.parser')
         root_div = soup.new_tag("div")
 
-        url = reverse_lazy("core:load_samples", args=(sample_type_id,))
+        url = reverse_lazy("core:load_samples", args=(config_id,))
         root_div.attrs = {
             'id': f'div_id_loading_{message_div_id}',
             'hx-trigger': "load",
@@ -364,7 +449,7 @@ def load_samples(request, **kwargs):
 
     elif request.method == "POST":
         mission_id = request.POST['mission_id']
-        message_div_id = f'div_id_{sample_type_id}'
+        message_div_id = f'div_id_{config_id}'
 
         # Todo: Add a unit test to test that the message block gets shown if no file is
         #  present when this function is active
@@ -377,30 +462,34 @@ def load_samples(request, **kwargs):
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
-        sample_type = models.SampleType.objects.get(pk=sample_type_id)
+        sample_config = models.SampleTypeConfig.objects.get(pk=config_id)
         mission = models.Mission.objects.get(pk=mission_id)
 
         # at the moment this will just prevent a user for accidentally deleting a sample_type that's used
         # across multiple missions. Eventually I'd like this to be a deep copy of the sample_type
         # where it can be edited from one mission to another without affecting settings for other missions
-        mission_sample_type = models.MissionSampleType(mission=mission, type=sample_type)
+        mission_sample_type = models.MissionSampleConfig(mission=mission, config=sample_config)
         mission_sample_type.save()
 
-        dataframe = get_excel_dataframe(stream=data, sheet_number=sample_type.tab, header_row=sample_type.skip)
+        dataframe = get_excel_dataframe(stream=data, sheet_number=sample_config.tab,
+                                        header_row=sample_config.skip)
 
         soup = BeautifulSoup('', 'html.parser')
 
         button_class = "btn btn-success btn-sm"
+        icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
         try:
             parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
 
             if (errors := models.FileError.objects.filter(file_name=file_name)).exists():
                 button_class = "btn btn-warning btn-sm"
+                icon = BeautifulSoup(load_svg("folder-symlink"), 'html.parser').svg
                 get_error_list(soup, message_div_id, errors)
 
         except Exception as ex:
             logger.error(f"Failed to load file {file_name}")
             logger.exception(ex)
+            icon = BeautifulSoup(load_svg("folder-x"), 'html.parser').svg
             button_class = "btn btn-danger btn-sm"
 
         # url = reverse_lazy('core:load_samples', args=(file_config.pk,))
@@ -408,13 +497,12 @@ def load_samples(request, **kwargs):
         button.attrs = {
             'id': f"{message_div_id}_load_button",
             'name': "load",
-            'hx-get': reverse_lazy('core:load_samples', args=(sample_type_id,)),
+            'hx-get': reverse_lazy('core:load_samples', args=(config_id,)),
             'hx-target': f"#{message_div_id}_message",
             'class': button_class
         }
 
         soup.append(button)
-        icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
         button.append(icon)
         response = HttpResponse(soup)
 
@@ -424,9 +512,9 @@ def load_samples(request, **kwargs):
 
 
 def delete_sample_type(request, **kwargs):
-    config_id = kwargs['sample_type_id']
+    config_id = kwargs['config_id']
     if request.method == "POST":
-        models.SampleType.objects.get(pk=config_id).delete()
+        models.SampleTypeConfig.objects.get(pk=config_id).delete()
 
     return HttpResponse()
 

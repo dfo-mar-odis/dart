@@ -16,14 +16,14 @@ excel_extensions = ['xls', 'xlsx', 'xlsm']
 
 
 def get_file_configs(data, file_type):
-    sample_types = core_models.SampleType.objects.filter(file_type=file_type)
+    sample_configs = core_models.SampleTypeConfig.objects.filter(file_type=file_type)
 
     # It's expensive to read headers.
     # If a config file matches a sample_field and a value_filed to a file then we'll assume we found
     # the correct header row for the correct tab, then we can narrow down our configs using the same settings
     lowercase_fields = []
     matching_config = None
-    for sample_type in sample_types:
+    for sample_type in sample_configs:
         if not lowercase_fields:
             # get the field choices, then see if they match the file_config's sample_type fields
             tab, skip, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
@@ -39,9 +39,9 @@ def get_file_configs(data, file_type):
         # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row with
         # values fields in the available columns should give us all file configurations for this type of file that
         # the user can load samples from.
-        file_configs = sample_types.filter(tab=matching_config.tab, skip=matching_config.skip,
-                                           sample_field=matching_config.sample_field,
-                                           value_field__in=lowercase_fields)
+        file_configs = sample_configs.filter(tab=matching_config.tab, skip=matching_config.skip,
+                                             sample_field=matching_config.sample_field,
+                                             value_field__in=lowercase_fields)
         return file_configs
 
     return None
@@ -94,7 +94,7 @@ def get_excel_dataframe(stream, sheet_number=-1, header_row=-1):
     else:
         df = pd.read_excel(io=stream, sheet_name=sheet_number, header=header_row)
         if header_row > 0:
-            df = df[(header_row-1):]
+            df = df[(header_row - 1):]
         else:
             df = df[(header_row):]
 
@@ -156,41 +156,41 @@ def _split_function(x):
     return s_id, r_id
 
 
-def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleType) -> pd.DataFrame:
+def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeConfig) -> pd.DataFrame:
     """ if the sample column of the dataframe is of a string type and contains an underscore
         it should be split into s_id and r_id columns """
 
+    sid, rid = 'sid', 'rid'
     # if the file settings specify blanks aren't allowed in the sample column, get rid of all nan rows
     if not file_settings.allow_blank:
         dataframe = dataframe[dataframe[file_settings.sample_field].notna()]
 
-    # if samples have underscores in their its column split them up and create the initial 's_id', 'r_id' columns
-    dataframe[['s_id', 'r_id']] = dataframe[file_settings.sample_field].apply(
+    # if samples have underscores in their column split, them up and create the initial 's_id', 'r_id' columns
+    dataframe[[sid, rid]] = dataframe[file_settings.sample_field].apply(
         lambda x: pd.Series(_split_function(x))
     )
 
     # copy s_ids to nan rows
-    if dataframe['s_id'].isnull().values.any():
-        dataframe['s_id'].fillna(method='ffill', inplace=True)
+    if dataframe[sid].isnull().values.any():
+        dataframe[sid].fillna(method='ffill', inplace=True)
 
     # drop and 's_id' row that is not numeric, keeping any nan rows
-    dataframe = dataframe[dataframe["s_id"] != "N/A"]
+    dataframe = dataframe[dataframe["sid"] != "N/A"]
 
     # set the replicate ids
-    if dataframe['r_id'].isnull().values.any():
-        tmp = dataframe[['s_id', 'r_id']].groupby('s_id', group_keys=True).apply(
+    if dataframe[rid].isnull().values.any():
+        tmp = dataframe[[sid, rid]].groupby(sid, group_keys=True).apply(
             lambda x: pd.Series((np.arange(len(x)) + 1), x.index)
         )
-        dataframe['r_id'] = tmp.values
+        dataframe[rid] = tmp.values
 
-    dataframe[['s_id', 'r_id']] = dataframe[['s_id', 'r_id']].apply(pd.to_numeric)
+    dataframe[[sid, rid]] = dataframe[[sid, rid]].apply(pd.to_numeric)
     return dataframe
 
 
 # once all the options are figured out (e.g what tab, what's the sample row, what's the value column)
 # this function will convert the dataframe into a sample
-def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, dataframe: pd.DataFrame):
-
+def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, dataframe: pd.DataFrame):
     mission = settings.mission
     # clear errors for this file
     core_models.FileError.objects.filter(file_name=file_name).delete()
@@ -209,14 +209,16 @@ def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, da
         # convert column names to lower case because it's expected that the file_settings fields will be lowercase
         dataframe.columns = dataframe.columns.str.lower()
         # prep the dataframe by splitting the samples, adding replicates
-        sample_type = settings.type
+        sample_config = settings.config
 
-        dataframe = split_sample(dataframe, sample_type)
-        sample_id_field = 's_id'
-        replicate_id_field = 'r_id'
-        value_field = sample_type.value_field
-        flag_field = sample_type.flag_field
-        comment_field = sample_type.comment_field
+        dataframe = split_sample(dataframe, sample_config)
+        sample_id_field, replicate_id_field = 'sid', 'rid'
+        value_field = sample_config.value_field
+        flag_field = sample_config.flag_field
+        comment_field = sample_config.comment_field
+        replicate_field = sample_config.replicate_field
+
+        sample_type = sample_config.sample_type
         for row in dataframe.iterrows():
             replicate = 1  # All samples will have at least one 'replicate'
             sample_id = int(row[1][sample_id_field])
@@ -248,14 +250,14 @@ def parse_data_frame(settings: core_models.MissionSampleType, file_name: str, da
             else:
                 create_samples[bottle.bottle_id] = db_sample
 
-            if settings.type.replicate_field:
-                replicate = row[1][settings.type.replicate_field]
+            if replicate_field:
+                replicate = row[1][replicate_field]
             elif replicate_id_field:
                 replicate = row[1][replicate_id_field]
 
                 # if replicates aren't allowed on this datatype then there should be an error here if the
                 # replicate values is greater than 1
-            if not settings.type.allow_replicate and replicate > 1:
+            if not sample_config.allow_replicate and replicate > 1:
                 message = _("Duplicate bottle found for sample ") + sample_id
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)

@@ -95,17 +95,24 @@ class AttachmentFactory(DjangoModelFactory):
 
 
 class SampleTypeFactory(DjangoModelFactory):
-    FILE_TYPE_CHOICES = Enum('FILE_TYPE_CHOICES', ['csv', 'xls', 'xlsx'])
 
     class Meta:
         model = models.SampleType
-        exclude = ('FILE_TYPE_CHOICES',)
 
     short_name = factory.lazy_attribute(lambda o: faker.word())
     long_name = factory.lazy_attribute(lambda o: faker.name())
 
     datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
 
+
+class SampleTypeConfigFactory(DjangoModelFactory):
+    FILE_TYPE_CHOICES = ['csv', 'xls', 'xlsx']
+
+    class Meta:
+        model = models.SampleTypeConfig
+        exclude = ('FILE_TYPE_CHOICES',)
+
+    sample_type = factory.SubFactory(SampleTypeFactory)
     file_type = factory.lazy_attribute(lambda o: faker.random.choice(o.FILE_TYPE_CHOICES))
     skip = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
     sample_field = factory.lazy_attribute(lambda o: faker.word())
@@ -143,3 +150,12 @@ class DiscreteValueFactory(DjangoModelFactory):
 
     sample = factory.SubFactory(SampleFactory)
     value = factory.lazy_attribute(lambda o: faker.pyfloat())
+
+
+class MissionSampleConfig(DjangoModelFactory):
+
+    class Meta:
+        model = models.MissionSampleConfig
+
+    mission = factory.SubFactory(MissionFactory)
+    config = factory.SubFactory(SampleTypeConfigFactory)

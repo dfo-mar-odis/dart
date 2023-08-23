@@ -8,24 +8,27 @@ app_name = 'core'
 urlpatterns = [
     # ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
 
-    # for testing the sample type form
+    # show the create a sample type form
+    path('sample_type/hx/new/', views_mission_sample.new_sample_type, name="new_sample_type"),
+
+    # for testing the sample config form
     path('mission/sample/test/<int:pk>/', views_mission_sample.SampleDetails.as_view()),
 
     # used to reload elements on the sample form if a GET htmx request
-    path('sample_type/hx/', views_mission_sample.load_sample_type, name="load_sample_type"),
-    path('sample_type/hx/<int:config>/', views_mission_sample.load_sample_type, name="load_sample_type"),
+    path('sample_config/hx/', views_mission_sample.load_sample_config, name="load_sample_config"),
+    path('sample_config/hx/<int:config>/', views_mission_sample.load_sample_config, name="load_sample_config"),
 
-    # show the create a sample type form
-    path('sample_type/hx/new/', views_mission_sample.new_sample_type, name="new_sample_type"),
-    path('sample_type/hx/new/<int:sample_type_id>/', views_mission_sample.new_sample_type, name="new_sample_type"),
+    # show the create a sample config form
+    path('sample_config/hx/new/', views_mission_sample.new_sample_config, name="new_sample_config"),
+    path('sample_config/hx/new/<int:config_id>/', views_mission_sample.new_sample_config, name="new_sample_config"),
 
-    # save the sample type
-    path('sample_type/hx/save/', views_mission_sample.save_sample_type, name="save_sample_type"),
-    path('sample_type/hx/update/<int:sample_type_id>/', views_mission_sample.save_sample_type, name="save_sample_type"),
+    # save the sample config
+    path('sample_config/hx/save/', views_mission_sample.save_sample_config, name="save_sample_config"),
+    path('sample_config/hx/update/<int:config_id>/', views_mission_sample.save_sample_config, name="save_sample_config"),
 
     # delete a sample file configuration or load samples using that file configuration
-    path('sample_type/hx/load/<int:sample_type_id>/', views_mission_sample.load_samples, name="load_samples"),
-    path('sample_type/hx/delete/<int:sample_type_id>/', views_mission_sample.delete_sample_type,
+    path('sample_config/hx/load/<int:config_id>/', views_mission_sample.load_samples, name="load_samples"),
+    path('sample_config/hx/delete/<int:config_id>/', views_mission_sample.delete_sample_type,
          name="delete_sample_type"),
 
     # ###### sample details ###### #

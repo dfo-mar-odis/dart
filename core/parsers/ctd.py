@@ -272,6 +272,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
     return errors
 
 
+# Todo: This function doesn't follow the standard pattern for creating/updating database elements
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     file_name = data_frame._metadata['name'] + ".BTL"

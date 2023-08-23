@@ -347,62 +347,16 @@ class MissionSearchForm(forms.Form):
         )
 
 
-# Form for loading a file, connecting sample, value, flag and replica fields to the SampleType so a user
-# doesn't have to constantly re-enter columns. Ultimately the user will select a file, the file type with the
-# expected headers for sample and value fields will be used to determine what SampleTypes the file contains
-# which will be automatically loaded if they've been previously seen. Otherwise a user will be able to add
-# new sample types.
 class SampleTypeForm(forms.ModelForm):
-    sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
-    value_field = forms.CharField(help_text=_("Column that contains the value data"))
-    replicate_field = forms.CharField(required=False, help_text=_("Column indicating replicate ids, if it exists"))
-    flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
-    comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
 
-    NONE_CHOICE = [(None, "------")]
-
-    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
-                                      help_text=_("Filter the Datatype field on key terms"))
+    datatype_filter = forms.CharField(label=_("Datatype Filter"), required=False,
+                                      help_text=_("Filter the Datatype dropdown based on key terms"))
 
     class Meta:
         model = models.SampleType
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
-
-        choice_fields = ['sample_field', 'replicate_field', 'value_field', 'flag_field', 'comment_field']
-        if 'field_choices' in kwargs:
-            field_choices: list = kwargs.pop('field_choices')
-
-            for field in choice_fields:
-                s_field: forms.CharField = self.base_fields[field]
-                self.base_fields[field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
-                if not self.base_fields[field].required:
-                    self.base_fields[field].choices = self.NONE_CHOICE
-                self.base_fields[field].choices += field_choices
-        else:
-            for field in choice_fields:
-                self.base_fields[field] = self.declared_fields[field]
-
-        # if no post_url is supplied then it's expected the form is posting to whatever
-        # view (and it's url) that created the form
-        sample_name = None
-        if 'sample_name' in kwargs:
-            sample_name = kwargs.pop('sample_name')
-
-        file_type = None
-        if 'instance' in kwargs:
-            file_type = kwargs['instance'].file_type
-        elif args and 'file_type' in args[0]:
-            file_type = args[0]['file_type']
-        elif 'initial' in kwargs and 'file_type' in kwargs['initial']:
-            file_type = kwargs['initial']['file_type']
-        elif 'file_type' in kwargs:
-            file_type = kwargs.pop('file_type')
-
-        if file_type is None:
-            raise KeyError({'message': 'missing initial "file_type"'})
-
         super().__init__(*args, **kwargs)
 
         if 'initial' in kwargs and 'datatype_filter' in kwargs['initial']:
@@ -418,7 +372,7 @@ class SampleTypeForm(forms.ModelForm):
 
         datatype_filter = Field('datatype_filter')
         datatype_filter.attrs = {
-            "hx-get": reverse_lazy('core:load_sample_type'),
+            "hx-get": reverse_lazy('core:new_sample_type'),
             "hx-target": "#div_id_datatype",
             "hx-select": "#div_id_datatype",  # natural id that crispy-forms assigns to the datatype div
             "hx-trigger": "keyup changed delay:1s",
@@ -449,17 +403,85 @@ class SampleTypeForm(forms.ModelForm):
                     Column(Field('datatype', css_class='form-control form-select-sm'), css_class='col-12'),
                     css_class="flex-fill"
                 ),
-                css_class="form-control mt-2", id="div_id_sample_type_form"
+                css_class="form-control mt-2", id="div_id_sample_type_holder_form"
             )
         )
 
+
+# Form for loading a file, connecting sample, value, flag and replica fields to the SampleType so a user
+# doesn't have to constantly re-enter columns. Ultimately the user will select a file, the file type with the
+# expected headers for sample and value fields will be used to determine what SampleTypes the file contains
+# which will be automatically loaded if they've been previously seen. Otherwise a user will be able to add
+# new configurations for sample types.
+class SampleTypeConfigForm(forms.ModelForm):
+    sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
+    value_field = forms.CharField(help_text=_("Column that contains the value data"))
+    replicate_field = forms.CharField(required=False, help_text=_("Column indicating replicate ids, if it exists"))
+    flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
+    comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
+
+    NONE_CHOICE = [(None, "------")]
+
+    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
+                                      help_text=_("Filter the Datatype field on key terms"))
+
+    class Meta:
+        model = models.SampleTypeConfig
+        fields = "__all__"
+
+    def __init__(self, *args, **kwargs):
+
+        # To use this form 'field_choices', a list of options the user can select from for the
+        # header row, must be passed in to populate the dropdowns. For some reason after the
+        # form has been created and populated the 'declared_fields' variable maintains the list
+        # of options and can be used when passing a request.GET or request.POST in
+        choice_fields = ['sample_field', 'replicate_field', 'value_field', 'flag_field', 'comment_field']
+        if 'field_choices' in kwargs:
+            field_choices: list = kwargs.pop('field_choices')
+
+            for field in choice_fields:
+                s_field: forms.CharField = self.base_fields[field]
+                self.base_fields[field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
+                if not self.base_fields[field].required:
+                    self.base_fields[field].choices = self.NONE_CHOICE
+                self.base_fields[field].choices += field_choices
+        else:
+            for field in choice_fields:
+                self.base_fields[field] = self.declared_fields[field]
+
+        file_type = None
+        if 'instance' in kwargs and kwargs['instance']:
+            file_type = kwargs['instance'].file_type
+        elif args and 'file_type' in args[0]:
+            file_type = args[0]['file_type']
+        elif 'initial' in kwargs and 'file_type' in kwargs['initial']:
+            file_type = kwargs['initial']['file_type']
+        elif 'file_type' in kwargs:
+            file_type = kwargs.pop('file_type')
+
+        if file_type is None:
+            raise KeyError({'message': 'missing initial "file_type"'})
+
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+        self.helper.layout = Layout()
+
+        sample_type_choices = [(st.pk, st) for st in models.SampleType.objects.all()]
+        sample_type_choices.insert(0, (None, ""))
+        sample_type_choices.insert(0, (-1, "New Sample Type"))
+        sample_type_choices.insert(0, (None, '---------'))
+        self.fields['sample_type'].choices = sample_type_choices
+
         hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:new_sample_type'),
-            'hx-select': "#div_id_file_attributes",
-            'hx-target': "#div_id_file_attributes",
+            'hx-post': reverse_lazy('core:new_sample_config'),
+            'hx-select': "#div_id_fields_row",
+            'hx-target': "#div_id_fields_row",
             'hx-swap': "outerHTML",
-            'hx-trigger': "keyup changed delay:1s, change"
+            'hx-trigger': "keyup changed delay:500ms, change"
         }
+
         # if the tab field is updated the form should reload looking for headers on the updated tab index
         if file_type.startswith('xls'):
             tab_field = Field('tab')
@@ -480,11 +502,28 @@ class SampleTypeForm(forms.ModelForm):
             css_class="flex-fill"
         )
 
+        if self.instance.pk:
+            config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
+
+        url = reverse_lazy('core:new_sample_config')
+        hx_sample_type_attrs = {
+            'hx_get': url,
+            'hx_trigger': 'change',
+            'hx_target': '#div_id_sample_type',
+            'hx_select': '#div_id_sample_type',
+            'hx_swap': 'outerHTML'
+        }
+        sample_type_row = Row(
+            Column(
+                Field('sample_type', **hx_sample_type_attrs),
+            )
+        )
+
         div = Div(
             # file type is hidden because it's taken care of by the form creation and
             # the type of file a user is loading
             Field('file_type', type="hidden"),
-
+            sample_type_row,
             config_name_row,
 
             Row(
@@ -493,7 +532,7 @@ class SampleTypeForm(forms.ModelForm):
                 Column(Field('replicate_field')),
                 Column(Field('flag_field', )),
                 Column(Field('comment_field')),
-                css_class="flex-fill"
+                css_class="flex-fill", id="div_id_fields_row"
             ),
             id="div_id_file_attributes",
             css_class="form-control input-group mt-2"
@@ -508,7 +547,7 @@ class SampleTypeForm(forms.ModelForm):
         attrs = {
             'css_class': "btn btn-primary btn-sm ms-2",
             'name': "add_sample_type",
-            'hx_get': reverse_lazy("core:save_sample_type"),
+            'hx_get': reverse_lazy("core:save_sample_config"),
             'hx_target': "#button_row",
             'hx_select': "#div_id_loaded_sample_type_message",
         }
@@ -517,7 +556,7 @@ class SampleTypeForm(forms.ModelForm):
         button_row.fields[0].insert(0, button_new)
 
         if self.instance.pk:
-            attrs['hx_get'] = reverse_lazy("core:save_sample_type", args=(self.instance.pk,))
+            attrs['hx_get'] = reverse_lazy("core:save_sample_config", args=(self.instance.pk,))
             attrs['name'] = "update_sample_type"
 
             button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
@@ -531,7 +570,7 @@ class SampleTypeForm(forms.ModelForm):
 # they want to load.
 class SampleTypeLoadForm(forms.ModelForm):
     class Meta:
-        model = models.SampleType
+        model = models.SampleTypeConfig
         fields = "__all__"
 
     def get_card_id(self):
@@ -574,15 +613,17 @@ class SampleTypeLoadForm(forms.ModelForm):
         # as a 'btn btn-success btn-sm' button or 'btn btn-warning btn-sm' if there are errors/warnings
         load_btn_svg = load_svg('folder')
         load_btn_class = 'btn btn-secondary btn-sm'
-        if self.instance.pk and (samples := models.Sample.objects.filter(type__id=self.instance.pk)).exists():
+
+        if self.instance.pk and (
+                samples := models.Sample.objects.filter(type__id=self.instance.sample_type.pk)).exists():
             files = samples.values_list('file', flat=True).distinct()
             errors = models.FileError.objects.filter(file_name__in=files).exists()
 
             if errors:
-                load_btn_svg = load_svg('folder-x')
+                load_btn_svg = load_svg('folder-symlink')
                 load_btn_class = 'btn btn-warning btn-sm'
             else:
-                load_btn_svg = load_svg('folder-check')
+                load_btn_svg = load_svg('folder-plus')
                 load_btn_class = 'btn btn-primary btn-sm'
 
         load_url = reverse_lazy('core:load_samples', args=(self.instance.pk,))
@@ -590,10 +631,10 @@ class SampleTypeLoadForm(forms.ModelForm):
                                    name='load', css_class=load_btn_class,
                                    hx_get=load_url, hx_target=f"#{card_id}_message")
 
-        edit_url = reverse_lazy('core:new_sample_type', args=(self.instance.pk,))
+        edit_url = reverse_lazy('core:new_sample_config', args=(self.instance.pk,))
         edit_button = StrictButton(load_svg('pencil-square'),
                                    name='edit', css_class='btn btn-primary btn-sm me-1',
-                                   hx_post=edit_url, hx_target="#div_id_sample_type",
+                                   hx_post=edit_url, hx_target="#div_id_sample_type_holder",
                                    # just a little javascript to scroll back to the new sample type form
                                    hx_on="htmx:afterRequest: window.location.href = '#div_id_sample_type';")
 
@@ -603,8 +644,7 @@ class SampleTypeLoadForm(forms.ModelForm):
                                      hx_post=delete_url, hx_target=f"#{card_id}",
                                      hx_swap="delete", hx_confirm=_("Are you sure?"))
 
-        title_label = f'{self.instance.file_type} - {self.instance.short_name}'
-        title_label += f' : {self.instance.long_name}' if self.instance.long_name else ''
+        title_label = f'{self.instance.file_type} - {self.instance.sample_type}'
 
         title = Div(
             Column(

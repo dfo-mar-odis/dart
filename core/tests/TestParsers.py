@@ -185,18 +185,20 @@ class TestSampleCSVParser(DartTestCase):
         self.oxy_sample_type = core_models.SampleType = core_factory.SampleTypeFactory(short_name='oxy',
                                                                                        long_name="Oxygen")
 
-        self.oxy_file_settings: core_models.SampleFileSettings = core_factory.SampleFileSettingsFactory(
-            sample_type=self.oxy_sample_type, file_type='csv',
-            header=9, sample_field="sample", value_field="o2_concentration(ml/l)", comment_field="comments",
+        self.oxy_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
+            sample_type=self.oxy_sample_type, file_type='csv', skip=9, tab=0,
+            sample_field="sample", value_field="o2_concentration(ml/l)", comment_field="comments",
             allow_blank=False, allow_replicate=True
         )
-
+        self.mission_oxy_file_settings = core_models.MissionSampleConfig = core_factory.MissionSampleConfig(
+            mission=self.mission, config=self.oxy_file_settings
+        )
         self.salt_sample_type = core_models.SampleType = core_factory.SampleTypeFactory(short_name='salts',
                                                                                         long_name="Salinity")
 
-        self.salt_file_settings: core_models.SampleFileSettings = core_factory.SampleFileSettingsFactory(
-            sample_type=self.salt_sample_type, file_type='xlsx',
-            header=1, sample_field="bottle label", value_field="calculated salinity", comment_field="comments",
+        self.salt_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
+            sample_type=self.salt_sample_type, file_type='xlsx', skip=1, tab=0,
+            sample_field="bottle label", value_field="calculated salinity", comment_field="comments",
             allow_blank=False, allow_replicate=True
         )
 
@@ -220,7 +222,7 @@ class TestSampleCSVParser(DartTestCase):
         df = pd.DataFrame(data)
 
         different_file = 'some_other_file.csv'
-        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, different_file, df)
+        SampleParser.parse_data_frame(self.mission_oxy_file_settings, different_file, df)
 
         sample = core_models.Sample.objects.filter(bottle=bottle)
         self.assertEquals(len(sample), 1)
@@ -232,7 +234,7 @@ class TestSampleCSVParser(DartTestCase):
         bottle = core_factory.BottleFactory(event=self.ctd_event, bottle_id=495271)
         self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
 
-        sample_type = self.oxy_file_settings.sample_type
+        sample_type = self.oxy_sample_type
 
         sample = core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
         core_factory.DiscreteValueFactory(sample=sample, replicate=1, value=0.001, comment="some comment")
@@ -248,7 +250,7 @@ class TestSampleCSVParser(DartTestCase):
         }
         df = pd.DataFrame(data)
 
-        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
+        SampleParser.parse_data_frame(self.mission_oxy_file_settings, self.file_name, df)
 
         discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
         self.assertEquals(len(discrete), 2)
@@ -275,8 +277,7 @@ class TestSampleCSVParser(DartTestCase):
             self.oxy_file_settings.value_field: [0.38]
         }
         df = pd.DataFrame(data)
-        SampleParser.parse_data_frame(mission=self.mission, settings=self.oxy_file_settings, file_name=file_name,
-                                      dataframe=df)
+        SampleParser.parse_data_frame(self.mission_oxy_file_settings, file_name=file_name, dataframe=df)
 
         samples = core_models.Sample.objects.filter(bottle__bottle_id=bottle_id)
         self.assertEquals(len(samples), 1)
@@ -284,19 +285,19 @@ class TestSampleCSVParser(DartTestCase):
     @tag('parsers_sample_split')
     def test_data_frame_split_sample(self):
         # some sample files, like oxygen, use a sample_id with an underscore to delimit replicates
-        # (i.e 495600_1, 495600_2). I want to split the sample column up into s_id and r_id before parsing
+        # (i.e 495600_1, 495600_2). I want to split the sample column up into sid and rid before parsing
 
-        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value')
         data = {
-            'sample id': ["495600_1", "495600_2", "495601_1", "495601_2", "495602_1", "495602_2"],
-            'value': [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+            self.oxy_file_settings.sample_field: ["495600_1", "495600_2", "495601_1", "495601_2", "495602_1",
+                                                  "495602_2"],
+            self.oxy_file_settings.value_field: [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
         }
         dataframe = pd.DataFrame(data)
         logger.debug(dataframe)
 
-        df = SampleParser.split_sample(dataframe, file_settings)
-        self.assertIn('s_id', df)
-        self.assertIn('r_id', df)
+        df = SampleParser.split_sample(dataframe, self.oxy_file_settings)
+        self.assertIn('sid', df)
+        self.assertIn('rid', df)
         logger.debug(dataframe)
 
     @tag('parsers_sample_split')
@@ -307,37 +308,38 @@ class TestSampleCSVParser(DartTestCase):
         expected_sample_ids = [495600, 495600, 495601, 495601, 495602, 495602]
         expected_replicates = [1, 2, 1, 2, 1, 2]
         expected_values = [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
-        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value')
+        self.oxy_file_settings.allow_blank = True
         data = {
-            'sample id': [495600, np.nan, 495601, np.nan, 495602, np.nan],
-            'value': expected_values
+            self.oxy_file_settings.sample_field: [495600, np.nan, 495601, np.nan, 495602, np.nan],
+            self.oxy_file_settings.value_field: expected_values
         }
         dataframe = pd.DataFrame(data)
         logger.debug(dataframe)
 
-        df = SampleParser.split_sample(dataframe, file_settings)
+        df = SampleParser.split_sample(dataframe, self.oxy_file_settings)
         logger.debug(df)
-        self.assertIn('s_id', df)
-        self.assertIn('r_id', df)
+        self.assertIn('sid', df)
+        self.assertIn('rid', df)
 
         for i in range(len(expected_sample_ids)):
             row = df.iloc[i, :]
-            self.assertEquals(row['value'], expected_values[i])
-            self.assertEquals(row['s_id'], expected_sample_ids[i])
-            self.assertEquals(row['r_id'], expected_replicates[i])
+            self.assertEquals(row[self.oxy_file_settings.value_field], expected_values[i])
+            self.assertEquals(row['sid'], expected_sample_ids[i])
+            self.assertEquals(row['rid'], expected_replicates[i])
 
     @tag('parsers_sample_split')
     def test_data_frame_split_remove_calibration(self):
         # some sample files, like salts, have calibration samples mixed in with bottle samples
-        # The calibraion samples should be removed
+        # The calibration samples, and values where the sample id is none, should be removed
 
-        expected_sample_ids = [495600, 495600, 495601, 495601, 495602, 495602]
-        expected_replicates = [1, 2, 1, 2, 1, 2]
-        expected_values = [1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
-        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value')
+        expected_sample_ids = [495600, 495601, 495602, 495602]
+        expected_replicates = [1, 1, 1, 2]
+        expected_values = [1.01, 2.01, 3.01, 3.02]
+        file_settings = self.salt_file_settings
+
         data = {
-            'sample id': ["p_012", np.nan, "495600", np.nan, "495601", np.nan, "495602", np.nan],
-            'value': [np.nan, np.nan, 1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+            file_settings.sample_field: ["p_012", np.nan, "495600", np.nan, "495601", np.nan, "495602", "495602"],
+            file_settings.value_field: [np.nan, np.nan, 1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
         }
 
         dataframe = pd.DataFrame(data)
@@ -345,14 +347,14 @@ class TestSampleCSVParser(DartTestCase):
 
         df = SampleParser.split_sample(dataframe, file_settings)
         logger.debug(df)
-        self.assertIn('s_id', df)
-        self.assertIn('r_id', df)
+        self.assertIn('sid', df)
+        self.assertIn('rid', df)
 
         for i in range(len(expected_sample_ids)):
             row = df.iloc[i, :]
-            self.assertEquals(row['value'], expected_values[i])
-            self.assertEquals(row['s_id'], expected_sample_ids[i])
-            self.assertEquals(row['r_id'], expected_replicates[i])
+            self.assertEquals(row[file_settings.value_field], expected_values[i])
+            self.assertEquals(row['sid'], expected_sample_ids[i])
+            self.assertEquals(row['rid'], expected_replicates[i])
 
     @tag('parsers_sample_split')
     def test_data_frame_split_no_blanks(self):
@@ -362,11 +364,10 @@ class TestSampleCSVParser(DartTestCase):
         expected_sample_ids = [495600, 495600, 495601, 495602]
         expected_replicates = [1, 2, 1, 1]
         expected_values = [1.011, 1.01, 2.01, 3.01]
-        file_settings = core_models.SampleFileSettings(sample_field='sample id', value_field='value',
-                                                       allow_blank=False)
+        file_settings = self.salt_file_settings
         data = {
-            'sample id': ["p_012", "495600", "495600", np.nan, "495601", np.nan, "495602", np.nan],
-            'value': [np.nan, 1.011, 1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
+            file_settings.sample_field: ["p_012", "495600", "495600", np.nan, "495601", np.nan, "495602", np.nan],
+            file_settings.value_field: [np.nan, 1.011, 1.01, 1.02, 2.01, 2.02, 3.01, 3.02]
         }
 
         dataframe = pd.DataFrame(data)
@@ -374,17 +375,17 @@ class TestSampleCSVParser(DartTestCase):
 
         df = SampleParser.split_sample(dataframe, file_settings)
         logger.debug(df)
-        self.assertIn('s_id', df)
-        self.assertIn('r_id', df)
+        self.assertIn('sid', df)
+        self.assertIn('rid', df)
 
         for i in range(len(expected_sample_ids)):
             row = df.iloc[i, :]
-            self.assertEquals(row['value'], expected_values[i])
-            self.assertEquals(row['s_id'], expected_sample_ids[i])
-            self.assertEquals(row['r_id'], expected_replicates[i])
+            self.assertEquals(row[file_settings.value_field], expected_values[i])
+            self.assertEquals(row['sid'], expected_sample_ids[i])
+            self.assertEquals(row['rid'], expected_replicates[i])
 
     def test_data_frame_column_convert(self):
-        # it's expected that the file_settings fields will be lower case fields so the colums of the dataframe
+        # it's expected that the file_settings fields will be lower case fields so the columns of the dataframe
         # should also be all lowercase
         data = {
             'Sample ID': ["495600_1", "495600_2", "495601_1", "495601_2", "495602_1", "495602_2"],
@@ -413,8 +414,7 @@ class TestSampleCSVParser(DartTestCase):
         }
         df = pd.DataFrame(data)
 
-        SampleParser.parse_data_frame(mission=self.mission, settings=self.oxy_file_settings,
-                                               file_name=self.file_name, dataframe=df)
+        SampleParser.parse_data_frame(self.mission_oxy_file_settings, file_name=self.file_name, dataframe=df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
         self.assertEquals(len(errors), 0)
@@ -459,7 +459,7 @@ class TestSampleCSVParser(DartTestCase):
         }
 
         df = pd.DataFrame(data)
-        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
+        SampleParser.parse_data_frame(self.mission_oxy_file_settings, self.file_name, df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
         self.assertEquals(len(errors), 1)
