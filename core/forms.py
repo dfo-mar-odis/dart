@@ -403,7 +403,7 @@ class SampleTypeForm(forms.ModelForm):
                     Column(Field('datatype', css_class='form-control form-select-sm'), css_class='col-12'),
                     css_class="flex-fill"
                 ),
-                css_class="form-control mt-2", id="div_id_sample_type_holder_form"
+                id="div_id_sample_type_holder_form"
             )
         )
 
@@ -513,17 +513,15 @@ class SampleTypeConfigForm(forms.ModelForm):
             'hx_select': '#div_id_sample_type',
             'hx_swap': 'outerHTML'
         }
-        sample_type_row = Row(
-            Column(
-                Field('sample_type', **hx_sample_type_attrs),
-            )
+        sample_type_row = Div(
+            Field('sample_type', **hx_sample_type_attrs, wrapper_class="col-auto"),
+            css_class="row flex-fill mt-2"
         )
 
         div = Div(
             # file type is hidden because it's taken care of by the form creation and
             # the type of file a user is loading
             Field('file_type', type="hidden"),
-            sample_type_row,
             config_name_row,
 
             Row(
@@ -538,6 +536,7 @@ class SampleTypeConfigForm(forms.ModelForm):
             css_class="form-control input-group mt-2"
         )
 
+        self.helper[0].layout.fields.append(sample_type_row)
         self.helper[0].layout.fields.append(div)
 
         button_row = Row(
@@ -559,111 +558,11 @@ class SampleTypeConfigForm(forms.ModelForm):
             attrs['hx_get'] = reverse_lazy("core:save_sample_config", args=(self.instance.pk,))
             attrs['name'] = "update_sample_type"
 
+            attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
             button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
             button_row.fields[0].insert(0, button_update)
 
         self.helper[0].layout.fields.append(button_row)
-
-
-# This form is used after sample types have been created and sample file configs have been assigned.
-# It's not a modifiable form, rather it lists information for the user to decide if this is what
-# they want to load.
-class SampleTypeLoadForm(forms.ModelForm):
-    class Meta:
-        model = models.SampleTypeConfig
-        fields = "__all__"
-
-    def get_card_id(self):
-        return f"div_id_{self.instance.pk}"
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-
-        card_id = self.get_card_id()
-        body = Div(
-            Row(
-                Column(HTML(f'{_("Header Row")} : {self.instance.skip}'), css_class="col-auto")
-            ),
-            Row(
-                Column(HTML(f'<div class="h6 mt-2">{_("Columns")}</div>'))
-            ),
-            Row(
-                Column(HTML(f'{_("Bottle ID")} : "{self.instance.sample_field}"')),
-                Column(HTML(f'{_("Value")} : "{self.instance.value_field}"')),
-            ),
-            Div(id=f"{card_id}_message")
-        )
-
-        if self.instance.replicate_field:
-            body[2].fields.append(Column(HTML(f'{_("Replicate")} : "{self.instance.replicate_field}"')))
-
-        if self.instance.flag_field:
-            body[2].fields.append(Column(HTML(f'{_("Data Quality Flag")} : {self.instance.flag_field}')))
-
-        if self.instance.comment_field:
-            body[2].fields.append(Column(HTML(f'{_("Comment")} : "{self.instance.comment_field}"')))
-
-        if self.instance.file_type.startswith('xls'):
-            body[0].fields.insert(0, Column(HTML(f'{_("Tab #")} : {self.instance.tab}'), css_class="col-auto"))
-
-        # upon successfully loading the content the 'core:load_samples' function should return the button
-        # as a 'btn btn-success btn-sm' button or 'btn btn-warning btn-sm' if there are errors/warnings
-        load_btn_svg = load_svg('folder')
-        load_btn_class = 'btn btn-secondary btn-sm'
-
-        if self.instance.pk and (
-                samples := models.Sample.objects.filter(type__id=self.instance.sample_type.pk)).exists():
-            files = samples.values_list('file', flat=True).distinct()
-            errors = models.FileError.objects.filter(file_name__in=files).exists()
-
-            if errors:
-                load_btn_svg = load_svg('folder-symlink')
-                load_btn_class = 'btn btn-warning btn-sm'
-            else:
-                load_btn_svg = load_svg('folder-plus')
-                load_btn_class = 'btn btn-primary btn-sm'
-
-        load_url = reverse_lazy('core:load_samples', args=(self.instance.pk,))
-        load_button = StrictButton(load_btn_svg, id=f"{self.get_card_id()}_load_button",
-                                   name='load', css_class=load_btn_class,
-                                   hx_get=load_url, hx_target=f"#{card_id}_message")
-
-        edit_url = reverse_lazy('core:new_sample_config', args=(self.instance.pk,))
-        edit_button = StrictButton(load_svg('pencil-square'),
-                                   name='edit', css_class='btn btn-primary btn-sm me-1',
-                                   hx_post=edit_url, hx_target="#div_id_sample_type_holder",
-                                   # just a little javascript to scroll back to the new sample type form
-                                   hx_on="htmx:afterRequest: window.location.href = '#div_id_sample_type';")
-
-        delete_url = reverse_lazy('core:delete_sample_type', args=(self.instance.pk,))
-        delete_button = StrictButton(load_svg('dash-square'),
-                                     name='delete', css_class='btn btn-danger btn-sm',
-                                     hx_post=delete_url, hx_target=f"#{card_id}",
-                                     hx_swap="delete", hx_confirm=_("Are you sure?"))
-
-        title_label = f'{self.instance.file_type} - {self.instance.sample_type}'
-
-        title = Div(
-            Column(
-                HTML(f'<div class="h6">{title_label}</div>'),
-                css_class='col'
-            ),
-            Column(delete_button, css_class='col-auto'),
-            Column(edit_button, load_button, css_class='col-auto'),
-            css_class='card-title row'
-        )
-
-        self.helper.layout = Layout(
-            Div(
-                Div(title, css_class='card-header'),
-                Div(body, css_class='card-body'),
-                css_class='card mt-2',
-                id=f"{card_id}"
-            )
-        )
 
 
 class BottleSelection(forms.Form):

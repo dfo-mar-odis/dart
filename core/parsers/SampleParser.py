@@ -316,7 +316,7 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
                                                                     update_discrete_values['fields'])
 
     except ValueError as ex:
-        message = f"Could not parse sample id column '{settings.type.sample_field}', " \
+        message = f"Could not parse sample id column '{sample_config.sample_field}', " \
                   f"make sure the right column was selected"
         logger.error(message)
         logger.exception(ex)

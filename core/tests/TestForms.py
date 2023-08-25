@@ -3,6 +3,7 @@ import os
 import bs4
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
+from django.template.loader import render_to_string
 
 from django.test import tag, Client
 from django.urls import reverse
@@ -210,12 +211,12 @@ class TestSampleFileConfiguration(DartTestCase):
 
     def test_submit_new_sample_type_valid(self):
         # If a submitted form is valid a div#div_id_loaded_samples_list element should be returned
-        # with a HTML forms.SampleTypeLoadForm() to be swapped into the #div_id_loaded_samples_list section
-        # of the 'core/partials/form_sample_type.html' template
+        # with the 'core/partials/card_sample_config.html' html to be swapped into the
+        # #div_id_loaded_samples_list section of the 'core/partials/form_sample_config.html' template
 
         oxy_sample_type = core_factory.SampleTypeFactory(
-            short_name = 'oxy',
-            long_name = 'Oxygen'
+            short_name='oxy',
+            long_name='Oxygen'
         )
         # required post variables that the form would have previously setup without user input
         file_type = 'xlsx'
@@ -263,7 +264,8 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        expected = render_crispy_form(forms.SampleTypeLoadForm(instance=oxy_sample_type_config))
+        expected = render_to_string('core/partials/card_sample_config.html',
+                                    context={'sample_config': oxy_sample_type_config})
         expected_soup = BeautifulSoup(f'<div id="div_id_loaded_samples_list">{expected}</div>', 'html.parser')
 
         url = reverse("core:load_sample_config")
@@ -512,7 +514,7 @@ class TestSampleFileConfiguration(DartTestCase):
         form = soup.find(id="div_id_sample_type_holder_form")
         self.assertIsNotNone(form)
 
-        button = soup.find(id="id_new_sample_submit")
+        button = soup.find(id="button_id_new_sample_type_submit")
         self.assertIsNotNone(button)
 
     def test_existing_sample_type_on_config(self):
@@ -560,3 +562,126 @@ class TestSampleFileConfiguration(DartTestCase):
         selected = sample_type.find('option', selected=True)
         self.assertIsNotNone(selected)
         self.assertEquals(int(selected.attrs['value']), oxy_sample_type.pk)
+
+
+@tag('forms', 'forms_sample_type_card')
+class TestSampleTypeCard(DartTestCase):
+
+    def setUp(self) -> None:
+        pass
+
+    def test_form_exists(self):
+        # given a sample type id of an existing sample type the 'core:load_sample_type' url
+        # should return a 'core/partials/card_sample_type.html' template
+
+        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
+
+        url = reverse('core:load_sample_type', args=(sample_type.pk,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self.assertIsNotNone(soup.find(id=f"div_id_sample_type_{sample_type.pk}"))
+
+    # when the delete sample type button is clicked on the sample type card
+    # the 'core:delete_sample_type' url should be called with a post request.
+    # The results should be an alert that will be swapped into the message area
+    # upon success the alert will have a hx-trigger='load' that targets the
+    # cards id and a hx-swap='delete' that will remove the card.
+    # on failure a message will be swapped in describing why the sample type can't be deleted
+    def test_delete_sample_type_success(self):
+
+        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
+
+        url = reverse('core:delete_sample_type', args=(sample_type.pk,))
+
+        response = self.client.post(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self.assertIsNotNone(soup)
+
+    def test_delete_sample_type_fail(self):
+        # if there are missions that have samples that are using this sample type, it should not be deleted
+        # and the user should get back a message saying why.
+        oxy_sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
+
+        core_factory.SampleFactory(type=oxy_sample_type)
+
+        url = reverse('core:delete_sample_type', args=(oxy_sample_type.pk,))
+
+        response = self.client.post(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self.assertIsNotNone(soup)
+
+    def test_save_sample_type_invalid(self):
+        # if no short_name is provided then an invalid form should be returned
+        url = reverse('core:save_sample_type')
+        response = self.client.post(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self.assertIsNotNone(soup.find(id="div_id_sample_type_form"))  # invalid form
+
+        short_name_input = soup.find(id='id_short_name')
+        self.assertIn('is-invalid', short_name_input.attrs['class'])
+
+    def test_save_sample_type(self):
+        # provided a post request with a short_name and priority, the sample type should be saved and
+        # a div_id_loaded_sample_types element along with div_id_sample_type_form should be returned
+        # to be swapped into the 'core/sample_settings.html' template
+        kwargs = {'short_name': 'oxy', 'priority': '1'}
+
+        url = reverse('core:save_sample_type')
+        response = self.client.post(url, kwargs)
+
+        sample_type = core.models.SampleType.objects.filter(short_name='oxy')
+        self.assertTrue(sample_type.exists())
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        form = soup.find(id="div_id_sample_type_form")
+        self.assertIsNotNone(form)  # blank form
+        self.assertIsNone(form.find(id='id_short_name').string)
+
+        new_card = soup.find(id='div_id_loaded_sample_types')
+        self.assertIsNotNone(new_card)
+
+    def test_edit_sample_type(self):
+        # provided a sample_type.pk to the 'core:edit_sample_type' url a SampleTypeForm should be returned
+        # populated with the sample_type details
+
+        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name='Oxygen')
+
+        url = reverse('core:edit_sample_type', args=(sample_type.pk,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        self.assertIsNotNone(soup.find(id='div_id_sample_type_form'))
+
+        short_name_input = soup.find(id='id_short_name')
+        self.assertEquals(short_name_input.attrs['value'], sample_type.short_name)
+
+        long_name_input = soup.find(id='id_long_name')
+        self.assertEquals(long_name_input.attrs['value'], sample_type.long_name)
+
+    def test_save_update_sample_type(self):
+        # provided an existing sample type with updated post arguments the sample_type should be updated
+        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name='Oxygen')
+
+        url = reverse('core:save_sample_type', args=(sample_type.pk,))
+
+        response = self.client.post(url, {'short_name': sample_type.short_name,
+                                          'priority': sample_type.priority,
+                                          'long_name': 'Oxygen2'})
+
+        sample_type_updated = core.models.SampleType.objects.filter(short_name='oxy')
+        self.assertTrue(sample_type_updated.exists())
+        self.assertEquals(sample_type_updated[0].long_name, 'Oxygen2')
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        form = soup.find(id="div_id_sample_type_form")
+        self.assertIsNotNone(form)  # blank form
+        self.assertIsNone(form.find(id='id_short_name').string)
+
+        new_card = soup.find(id=f'div_id_sample_type_{ sample_type.pk }')
+        self.assertIsNotNone(new_card)

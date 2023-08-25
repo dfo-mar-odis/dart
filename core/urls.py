@@ -1,7 +1,8 @@
 from django.urls import path
 
 import core.views_mission_sample
-from . import views, views_mission_sample, htmx, reports
+import core.views_sample_type
+from . import views, views_mission_sample, views_sample_type, htmx, reports
 
 app_name = 'core'
 
@@ -9,7 +10,15 @@ urlpatterns = [
     # ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
 
     # show the create a sample type form
+    path('sample_type/', views_sample_type.SampleTypeList.as_view(), name="sample_type_details"),
     path('sample_type/hx/new/', views_mission_sample.new_sample_type, name="new_sample_type"),
+    path('sample_type/hx/save/', views_sample_type.save_sample_type, name="save_sample_type"),
+    path('sample_type/hx/save/<int:sample_type_id>/', views_sample_type.save_sample_type, name="save_sample_type"),
+    path('sample_type/hx/load/<int:sample_type_id>/', views_sample_type.load_sample_type, name="load_sample_type"),
+    path('sample_type/hx/edit/', views_sample_type.edit_sample_type, name="edit_sample_type"),
+    path('sample_type/hx/edit/<int:sample_type_id>/', views_sample_type.edit_sample_type, name="edit_sample_type"),
+    path('sample_type/hx/delete/<int:sample_type_id>/', views_sample_type.delete_sample_type,
+         name="delete_sample_type"),
 
     # for testing the sample config form
     path('mission/sample/test/<int:pk>/', views_mission_sample.SampleDetails.as_view()),
@@ -24,12 +33,13 @@ urlpatterns = [
 
     # save the sample config
     path('sample_config/hx/save/', views_mission_sample.save_sample_config, name="save_sample_config"),
-    path('sample_config/hx/update/<int:config_id>/', views_mission_sample.save_sample_config, name="save_sample_config"),
+    path('sample_config/hx/update/<int:config_id>/', views_mission_sample.save_sample_config,
+         name="save_sample_config"),
 
     # delete a sample file configuration or load samples using that file configuration
     path('sample_config/hx/load/<int:config_id>/', views_mission_sample.load_samples, name="load_samples"),
-    path('sample_config/hx/delete/<int:config_id>/', views_mission_sample.delete_sample_type,
-         name="delete_sample_type"),
+    path('sample_config/hx/delete/<int:config_id>/', views_mission_sample.delete_sample_config,
+         name="delete_sample_config"),
 
     # ###### sample details ###### #
 

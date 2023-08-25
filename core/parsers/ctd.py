@@ -117,7 +117,7 @@ def process_ros_sensors(exclude_sensors: [str], ros_file: str):
         if units:
             long_name += f" [{units}]"
 
-        sensor_type = core_models.SampleType(short_name=sensor_mapping[0], long_name=long_name)
+        sensor_type = core_models.SampleType(short_name=sensor_mapping[0], long_name=long_name, is_sensor=True)
         sensor_type.name = sensor_type_string
         sensor_type.priority = priority if priority else 1
         sensor_type.units = units if units else None
@@ -167,7 +167,7 @@ def process_common_sensors(sensors: list[str], exclude_sensors: [str]):
 
         details = parse_sensor_name(sensor)
         long_name = details[2]  # basically all we have at the moment is the units of measure
-        sensor_details = core_models.SampleType(short_name=details[0], long_name=long_name)
+        sensor_details = core_models.SampleType(short_name=details[0], long_name=long_name, is_sensor=True)
         sensor_details.priority = details[1]
         sensor_details.units = details[2]
 

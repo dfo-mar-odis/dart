@@ -10,15 +10,11 @@
     {#             href="#search_form">{% custom_icon 'search' %}</div>#}
     {#    </li>#}
     <li class="nav-item me-2">
-         <div class="btn btn-info col-auto" data-bs-toggle="collapse"
-             href="#div_new_sample" title="{% trans "Add Sample" %}">{% custom_icon 'plus-square' %}</div>
-   </li>
-    <li class="nav-item me-2">
         <a href="{% url 'core:event_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:event_details' object.pk %}" class="btn btn-danger"
+        <a href="{% url 'core:event_details' object.pk %}" class="btn btn-outline-danger"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     <li class="nav-item me-2">
@@ -29,23 +25,33 @@
 
 {% block content %}
     <div class="row" id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+        <div class="col">
         {% block new_sample_block %}
-        <div class="mb-2 col">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title row">
+                    <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                            href="#div_new_sample">{% custom_icon 'caret-down' %}</button>
+                    <h6 class="col-auto align-self-end">{% trans "Load Sample from file" %}</h6></div>
+            </div>
             <div class="collapse col" id="div_new_sample">
-                <div class="card">
-                    <div id="new_sample_form" class="card-body">
-                        {% block new_sample_form_block %}
-                            {% include 'core/partials/form_sample_type.html' with mission=object %}
-                        {% endblock %}
+                <div class="card-body">
+                    <div class="mb-2 col">
+                        <div id="new_sample_form" class="card-body">
+                            {% block new_sample_form_block %}
+                                {% include 'core/partials/form_sample_config.html' with mission=object %}
+                            {% endblock %}
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         {% endblock %}
+        </div>
     </div>
 
     {% block ctd_block %}
-        <div class="row">
+        <div class="row mt-2">
             <div id="div_ctd_id" class="col">
                 <div class="card">
                     <div class="card-header">
@@ -85,16 +91,4 @@
             </div>
         </div>
     {% endblock %}
-    </div>
-{% endblock %}
-
-{% block body_js %}
-    <script>
-        function update_selected(event) {
-            $(".selectedBg").removeClass("selectedBg");
-            if (event != 0) {
-                $("#event-" + event).addClass('selectedBg');
-            }
-        }
-    </script>
 {% endblock %}

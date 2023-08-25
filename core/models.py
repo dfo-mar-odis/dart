@@ -391,6 +391,9 @@ class SampleType(models.Model):
     datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, related_name='sample_types', on_delete=models.SET_NULL)
 
+    is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
+                                    help_text=_("Identify this sample type as a type of sensor"))
+
     def __str__(self):
         return self.short_name + (f" - {self.long_name}" if self.long_name else "")
 
@@ -398,7 +401,7 @@ class SampleType(models.Model):
 class SampleTypeConfig(models.Model):
 
     sample_type = models.ForeignKey(SampleType, verbose_name=_("Sample Type"),
-                                    related_name="configs", on_delete=models.CASCADE,
+                                    related_name="configs", on_delete=models.DO_NOTHING,
                                     help_text=_("The sample type this config is intended for"))
     file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
                                  help_text=_("file type extension e.g csv, xls, xlsx, dat"))
