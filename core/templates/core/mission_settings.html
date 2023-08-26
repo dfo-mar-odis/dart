@@ -28,39 +28,6 @@
             {% csrf_token %}
             {%  crispy form %}
         </form>
-        <!-- geographic region Modal -->
-        <div class="modal fade" id="geographic_region_dialog" tabindex="-1" aria-hidden="true">
-            <div class="modal-dialog">
-                <div class="modal-content">
-                    <div class="modal-header">
-                        <h5 class="modal-title" id="geographic_region_dialog_label">{% trans 'New Geographic Region' %}</h5>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                    </div>
-                    <form id="geographic_region_form"
-                          hx-post="{% url 'core:hx_geo_region_add' %}" class="form-control"
-                          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
-                          hx-target="#div_id_geographic_region"
-                          hx-swap="outerHTML"
-                          hx-select="#div_id_geographic_region"
-                          hx-swap-oob="outerHTML"
-                          hx-select-oob="#geographic_region_form"
-                    >
-                        {% block geographic_region_form %}
-                        <div class="modal-body">
-                            <label class="form-label" for="new_region">
-                                {% trans 'Geographic Region' %}
-                            </label>
-                            <input name="new_region" id="new_region" type="text" class="form-control" value=""
-                                   placeholder="{% trans "New geographic region name, or blank to close" %}"/>
-                        </div>
-                        <div class="modal-footer">
-                            <button type="submit" class="btn btn-primary" data-bs-dismiss="modal">{% trans 'Ok' %}</button>
-                        </div>
-                        {% endblock %}
-                    </form>
-                </div>
-            </div>
-        </div>
     </div>
 {% endblock %}
 

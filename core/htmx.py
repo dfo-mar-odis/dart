@@ -1,6 +1,8 @@
 import io
 import time
 
+from bs4 import BeautifulSoup
+
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from crispy_forms.utils import render_crispy_form
@@ -21,6 +23,7 @@ import logging
 
 from core.parsers import elog
 from core import validation
+from dart2.utils import load_svg
 
 logger = logging.getLogger("dart")
 
@@ -55,14 +58,48 @@ def list_missions(request):
     return response
 
 
-def update_geographic_regions(request):
-    regions = models.GeographicRegion.objects.all().order_by("pk")
-    selected = regions.last()
-    regions.order_by('name')
-    context = {'geographic_regions': regions, 'selected': selected.pk}
+def update_geographic_regions(request, **kwargs):
 
-    html = render(request, 'core/partials/geographic_region.html', context)
-    return HttpResponse(html)
+    if request.method == "GET":
+        if 'geographic_region' in request.GET and request.GET['geographic_region'] == '-1':
+            soup = BeautifulSoup('', 'html.parser')
+
+            row = soup.new_tag('div')
+            row.attrs['class'] = 'container-fluid row'
+
+            geo_region_input = soup.new_tag('input')
+            geo_region_input.attrs['name'] = 'geographic_region'
+            geo_region_input.attrs['id'] = 'id_geographic_region'
+            geo_region_input.attrs['type'] = 'text'
+            geo_region_input.attrs['class'] = 'textinput form-control col'
+
+            submit = soup.new_tag('button')
+            submit.attrs['class'] = 'btn btn-primary btn-sm ms-2 col-auto'
+            submit.attrs['hx-post'] = reverse_lazy('core:hx_update_regions')
+            submit.attrs['hx-target'] = '#div_id_geographic_region'
+            submit.attrs['hx-select'] = '#div_id_geographic_region'
+            submit.attrs['hx-swap'] = 'outerHTML'
+            submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
+
+            row.append(geo_region_input)
+            row.append(submit)
+
+            soup.append(row)
+
+            return HttpResponse(soup)
+    if request.method == "POST":
+        mission_dict = request.POST.copy()
+        if 'geographic_region' in request.POST and (region_name := request.POST['geographic_region'].strip()):
+            if (region := models.GeographicRegion.objects.filter(name=region_name)).exists():
+                mission_dict['geographic_region'] = region[0].id
+            else:
+                region = models.GeographicRegion(name=region_name)
+                region.save()
+                mission_dict['geographic_region'] = models.GeographicRegion.objects.get(name=region_name)
+
+        mission_form = forms.MissionSettingsForm(mission_dict)
+        html = render_crispy_form(mission_form)
+        return HttpResponse(html)
 
 
 def add_geo_region(request):

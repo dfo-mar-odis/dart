@@ -47,12 +47,14 @@ class MissionSettingsForm(forms.ModelForm):
         self.helper = FormHelper()
         self.helper.form_show_labels = True
         self.fields['geographic_region'].label = False
-        self.fields['geographic_region'].widget.attrs["hx-target"] = '#div_id_geographic_region'
-        self.fields['geographic_region'].widget.attrs["hx-trigger"] = 'region_added from:body'
+        self.fields['geographic_region'].widget.attrs["hx-target"] = '#id_geographic_region'
+        self.fields['geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
+        self.fields['geographic_region'].widget.attrs["hx-trigger"] = 'change'
         self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
-        if 'initial' in kwargs and 'geographic_region' in kwargs['initial']:
-            self.fields['geographic_region'].initial = kwargs['initial']['geographic_region']
 
+        self.fields['geographic_region'].choices = [(None, '------'), (-1, _('New Region')), (-2, _(''))]
+        self.fields['geographic_region'].choices += [(gr.id, gr) for gr in models.GeographicRegion.objects.all()]
+        self.fields['geographic_region'].initial = None
         self.fields['protocol'].required = False
         self.fields['lead_scientist'].required = False
         self.fields['mission_descriptor'].required = False
@@ -63,11 +65,6 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['data_manager_comments'].required = False
         self.fields['more_comments'].required = False
         self.fields['platform'].required = False
-
-        # This button depends on a separate section being on the page with the ID 'geographic_region_dialog'
-        button_geo_add = HTML(
-            '<button class="btn btn-primary" type="button" data-bs-toggle="modal" '
-            'data-bs-target="#geographic_region_dialog">+</button>')
 
         submit = Submit('submit', 'Submit')
         if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
@@ -89,7 +86,6 @@ class MissionSettingsForm(forms.ModelForm):
                     ),
                     Row(
                         Column(Field('geographic_region'), css_class="col"),
-                        Column(button_geo_add, css_class="col-auto"),
                     )
                 )
             ),
