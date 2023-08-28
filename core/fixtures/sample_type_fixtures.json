@@ -1049,5 +1049,719 @@
         "allow_blank": false,
         "allow_replicate": true
     }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 36,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "xlsx",
+        "skip": 9,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 37,
+    "fields": {
+        "sample_type": 2,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "bottle label",
+        "value_field": "calculated salinity",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 38,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 39,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 40,
+    "fields": {
+        "sample_type": 11,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "nitrate",
+        "tab": 0,
+        "flag_field": "nitrate_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 41,
+    "fields": {
+        "sample_type": 12,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "nitrite",
+        "tab": 0,
+        "flag_field": "nitrite_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 42,
+    "fields": {
+        "sample_type": 13,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "phosphate",
+        "tab": 0,
+        "flag_field": "phosphate_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 43,
+    "fields": {
+        "sample_type": 14,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "silicate",
+        "tab": 0,
+        "flag_field": "silicste_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 44,
+    "fields": {
+        "sample_type": 15,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "ammonium",
+        "tab": 0,
+        "flag_field": "ammonium_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 45,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "poc_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 46,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "pon_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 47,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 48,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 49,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 50,
+    "fields": {
+        "sample_type": 3,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "chl.",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 51,
+    "fields": {
+        "sample_type": 4,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "phae.",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 52,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "poc_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 53,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "pon_qc",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 54,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "poc_qc.1",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 55,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "pon_qc.1",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 56,
+    "fields": {
+        "sample_type": 16,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "acarot",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 57,
+    "fields": {
+        "sample_type": 17,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "allox",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 58,
+    "fields": {
+        "sample_type": 18,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "astax",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 59,
+    "fields": {
+        "sample_type": 19,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "bcarot",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 60,
+    "fields": {
+        "sample_type": 20,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "but19",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 61,
+    "fields": {
+        "sample_type": 21,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "butlike",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 62,
+    "fields": {
+        "sample_type": 22,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hplchla",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 63,
+    "fields": {
+        "sample_type": 23,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlb",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 64,
+    "fields": {
+        "sample_type": 24,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlc12",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 65,
+    "fields": {
+        "sample_type": 25,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlc3",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 66,
+    "fields": {
+        "sample_type": 26,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlidea",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 67,
+    "fields": {
+        "sample_type": 27,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "diadinox",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 68,
+    "fields": {
+        "sample_type": 28,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "diatox",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 69,
+    "fields": {
+        "sample_type": 29,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "fucox",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 70,
+    "fields": {
+        "sample_type": 30,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hex19",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 71,
+    "fields": {
+        "sample_type": 31,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hexlike",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 72,
+    "fields": {
+        "sample_type": 32,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hexlike2",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 73,
+    "fields": {
+        "sample_type": 33,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "perid",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 74,
+    "fields": {
+        "sample_type": 34,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hplcphae",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 75,
+    "fields": {
+        "sample_type": 35,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "prasinox",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 76,
+    "fields": {
+        "sample_type": 37,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "violax",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 38,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "zea",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
 }
 ]
