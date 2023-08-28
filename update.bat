@@ -29,7 +29,7 @@ python .\manage.py collectstatic --noinput
 
 :start_server
 echo "Creating/Updating local database"
-python .\manage.py migrate >> DART.log
+python .\manage.py migrate >> logs/start_dart.log
 
 if exist ".\settings\DefaultElogConfiguration.json" python .\manage.py loaddata DefaultElogConfiguration
 
