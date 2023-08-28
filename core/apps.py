@@ -17,7 +17,7 @@ class CoreAppConf(AppConfig):
             if 'core_sampletype' in connection.introspection.table_names():
                 if not models.SampleType.objects.all().exists():
                     logger.info("Loading sample type fixtures, this may take a moment")
-                    call_command('loaddata', 'core_fixtures')
+                    call_command('loaddata', 'sample_type_fixtures')
 
         except Exception as ex:
             logger.error('Could not load biochem fixtures')
