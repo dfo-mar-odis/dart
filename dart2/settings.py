@@ -42,10 +42,10 @@ ASGI_APPLICATION = 'dart2.asgi.application'
 # These apps are part of the core functionality for DART
 # --- Please do not modify unless you know what you're doing ---
 REQUIRED_APPS = [
-    'core',
     'docs',
     'biochem',
     'bio_tables',
+    'core',
 ]
 
 # Add Registered applications here for auto loading parsers, URLs and APIs
