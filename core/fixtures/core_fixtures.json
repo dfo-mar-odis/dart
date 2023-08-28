@@ -3,258 +3,6 @@
     "model": "core.sampletype",
     "pk": 1,
     "fields": {
-        "short_name": "t068C",
-        "long_name": "Temperature [IPTS-68, deg C]",
-        "priority": 1,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 2,
-    "fields": {
-        "short_name": "c0S/m",
-        "long_name": "Conductivity [S/m]",
-        "priority": 1,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 3,
-    "fields": {
-        "short_name": "t168C",
-        "long_name": "Temperature [IPTS-68, deg C]",
-        "priority": 2,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 4,
-    "fields": {
-        "short_name": "c1S/m",
-        "long_name": "Conductivity [S/m]",
-        "priority": 2,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 5,
-    "fields": {
-        "short_name": "altM",
-        "long_name": "Altimeter [m]",
-        "priority": 1,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 6,
-    "fields": {
-        "short_name": "par/log",
-        "long_name": "PAR/Logarithmic, Satlantic [umol photons/m2/s]",
-        "priority": 1,
-        "comments": "Satlantic",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 7,
-    "fields": {
-        "short_name": "sbeox0V",
-        "long_name": "Oxygen raw, SBE 43 [V]",
-        "priority": 1,
-        "comments": "SBE 43",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 8,
-    "fields": {
-        "short_name": "sbeox1V",
-        "long_name": "Oxygen raw, SBE 43 [V]",
-        "priority": 2,
-        "comments": "SBE 43",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 9,
-    "fields": {
-        "short_name": "flSPuv0",
-        "long_name": "Fluorescence, Seapoint Ultraviolet",
-        "priority": 1,
-        "comments": "Seapoint Ultraviolet",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 10,
-    "fields": {
-        "short_name": "flSP",
-        "long_name": "Fluorescence, Seapoint",
-        "priority": 1,
-        "comments": "Seapoint",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 11,
-    "fields": {
-        "short_name": "ph",
-        "long_name": "pH",
-        "priority": 1,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 12,
-    "fields": {
-        "short_name": "turbWETbb0",
-        "long_name": "Turbidity, WET Labs ECO BB [m^-1/sr]",
-        "priority": 1,
-        "comments": "WET Labs ECO BB",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 13,
-    "fields": {
-        "short_name": "spar",
-        "long_name": "SPAR/Surface Irradiance",
-        "priority": 1,
-        "comments": "",
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 14,
-    "fields": {
-        "short_name": "Sbeox0ML/L",
-        "long_name": "ML/L",
-        "priority": 1,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 15,
-    "fields": {
-        "short_name": "Sbeox1ML/L",
-        "long_name": "ML/L",
-        "priority": 2,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 16,
-    "fields": {
-        "short_name": "Sal00",
-        "long_name": null,
-        "priority": 1,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 17,
-    "fields": {
-        "short_name": "Sal11",
-        "long_name": null,
-        "priority": 2,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 18,
-    "fields": {
-        "short_name": "Potemp068C",
-        "long_name": "68C",
-        "priority": 1,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 19,
-    "fields": {
-        "short_name": "Potemp168C",
-        "long_name": "68C",
-        "priority": 2,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 20,
-    "fields": {
-        "short_name": "Sigma-é00",
-        "long_name": null,
-        "priority": 1,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 21,
-    "fields": {
-        "short_name": "Sigma-é11",
-        "long_name": null,
-        "priority": 2,
-        "comments": null,
-        "datatype": null,
-        "is_sensor": true
-    }
-},
-{
-    "model": "core.sampletype",
-    "pk": 22,
-    "fields": {
         "short_name": "oxy",
         "long_name": "Oxygen",
         "priority": 1,
@@ -265,7 +13,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 23,
+    "pk": 2,
     "fields": {
         "short_name": "salts",
         "long_name": "Salinity",
@@ -277,7 +25,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 24,
+    "pk": 3,
     "fields": {
         "short_name": "chl",
         "long_name": "Chlorophyll",
@@ -289,7 +37,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 25,
+    "pk": 4,
     "fields": {
         "short_name": "phae",
         "long_name": "Phaeophytin",
@@ -301,7 +49,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 26,
+    "pk": 5,
     "fields": {
         "short_name": "chl_mean",
         "long_name": "Mean Chlorophyll",
@@ -313,7 +61,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 27,
+    "pk": 6,
     "fields": {
         "short_name": "phae_mean",
         "long_name": "Mean Phaeophytin",
@@ -325,7 +73,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 28,
+    "pk": 7,
     "fields": {
         "short_name": "carb",
         "long_name": "Carbon",
@@ -337,7 +85,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 29,
+    "pk": 8,
     "fields": {
         "short_name": "nitro",
         "long_name": "Nitrogen",
@@ -349,7 +97,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 30,
+    "pk": 9,
     "fields": {
         "short_name": "carb_l",
         "long_name": "Carbon (Micrograms/Litre)",
@@ -361,7 +109,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 31,
+    "pk": 10,
     "fields": {
         "short_name": "nitro_l",
         "long_name": "Nitrogen (Micrograms/Litre",
@@ -373,7 +121,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 32,
+    "pk": 11,
     "fields": {
         "short_name": "nitrate",
         "long_name": "Nitrate",
@@ -385,7 +133,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 33,
+    "pk": 12,
     "fields": {
         "short_name": "nitrite",
         "long_name": "Nitrite",
@@ -397,7 +145,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 34,
+    "pk": 13,
     "fields": {
         "short_name": "phosphate",
         "long_name": "Phosphate",
@@ -409,7 +157,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 35,
+    "pk": 14,
     "fields": {
         "short_name": "silicate",
         "long_name": "Silicate",
@@ -421,7 +169,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 36,
+    "pk": 15,
     "fields": {
         "short_name": "ammonium",
         "long_name": "Ammonium",
@@ -433,7 +181,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 37,
+    "pk": 16,
     "fields": {
         "short_name": "acarot",
         "long_name": "HPLC ACAROT",
@@ -445,7 +193,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 38,
+    "pk": 17,
     "fields": {
         "short_name": "allox",
         "long_name": "HPLC ALLOX",
@@ -457,7 +205,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 39,
+    "pk": 18,
     "fields": {
         "short_name": "astax",
         "long_name": "HPLC ASTAX",
@@ -469,7 +217,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 40,
+    "pk": 19,
     "fields": {
         "short_name": "bcarot",
         "long_name": "HPLC BCAROT",
@@ -481,7 +229,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 41,
+    "pk": 20,
     "fields": {
         "short_name": "but19",
         "long_name": "BUT19",
@@ -493,7 +241,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 42,
+    "pk": 21,
     "fields": {
         "short_name": "butlike",
         "long_name": "HPLC BUTLIKE",
@@ -505,7 +253,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 43,
+    "pk": 22,
     "fields": {
         "short_name": "chla",
         "long_name": "HPLC CHLA",
@@ -517,7 +265,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 44,
+    "pk": 23,
     "fields": {
         "short_name": "chlb",
         "long_name": "HPLC CHLB",
@@ -529,7 +277,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 45,
+    "pk": 24,
     "fields": {
         "short_name": "chlc12",
         "long_name": "HPLC CHLC12",
@@ -541,7 +289,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 46,
+    "pk": 25,
     "fields": {
         "short_name": "chlc3",
         "long_name": "HPLC CHLC3",
@@ -553,7 +301,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 47,
+    "pk": 26,
     "fields": {
         "short_name": "chlidea",
         "long_name": "HPLC CHLIDEA",
@@ -565,7 +313,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 48,
+    "pk": 27,
     "fields": {
         "short_name": "diadinox",
         "long_name": "HPLC DIADINOX",
@@ -577,7 +325,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 49,
+    "pk": 28,
     "fields": {
         "short_name": "diatox",
         "long_name": "HPLC DIATOX",
@@ -589,7 +337,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 50,
+    "pk": 29,
     "fields": {
         "short_name": "fucox",
         "long_name": "HPLC FUCOX",
@@ -601,7 +349,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 51,
+    "pk": 30,
     "fields": {
         "short_name": "hex19",
         "long_name": "HPLC HEX19",
@@ -613,7 +361,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 52,
+    "pk": 31,
     "fields": {
         "short_name": "hexlike",
         "long_name": "HPLC HEXLIKE",
@@ -625,7 +373,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 53,
+    "pk": 32,
     "fields": {
         "short_name": "hexlike2",
         "long_name": "HPLC HEXLIKE2",
@@ -637,7 +385,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 54,
+    "pk": 33,
     "fields": {
         "short_name": "perid",
         "long_name": "HPLC PERID",
@@ -649,7 +397,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 55,
+    "pk": 34,
     "fields": {
         "short_name": "phaeo",
         "long_name": "HPLC PHAEO",
@@ -661,7 +409,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 56,
+    "pk": 35,
     "fields": {
         "short_name": "prasinox",
         "long_name": "HPLC PRASINOX",
@@ -673,7 +421,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 57,
+    "pk": 36,
     "fields": {
         "short_name": "pyrophae",
         "long_name": "HPLC PYROPHAE",
@@ -685,7 +433,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 58,
+    "pk": 37,
     "fields": {
         "short_name": "violax",
         "long_name": "HPLC VIOLAX",
@@ -697,7 +445,7 @@
 },
 {
     "model": "core.sampletype",
-    "pk": 59,
+    "pk": 38,
     "fields": {
         "short_name": "zea",
         "long_name": "HPLC ZEA",
