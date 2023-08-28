@@ -4,6 +4,10 @@ from django.db import models
 from django.utils.translation import gettext as _
 
 
+class BCUpdate(models.Model):
+    last_update = models.DateTimeField(verbose_name=_("Last Updated"))
+
+
 class BCDataCenter(models.Model):
     data_center_code = models.IntegerField(verbose_name=_("Data Center Code"), primary_key=True)
     name = models.CharField(verbose_name=_("Data Center Name"), max_length=50)

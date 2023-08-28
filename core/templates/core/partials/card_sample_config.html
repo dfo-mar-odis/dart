@@ -1,0 +1,70 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<div id="div_id_sample_config_card_{{ sample_config.pk }}" class="card mt-2">
+<div class="card-header">
+    <div class="card-title row">
+        <button type="button" class="btn btn-light btn-sm col-auto collapsed" data-bs-toggle="collapse"
+            href="#div_id_sample_config_card_body_{{ sample_config.pk }}" aria-expanded="true">{% custom_icon 'caret-down' %}</button>
+
+        <h6 class="col align-self-end">{% trans 'File Configuration' %} : {{ sample_config }}</h6>
+        <div class="col-auto">
+            <button type="button" class="btn btn-danger btn-sm" name='delete'
+                    hx-post="{% url 'core:delete_sample_config' sample_config.pk %}"
+                    hx-target="#div_id_sample_config_card_{{ sample_config.pk }}"
+                    hx-swap="delete"
+                    hx-confirm="{% trans "Are you sure?" %}"
+            >{% custom_icon 'dash-square' %}</button>
+        </div>
+        <div class="col-auto">
+            <button type="button" class="btn btn-primary btn-sm me-1" name='edit'
+                    hx-post="{% url 'core:new_sample_config' sample_config.pk %}"
+                    hx-target="#div_id_sample_type_holder"
+                    {# just a little javascript to scroll back to the new sample type form #}
+                    hx-on="htmx:afterRequest: window.location.href = '#div_id_sample_type';"
+            >{% custom_icon 'pencil-square' %}</button>
+            <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-secondary{% endif %} btn-sm" name='load'
+                    id="div_id_sample_config_card_{{ sample_config.pk }}_load_button"
+                    hx-get="{% url 'core:load_samples' sample_config.pk %}"
+                    hx-target="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
+                    hx-select="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
+                    hx-swap="outerHTML"
+                    hx-select-oob="#div_id_sample_config_card_{{ sample_config.pk }}_message"
+            >{% if errors %}
+                {# if the loaded file contins errors show the 'reload' icon and set the 'btn-warning' css #}
+                {% custom_icon 'folder-symlink' %}
+             {% else %}
+                {# if the loaded file contins errors show the 'reload' icon and set the 'btn-warning' css #}
+                {% custom_icon 'folder' %}
+             {% endif %}</button>
+        </div>
+    </div>
+</div>
+<div id="div_id_sample_config_card_body_{{ sample_config.pk }}" class="collapsed collapse">
+    <div class="card-body">
+        <div class="row">
+            <div class="col-auto">{% trans "Tab #" %} : {{ sample_config.tab }}</div>
+            <div class="col-auto">{% trans "Header Row #" %} : {{ sample_config.skip }}</div>
+        </div>
+        <ul class="list-group">
+            <li class="list-group-item list-group-item-secondary">{% trans "Column Mappings" %}</li>
+            <li class="list-group-item">{% trans 'Sample' %} : {{ sample_config.sample_field }}</li>
+            <li class="list-group-item">{% trans 'Value' %} : {{ sample_config.value_field }}</li>
+
+            {% if sample_config.replicate_field %}
+            <li class="list-group-item">{% trans 'Replicate' %} : {{ sample_config.replicate_field }}</li>
+            {% endif %}
+
+            {% if sample_config.flag_field %}
+            <li class="list-group-item">{% trans 'Quality Flag' %} : {{ sample_config.flag_field }}</li>
+            {% endif %}
+
+            {% if sample_config.comment_field %}
+            <li class="list-group-item">{% trans 'Comment' %} : {{ sample_config.comment_field }}</li>
+            {% endif %}
+        </ul>
+        <div id="div_id_sample_config_card_{{ sample_config.pk }}_message"></div>
+    </div>
+</div>
+</div>

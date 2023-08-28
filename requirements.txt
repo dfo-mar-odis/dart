@@ -24,6 +24,9 @@ django-render-block
 # used for updating dynamic forms with HTMX
 django-forms-dynamic
 
+# used for detecting HTMX calls
+django-htmx==1.16.0
+
 # daphne is a standalone python webserver used to run the Django application outside a development env.
 daphne==3.0.2
 
@@ -60,6 +63,10 @@ pytz~=2022.6
 numpy~=1.23
 pandas~=1.5
 matplotlib~=3.6.2
+django-pandas==0.6.6
+
+# Post pandas to_html table styling
+beautifulsoup4
 
 # xlrd is for working with legacy excel (.xls) files
 xlrd==2.0.1

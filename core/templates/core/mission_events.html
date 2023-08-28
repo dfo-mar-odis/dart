@@ -1,0 +1,161 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+{% block nav_button_block %}
+    <li class="nav-item me-2">
+        <div class="btn btn-info col-auto" data-bs-toggle="collapse"
+             href="#div_mission_search">{% custom_icon 'search' %}</div>
+    </li>
+    <li class="nav-item me-2">
+        <a href="{% url 'core:sample_details' object.pk %}" class="btn btn-primary"
+           title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a href="{% url 'core:event_details' object.pk %}" class="btn btn-outline-danger"
+           title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' object.pk %}"
+           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+    </li>
+{% endblock %}
+
+{% block content %}
+    <div class="mb-2">
+        <div class="collapse col" id="div_mission_search">
+            <div class="card">
+                <div class="card-body">
+                    <div class="" hx-get="{% url 'core:hx_event_list' object.pk %}"
+                                      hx-target="#event_table" hx-swap="outerHTML"
+                                      hx-trigger="reset from:#mission_search_form">
+                        {% block mission_search_block %}
+                            {% if search_form %}
+                                <form id="mission_search_form" class=""
+                                      hx-get="{% url 'core:hx_event_list' object.pk %}"
+                                      hx-target="#event_table" hx-swap="outerHTML"
+                                      hx-trigger="submit, event_updated from:body">
+                                    <div >
+                                        {# see core.forms.MissionSearchForm #}
+                                        {% crispy search_form %}
+                                    </div>
+                                    <input type="submit" name="submit" value="Submit" class="btn btn-primary"/>
+                                    <input type="reset" name="reset" value="Reset" class="btn btn-warning" />
+                                </form>
+                            {% endif %}
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% block content_details_block %}
+        <div id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+            <div class="row">
+                <div id="div_events_id" class="col">
+                    <div class="card">
+                        <div class="card-header">
+                            <div class="row">
+                                <div class="card-title col">{% trans "Events" %}</div>
+                                <div class="col-1"><label for="event_file_input_id" class="btn btn-primary"
+                                                          title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            {% block event_import_form %}
+                                <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
+                                      hx-encoding="multipart/form-data"
+                                      hx-post="{% url "core:hx_upload_elog" object.pk %}"
+                                      hx-target="this" hx-swap="outerHTML" hx-trigger="change">
+                                    {% csrf_token %}
+                                    <input id="event_file_input_id" type="file" name="event" accept=".log"
+                                           multiple="true" class="invisible"/>
+                                </form>
+                            {% endblock %}
+                            <div id="div_event_list_id" class="vertical-scrollbar">
+                                {% include 'core/partials/table_event.html' with mission=object %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="div_event_details_id" class="col">
+                    {% block selected_event_details %}
+                        <div class="card">
+                            <div class="card-header">
+                                <div class="row">
+                                    <div class="card-title col">{% trans "Event Detials" %}</div>
+                                    {% if selected_event %}
+                                        <div class="col-1">
+                                            <button class="btn btn-danger" title="{% trans "Delete" %}"
+                                                    hx-on="click: update_selected({{ 0 }})"
+                                                    hx-target="#div_content_block_id"
+                                                    hx-swap="outerHTML"
+                                                    hx-post="{% url 'core:hx_event_delete' selected_event.pk %}">{% custom_icon 'dash-square' %}</button>
+                                        </div>
+                                    {% endif %}
+                                    <div class="col-1 me-3">
+                                        <button class="btn btn-primary" title="{% trans "Add" %}"
+                                                hx-on="click: update_selected({{ 0 }})"
+                                                hx-target="#div_event_content_id"
+                                                hx-get="{% url 'core:hx_event_new' mission_id=object.pk %}">{% custom_icon 'plus-square' %}</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="vertical-scrollbar">
+                                    {% block event_details_block %}
+                                        <div id="div_event_content_id">
+                                            {% if selected_event %}
+                                                {% if selected_event.files %}
+                                                    {% include 'core/partials/event_details.html' with event=selected_event %}
+                                                {% else %}
+                                                    {% include 'core/partials/event_edit_form.html' with event=selected_event %}
+                                                {% endif %}
+                                            {% endif %}
+                                        </div>
+                                    {% endblock %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endblock %}
+                </div>
+            </div>
+            <div class="row mt-2" hx-ext="ws" ws-connect="/ws/notifications/">
+                <div id="div_notifications_id" class="col">
+                    <div class="card">
+                        <div class="card-header d-flex justify-content-between">
+                            <div class="card-title">
+                                {% trans "Notifications" %}
+                            </div>
+                            {% block status_block %}
+                                <div id="status">
+                                    {{ msg }}
+                                </div>
+                            {% endblock %}
+                        </div>
+                        <div class="card-body vertical-scrollbar" hx-trigger="load" hx-target="#errors"
+                             hx-get="{% url 'core:hx_get_file_errors' object.pk %}">
+                            {% block error_block %}
+                                {% include 'core/partials/event_errors.html' %}
+                            {% endblock %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endblock %}
+{% endblock %}
+
+{% block body_js %}
+    <script>
+        function update_selected(event) {
+            $(".selectedBg").removeClass("selectedBg");
+            if (event != 0) {
+                $("#event-" + event).addClass('selectedBg');
+            }
+        }
+    </script>
+{% endblock %}

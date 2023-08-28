@@ -63,3 +63,5 @@ test_*
 /dart_env/
 /settings/
 /logs/*
+
+!core/tests/sample_data/*

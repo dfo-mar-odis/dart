@@ -1,61 +1,18 @@
-import json
-
-from django.contrib import messages
-from django.shortcuts import render
-from django.urls import reverse_lazy
-from django.utils.translation import gettext as _
-from django.http import JsonResponse, HttpResponseRedirect, HttpResponse
-
-from render_block import render_block_to_string
-
-from biochem import models
-from core import models
-
-import logging
-
-logger = logging.getLogger("dart")
+import pandas as pd
+import math
 
 
-def mission_delete(request):
-    if "mission" in request.GET:
-        m = models.Mission.objects.get(pk=request.GET["mission"])
-        m.delete()
+# compute the distance between two points on earth
+def distance(point1: [float, float], point2: [float, float]) -> float:
 
-    messages.success(request=request, message=_("Mission Deleted"))
-    return HttpResponseRedirect(reverse_lazy("core:mission_filter"))
+    lat1 = point1[0] * math.pi / 180
+    lat2 = point2[0] * math.pi / 180
+    lon = (point2[1] - point1[1]) * math.pi / 180
+    R = 6371e3
 
+    inner = math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon)
 
-def update_geographic_regions(request):
-    regions = models.GeographicRegion.objects.all().order_by("pk")
-    selected = regions.last()
-    regions.order_by('name')
-    context = {'geographic_regions': regions, 'selected': selected.pk}
+    # if the inner value is greater than 1, likely due to rounding errors, math.acos will throw a ValueError
+    d = math.acos(1 if inner > 1 else inner) * R
 
-    html = render(request, 'core/partials/geographic_region.html', context)
-    return HttpResponse(html)
-
-
-def add_geo_region(request):
-    region_name = request.POST.get('new_region')
-
-    if region_name is None or region_name.strip() == "":
-        message = _("could not create geographic region, no name provided")
-        logger.error(message)
-
-        html = render_block_to_string('core/mission_settings.html', 'geographic_region_block')
-        # TODO: This should be replaced with a notification using Django Channels
-        return HttpResponse(html)
-
-    regs = models.GeographicRegion.objects.filter(name=region_name)
-
-    if not regs.exists():
-        region = models.GeographicRegion(name=region_name)
-        region.save()
-
-        regs = models.GeographicRegion.objects.filter(name=region_name)
-
-    html = render_block_to_string('core/mission_settings.html', 'geographic_region_form')
-    response = HttpResponse(html)
-    response['HX-Trigger'] = "region_added"
-
-    return response
+    return d

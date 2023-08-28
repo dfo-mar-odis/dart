@@ -1,39 +1,76 @@
-{% extends 'generic_filter.html' %}
+{% extends 'base.html' %}
 {% load bootstrap_icons %}
 {% load bootstrap5 %}
 {% load i18n %}
 
-{% block header_buttons %}
-<span class=""><a class="btn btn-primary" href="{% url 'docs:index' %}">{% custom_icon 'question-circle' %}</a></span>{% endblock %}
-
-{% block extra_cols_header %}
-    <th class="col"></th>
-    <th class="col-1"></th>
-    <th class="col-1"></th>
-    <th class="col-1">{# blank column separating delete btn from other btns #}</th>
-    <th class="col-1"></th>{% endblock %}
-
-{% block extra_cols_table %}
-    <td></td>
-    <td><a class="btn btn-primary" href="{% url 'core:event_details' o.id %}">{% trans 'Events' %}</a></td>
-    <td><a class="btn btn-primary" href="{% url 'core:sample_details' o.id %}">{% trans 'Samples' %}</a></td>
-    <td>
-{#    {% if bio_chem_details_provided %}#}
-        <a class="btn btn-primary" href="{% url 'core:sample_uploads' o.id %}">{% trans 'BioChem' %}</a>
-{#    {% else %}#}
-{#        <button type="button" class="btn btn-secondary" onclick="window.alert('{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}')" title="{% trans 'Could not connect to the BioChem staging database. Check the connection details in the .env file and that you can connect to the database.' %}">{% trans 'BioChem' %}</button>#}
-{#    {% endif %}#}
-    </td>
-<td><a class="btn btn-primary" href="{% url 'core:mission_update' o.id %}">{% custom_icon 'gear' %}</a></td>
-    <td><span></span></td>
-<td><a class="btn btn-danger" onclick="delete_mission({{o.id}})">X</a></td>
+{% block nav_button_block %}
+    <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:sample_type_details' %}" title="{% trans "Sensor Details" %}">{% custom_icon 'speedometer2' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a class="btn btn-outline-danger" href="" title="{% trans "Default Elog Config" %}">{% custom_icon 'body-text' %}</a>
+    </li>
 {% endblock %}
 
-{% block body_js %}
-<script type="application/javascript">
-    function delete_mission(id) {
-      userInput = confirm("{% trans 'are you sure you want to delete this mission?' %}");
-      if (userInput) window.location.href = "{% url 'core:mission_delete' %}?mission=" + id;
-    }
-</script>
+{% block title %}
+    {{ block.super }}
+    {% if new_url %}
+        <span class="col-1"><a class="btn btn-primary" href="{{ new_url }}">{% trans 'New' %}</a></span>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% block filter %}
+        <form id="filter-form" class="form" hx-target="#mission_table" hx-get="{% url 'core:hx_list_missions' %}">
+            <div class="row">
+                {% for field in filter.form %}
+                    <div class="col">
+                        {% bootstrap_field field placeholder="" size="small" %}
+                    </div>
+                {% endfor %}
+                <div class="col">
+                    <br>
+                    <input type="submit" value="Filter" class="btn btn-warning btn-sm">
+                    <a href="." class="btn btn-secondary btn-sm">{% trans 'Clear' %}</a>
+                </div>
+            </div>
+        </form>
+    {% endblock %}
+
+    <table class="table table-sm" hx-target="#mission_table" hx-trigger="load" hx-get="{% url 'core:hx_list_missions' %}">
+        <thead>
+        <tr>
+            <th class="col">Name</th>
+            <th class="col">Start Date</th>
+            <th class="col">End Date</th>
+            <th class="col">Biochem Table</th>
+            <th class="col-2">{# mission details #}</th>
+            <th class="col-1">{# delete #}</th>
+        </tr>
+        </thead>
+
+        <tbody id="mission_table">
+        {% block mission_table_block %}
+        {% for mission in missions %}
+            <tr class="table-row">
+                <td>{{ mission.name }}</td>
+                <td>{{ mission.start_date }}</td>
+                <td>{{ mission.end_date }}</td>
+                <td>{{ mission.biochem_table }}</td>
+                <td>
+                    <a class="btn btn-primary" href="{% url 'core:mission_edit' mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+                    <a class="btn btn-primary" href="{% url 'core:event_details' mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
+                    <a class="btn btn-primary" href="{% url 'core:sample_details' mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
+                    <a class="btn btn-outline-danger" href="{% url 'core:sample_details' mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
+                </td>
+                <td><button type="button" class="btn btn-danger"
+                            hx-target="#mission_table" hx-post="{% url 'core:hx_mission_delete' mission.id %}"
+                            hx-confirm="{% trans 'This will permanently delete the mission and all loaded data, are you sure?' %}">X</button></td>
+            </tr>
+        {% endfor %}
+        {% endblock %}
+        </tbody>
+    </table>
+</div>
 {% endblock %}

@@ -1,5 +1,5 @@
 from django.urls import reverse_lazy
-from django.views.generic import CreateView, UpdateView
+from django.views.generic import CreateView, UpdateView, DetailView, TemplateView
 from django_filters.views import FilterView
 
 from . import urls
@@ -11,12 +11,20 @@ from biochem import models as upload_models
 class GenericViewMixin:
     page_title = None
     home_url = reverse_lazy('core:mission_filter')
+    theme = 'light'
+    settings_url = None
 
     def get_home_url(self):
         return self.home_url
 
     def get_page_title(self):
         return self.page_title
+
+    def get_settings_url(self):
+        return self.settings_url
+
+    def get_theme(self):
+        return self.theme
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -37,6 +45,8 @@ class GenericViewMixin:
             if 'csv_report-list' in [url.name for url in resolver.url_patterns]:
                 context["reports"][resolver.namespace] = f'{resolver.app_name}:csv_report-list'
 
+        context['settings_url'] = self.get_settings_url()
+        context['theme'] = self.get_theme()
         return context
 
 
@@ -67,3 +77,11 @@ class GenericUpdateView(GenericViewMixin, UpdateView):
 
     def get_success_url(self):
         return self.success_url
+
+
+class GenericDetailView(GenericViewMixin, DetailView):
+    pass
+
+
+class GenericTemplateView(GenericViewMixin, TemplateView):
+    pass
