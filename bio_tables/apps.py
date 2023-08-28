@@ -4,6 +4,7 @@ import pytz
 
 from django.apps import AppConfig
 from django.core.management import call_command
+from django.db import connection
 
 from dart2 import settings
 
@@ -19,22 +20,23 @@ class BioTablesAppConf(AppConfig):
         from . import models
 
         try:
-            # check the bio_chem fixture file. If it's been modified then automatically reload the fixtures.
-            fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/biochem_fixtures.json')
-            modified = datetime.fromtimestamp(os.path.getmtime(fixture_file))
-            modified = pytz.utc.localize(modified)
+            if 'bio_tables_bcupdate' in connection.introspection.table_names():
+                # check the bio_chem fixture file. If it's been modified then automatically reload the fixtures.
+                fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/biochem_fixtures.json')
+                modified = datetime.fromtimestamp(os.path.getmtime(fixture_file))
+                modified = pytz.utc.localize(modified)
 
-            if not models.BCUpdate.objects.filter(pk=1).exists():
-                logger.info("Loading biochem fixtures, this may take a moment")
-                call_command('loaddata', 'biochem_fixtures')
-                last_update = models.BCUpdate(last_update=modified)
-                last_update.save()
+                if not models.BCUpdate.objects.filter(pk=1).exists():
+                    logger.info("Loading biochem fixtures, this may take a moment")
+                    call_command('loaddata', 'biochem_fixtures')
+                    last_update = models.BCUpdate(last_update=modified)
+                    last_update.save()
 
-            elif modified.timestamp() != (last_update := models.BCUpdate.objects.get(pk=1)).last_update.timestamp():
-                logger.info("Loading biochem fixtures, this may take a moment")
-                call_command('loaddata', 'biochem_fixtures')
-                last_update.last_update = modified
-                last_update.save()
+                elif modified.timestamp() != (last_update := models.BCUpdate.objects.get(pk=1)).last_update.timestamp():
+                    logger.info("Loading biochem fixtures, this may take a moment")
+                    call_command('loaddata', 'biochem_fixtures')
+                    last_update.last_update = modified
+                    last_update.save()
 
         except Exception as ex:
             logger.error('Could not load biochem fixtures')
