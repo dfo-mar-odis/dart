@@ -4,7 +4,7 @@ if not exist ".\logs\" (
   mkdir logs
 )
 
-set update_version=0.0
+set update_version=0.01
 set first_run=0
 set server_path=.\dart_env\Scripts\activate.bat
 if not exist ".\dart_env\" (
