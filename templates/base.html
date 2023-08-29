@@ -86,6 +86,20 @@
 <script type="text/javascript" src="{% static 'dart/js/jquery.min.js' %}"></script>
 
 <script type="text/javascript" src="{% static 'dart/js/htmx_web_sockets.js' %}"></script>
+<script>
+    {# This is to handle htmx errors so the user doesn't endup staring at an infinite save/load dialog #}
+    document.addEventListener('htmx:responseError', function(evt) {
+        let element_id = evt.target.id;
+        let bad_element = document.getElementById(element_id);
+        let replace_with = document.createElement('div');
+        let error_text = document.createTextNode("{% trans "Something went wrong, check ./logs/error.log" %}")
+        replace_with.id = element_id;
+        replace_with.setAttribute('class', 'alert alert-danger mt-2');
+        replace_with.append(error_text)
+
+        bad_element.parentNode.replaceChild(replace_with, bad_element);
+    });
+</script>
 {% block body_js %}{% endblock %}
 
 </body>

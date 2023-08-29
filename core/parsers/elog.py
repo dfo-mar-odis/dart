@@ -89,7 +89,8 @@ def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> di
     # All mid objects start with $@MID@$ and end with a series of equal signs and a blank line.
     # Using regular expressions we'll split the whole stream in to mid objects, then process each object
     # each mid object represents an action, events are made up of multiple actions
-    paragraph = re.split('====*\n\n', stream.read().strip())
+    data = stream.read().strip().replace("\r\n", "\n")
+    paragraph = re.split('====*\n\n', data)
     for mid in paragraph:
 
         # Each variable in a mid object starts with the label followed by a colon followed by the value
@@ -132,9 +133,10 @@ def process_stations(station_queue: [str]) -> None:
     added_stations = set()
     existing_stations = core_models.Station.objects.all()
     for station in station_queue:
-        if station.upper() not in added_stations and not existing_stations.filter(name__iexact=station).exists():
-            added_stations.add(station.upper())
-            stations.append(core_models.Station(name=station))
+        stn = station.upper()
+        if stn not in added_stations and not existing_stations.filter(name__iexact=stn).exists():
+            added_stations.add(stn)
+            stations.append(core_models.Station(name=stn))
 
     core_models.Station.objects.bulk_create(stations)
 
@@ -217,8 +219,8 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             if event_id in processed_events:
                 continue
 
-            station = stations.get(name=buffer.pop(station_field))
-            instrument = instruments.get(name=buffer.pop(instrument_field))
+            station = stations.get(name__iexact=buffer.pop(station_field))
+            instrument = instruments.get(name__iexact=buffer.pop(instrument_field))
             sample_id: str = buffer.pop(sample_id_field)
             end_sample_id: str = buffer.pop(end_sample_id_field)
 
@@ -348,7 +350,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                 if comment and comment != "":
                     action.comment = comment
 
-                if sounding and sounding != "":
+                if sounding and sounding != "" and str(sounding).isnumeric():
                     action.sounding = sounding
 
                 if action_type == core_models.ActionType.other:

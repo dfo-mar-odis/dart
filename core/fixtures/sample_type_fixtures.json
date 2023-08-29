@@ -456,6 +456,42 @@
     }
 },
 {
+    "model": "core.sampletype",
+    "pk": 39,
+    "fields": {
+        "short_name": "f12",
+        "long_name": "Freon 12",
+        "priority": 1,
+        "comments": null,
+        "datatype": 90001136,
+        "is_sensor": false
+    }
+},
+{
+    "model": "core.sampletype",
+    "pk": 40,
+    "fields": {
+        "short_name": "sf6",
+        "long_name": "Sulfur Hexafluoride",
+        "priority": 1,
+        "comments": null,
+        "datatype": 90001135,
+        "is_sensor": false
+    }
+},
+    {
+    "model": "core.sampletype",
+    "pk": 41,
+    "fields": {
+        "short_name": "pH",
+        "long_name": "pH",
+        "priority": 1,
+        "comments": null,
+        "datatype": 90000330,
+        "is_sensor": false
+    }
+},
+{
     "model": "core.sampletypeconfig",
     "pk": 1,
     "fields": {
@@ -1763,5 +1799,40 @@
         "allow_blank": false,
         "allow_replicate": true
     }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 39,
+        "file_type": "csv",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "f12_pmol_L",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "core.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 40,
+        "file_type": "csv",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "sf6_fmol_L",
+        "tab": 0,
+        "flag_field": "",
+        "replicate_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
 }
+
 ]

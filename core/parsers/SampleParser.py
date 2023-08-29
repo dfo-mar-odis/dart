@@ -16,25 +16,36 @@ excel_extensions = ['xls', 'xlsx', 'xlsm']
 
 
 def get_file_configs(data, file_type):
-    sample_configs = core_models.SampleTypeConfig.objects.filter(file_type=file_type)
+    sample_configs = core_models.SampleTypeConfig.objects.filter(file_type=file_type).order_by('tab')
 
     # It's expensive to read headers.
     # If a config file matches a sample_field and a value_filed to a file then we'll assume we found
     # the correct header row for the correct tab, then we can narrow down our configs using the same settings
     lowercase_fields = []
     matching_config = None
+    curtab = -1
+    df = None
     for sample_type in sample_configs:
-        if not lowercase_fields:
-            # get the field choices, then see if they match the file_config's sample_type fields
-            tab, skip, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
-            lowercase_fields = [field[0] for field in field_choices]
+        if file_type == 'csv':
+            if not lowercase_fields:
+                # get the field choices, then see if they match the file_config's sample_type fields
+                tab, skip, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
+                lowercase_fields = [field[0] for field in field_choices]
+
+        elif file_type in excel_extensions:
+            # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
+            # if the tab changes
+            if curtab != sample_type.tab:
+                df = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None)
+                curtab = sample_type.tab
+
+            lowercase_fields = [str(column).lower() for column in df.iloc[sample_type.skip]]
 
         if sample_type.sample_field in lowercase_fields and sample_type.value_field in lowercase_fields:
             matching_config = sample_type
             break
 
         lowercase_fields = []
-
     if matching_config:
         # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row with
         # values fields in the available columns should give us all file configurations for this type of file that
