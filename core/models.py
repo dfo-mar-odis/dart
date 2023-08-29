@@ -394,6 +394,9 @@ class SampleType(models.Model):
     is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
                                     help_text=_("Identify this sample type as a type of sensor"))
 
+    class Meta:
+        ordering = ('is_sensor', 'short_name')
+
     def __str__(self):
         return self.short_name + (f" - {self.long_name}" if self.long_name else "")
 
@@ -439,7 +442,7 @@ class SampleTypeConfig(models.Model):
 
 
 class MissionSampleConfig(models.Model):
-    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
+    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_configs",
                                 on_delete=models.CASCADE, help_text=_("Mission a sample type was loaded for"))
     config = models.ForeignKey(SampleTypeConfig, verbose_name="Sample Configuration",
                                related_name="mission_sample_configs",

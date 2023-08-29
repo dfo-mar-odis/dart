@@ -2,6 +2,7 @@ import datetime
 import re
 import csv
 
+from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
@@ -588,3 +589,53 @@ class BottleSelection(forms.Form):
         )
 
         self.helper.add_input(Submit('submit', _("Submit")))
+
+
+def SaveLoadComponent(id, message, hx_post: str = None, hx_get: str = None, alert_type: str = 'info',
+                      hx_trigger: str = 'load', hx_target: str = None):
+    # return a loading alert that calls this methods post request
+    # Let's make some soup
+    soup = BeautifulSoup('', "html.parser")
+
+    root_div = soup.new_tag("div")
+    soup.append(root_div)
+
+    # creates an alert dialog with an animated progress bar to let the user know we're saving or loading something
+    # type should be a bootstrap css type, (danger, info, warning, success, etc.)
+
+    # create an alert area saying we're loading
+    alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
+    alert_div.string = message
+
+    # create a progress bar to give the user something to stare at while they wait.
+    progress_bar = soup.new_tag("div")
+    progress_bar.attrs = {
+        'class': "progress-bar progress-bar-striped progress-bar-animated",
+        'role': "progressbar",
+        'style': "width: 100%"
+    }
+    progress_bar_div = soup.new_tag("div", attrs={'class': "progress"})
+    progress_bar_div.append(progress_bar)
+
+    alert_div.append(progress_bar_div)
+
+    root_div.attrs = {
+        'id': id,
+        'hx-target': "#div_id_sample_type_holder",
+    }
+
+    if hx_trigger:
+        root_div.attrs['hx-trigger'] = hx_trigger
+
+    if hx_target:
+        root_div.attrs['hx-target'] = hx_target
+
+    if hx_get:
+        root_div.attrs['hx-get'] = hx_get
+    elif hx_post:
+        root_div.attrs['hx-post'] = hx_post
+
+    root_div.append(alert_div)
+    soup.append(root_div)
+
+    return soup

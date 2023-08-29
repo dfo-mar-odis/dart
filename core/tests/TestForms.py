@@ -225,7 +225,7 @@ class TestSampleFileConfiguration(DartTestCase):
         sample_field = 'sample'
         value_field = 'o2_concentration(ml/l)'
 
-        expected_sample_type_load_form_id = f'div_id_{1}'
+        expected_sample_type_load_form_id = f'div_id_sample_config_card_{1}'
 
         url = reverse("core:save_sample_config")
 
@@ -439,7 +439,7 @@ class TestSampleFileConfiguration(DartTestCase):
         soup = BeautifulSoup(response.content, 'html.parser')
         logger.debug(soup)
 
-        message = soup.find(id=f"div_id_loading_div_id_{oxy_sample_type_config.pk}")
+        message = soup.find(id=f"div_id_loading_div_id_sample_config_card_{oxy_sample_type_config.pk}")
 
         self.assertIsNotNone(message)
         self.assertEquals(message.attrs['hx-trigger'], 'load')
@@ -467,7 +467,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        message_div_id = f'div_id_{oxy_sample_type_config.pk}'
+        message_div_id = f'div_id_sample_config_card_{oxy_sample_type_config.pk}'
         url = reverse("core:load_samples", args=(oxy_sample_type_config.pk,))
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:

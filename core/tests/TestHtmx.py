@@ -1,3 +1,5 @@
+import os
+
 from django.test import tag, Client
 from django.urls import reverse_lazy
 
@@ -36,11 +38,12 @@ class TestElogUpload(DartTestCase):
             logger.info(error)
 
     def test_elog_uplaod_missing_fields(self):
+        # Errors should be reported if a message object is missing the instrument and/or station field
         logger.info("Running test_elog_uplaod_missing_mid")
 
         file_name = 'bad.log'
 
-        with open(self.file_location+file_name, 'rb') as fp:
+        with open(os.path.join(self.file_location, file_name), 'rb') as fp:
             self.client.post(self.url, {'event': fp})
 
         errors = self.mission.file_errors.all()

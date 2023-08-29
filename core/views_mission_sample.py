@@ -45,30 +45,6 @@ def process_file(file) -> [str, str, str]:
     return file_name, file_type, data
 
 
-def get_alert(soup, message, alert_type):
-    # creates an alert dialog with an animated progress bar to let the user know we're saving or loading something
-
-    # type should be a bootstrap css type, (danger, info, warning, success, etc.)
-
-    # create an alert area saying we're loading
-    alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
-    alert_div.string = message
-
-    # create a progress bar to give the user something to stare at while they wait.
-    progress_bar = soup.new_tag("div")
-    progress_bar.attrs = {
-        'class': "progress-bar progress-bar-striped progress-bar-animated",
-        'role': "progressbar",
-        'style': "width: 100%"
-    }
-    progress_bar_div = soup.new_tag("div", attrs={'class': "progress"})
-    progress_bar_div.append(progress_bar)
-
-    alert_div.append(progress_bar_div)
-
-    return alert_div
-
-
 def get_file_config_forms(data, file_type):
     config_forms = []
     file_configs = get_file_configs(data, file_type)
@@ -207,21 +183,16 @@ def save_sample_config(request, **kwargs):
             url = reverse_lazy("core:save_sample_config")
             oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
 
-        soup = BeautifulSoup('', "html.parser")
-
-        root_div = soup.new_tag("div")
-        alert_div = get_alert(soup, _("Saving"), 'info')
-
-        root_div.attrs = {
+        attrs = {
             'id': "div_id_loaded_sample_type_message",
-            'hx-trigger': "load",
-            'hx-target': "#div_id_sample_type_holder",
-            'hx-select-oob': oob_select,
-            'hx-post': url,
+            'message': _('Saving'),
+            'alert_type': 'info',
+            'hx_target': "#div_id_sample_type_holder",
+            'hx_post': url
         }
-
-        root_div.append(alert_div)
-        soup.append(root_div)
+        soup = forms.SaveLoadComponent(**attrs)
+        root_div = soup.find(id="div_id_loaded_sample_type_message")
+        root_div['hx-select-oob'] = oob_select
 
         return HttpResponse(soup)
     elif request.method == "POST":
@@ -289,20 +260,14 @@ def new_sample_config(request, **kwargs):
         # Let's make some soup
         url = reverse_lazy("core:new_sample_config")
 
-        soup = BeautifulSoup('', "html.parser")
-
-        root_div = soup.new_tag("div")
-        alert_div = get_alert(soup, _("Loading"), 'info')
-
-        root_div.attrs = {
+        attrs = {
             'id': "div_id_loaded_sample_type_message",
-            'hx-trigger': "load",
-            'hx-post': url,
-            'hx-target': "#div_id_sample_type_holder",
+            'message': _("Loading"),
+            'alert_type': 'info',
+            'hx_post': url,
+            'hx_target': "#div_id_sample_type_holder"
         }
-
-        root_div.append(alert_div)
-        soup.append(root_div)
+        soup = forms.SaveLoadComponent(**attrs)
 
         return HttpResponse(soup)
     elif request.method == "POST":
@@ -353,19 +318,19 @@ def load_sample_config(request, **kwargs):
             soup = BeautifulSoup('<div id="div_id_loaded_sample_type"><div id=div_id_loaded_samples_list></div</div>',
                                  "html.parser")
 
-            root_div = soup.new_tag("div")
-            alert_div = get_alert(soup, _("Loading"), 'info')
-
-            root_div.attrs = {
+            attrs = {
                 'id': "div_id_loaded_sample_type_message",
-                'hx-trigger': "load",
-                'hx-post': url,
-                'hx-target': "#div_id_loaded_sample_type_message",
-                'hx-swap': "outerHTML",
-                'hx-select-oob': oob_select,
+                'message': _("Loading"),
+                'alert_type': 'info',
+                'hx_target': "#div_id_loaded_sample_type_message",
+                'hx_post': url
             }
+            dialog_soup = forms.SaveLoadComponent(**attrs)
+            root_div = dialog_soup.find(id='div_id_loaded_sample_type_message')
 
-            root_div.append(alert_div)
+            root_div['hx-swap'] = "outerHTML"
+            root_div['hx-select-oob'] = oob_select,
+
             soup.find(id="div_id_loaded_sample_type").append(root_div)
 
             return HttpResponse(soup)
@@ -441,19 +406,19 @@ def load_samples(request, **kwargs):
         root_div = soup.new_tag("div")
         root_div.attrs['id'] = f'{message_div_id}_message'
 
-        message_div = soup.new_tag("div")
-
         url = reverse_lazy("core:load_samples", args=(config_id,))
-        message_div.attrs = {
+        attrs = {
             'id': f'div_id_loading_{message_div_id}',
-            'hx-trigger': "load",
-            'hx-post': url,
-            'hx-target': f'#div_id_loading_{message_div_id}',
-            'hx-swap': "outerHTML",
-            'hx-select-oob': f"#{message_div_id}_load_button, #{message_div_id}_message"
+            'message': _("Loading"),
+            'alert_type': 'info',
+            'hx_target': f'#div_id_loading_{message_div_id}',
+            'hx_post': url
         }
+        dialog_soup = forms.SaveLoadComponent(**attrs)
+        message_div = dialog_soup.find(id=f'div_id_loading_{message_div_id}')
 
-        message_div.append(get_alert(soup, _("Loading"), 'info'))
+        message_div['hx-swap'] = "outerHTML"
+        message_div['hx-select-oob'] = f"#{message_div_id}_load_button, #{message_div_id}_message"
 
         button = soup.new_tag('button')
         button.attrs['id'] = f'{message_div_id}_load_button'
@@ -503,6 +468,7 @@ def load_samples(request, **kwargs):
         button_class = "btn btn-success btn-sm"
         icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
         try:
+            logger.info(f"Starting sample load for file {file_name}")
             parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
 
             if (errors := models.FileError.objects.filter(file_name=file_name)).exists():
