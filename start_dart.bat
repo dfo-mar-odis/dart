@@ -4,9 +4,16 @@ if not exist ".\logs\" (
   mkdir logs
 )
 
-set dart_version=0.01
+set dart_version=2.00.01
 
-echo "Updating Application"
-git pull origin master >> logs/start_dart.log
+REM if this is not a git repo, and the application was installed from zip file we just want to run update
+REM if this is a cloned version of the git repo we want to pull from master, then run the update
 
-call .\update.bat
+git branch | find "* master" > NULL & if ERRORLEVEL 1 (
+	call .\update.bat
+) else (
+	echo "Updating Application"
+	git pull origin master >> logs/start_dart.log
+
+	call .\update.bat
+)
