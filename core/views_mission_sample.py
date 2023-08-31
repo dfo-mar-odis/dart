@@ -187,12 +187,12 @@ def save_sample_config(request, **kwargs):
             'id': "div_id_loaded_sample_type_message",
             'message': _('Saving'),
             'alert_type': 'info',
-            'hx_target': "#div_id_sample_type_holder",
-            'hx_post': url
+            'hx-trigger': "load",
+            'hx-target': "#div_id_sample_type_holder",
+            'hx-post': url,
+            'hx-select-oob': oob_select
         }
         soup = forms.SaveLoadComponent(**attrs)
-        root_div = soup.find(id="div_id_loaded_sample_type_message")
-        root_div['hx-select-oob'] = oob_select
 
         return HttpResponse(soup)
     elif request.method == "POST":
@@ -264,8 +264,9 @@ def new_sample_config(request, **kwargs):
             'id': "div_id_loaded_sample_type_message",
             'message': _("Loading"),
             'alert_type': 'info',
-            'hx_post': url,
-            'hx_target': "#div_id_sample_type_holder"
+            'hx-post': url,
+            'hx-target': "#div_id_sample_type_holder",
+            'hx-trigger': "load"
         }
         soup = forms.SaveLoadComponent(**attrs)
 
@@ -322,14 +323,14 @@ def load_sample_config(request, **kwargs):
                 'id': "div_id_loaded_sample_type_message",
                 'message': _("Loading"),
                 'alert_type': 'info',
-                'hx_target': "#div_id_loaded_sample_type_message",
-                'hx_post': url
+                'hx-target': "#div_id_loaded_sample_type_message",
+                'hx-post': url,
+                'hx-trigger': "load",
+                'hx-swap': "outerHTML",
+                'hx-select-oob': oob_select,
             }
             dialog_soup = forms.SaveLoadComponent(**attrs)
             root_div = dialog_soup.find(id='div_id_loaded_sample_type_message')
-
-            root_div['hx-swap'] = "outerHTML"
-            root_div['hx-select-oob'] = oob_select,
 
             soup.find(id="div_id_loaded_sample_type").append(root_div)
 
@@ -411,14 +412,14 @@ def load_samples(request, **kwargs):
             'id': f'div_id_loading_{message_div_id}',
             'message': _("Loading"),
             'alert_type': 'info',
-            'hx_target': f'#div_id_loading_{message_div_id}',
-            'hx_post': url
+            'hx-target': f'#div_id_loading_{message_div_id}',
+            'hx-post': url,
+            'hx-trigger': "load",
+            'hx-swap': "outerHTML",
+            'hx-select-oob': f"#{message_div_id}_load_button, #{message_div_id}_message"
         }
         dialog_soup = forms.SaveLoadComponent(**attrs)
         message_div = dialog_soup.find(id=f'div_id_loading_{message_div_id}')
-
-        message_div['hx-swap'] = "outerHTML"
-        message_div['hx-select-oob'] = f"#{message_div_id}_load_button, #{message_div_id}_message"
 
         button = soup.new_tag('button')
         button.attrs['id'] = f'{message_div_id}_load_button'
