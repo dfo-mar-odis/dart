@@ -483,8 +483,8 @@
     "model": "core.sampletype",
     "pk": 41,
     "fields": {
-        "short_name": "pH",
-        "long_name": "pH",
+        "short_name": "ph_25",
+        "long_name": "pH at 25°C",
         "priority": 1,
         "comments": null,
         "datatype": 90000330,
