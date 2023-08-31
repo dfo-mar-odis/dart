@@ -1,0 +1,316 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Diagram>
+  <ID>DATABASE</ID>
+  <OriginalElement>60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_action</OriginalElement>
+  <nodes>
+    <node x="242.5000000000001" y="186.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcsamplehandling</node>
+    <node x="1419.9111683636706" y="188.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission</node>
+    <node x="537.7500000000001" y="429.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdataretrieval</node>
+    <node x="1467.4111683636706" y="913.0000000000001">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileerror</node>
+    <node x="1386.4354811854814" y="1662.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_biochemupload</node>
+    <node x="1096.5858724608722" y="517.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_station</node>
+    <node x="1760.3803889128294" y="474.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_elogconfig</node>
+    <node x="1180.1868548118548" y="891.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event</node>
+    <node x="2107.235901503126" y="474.00000000000006">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileconfiguration</node>
+    <node x="1884.125" y="1332.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_variablename</node>
+    <node x="1244.5858724608722" y="506.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_instrument</node>
+    <node x="909.5000000000001" y="186.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcanalysis</node>
+    <node x="1477.9368548118548" y="1321.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_instrumentsensor</node>
+    <node x="1216.875" y="1980.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_missionsampleconfig</node>
+    <node x="10.5" y="175.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcpreservation</node>
+    <node x="361.0000000000001" y="803.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype</node>
+    <node x="1068.9368548118548" y="1310.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_validationerror</node>
+    <node x="732.6854811854814" y="1266.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_bottle</node>
+    <node x="297.1250000000001" y="1936.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_discretesamplevalue</node>
+    <node x="434.5000000000001" y="1277.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletype</node>
+    <node x="522.7500000000001" y="1585.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletypeconfig</node>
+    <node x="496.5000000000001" y="186.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcunit</node>
+    <node x="1500.1611683636706" y="22.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_geographicregion</node>
+    <node x="1261.9368548118548" y="1222.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_action</node>
+    <node x="1153.3535214785213" y="0.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter</node>
+    <node x="1849.125" y="1673.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_variablefield</node>
+    <node x="1688.9368548118548" y="617.0409694171957">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_error</node>
+    <node x="703.5000000000001" y="186.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcstorage</node>
+    <node x="382.7500000000001" y="1673.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sample</node>
+    <node x="1954.3496094619882" y="188.0">60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileconfigurationmapping</node>
+  </nodes>
+  <notes />
+  <edges>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcsamplehandling" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="0.0" y="-61.5" />
+      <point x="359.5000000000001" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_variablefield" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_action" relationship="REFERENCES">
+      <point x="-39.0" y="-61.5" />
+      <point x="1888.125" y="1553.0" />
+      <point x="1359.9368548118548" y="1553.0" />
+      <point x="0.0" y="149.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" relationship="REFERENCES">
+      <point x="0.0" y="-94.5" />
+      <point x="516.0000000000001" y="1195.0" />
+      <point x="524.5000000000001" y="1195.0" />
+      <point x="54.5" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_discretesamplevalue" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" relationship="REFERENCES">
+      <point x="-52.5" y="-94.5" />
+      <point x="349.6250000000001" y="1910.0" />
+      <point x="366.8750000000001" y="1910.0" />
+      <point x="366.8750000000001" y="1195.0" />
+      <point x="415.5000000000001" y="1195.0" />
+      <point x="-54.5" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_biochemupload" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" relationship="REFERENCES">
+      <point x="44.25" y="-72.5" />
+      <point x="1519.1854811854814" y="1563.0" />
+      <point x="1678.4368548118548" y="1563.0" />
+      <point x="1678.4368548118548" y="781.0" />
+      <point x="1542.9111683636706" y="781.0" />
+      <point x="0.0" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcpreservation" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="0.0" y="-72.5" />
+      <point x="116.5" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_error" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" relationship="REFERENCES">
+      <point x="0.0" y="-61.5" />
+      <point x="1764.4368548118548" y="678.5409694171957" />
+      <point x="1542.9111683636706" y="678.5409694171957" />
+      <point x="0.0" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcanalysis" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="-1.1368683772161603E-13" y="-61.5" />
+      <point x="1002.5" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdataretrieval" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcunit" relationship="REFERENCES">
+      <point x="-57.0" y="-127.5" />
+      <point x="594.7500000000001" y="347.0" />
+      <point x="636.0000000000001" y="347.0" />
+      <point x="46.5" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileerror" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" relationship="REFERENCES">
+      <point x="0.0" y="-83.5" />
+      <point x="0.0" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="-61.5" y="-182.5" />
+      <point x="1481.4111683636706" y="319.64127546501334" />
+      <point x="1303.3535214785213" y="319.64127546501334" />
+      <point x="50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_discretesamplevalue" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sample" relationship="REFERENCES">
+      <point x="52.5" y="-94.5" />
+      <point x="454.6250000000001" y="1910.0" />
+      <point x="442.7500000000001" y="1910.0" />
+      <point x="0.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_validationerror" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" relationship="REFERENCES">
+      <point x="0.0" y="-61.5" />
+      <point x="1155.4368548118548" y="1195.0" />
+      <point x="1257.6868548118548" y="1195.0" />
+      <point x="0.0" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_station" relationship="REFERENCES">
+      <point x="-51.66666666666674" y="-94.5" />
+      <point x="1206.020188145188" y="781.0" />
+      <point x="1160.5858724608722" y="781.0" />
+      <point x="0.0" y="39.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_variablefield" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_variablename" relationship="REFERENCES">
+      <point x="39.0" y="-61.5" />
+      <point x="0.0" y="39.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="-93.42857142857144" y="-182.5" />
+      <point x="376.57142857142867" y="781.0" />
+      <point x="0.0" y="781.0" />
+      <point x="0.0" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_biochemupload" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletype" relationship="REFERENCES">
+      <point x="-44.25" y="-72.5" />
+      <point x="1430.6854811854814" y="1563.0" />
+      <point x="511.0000000000001" y="1563.0" />
+      <point x="511.0000000000001" y="1543.0" />
+      <point x="475.2500000000001" y="1543.0" />
+      <point x="-40.75" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcunit" relationship="REFERENCES">
+      <point x="0.0" y="-182.5" />
+      <point x="470.0000000000001" y="347.0" />
+      <point x="543.0000000000001" y="347.0" />
+      <point x="-46.5" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_missionsampleconfig" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" relationship="REFERENCES">
+      <point x="53.5" y="-50.5" />
+      <point x="1377.375" y="1910.0" />
+      <point x="2240.4368548118546" y="1910.0" />
+      <point x="2240.4368548118546" y="806.8387953941542" />
+      <point x="1542.9111683636706" y="806.8387953941542" />
+      <point x="0.0" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_elogconfig" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" relationship="REFERENCES">
+      <point x="-49.75" y="-39.5" />
+      <point x="1810.1303889128294" y="513.5" />
+      <point x="1542.9111683636706" y="513.5" />
+      <point x="0.0" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sample" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_bottle" relationship="REFERENCES">
+      <point x="30.0" y="-61.5" />
+      <point x="472.7500000000001" y="1553.0" />
+      <point x="811.1854811854814" y="1553.0" />
+      <point x="0.0" y="105.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletypeconfig" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletype" relationship="REFERENCES">
+      <point x="0.0" y="-149.5" />
+      <point x="619.2500000000001" y="1543.0" />
+      <point x="556.7500000000001" y="1543.0" />
+      <point x="40.75" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdataretrieval" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="57.0" y="-127.5" />
+      <point x="708.7500000000001" y="347.0" />
+      <point x="693.0000000000001" y="347.0" />
+      <point x="693.0000000000001" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcstorage" relationship="REFERENCES">
+      <point x="62.285714285714334" y="-182.5" />
+      <point x="532.2857142857144" y="771.0" />
+      <point x="796.5000000000001" y="771.0" />
+      <point x="0.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_instrumentsensor" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" relationship="REFERENCES">
+      <point x="0.0" y="-50.5" />
+      <point x="1572.9368548118548" y="1195.0" />
+      <point x="1257.6868548118548" y="1195.0" />
+      <point x="0.0" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcsamplehandling" relationship="REFERENCES">
+      <point x="-31.142857142857167" y="-182.5" />
+      <point x="438.8571428571429" y="761.0" />
+      <point x="359.5000000000001" y="761.0" />
+      <point x="0.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_bottle" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" relationship="REFERENCES">
+      <point x="0.0" y="-105.5" />
+      <point x="811.1854811854814" y="1195.0" />
+      <point x="1257.6868548118548" y="1195.0" />
+      <point x="0.0" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_instrument" relationship="REFERENCES">
+      <point x="0.0" y="-94.5" />
+      <point x="1257.6868548118548" y="771.0" />
+      <point x="1317.5858724608722" y="771.0" />
+      <point x="0.0" y="50.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileconfigurationmapping" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileconfiguration" relationship="REFERENCES">
+      <point x="0.0" y="-72.5" />
+      <point x="2077.349609461988" y="370.5" />
+      <point x="2172.8367075811393" y="370.5" />
+      <point x="2172.8367075811393" y="553.0" />
+      <point x="46.5" y="39.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcanalysis" relationship="REFERENCES">
+      <point x="93.42857142857144" y="-182.5" />
+      <point x="563.4285714285716" y="781.0" />
+      <point x="1002.5000000000001" y="781.0" />
+      <point x="0.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_missionsampleconfig" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletypeconfig" relationship="REFERENCES">
+      <point x="-53.5" y="-50.5" />
+      <point x="1270.375" y="1910.0" />
+      <point x="619.2500000000001" y="1910.0" />
+      <point x="0.0" y="149.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sample" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_sampletype" relationship="REFERENCES">
+      <point x="-30.0" y="-61.5" />
+      <point x="412.7500000000001" y="1563.0" />
+      <point x="511.0000000000001" y="1563.0" />
+      <point x="511.0000000000001" y="1543.0" />
+      <point x="475.2500000000001" y="1543.0" />
+      <point x="-40.75" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" relationship="REFERENCES">
+      <point x="51.66666666666674" y="-94.5" />
+      <point x="1309.3535214785215" y="781.0" />
+      <point x="1542.9111683636706" y="781.0" />
+      <point x="0.0" y="182.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_elogconfig" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_fileconfiguration" relationship="REFERENCES">
+      <point x="49.75" y="-39.5" />
+      <point x="1909.6303889128294" y="513.5" />
+      <point x="2153.735901503126" y="513.5" />
+      <point x="-46.5" y="39.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcpreservation" relationship="REFERENCES">
+      <point x="-62.285714285714334" y="-182.5" />
+      <point x="407.7142857142858" y="771.0" />
+      <point x="116.50000000000011" y="771.0" />
+      <point x="0.0" y="72.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatatype" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdataretrieval" relationship="REFERENCES">
+      <point x="31.14285714285711" y="-182.5" />
+      <point x="501.1428571428572" y="761.0" />
+      <point x="651.7500000000001" y="761.0" />
+      <point x="0.0" y="127.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_mission" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_geographicregion" relationship="REFERENCES">
+      <point x="61.5" y="-182.5" />
+      <point x="1604.4111683636706" y="347.0" />
+      <point x="1596.1611683636706" y="347.0" />
+      <point x="0.0" y="39.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcstorage" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="0.0" y="-61.5" />
+      <point x="796.5000000000001" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_action" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.core_event" relationship="REFERENCES">
+      <point x="0.0" y="-149.5" />
+      <point x="1359.9368548118548" y="1195.0" />
+      <point x="1257.6868548118548" y="1195.0" />
+      <point x="0.0" y="94.5" />
+    </edge>
+    <edge source="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcunit" target="60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter" relationship="REFERENCES">
+      <point x="0.0" y="-61.5" />
+      <point x="589.5000000000001" y="154.0" />
+      <point x="516.3178071928071" y="154.0" />
+      <point x="516.3178071928071" y="144.0" />
+      <point x="1203.3535214785213" y="144.0" />
+      <point x="-50.0" y="61.5" />
+    </edge>
+  </edges>
+  <settings layout="Hierarchic" zoom="0.5079254079254079" showDependencies="false" x="1423.4203763194128" y="270.38412115649385" />
+  <SelectedNodes>
+    <node>60e10d80-4527-474f-b71e-6ed5e1a67871.TABLE:main.bio_tables_bcdatacenter</node>
+  </SelectedNodes>
+  <Categories>
+    <Category>Columns</Category>
+    <Category>Comments</Category>
+    <Category>Key columns</Category>
+    <Category>Virtual foreign keys</Category>
+  </Categories>
+</Diagram>
+

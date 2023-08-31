@@ -31,6 +31,4 @@ python .\manage.py collectstatic --noinput
 echo "Creating/Updating local database"
 python .\manage.py migrate >> logs/start_dart.log
 
-if exist ".\settings\DefaultElogConfiguration.json" python .\manage.py loaddata DefaultElogConfiguration
-
 call server.bat
