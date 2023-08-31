@@ -1,4 +1,5 @@
 from asgiref.sync import async_to_sync
+from bs4 import BeautifulSoup
 from channels.generic.websocket import WebsocketConsumer
 from django.template.loader import render_to_string
 
@@ -41,8 +42,7 @@ class CoreConsumer(WebsocketConsumer):
         self.send(text_data=html)
 
     def processing_elog_message(self, event):
-        html = render_block_to_string('core/mission_events.html', 'status_block',
-                                      context={'object': event['mission'], 'msg': event['message']})
+        html = BeautifulSoup(f'<div id="status">{event["message"]}</div>', 'html.parser')
         self.send(text_data=html)
 
     def update_errors(self, event):

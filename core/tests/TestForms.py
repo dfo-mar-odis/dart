@@ -22,6 +22,42 @@ import logging
 logger = logging.getLogger("dart.test")
 
 
+@tag('forms', 'form_mission_events')
+class TestMissionEventForm(DartTestCase):
+
+    def setUp(self) -> None:
+        self.client = Client()
+        self.mission = core_factory.MissionFactory()
+
+    def test_events_card(self):
+        # the mission events page should have a card on it that contains an upload button
+        url = reverse("core:event_details", args=(self.mission.id,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        upload_form = soup.find(id="elog_upload_file_form_id")
+        self.assertIsNotNone(upload_form)
+
+        form_input = soup.find(id="event_file_input_id")
+        self.assertIsNotNone(form_input)
+
+    def test_events_upload_response(self):
+        # the response from a get request to core:hx_elog_upload url should contain a loading alert
+        # the loading alert should have a post request to core:hx_elog_upload to start the processing
+        # of uploaded files.
+        url = reverse("core:hx_upload_elog", args=(self.mission.id,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        div_load_alert = soup.find(id='div_id_upload_elog_load')
+
+        self.assertIsNotNone(div_load_alert)
+        self.assertIn('hx-post', div_load_alert.attrs)
+
+
 @tag('forms', 'form_sample_config')
 class TestSampleFileConfiguration(DartTestCase):
 

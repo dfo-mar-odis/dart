@@ -591,8 +591,10 @@ class BottleSelection(forms.Form):
         self.helper.add_input(Submit('submit', _("Submit")))
 
 
-def SaveLoadComponent(id, message, hx_post: str = None, hx_get: str = None, alert_type: str = 'info',
-                      hx_trigger: str = 'load', hx_target: str = None):
+def SaveLoadComponent(id, message, **kwargs):
+
+    alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
+
     # return a loading alert that calls this methods post request
     # Let's make some soup
     soup = BeautifulSoup('', "html.parser")
@@ -605,7 +607,10 @@ def SaveLoadComponent(id, message, hx_post: str = None, hx_get: str = None, aler
 
     # create an alert area saying we're loading
     alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
-    alert_div.string = message
+    alert_msg = soup.new_tag('div', attrs={'id': f'{id}_message'})
+    alert_msg.string = message
+
+    alert_div.append(alert_msg)
 
     # create a progress bar to give the user something to stare at while they wait.
     progress_bar = soup.new_tag("div")
@@ -621,19 +626,10 @@ def SaveLoadComponent(id, message, hx_post: str = None, hx_get: str = None, aler
 
     root_div.attrs = {
         'id': id,
-        'hx-target': "#div_id_sample_type_holder",
     }
 
-    if hx_trigger:
-        root_div.attrs['hx-trigger'] = hx_trigger
-
-    if hx_target:
-        root_div.attrs['hx-target'] = hx_target
-
-    if hx_get:
-        root_div.attrs['hx-get'] = hx_get
-    elif hx_post:
-        root_div.attrs['hx-post'] = hx_post
+    for attr, val in kwargs.items():
+        root_div.attrs[attr] = val
 
     root_div.append(alert_div)
     soup.append(root_div)
