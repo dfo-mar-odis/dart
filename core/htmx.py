@@ -1,13 +1,9 @@
-import io
-import time
-
 from bs4 import BeautifulSoup
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from crispy_forms.utils import render_crispy_form
 from django.contrib import messages
-from django.shortcuts import render
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
@@ -21,7 +17,6 @@ from core import models, forms
 
 import logging
 
-from core.parsers import elog
 from core import validation
 from dart2.utils import load_svg
 
@@ -130,15 +125,26 @@ def add_geo_region(request):
     return response
 
 
-def send_render_block(group_name, template, context, block=None):
+def send_user_notification_close(group_name, **kwargs):
     channel_layer = get_channel_layer()
     event = {
-        'type': 'process_render_block',
-        'template': template,
-        'context': context
+        'type': 'close_render_queue',
     }
-    if block:
-        event['block'] = block
+    for key, value in kwargs.items():
+        if key.startswith('hx'):
+            event[key] = value
+
+    async_to_sync(channel_layer.group_send)(group_name, event)
+
+
+def send_user_notification_queue(group_name, message, queue):
+    channel_layer = get_channel_layer()
+    event = {
+        'type': 'process_render_queue',
+        'message': message,
+        'queue': queue
+    }
+
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
@@ -193,93 +199,6 @@ def htmx_validate_events(request, mission_id, file_name):
 
         # clear the processing message
         send_user_notification_elog(group_name, mission, _('An unknown error occurred, see error.log'))
-
-
-def upload_elog(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
-    elog_configuration = models.ElogConfig.get_default_config(mission)
-
-    files = request.FILES.getlist('event')
-    group_name = 'mission_events'
-
-    for index, file in enumerate(files):
-        file_name = file.name
-        process_message = f'{index}/{len(files)}: {file_name}'
-        # let the user know that we're about to start processing a file
-        send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
-
-        # remove any existing errors for a log file of this name and update the interface
-        mission.file_errors.filter(file_name=file_name).delete()
-        send_update_errors(group_name, mission)
-
-        try:
-            data = file.read()
-            message_objects = elog.parse(io.StringIO(data.decode('utf-8')), elog_configuration)
-
-            file_errors: [models.FileError] = []
-            errors: [tuple] = []
-            # make note of missing required field errors in this file
-            for mid, error_buffer in message_objects[elog.ParserType.ERRORS].items():
-                # Report errors to the user if there are any, otherwise process the message objects you can
-                for error in error_buffer:
-                    err = models.FileError(mission=mission, file_name=file_name, line=int(mid),
-                                           type=models.ErrorType.missing_value,
-                                           message=f'Elog message object ($@MID@$: {mid}) missing required '
-                                                   f'field [{error.args[0]["expected"]}]')
-                    file_errors.append(err)
-
-                    if mid in message_objects[elog.ParserType.MID]:
-                        message_objects[elog.ParserType.MID].pop(mid)
-
-            send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
-            elog.process_stations(message_objects[elog.ParserType.STATIONS])
-
-            send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
-            elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
-
-            send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
-            errors += elog.process_events(message_objects[elog.ParserType.MID], mission)
-
-            send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
-            errors += elog.process_attachments_actions(message_objects[elog.ParserType.MID], mission, file_name)
-
-            send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
-            errors += elog.process_variables(message_objects[elog.ParserType.MID], mission)
-
-            for error in errors:
-                file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
-                if isinstance(error[2], KeyError):
-                    file_error.type = models.ErrorType.missing_id
-                elif isinstance(error[2], ValueError):
-                    file_error.type = models.ErrorType.missing_value
-                else:
-                    file_error.type = models.ErrorType.unknown
-                file_errors.append(file_error)
-
-            models.FileError.objects.bulk_create(file_errors)
-
-        except Exception as ex:
-            if type(ex) is LookupError:
-                logger.error(ex)
-                err = models.FileError(mission=mission, type=models.ErrorType.missing_id, file_name=file_name,
-                                       message=ex.args[0]['message'] + ", " + _("see error.log for details"))
-            else:
-                # Something is really wrong with this file
-                logger.exception(ex)
-                err = models.FileError(mission=mission, type=models.ErrorType.unknown, file_name=file_name,
-                                       message=_("Unknown error :") + f"{str(ex)}, " + _("see error.log for details"))
-            err.save()
-            send_update_errors(group_name, mission)
-            send_user_notification_elog(group_name, mission, "File Error")
-
-            continue
-
-        htmx_validate_events(request, mission.pk, file_name)
-
-    context = {'object': mission}
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'event_import_form', context))
-    response['HX-Trigger'] = 'event_updated'
-    return response
 
 
 def get_mission_elog_errors(mission):

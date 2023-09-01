@@ -65,17 +65,18 @@
                             </div>
                         </div>
                         <div class="card-body">
+                            <div id="div_event_list_id" class="vertical-scrollbar">
                             {% block event_import_form %}
                                 <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
                                       hx-encoding="multipart/form-data"
-                                      hx-post="{% url "core:hx_upload_elog" object.pk %}"
-                                      hx-target="this" hx-swap="outerHTML" hx-trigger="change">
-                                    {% csrf_token %}
+                                      hx-get="{% url "core:hx_upload_elog" object.pk %}"
+                                      hx-trigger="change"
+                                      hx-swap="beforeend"
+                                >
                                     <input id="event_file_input_id" type="file" name="event" accept=".log"
                                            multiple="true" class="invisible"/>
                                 </form>
                             {% endblock %}
-                            <div id="div_event_list_id" class="vertical-scrollbar">
                                 {% include 'core/partials/table_event.html' with mission=object %}
                             </div>
                         </div>
@@ -123,20 +124,16 @@
                     {% endblock %}
                 </div>
             </div>
-            <div class="row mt-2" hx-ext="ws" ws-connect="/ws/notifications/">
+            <div class="row mt-2">
+                {# hx-ext="ws" ws-connect="/ws/notifications/" >#}
                 <div id="div_notifications_id" class="col">
                     <div class="card">
                         <div class="card-header d-flex justify-content-between">
                             <div class="card-title">
                                 {% trans "Notifications" %}
                             </div>
-                            {% block status_block %}
-                                <div id="status">
-                                    {{ msg }}
-                                </div>
-                            {% endblock %}
                         </div>
-                        <div class="card-body vertical-scrollbar" hx-trigger="load" hx-target="#errors"
+                        <div class="card-body vertical-scrollbar" hx-trigger="load, event_updated from:body" hx-target="#errors"
                              hx-get="{% url 'core:hx_get_file_errors' object.pk %}">
                             {% block error_block %}
                                 {% include 'core/partials/event_errors.html' %}
