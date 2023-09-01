@@ -579,19 +579,35 @@ class BottleSelection(forms.Form):
         self.helper = FormHelper(self)
         # self.helper.form_tag = False
         self.helper.attrs = {
-            "hx_post": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],)),
-            "hx_swap": 'outerHTML'
+            "id": "form_id_ctd_bottle_upload",
+            "hx_get": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],)),
+            "hx_swap": 'beforeend'
         }
 
+        url = reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],))
+        url += f"?bottle_dir={kwargs['initial']['bottle_dir']}"
+        all_attrs = {
+            'title': _('Show Unloaded') if 'show_all' in kwargs['initial'] else _('Show All'),
+            'name': 'show_some' if 'show_all' in kwargs['initial'] else 'show_all',
+            'hx_get': url,
+            'hx_target': "#form_id_ctd_bottle_upload",
+            'hx_swap': 'outerHTML'
+        }
+        icon = load_svg('eye-slash') if 'show_all' in kwargs['initial'] else load_svg('eye')
+        all_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **all_attrs)
+
+        submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm", type='input',
+                                     title=_("Load Selected"))
         self.helper.layout = Layout(
+            Row(Column(all_button)),
             Hidden('bottle_dir', kwargs['initial']['bottle_dir']),
-            Row(Column(Field('file_name'))),
+            Row(Column(Field('file_name')), css_class='mt-2'),
+            submit_button
         )
+        self.helper.form_show_labels = False
 
-        self.helper.add_input(Submit('submit', _("Submit")))
 
-
-def SaveLoadComponent(id, message, **kwargs):
+def SaveLoadComponent(component_id, message, **kwargs):
 
     alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
 
@@ -607,7 +623,7 @@ def SaveLoadComponent(id, message, **kwargs):
 
     # create an alert area saying we're loading
     alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
-    alert_msg = soup.new_tag('div', attrs={'id': f'{id}_message'})
+    alert_msg = soup.new_tag('div', attrs={'id': f'{component_id}_message'})
     alert_msg.string = message
 
     alert_div.append(alert_msg)
@@ -619,13 +635,13 @@ def SaveLoadComponent(id, message, **kwargs):
         'role': "progressbar",
         'style': "width: 100%"
     }
-    progress_bar_div = soup.new_tag("div", attrs={'class': "progress"})
+    progress_bar_div = soup.new_tag("div", attrs={'class': "progress", 'id': 'progress_bar'})
     progress_bar_div.append(progress_bar)
 
     alert_div.append(progress_bar_div)
 
     root_div.attrs = {
-        'id': id,
+        'id': component_id,
     }
 
     for attr, val in kwargs.items():

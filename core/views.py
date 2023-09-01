@@ -99,9 +99,8 @@ def load_ctd_files(mission):
 
             logger.info(f"Processed {processed}")
 
-            core.htmx.send_render_block(group_name, template='core/partials/notifications_samples.html',
-                                        block='notifications',
-                                        context={'msg': f"Loading {kw['file']}", 'queue': processed})
+            # update the user on our progress
+            core.htmx.send_user_notification_queue(group_name, f"Loading {kw['file']}", processed)
 
             done, not_done = concurrent.futures.wait(jobs)
 
@@ -122,14 +121,14 @@ def load_ctd_files(mission):
     # The mission_samples.html page has a websocket notifications element on it. We can send messages
     # to the notifications element to display progress to the user, but we can also use it to
     # send an update request to the page when loading is complete.
+    url = reverse_lazy("core:hx_sample_list", args=(mission.pk,))
     hx = {
-        'get': reverse_lazy("core:hx_sample_list", args=(mission.pk,)),
-        'trigger': 'load',
-        'target': '#sample_table',
-        'swap': 'outerHTML'
+        'hx-get': url,
+        'hx-trigger': 'load',
+        'hx-target': '#form_id_ctd_bottle_upload',
+        'hx-swap': 'outerHTML'
     }
-    core.htmx.send_render_block(group_name, template='core/partials/notifications_samples.html',
-                                block='notifications', context={'hx': hx})
+    core.htmx.send_user_notification_close(group_name, **hx)
 
 
 def load_ctd_file(mission, file, bottle_dir):
@@ -138,9 +137,6 @@ def load_ctd_file(mission, file, bottle_dir):
 
     message = f"Loading file {file}"
     logger.info(message)
-
-    # core.htmx.send_render_block(group_name, template='core/partials/notifications_samples.html',
-    #                             block='notifications', context={'msg': message})
 
     ctd_file = os.path.join(bottle_dir, file)
     try:

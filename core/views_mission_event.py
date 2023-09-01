@@ -316,7 +316,7 @@ def upload_elog(request, mission_id):
     if request.method == "GET":
         url = reverse_lazy('core:hx_upload_elog', args=(mission_id,))
         attrs = {
-            'id': "div_id_upload_elog_load",
+            'component_id': "div_id_upload_elog_load",
             'message': '',
             'alert_type': "info",
             'hx-post': url,

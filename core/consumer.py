@@ -30,16 +30,33 @@ class CoreConsumer(WebsocketConsumer):
             self.GROUP_NAME, self.channel_name
         )
 
-    def process_render_block(self, event):
-        template = event['template']
-        block = event['block'] if 'block' in event else None
-        context = event['context']
-        if block:
-            html = render_block_to_string(template, block, context=context)
-        else:
-            html = render_to_string(template, context=context)
+    def close_render_queue(self, event):
+
+        html = BeautifulSoup(f'<div id="status"></div>', 'html.parser')
+        status_div = html.find('div')
+        for key, value in event.items():
+            status_div.attrs[key] = value
 
         self.send(text_data=html)
+
+    def process_render_queue(self, event):
+        soup = BeautifulSoup(f'<div id="status">{event["message"]}</div>', 'html.parser')
+        progress_bar = soup.new_tag("div")
+        progress_bar.attrs = {
+            'class': "progress-bar progress-bar-striped progress-bar-animated",
+            'role': "progressbar",
+            'style': f'width: {event["queue"]}%'
+        }
+        progress_bar.string = event["queue"]
+
+        progress_bar_div = soup.new_tag("div", attrs={'class': "progress", 'id': 'progress_bar'})
+        progress_bar_div.append(progress_bar)
+        progress_bar_div.attrs['aria-valuenow'] = event["queue"]
+        progress_bar_div.attrs['aria-valuemin'] = "0"
+        progress_bar_div.attrs['aria-valuemax'] = "100"
+
+        soup.append(progress_bar_div)
+        self.send(text_data=soup)
 
     def processing_elog_message(self, event):
         html = BeautifulSoup(f'<div id="status">{event["message"]}</div>', 'html.parser')

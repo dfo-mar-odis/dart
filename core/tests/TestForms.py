@@ -22,6 +22,52 @@ import logging
 logger = logging.getLogger("dart.test")
 
 
+@tag('forms', 'form_mission_samples')
+class TestMissionSamplesForm(DartTestCase):
+
+    def setUp(self) -> None:
+        self.client = Client()
+        self.mission = core_factory.MissionFactory()
+
+    def test_ctd_card(self):
+        # The CTD card should have a form with a text input and a refresh button
+        url = reverse('core:sample_details', args=(self.mission.id,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        upload_form = soup.find(id="ctd_upload_file_form_id")
+        self.assertIsNotNone(upload_form)
+
+    def test_get_btl_list(self):
+        # provided a directory a get request to hx_sample_upload_ctd should return a form
+        # with a list of files that can be uploaded when selected.
+        url = reverse('core:hx_sample_upload_ctd', args=(self.mission.id,))
+        dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
+
+        response = self.client.get(url, {"bottle_dir": dir})
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        file_selection = soup.find(id="id_file_name")
+        self.assertIsNotNone(file_selection)
+
+    def test_event_upload_selected(self):
+        # Upon selecting files and clicking the submit button a get request should be made to
+        # hx_sample_upload_ctd that will return a loading dialog that will make a post request
+        # to hx_sample_upload_ctd with a websocket on it.
+        url = reverse('core:hx_sample_upload_ctd', args=(self.mission.id,))
+
+        dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
+
+        response = self.client.get(url, {"bottle_dir": dir, "file_name": ['JC243a001.btl', 'JC243a006.btl']})
+        soup = BeautifulSoup(response.content, 'html.parser')
+        div_load_alert = soup.find(id='div_id_upload_ctd_load')
+
+        self.assertIsNotNone(div_load_alert)
+        self.assertIn('hx-post', div_load_alert.attrs)
+
+
 @tag('forms', 'form_mission_events')
 class TestMissionEventForm(DartTestCase):
 

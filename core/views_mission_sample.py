@@ -184,7 +184,7 @@ def save_sample_config(request, **kwargs):
             oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
 
         attrs = {
-            'id': "div_id_loaded_sample_type_message",
+            'component_id': "div_id_loaded_sample_type_message",
             'message': _('Saving'),
             'alert_type': 'info',
             'hx-trigger': "load",
@@ -261,7 +261,7 @@ def new_sample_config(request, **kwargs):
         url = reverse_lazy("core:new_sample_config")
 
         attrs = {
-            'id': "div_id_loaded_sample_type_message",
+            'component_id': "div_id_loaded_sample_type_message",
             'message': _("Loading"),
             'alert_type': 'info',
             'hx-post': url,
@@ -320,7 +320,7 @@ def load_sample_config(request, **kwargs):
                                  "html.parser")
 
             attrs = {
-                'id': "div_id_loaded_sample_type_message",
+                'component_id': "div_id_loaded_sample_type_message",
                 'message': _("Loading"),
                 'alert_type': 'info',
                 'hx-target': "#div_id_loaded_sample_type_message",
@@ -409,7 +409,7 @@ def load_samples(request, **kwargs):
 
         url = reverse_lazy("core:load_samples", args=(config_id,))
         attrs = {
-            'id': f'div_id_loading_{message_div_id}',
+            'component_id': f'div_id_loading_{message_div_id}',
             'message': _("Loading"),
             'alert_type': 'info',
             'hx-target': f'#div_id_loading_{message_div_id}',
@@ -517,12 +517,41 @@ def hx_sample_upload_ctd(request, mission_id):
     thread_name = "load_ctd_files"
 
     if request.method == "GET":
+        if 'show_all' not in request.GET and 'file_name' in request.GET:
+            # We're going to throw up a loading alert to call the hx-post and clear the selection form off the page,
+            # then we'll swap in the Websocket connected dialog from the POST method to give feedback to the user
+            url = reverse_lazy('core:hx_sample_upload_ctd', args=(mission_id,))
+            attrs = {
+                'component_id': "div_id_upload_ctd_load",
+                'alert_type': 'info',
+                'message': _("Loading"),
+                'hx-post': url,
+                'hx-trigger': 'load',
+                'hx-target': "#form_id_ctd_bottle_upload",
+                'hx-swap': 'innerHTML'
+            }
+            soup = forms.SaveLoadComponent(**attrs)
+            response = HttpResponse(soup)
+            return response
+
         bottle_dir = request.GET['bottle_dir']
-        files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl')]
+
+        initial_args = {'mission': mission_id, 'bottle_dir': bottle_dir}
+        if 'show_all' in request.GET:
+            files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl')]
+            initial_args['show_all'] = True
+        else:
+            loaded_files = [f[0] for f in models.Sample.objects.filter(
+                    type__is_sensor=True,
+                    bottle__event__mission_id=mission_id).values_list('file').distinct()]
+            files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl') if f not in loaded_files]
+            initial_args['show_some'] = True
+
         files.sort(key=lambda fn: os.path.getmtime(os.path.join(bottle_dir, fn)))
-        context['file_form'] = forms.BottleSelection(initial={'mission': mission_id,
-                                                              'bottle_dir': bottle_dir,
-                                                              'file_name': files})
+
+        initial_args['file_name'] = files
+
+        context['file_form'] = forms.BottleSelection(initial=initial_args)
         html = render_block_to_string('core/mission_samples.html', 'ctd_list', context=context)
         response = HttpResponse(html)
 
@@ -549,11 +578,29 @@ def hx_sample_upload_ctd(request, mission_id):
             Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,)).start()
 
         context['object'] = mission
-        html = render_block_to_string('core/mission_samples.html', 'ctd_list', context=context)
-        response = HttpResponse(html)
+
+        attrs = {
+            'component_id': "div_id_upload_ctd_load",
+            'alert_type': 'info',
+            'message': _("Loading"),
+            'hx-target': "#form_id_ctd_bottle_upload",
+            'hx-ext': "ws",
+            'ws-connect': "/ws/notifications/"
+        }
+        soup = forms.SaveLoadComponent(**attrs)
+        # add a message area for websockets
+        msg_div = soup.find(id="div_id_upload_ctd_load_message")
+        msg_div.string = ""
+
+        # The core.consumer.processing_elog_message() function is going to write output to a div
+        # with the 'status' id, we'll stick that in the loading alerts message area and bam! Instant notifications!
+        msg_div_status = soup.new_tag('div')
+        msg_div_status['id'] = 'status'
+        msg_div_status.string = _("Loading")
+        msg_div.append(msg_div_status)
+
+        response = HttpResponse(soup)
         return response
-    response = HttpResponse("Hi!")
-    return response
 
 
 def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:

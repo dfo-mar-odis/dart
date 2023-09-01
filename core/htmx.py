@@ -125,15 +125,26 @@ def add_geo_region(request):
     return response
 
 
-def send_render_block(group_name, template, context, block=None):
+def send_user_notification_close(group_name, **kwargs):
     channel_layer = get_channel_layer()
     event = {
-        'type': 'process_render_block',
-        'template': template,
-        'context': context
+        'type': 'close_render_queue',
     }
-    if block:
-        event['block'] = block
+    for key, value in kwargs.items():
+        if key.startswith('hx'):
+            event[key] = value
+
+    async_to_sync(channel_layer.group_send)(group_name, event)
+
+
+def send_user_notification_queue(group_name, message, queue):
+    channel_layer = get_channel_layer()
+    event = {
+        'type': 'process_render_queue',
+        'message': message,
+        'queue': queue
+    }
+
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
