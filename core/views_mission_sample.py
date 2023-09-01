@@ -455,11 +455,11 @@ def load_samples(request, **kwargs):
         sample_config = models.SampleTypeConfig.objects.get(pk=config_id)
         mission = models.Mission.objects.get(pk=mission_id)
 
-        # at the moment this will just prevent a user for accidentally deleting a sample_type that's used
-        # across multiple missions. Eventually I'd like this to be a deep copy of the sample_type
-        # where it can be edited from one mission to another without affecting settings for other missions
-        mission_sample_type = models.MissionSampleConfig(mission=mission, config=sample_config)
-        mission_sample_type.save()
+        # Eventually I'd like this to be a deep copy of the sample_type
+        # where it can be edited for one mission without affecting settings for other missions
+        if not models.MissionSampleConfig.objects.filter(mission=mission, config=sample_config).exists():
+            mission_sample_type = models.MissionSampleConfig(mission=mission, config=sample_config)
+            mission_sample_type.save()
 
         if file_type == 'csv':
             io_stream = io.BytesIO(data)
@@ -787,11 +787,13 @@ def format_all_sensor_table(df, mission_id):
 
         pk = column.string
         sampletype = models.SampleType.objects.get(pk=pk)
+        upload_date = models.Sample.objects.filter(bottle__event__mission_id=mission_id,
+                                                   type_id=pk).order_by('bio_upload_date').first().bio_upload_date
 
         button = soup.new_tag("button")
         button.string = f'{sampletype.short_name}'
         column.string = ''
-        button.attrs['class'] = 'btn btn-primary'
+        button.attrs['class'] = 'btn btn-sm ' + ('btn-secondary' if not upload_date else 'btn-primary')
         button.attrs['style'] = 'width: 100%'
         button.attrs['hx-trigger'] = 'click'
         button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
