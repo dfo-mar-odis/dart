@@ -192,7 +192,7 @@ def save_sample_config(request, **kwargs):
             'hx-post': url,
             'hx-select-oob': oob_select
         }
-        soup = forms.SaveLoadComponent(**attrs)
+        soup = forms.save_load_component(**attrs)
 
         return HttpResponse(soup)
     elif request.method == "POST":
@@ -268,7 +268,7 @@ def new_sample_config(request, **kwargs):
             'hx-target': "#div_id_sample_type_holder",
             'hx-trigger': "load"
         }
-        soup = forms.SaveLoadComponent(**attrs)
+        soup = forms.save_load_component(**attrs)
 
         return HttpResponse(soup)
     elif request.method == "POST":
@@ -329,7 +329,7 @@ def load_sample_config(request, **kwargs):
                 'hx-swap': "outerHTML",
                 'hx-select-oob': oob_select,
             }
-            dialog_soup = forms.SaveLoadComponent(**attrs)
+            dialog_soup = forms.save_load_component(**attrs)
             root_div = dialog_soup.find(id='div_id_loaded_sample_type_message')
 
             soup.find(id="div_id_loaded_sample_type").append(root_div)
@@ -412,19 +412,23 @@ def load_samples(request, **kwargs):
             'component_id': f'div_id_loading_{message_div_id}',
             'message': _("Loading"),
             'alert_type': 'info',
-            'hx-target': f'#div_id_loading_{message_div_id}',
+            'hx-select': f"#{message_div_id}_load_button",
+            'hx-target': f'#{message_div_id}_load_button',
             'hx-post': url,
             'hx-trigger': "load",
             'hx-swap': "outerHTML",
-            'hx-select-oob': f"#{message_div_id}_load_button, #{message_div_id}_message"
+            'hx-select-oob': f"#{message_div_id}_message"
         }
-        dialog_soup = forms.SaveLoadComponent(**attrs)
+        dialog_soup = forms.save_load_component(**attrs)
         message_div = dialog_soup.find(id=f'div_id_loading_{message_div_id}')
 
         button = soup.new_tag('button')
         button.attrs['id'] = f'{message_div_id}_load_button'
-        button.attrs['class'] = "btn btn-secondary btn-sm"
+        button.attrs['class'] = "btn btn-secondary btn-sm placeholder-glow"
+        button.attrs['disabled'] = "True"
         icon = BeautifulSoup(load_svg("folder"), 'html.parser').svg
+        icon.attrs['class'] = 'placeholder'
+
         button.append(icon)
 
         soup.append(button)
@@ -470,12 +474,21 @@ def load_samples(request, **kwargs):
         icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
         try:
             logger.info(f"Starting sample load for file {file_name}")
+
+            # Remove any row that is *all* nan values
+            dataframe.dropna(axis=0, how='all', inplace=True)
+
             parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
 
             if (errors := models.FileError.objects.filter(file_name=file_name)).exists():
                 button_class = "btn btn-warning btn-sm"
                 icon = BeautifulSoup(load_svg("folder-symlink"), 'html.parser').svg
                 get_error_list(soup, message_div_id, errors)
+            else:
+                # create an empty message div to remove the loading alert
+                msg_div = soup.new_tag('div')
+                msg_div.attrs['id'] = f'{message_div_id}_message'
+                soup.append(msg_div)
 
         except Exception as ex:
             logger.error(f"Failed to load file {file_name}")
@@ -487,14 +500,18 @@ def load_samples(request, **kwargs):
         button = soup.new_tag('button')
         button.attrs = {
             'id': f"{message_div_id}_load_button",
+            'class': button_class,
             'name': "load",
             'hx-get': reverse_lazy('core:load_samples', args=(config_id,)),
-            'hx-target': f"#{message_div_id}_message",
-            'class': button_class
+            'hx-swap': "outerHTML",
+            'hx-target': f"#{message_div_id}_load_button",
+            'hx-select': f"#{message_div_id}_load_button",
+            'hx-select-oob': f"#{message_div_id}_message"
         }
 
         soup.append(button)
         button.append(icon)
+
         response = HttpResponse(soup)
 
         # This will trigger the Sample table on the 'core/mission_samples.html' template to update
@@ -505,6 +522,7 @@ def load_samples(request, **kwargs):
 def delete_sample_config(request, **kwargs):
     config_id = kwargs['config_id']
     if request.method == "POST":
+        models.MissionSampleConfig.objects.get(config_id=config_id).delete()
         models.SampleTypeConfig.objects.get(pk=config_id).delete()
 
     return HttpResponse()
@@ -530,7 +548,7 @@ def hx_sample_upload_ctd(request, mission_id):
                 'hx-target': "#form_id_ctd_bottle_upload",
                 'hx-swap': 'innerHTML'
             }
-            soup = forms.SaveLoadComponent(**attrs)
+            soup = forms.save_load_component(**attrs)
             response = HttpResponse(soup)
             return response
 
@@ -587,7 +605,7 @@ def hx_sample_upload_ctd(request, mission_id):
             'hx-ext': "ws",
             'ws-connect': "/ws/notifications/"
         }
-        soup = forms.SaveLoadComponent(**attrs)
+        soup = forms.save_load_component(**attrs)
         # add a message area for websockets
         msg_div = soup.find(id="div_id_upload_ctd_load_message")
         msg_div.string = ""

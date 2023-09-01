@@ -607,7 +607,7 @@ class BottleSelection(forms.Form):
         self.helper.form_show_labels = False
 
 
-def SaveLoadComponent(component_id, message, **kwargs):
+def save_load_component(component_id, message, **kwargs):
 
     alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
 

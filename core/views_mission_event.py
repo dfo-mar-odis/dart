@@ -326,7 +326,7 @@ def upload_elog(request, mission_id):
             'ws-connect': "/ws/notifications/",
             'hx-trigger': "load"
         }
-        soup = forms.SaveLoadComponent(**attrs)
+        soup = forms.save_load_component(**attrs)
         # add a message area for websockets
         msg_div = soup.find(id="div_id_upload_elog_load_message")
         msg_div.string = ""
