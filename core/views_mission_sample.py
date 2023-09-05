@@ -19,11 +19,11 @@ from django_pandas.io import read_frame
 from render_block import render_block_to_string
 
 import bio_tables.models
-import dart2.utils
 from biochem import models
 
 from core import forms
 from core import models
+from core import views
 from core.parsers.SampleParser import get_headers, get_file_configs, parse_data_frame, get_excel_dataframe
 from core.views import sample_file_queue, load_ctd_files, MissionMixin
 
@@ -93,6 +93,31 @@ def get_error_list(soup, card_id, errors):
         li['class'] = 'list-group-item'
         li.string = error.message
         ul_list.append(li)
+
+
+class SampleDetails(MissionMixin, GenericDetailView):
+    page_title = _("Mission Samples")
+    template_name = "core/mission_samples.html"
+
+    def get_settings_url(self):
+        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['reports'] = {key: reverse_lazy(views.reports[key], args=(self.object.pk,)) for key in
+                              views.reports.keys()}
+
+        context['mission'] = self.object
+        if 'sample_type_id' in self.kwargs:
+            sample_type = models.SampleType.objects.get(pk=self.kwargs['sample_type_id'])
+            context['sample_type'] = sample_type
+
+            context['biochem_form'] = forms.BioChemUpload(initial={'sample_type_id': sample_type.id,
+                                                                   'mission_id': self.object.id,
+                                                                    'data_type_code': sample_type.datatype.data_type_seq
+                                                                   })
+
+        return context
 
 
 def new_sample_type(request, **kwargs):
@@ -669,7 +694,6 @@ def hx_list_samples(request, **kwargs):
         headings = ['Flag', 'Datatype', 'Comments']
         df = read_frame(queryset)
         df.columns = ["Sample", "Pressure", "Replicate", "Value"] + headings
-
         df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
 
         soup = format_sensor_table(request, df, mission_id, sensor_id)
@@ -713,13 +737,12 @@ def hx_list_samples(request, **kwargs):
 
     # add styles to the table so it's consistent with the rest of the application
     table = soup.find('table')
-    table.attrs['class'] = 'dataframe table table-striped tscroll'
+    table.attrs['class'] = 'dataframe table table-striped tscroll horizontal-scrollbar'
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
     args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
     last_tr = table.find('tbody').find_all('tr')[-1]
-
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
     last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page + 1}"
@@ -728,7 +751,7 @@ def hx_list_samples(request, **kwargs):
     # finally, align all text in each column to the center of the cell
     tds = soup.find('table').find_all('td')
     for td in tds:
-        td['class'] = 'text-center'
+        td['class'] = 'text-center text-nowrap'
 
     if page > 0:
         response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
@@ -801,7 +824,7 @@ def format_all_sensor_table(df, mission_id):
         button.attrs['class'] = 'btn btn-sm ' + ('btn-secondary' if not upload_date else 'btn-primary')
         button.attrs['style'] = 'width: 100%'
         button.attrs['hx-trigger'] = 'click'
-        button.attrs['hx-get'] = reverse_lazy('core:samples_details', args=(mission_id, sampletype.pk,))
+        button.attrs['hx-get'] = reverse_lazy('core:sample_details', args=(mission_id, sampletype.pk,))
         button.attrs['hx-target'] = "#sample_table"
         button.attrs['hx-push-url'] = 'true'
         button.attrs['title'] = sampletype.long_name
@@ -815,6 +838,16 @@ def format_all_sensor_table(df, mission_id):
 
 def format_sensor_table(request, df, mission_id, sensor_id):
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
+
+    # start by replacing nan values with '---'
+    df.fillna('---', inplace=True)
+
+    # reformat the Datatype columns, which will be represented as floats, but we want them as integers
+    for i in range(1, df['Datatype'].shape[1]+1):
+        df[('Datatype', i,)] = df[('Datatype', i)].astype('string')
+        df[('Datatype', i,)] = df[('Datatype', i,)].map(lambda x: int(float(x)) if x != '---' else x)
+
+    # convert the dataframe to an HTML table
     html = '<div id="sample_table">' + df.to_html() + "</div>"
 
     # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
@@ -852,13 +885,23 @@ def format_sensor_table(request, df, mission_id, sensor_id):
 
     # create a button so the user can go back to viewing all loaded sensors/samples
 
+    upload_button = soup.new_tag('button')
+    upload_button.attrs['class'] = 'btn btn-primary btn-sm'
+
+    upload_button_icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
+    upload_button.append(upload_button_icon)
+
     table = soup.find('table')
     table.attrs['id'] = 'table_id_sample_table'
     th = table.find('tr').find('th')
     th.attrs['class'] = 'text-center'
+    th.append(upload_button)
+
     # center all of the header text
     while (th := th.findNext('th')):
         th.attrs['class'] = 'text-center'
+        if th.string == 'Comments':
+            th.attrs['class'] += ' w-100'
 
     root.append(table)
 
@@ -872,21 +915,6 @@ def hx_sample_delete(request, **kwargs):
         models.Sample.objects.filter(type=sample_type).delete()
 
     return hx_list_samples(request, mission_id=mission)
-
-
-# Used in testing the mission samples type form
-class SampleDetails(MissionMixin, GenericDetailView):
-    page_title = _("Mission Samples")
-    template_name = "core/mission_samples_test.html"
-
-    def get_settings_url(self):
-        return reverse_lazy("core:mission_edit", args=(self.object.pk,))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['mission'] = self.object
-
-        return context
 
 
 def update_sample_type(request, **kwargs):
@@ -921,10 +949,15 @@ def update_sample_type(request, **kwargs):
         mission_id = request.POST['mission_id']
         sample_type_id = request.POST['sample_type_id']
         data_type_code = request.POST['data_type_code']
+        start_sample = request.POST['start_sample']
+        end_sample = request.POST['end_sample']
+
         data_type = bio_tables.models.BCDataType.objects.get(data_type_seq=data_type_code)
 
         discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission_id=mission_id,
-                                                                    sample__type__id=sample_type_id)
+                                                                    sample__bottle__bottle_id__gte=start_sample,
+                                                                    sample__bottle__bottle_id__lte=end_sample,
+                                                                    sample__type__id=sample_type_id,)
         for value in discrete_update:
             value.sample_datatype = data_type
         models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['sample_datatype'])

@@ -42,9 +42,9 @@ urlpatterns = [
 
     # ###### sample details ###### #
 
-    path('mission/sample/<int:pk>/', views.SamplesDetails.as_view(), name="samples_details"),
-    path('mission/sample/<int:pk>/<int:sample_type_id>/', views.SamplesDetails.as_view(), name="samples_details"),
-
+    path('mission/sample/<int:pk>/', views_mission_sample.SampleDetails.as_view(), name="sample_details"),
+    path('mission/sample/<int:pk>/<int:sample_type_id>/', views_mission_sample.SampleDetails.as_view(),
+         name="sample_details"),
     path('mission/sample/hx/ctd/<int:mission_id>/', views_mission_sample.hx_sample_upload_ctd,
          name="hx_sample_upload_ctd"),
     path('mission/sample/hx/delete/<int:mission_id>/<int:sample_type_id>/', views_mission_sample.hx_sample_delete,

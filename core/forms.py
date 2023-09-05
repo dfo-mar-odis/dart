@@ -414,8 +414,8 @@ class BioChemUpload(forms.Form):
     data_type_code = forms.IntegerField(label=_("Datatype Code"), required=False)
     data_type_description = forms.ChoiceField(label=_("Datatype Description"), required=False)
 
-    sample_start = forms.IntegerField(label=_("Start"), required=False)
-    sample_end = forms.IntegerField(label=_("End"), required=False)
+    start_sample = forms.IntegerField(label=_("Start"))
+    end_sample = forms.IntegerField(label=_("End"))
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -446,6 +446,16 @@ class BioChemUpload(forms.Form):
 
             if 'data_type_code' in kwargs['initial']:
                 self.fields['data_type_description'].initial = kwargs['initial']['data_type_code']
+
+        if 'mission_id' in self.initial and 'sample_type_id' in self.initial:
+            mission_id = self.initial['mission_id']
+            sample_type_id = self.initial['sample_type_id']
+            samples = models.Sample.objects.filter(bottle__event__mission_id=mission_id, type_id=sample_type_id)
+            if 'start_sample' not in kwargs['initial']:
+                self.fields['start_sample'].initial = samples.first().bottle.bottle_id
+
+            if 'end_sample' not in kwargs['initial']:
+                self.fields['end_sample'].initial = samples.last().bottle.bottle_id
 
         self.helper = FormHelper(self)
 
@@ -478,14 +488,6 @@ class BioChemUpload(forms.Form):
         apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
                                     **apply_attrs)
 
-        samples = models.Sample.objects.filter(bottle__event__mission_id=self.initial['mission_id'],
-                                               type_id=self.initial['sample_type_id'])
-        if 'sample_start' not in self.initial:
-            self.fields['sample_start'].initial = samples.first().bottle.bottle_id
-
-        if 'sample_end' not in self.initial:
-            self.fields['sample_end'].initial = samples.last().bottle.bottle_id
-
         self.helper.form_tag = False
         self.helper.layout = Layout(
             Div(
@@ -500,8 +502,8 @@ class BioChemUpload(forms.Form):
                     id="div_id_data_type_row"
                 ),
                 Row(
-                    Column(Field('sample_start', css_class="form-control-sm"), css_class='col-auto'),
-                    Column(Field('sample_end', css_class="form-control-sm"), css_class="col-auto"),
+                    Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
+                    Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
                     Column(apply_button, css_class="col-auto align-self-end mb-3"),
                     id="div_id_sample_range"
                 ),

@@ -69,29 +69,6 @@ class MissionUpdateView(MissionCreateView, GenericUpdateView):
         return super().form_valid(form)
 
 
-class SamplesDetails(MissionMixin, GenericDetailView):
-    page_title = _("Mission Samples")
-    template_name = "core/mission_samples.html"
-
-    def get_settings_url(self):
-        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,)) for key in reports.keys()}
-
-        context['mission'] = self.object
-        if 'sample_type_id' in self.kwargs:
-            sample_type = models.SampleType.objects.get(pk=self.kwargs['sample_type_id'])
-            context['sample_type'] = sample_type
-
-            context['biochem_form'] = forms.BioChemUpload(
-                initial={'sample_type_id': sample_type.id, 'mission_id': self.object.pk,
-                         'data_type_code': sample_type.datatype.data_type_seq})
-
-        return context
-
-
 def load_ctd_files(mission):
 
     group_name = 'mission_events'
@@ -155,3 +132,5 @@ def load_ctd_file(mission, file, bottle_dir):
         status = "Fail"
 
     return status
+
+
