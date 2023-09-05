@@ -111,11 +111,15 @@ class SampleDetails(MissionMixin, GenericDetailView):
         if 'sample_type_id' in self.kwargs:
             sample_type = models.SampleType.objects.get(pk=self.kwargs['sample_type_id'])
             context['sample_type'] = sample_type
+            data_type_seq = sample_type.datatype
 
-            context['biochem_form'] = forms.BioChemUpload(initial={'sample_type_id': sample_type.id,
-                                                                   'mission_id': self.object.id,
-                                                                    'data_type_code': sample_type.datatype.data_type_seq
-                                                                   })
+            initial = {}
+            initial['sample_type_id'] = sample_type.id
+            initial['mission_id'] = self.object.id
+            if data_type_seq:
+                initial['data_type_code'] = data_type_seq.data_type_seq
+
+            context['biochem_form'] = forms.BioChemUpload(initial=initial)
 
         return context
 
