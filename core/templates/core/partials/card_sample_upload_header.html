@@ -1,0 +1,40 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<form class="container" id="div_content_block_id"
+     hx-swap-oob="outerHTML:#div_content_block_id"
+     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+
+                <div class="row justify-content-between">
+                    <div class="col">
+                        <button type="button" class="btn btn-primary btn-sm" name="back" title="{% trans 'Back' %}"
+                                hx-get="{% url 'core:samples_details' mission.pk %}"
+                                hx-push-url="true"
+                                hx-select="#div_ctd_id"
+                                hx-target="#div_ctd_id"
+                                hx-swap="outerHTML"
+                        >{% custom_icon 'arrow-left-square' %}</button>
+                    </div>
+                    <div class="col-auto">
+                        <button type="button" class="btn btn-danger btn-sm" name="delete" title="{% trans 'Delete' %}"
+                                hx-post="{% url 'core:hx_sample_delete'  mission.pk sample_type.pk %}"
+                                hx-target="#sample_table"
+                                hx-swap="outerHTML"
+                                hx-confirm="{% trans 'Are you sure?' %}"
+                        >{% custom_icon 'dash-square' %}</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+        {% if biochem_form %}
+            {% crispy biochem_form %}
+        {% endif %}
+        </div>
+    </div>
+</form>

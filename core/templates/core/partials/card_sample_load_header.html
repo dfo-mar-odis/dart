@@ -1,0 +1,31 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<div class="container-fluid" id="div_content_block_id"
+     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+     hx-swap-oob="outerHTML:#div_content_block_id"
+>
+    {% block new_sample_block %}
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title row">
+                <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                        href="#div_new_sample">{% custom_icon 'caret-down' %}</button>
+                <h6 class="col-auto align-self-end">{% trans "Load Sample from file" %}</h6></div>
+        </div>
+        <div class="collapse col" id="div_new_sample">
+            <div class="card-body">
+                <div class="mb-2 col">
+                    <div id="new_sample_form" class="card-body">
+                        {% block new_sample_form_block %}
+                            {% include 'core/partials/form_sample_config.html' %}
+                        {% endblock %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endblock %}
+</div>
+

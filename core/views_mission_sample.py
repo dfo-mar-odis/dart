@@ -18,6 +18,7 @@ from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from render_block import render_block_to_string
 
+import bio_tables.models
 import dart2.utils
 from biochem import models
 
@@ -457,7 +458,10 @@ def load_samples(request, **kwargs):
 
         # Eventually I'd like this to be a deep copy of the sample_type
         # where it can be edited for one mission without affecting settings for other missions
-        if not models.MissionSampleConfig.objects.filter(mission=mission, config=sample_config).exists():
+        mission_sample_type = models.MissionSampleConfig.objects.filter(mission=mission, config=sample_config)
+        if mission_sample_type.exists():
+            mission_sample_type = mission_sample_type[0]
+        else:
             mission_sample_type = models.MissionSampleConfig(mission=mission, config=sample_config)
             mission_sample_type.save()
 
@@ -668,7 +672,7 @@ def hx_list_samples(request, **kwargs):
 
         df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
 
-        soup = format_sensor_table(df, mission_id, sensor_id)
+        soup = format_sensor_table(request, df, mission_id, sensor_id)
     else:
         bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
                        page_start:(page_start + page_limit)]
@@ -715,6 +719,7 @@ def hx_list_samples(request, **kwargs):
     # of samples will be loaded into the table.
     args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
     last_tr = table.find('tbody').find_all('tr')[-1]
+
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
     last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page + 1}"
@@ -796,9 +801,9 @@ def format_all_sensor_table(df, mission_id):
         button.attrs['class'] = 'btn btn-sm ' + ('btn-secondary' if not upload_date else 'btn-primary')
         button.attrs['style'] = 'width: 100%'
         button.attrs['hx-trigger'] = 'click'
-        button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id, sampletype.pk,))
+        button.attrs['hx-get'] = reverse_lazy('core:samples_details', args=(mission_id, sampletype.pk,))
         button.attrs['hx-target'] = "#sample_table"
-        button.attrs['hx-swap'] = 'outerHTML'
+        button.attrs['hx-push-url'] = 'true'
         button.attrs['title'] = sampletype.long_name
 
         column.append(button)
@@ -808,7 +813,7 @@ def format_all_sensor_table(df, mission_id):
     return soup
 
 
-def format_sensor_table(df, mission_id, sensor_id):
+def format_sensor_table(request, df, mission_id, sensor_id):
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
     html = '<div id="sample_table">' + df.to_html() + "</div>"
 
@@ -843,84 +848,18 @@ def format_sensor_table(df, mission_id, sensor_id):
     sampletype = models.SampleType.objects.get(pk=sensor_id)
     column.string = f'{sampletype.short_name}'
 
-    data_type_label = soup.new_tag("div")
-    data_type_label.attrs['class'] = 'col-auto fw-bold'
-    data_type_label.string = _("Sensor Datatype") + " : "
-
-    data_type_value = soup.new_tag("div")
-    data_type_value.attrs['class'] = "col-auto"
-    data_type_value.string = str(sampletype.datatype.pk) if sampletype.datatype else _("None")
-
-    data_type_des_des = soup.new_tag("div")
-    data_type_des_des.attrs['class'] = "col-auto fw-bold"
-    data_type_des_des.string = _("Datatype Description") + " : "
-
-    data_type_des_value = soup.new_tag("div")
-    data_type_des_value.attrs['class'] = "col"
-    data_type_des_value.string = sampletype.datatype.description if sampletype.datatype else _("None")
-
-    sensor_details_row = soup.new_tag("div")
-    sensor_details_row.attrs['class'] = "row alert alert-secondary mt-2"
-    sensor_details_row.append(data_type_label)
-    sensor_details_row.append(data_type_value)
-    sensor_details_row.append(data_type_des_des)
-    sensor_details_row.append(data_type_des_value)
-
-    sensor_row_container = soup.new_tag("div")
-    sensor_row_container.attrs['class'] = "container-fluid"
-    sensor_row_container.append(sensor_details_row)
-
     root = soup.findChildren()[0]
 
     # create a button so the user can go back to viewing all loaded sensors/samples
-    back_button = soup.new_tag('button')
-    back_button.attrs['class'] = 'btn btn-primary'
-    back_button.attrs['hx-trigger'] = 'click'
-    back_button.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=(mission_id,))
-    back_button.attrs['hx-target'] = "#sample_table"
-    back_button.attrs['hx-swap'] = 'outerHTML'
-    back_button.attrs['title'] = _("Back")
-    back_button.attrs['name'] = 'back'
-    svg = dart2.utils.load_svg('arrow-left-square')
-    icon = BeautifulSoup(svg, 'html.parser').svg
-    back_button.append(icon)
-
-    # create a button to remove discrete samples
-    delete_button = soup.new_tag('button')
-    delete_button.attrs['class'] = 'btn btn-danger'
-    delete_button.attrs['hx-trigger'] = 'click'
-    delete_button.attrs['hx-post'] = reverse_lazy('core:hx_sample_delete', args=(mission_id, sensor_id,))
-    delete_button.attrs['hx-target'] = "#sample_table"
-    delete_button.attrs['hx-swap'] = 'outerHTML'
-    delete_button.attrs['hx-confirm'] = _("Are you sure?")
-    delete_button.attrs['title'] = _("Delete")
-    delete_button.attrs['name'] = 'delete'
-    svg = dart2.utils.load_svg('dash-square')
-    icon = BeautifulSoup(svg, 'html.parser').svg
-    delete_button.append(icon)
-
-    col_1 = soup.new_tag('div')
-    col_1.attrs['class'] = 'col'
-    col_1.append(back_button)
-
-    col_2 = soup.new_tag('div')
-    col_2.attrs['class'] = 'col-auto'
-    col_2.append(delete_button)
-
-    button_row = soup.new_tag('div')
-    button_row.attrs['class'] = 'row justify-content-between'
-    button_row.append(col_1)
-    button_row.append(col_2)
 
     table = soup.find('table')
+    table.attrs['id'] = 'table_id_sample_table'
     th = table.find('tr').find('th')
     th.attrs['class'] = 'text-center'
     # center all of the header text
     while (th := th.findNext('th')):
         th.attrs['class'] = 'text-center'
 
-    root.append(button_row)
-    root.append(sensor_row_container)
     root.append(table)
 
     return soup
@@ -948,3 +887,47 @@ class SampleDetails(MissionMixin, GenericDetailView):
         context['mission'] = self.object
 
         return context
+
+
+def update_sample_type(request, **kwargs):
+
+    if request.method == "GET":
+        if 'apply_data_type' in request.GET:
+            attrs = {
+                'component_id': 'div_id_data_type_update_save',
+                'message': _("Saving"),
+                'hx-post': reverse_lazy('core:hx_update_sample_type'),
+                'hx-trigger': 'load',
+                'hx-target': '#div_id_data_type_message',
+                'hx-select': '#div_id_data_type_message',
+                'hx-select-oob': '#table_id_sample_table'
+            }
+            soup = forms.save_load_component(**attrs)
+            return HttpResponse(soup)
+
+        if 'data_type_filter' in request.GET:
+            biochem_form = forms.BioChemUpload(initial={'data_type_filter': request.GET['data_type_filter']})
+            html = render_crispy_form(biochem_form)
+            return HttpResponse(html)
+
+        data_type_code = request.GET['data_type_code'] if 'data_type_code' in request.GET else \
+            request.GET['data_type_description']
+
+        biochem_form = forms.BioChemUpload(initial={'data_type_code': data_type_code})
+        html = render_crispy_form(biochem_form)
+        return HttpResponse(html)
+    if request.method == "POST":
+
+        mission_id = request.POST['mission_id']
+        sample_type_id = request.POST['sample_type_id']
+        data_type_code = request.POST['data_type_code']
+        data_type = bio_tables.models.BCDataType.objects.get(data_type_seq=data_type_code)
+
+        discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission_id=mission_id,
+                                                                    sample__type__id=sample_type_id)
+        for value in discrete_update:
+            value.sample_datatype = data_type
+        models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['sample_datatype'])
+
+        response = hx_list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
+        return response

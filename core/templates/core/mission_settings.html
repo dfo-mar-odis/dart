@@ -11,7 +11,7 @@
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:sample_details' object.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:samples_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     <li class="nav-item me-2">
@@ -26,7 +26,7 @@
     <div id="app">
         <form method="POST" >
             {% csrf_token %}
-            {%  crispy form %}
+            {% crispy form %}
         </form>
     </div>
 {% endblock %}

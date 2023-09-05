@@ -31,7 +31,7 @@ class TestMissionSamplesForm(DartTestCase):
 
     def test_ctd_card(self):
         # The CTD card should have a form with a text input and a refresh button
-        url = reverse('core:sample_details', args=(self.mission.id,))
+        url = reverse('core:samples_details', args=(self.mission.id,))
 
         response = self.client.get(url)
 
