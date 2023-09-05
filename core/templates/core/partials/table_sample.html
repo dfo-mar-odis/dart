@@ -1,6 +1,11 @@
 {% block sample_block %}
 <div hx-target="#sample_table" hx-swap="outerHTML" hx-trigger="load, update_samples from:body"
-     hx-get="{% url 'core:hx_sample_list' mission.pk %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+     {% if sample_type %}
+     hx-get="{% url 'core:hx_sample_list' mission.pk sample_type.pk %}"
+     {% else %}
+     hx-get="{% url 'core:hx_sample_list' mission.pk %}"
+     {% endif %}
 >
 {% block sample_table %}
     <table id="sample_table" class="table table-striped">

@@ -470,6 +470,12 @@ class Sample(models.Model):
 
     file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
 
+    last_modified_date = models.DateTimeField(verbose_name=_("Sample Modified"),
+                                              help_text=_("Date sample was last updated"), auto_now=True)
+
+    bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
+                                           help_text=_("Date of last BioChem upload"))
+
     def __str__(self):
         return f'{self.type}: {self.bottle.bottle_id}'
 

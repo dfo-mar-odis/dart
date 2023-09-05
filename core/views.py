@@ -69,20 +69,6 @@ class MissionUpdateView(MissionCreateView, GenericUpdateView):
         return super().form_valid(form)
 
 
-class SampleDetails(MissionMixin, GenericDetailView):
-    page_title = _("Mission Samples")
-    template_name = "core/mission_samples.html"
-
-    def get_settings_url(self):
-        return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
-
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,)) for key in reports.keys()}
-
-        return context
-
-
 def load_ctd_files(mission):
 
     group_name = 'mission_events'

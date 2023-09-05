@@ -42,7 +42,9 @@ urlpatterns = [
 
     # ###### sample details ###### #
 
-    path('mission/sample/<int:pk>/', views.SampleDetails.as_view(), name="sample_details"),
+    path('mission/sample/<int:pk>/', views_mission_sample.SampleDetails.as_view(), name="sample_details"),
+    path('mission/sample/<int:pk>/<int:sample_type_id>/', views_mission_sample.SampleDetails.as_view(),
+         name="sample_details"),
     path('mission/sample/hx/ctd/<int:mission_id>/', views_mission_sample.hx_sample_upload_ctd,
          name="hx_sample_upload_ctd"),
     path('mission/sample/hx/delete/<int:mission_id>/<int:sample_type_id>/', views_mission_sample.hx_sample_delete,
@@ -50,6 +52,8 @@ urlpatterns = [
     path('mission/sample/hx/list/<int:mission_id>', views_mission_sample.hx_list_samples, name="hx_sample_list"),
     path('mission/sample/hx/list/<int:mission_id>/<int:sensor_id>', views_mission_sample.hx_list_samples,
          name="hx_sample_list"),
+
+    path('mission/sample/hx/datatype/', views_mission_sample.update_sample_type, name="hx_update_sample_type"),
 
     # ###### Mission details and setting ###### #
 

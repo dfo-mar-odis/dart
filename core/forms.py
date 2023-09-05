@@ -1,6 +1,5 @@
 import datetime
 import re
-import csv
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -8,13 +7,14 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
 from django import forms
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
-import bio_tables.models
 from dart2.utils import load_svg
-import dart2.utils
+
 from . import models
+from bio_tables import models as bio_models
 
 
 class NoWhiteSpaceCharField(forms.CharField):
@@ -358,7 +358,7 @@ class SampleTypeForm(forms.ModelForm):
 
         if 'initial' in kwargs and 'datatype_filter' in kwargs['initial']:
             filter = kwargs['initial']['datatype_filter'].split(" ")
-            queryset = bio_tables.models.BCDataType.objects.all()
+            queryset = bio_models.BCDataType.objects.all()
             for term in filter:
                 queryset = queryset.filter(description__icontains=term)
 
@@ -401,6 +401,115 @@ class SampleTypeForm(forms.ModelForm):
                     css_class="flex-fill"
                 ),
                 id="div_id_sample_type_holder_form"
+            )
+        )
+
+
+class BioChemUpload(forms.Form):
+    sample_type_id = forms.IntegerField(label=_("Sample Type"),
+                                        help_text=_("The Sample Type to apply the BioChem datatype to"))
+    mission_id = forms.IntegerField(label=_("Mission"),
+                                    help_text=_("The mission to apply the BioChem datatype to"))
+    data_type_filter = forms.CharField(label=_("Filter Datatype"), required=False)
+    data_type_code = forms.IntegerField(label=_("Datatype Code"), required=False)
+    data_type_description = forms.ChoiceField(label=_("Datatype Description"), required=False)
+
+    start_sample = forms.IntegerField(label=_("Start"))
+    end_sample = forms.IntegerField(label=_("End"))
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        data_type_choices_qs = bio_models.BCDataType.objects.all()
+        if 'data_type_filter' in kwargs['initial']:
+            filter = kwargs['initial']['data_type_filter'].split(" ")
+            q_set = Q()
+            for f in filter:
+                q_set = Q(description__icontains=f) & q_set
+            data_type_choices_qs = data_type_choices_qs.filter(q_set)
+
+            if data_type_choices_qs.exists():
+                data_type_choices = [(st.pk, st) for st in data_type_choices_qs]
+
+                self.fields['data_type_description'].choices = data_type_choices
+                self.fields['data_type_description'].initial = data_type_choices[0][0]
+                self.fields['data_type_code'].initial = data_type_choices[0][0]
+            else:
+                self.fields['data_type_description'].choices = [(None, '---------')]
+                self.fields['data_type_description'].initial = None
+                self.fields['data_type_code'].initial = None
+        else:
+            data_type_choices = [(st.pk, st) for st in data_type_choices_qs]
+            data_type_choices.insert(0, (None, '---------'))
+            self.fields['data_type_description'].choices = data_type_choices
+            self.fields['data_type_description'].initial = None
+
+            if 'data_type_code' in kwargs['initial']:
+                self.fields['data_type_description'].initial = kwargs['initial']['data_type_code']
+
+        if 'mission_id' in self.initial and 'sample_type_id' in self.initial:
+            mission_id = self.initial['mission_id']
+            sample_type_id = self.initial['sample_type_id']
+            samples = models.Sample.objects.filter(bottle__event__mission_id=mission_id, type_id=sample_type_id)
+            if 'start_sample' not in kwargs['initial']:
+                self.fields['start_sample'].initial = samples.first().bottle.bottle_id
+
+            if 'end_sample' not in kwargs['initial']:
+                self.fields['end_sample'].initial = samples.last().bottle.bottle_id
+
+        self.helper = FormHelper(self)
+
+        data_type_filter = Field('data_type_filter', css_class="form-control form-control-sm")
+        data_type_filter.attrs['hx-get'] = reverse_lazy('core:hx_update_sample_type')
+        data_type_filter.attrs['hx-trigger'] = 'keyup changed delay:500ms, change'
+        data_type_filter.attrs['hx-target'] = "#div_id_data_type_row"
+        data_type_filter.attrs['hx-select'] = "#div_id_data_type_row"
+
+        data_type_code = Field('data_type_code', id='id_data_type_code', css_class="form-control-sm")
+        data_type_code.attrs['hx-get'] = reverse_lazy('core:hx_update_sample_type')
+        data_type_code.attrs['hx-trigger'] = 'keyup changed delay:500ms, change'
+        data_type_code.attrs['hx-target'] = "#id_data_type_description"
+        data_type_code.attrs['hx-select-oob'] = "#id_data_type_description"
+
+        data_type_description = Field('data_type_description', id='id_data_type_description',
+                                      css_class='form-control form-select-sm')
+        data_type_description.attrs['hx-get'] = reverse_lazy('core:hx_update_sample_type')
+        data_type_description.attrs['hx-trigger'] = 'change'
+        data_type_description.attrs['hx-target'] = "#id_data_type_code"
+        data_type_description.attrs['hx-select'] = "#id_data_type_code"
+
+        apply_attrs = {
+            'name': 'apply_data_type',
+            'title': _('Apply Datatype to Samples'),
+            'hx-get': reverse_lazy('core:hx_update_sample_type'),
+            'hx-target': "#div_id_data_type_message",
+            'hx-swap': 'innerHTML'
+        }
+        apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
+                                    **apply_attrs)
+
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Div(
+                Field('sample_type_id', type='hidden'),
+                Field('mission_id', type='hidden'),
+                Row(
+                    Column(data_type_filter, css_class='col'),
+                ),
+                Row(
+                    Column(data_type_code, css_class='col-auto'),
+                    Column(data_type_description, css_class="col"),
+                    id="div_id_data_type_row"
+                ),
+                Row(
+                    Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
+                    Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
+                    Column(apply_button, css_class="col-auto align-self-end mb-3"),
+                    id="div_id_sample_range"
+                ),
+                Row(
+                    Column(id="div_id_data_type_message")
+                ), css_class="alert alert-secondary mt-2", id="div_id_data_type_form"
             )
         )
 
