@@ -181,7 +181,7 @@ def oxygen_report(request, **kwargs):
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def salt_report(request, **kwargs):
     sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
-    samples = ['sal']
+    samples = ['salts']
     header = ["Station", "Event", 'Pressure', "Sample", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
               'Sal_CTD_P', 'Sal_CTD_S', 'Sal_Rep1', 'Sal_Rep2']
 
