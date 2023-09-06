@@ -942,6 +942,18 @@ def hx_sample_delete(request, **kwargs):
     if request.method == "POST":
         models.Sample.objects.filter(type=sample_type).delete()
 
+        # return a loading dialog that will send the user back to the Mission Sample page
+        attrs = {
+            'component_id': "div_id_delete_samples",
+            'alert_type': 'info',
+            'message': _("Loading"),
+            'hx-get': reverse_lazy('core:sample_details', args=(mission,)),
+            'hx-trigger': 'load',
+            'hx-push-url': 'true'
+        }
+        soup = forms.save_load_component(**attrs)
+        return HttpResponse(soup)
+
     return hx_list_samples(request, mission_id=mission)
 
 
