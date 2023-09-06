@@ -684,7 +684,17 @@ def hx_list_samples(request, **kwargs):
 
     mission = models.Mission.objects.get(pk=mission_id)
     if sensor_id:
-        queryset = models.Sample.objects.filter(type_id=sensor_id).order_by('bottle__bottle_id')[
+        # unfortunately if a page doesn't contain columns for 1 or 2 replicates when there's more the
+        # HTML table that gets returned to the interface will be missing columns and it throws everything
+        # out of alignment. We'll get the replicate columns here and use that value to insert blank
+        # columns into the dataframe if a replicate column is missing from the query set.
+        replicates = models.DiscreteSampleValue.objects.filter(
+            sample__bottle__event__mission_id=mission_id,
+            sample__type__id=sensor_id).aggregate(Max('replicate'))['replicate__max']
+
+        queryset = models.Sample.objects.filter(
+            bottle__event__mission=mission,
+            type_id=sensor_id).order_by('bottle__bottle_id')[
                    page_start:(page_start + page_limit)]
         queryset = queryset.values(
             'bottle__bottle_id',
@@ -695,11 +705,20 @@ def hx_list_samples(request, **kwargs):
             'discrete_values__sample_datatype',
             'discrete_values__comment',
         )
-        headings = ['Flag', 'Datatype', 'Comments']
+        headings = ['Value', 'Flag', 'Datatype', 'Comments']
         df = read_frame(queryset)
-        df.columns = ["Sample", "Pressure", "Replicate", "Value"] + headings
+        df.columns = ["Sample", "Pressure", "Replicate",] + headings
         df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
 
+        for j, column in enumerate(headings):
+            for i in range(1, replicates+1):
+                col_index = (column, i,)
+                if col_index not in df.columns:
+                    index = j*replicates+i-1
+                    if index < df.shape[1]:
+                        df.insert(index, col_index, np.nan)
+                    else:
+                        df[col_index] = np.nan
         soup = format_sensor_table(request, df, mission_id, sensor_id)
     else:
         bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
@@ -741,12 +760,17 @@ def hx_list_samples(request, **kwargs):
 
     # add styles to the table so it's consistent with the rest of the application
     table = soup.find('table')
-    table.attrs['class'] = 'dataframe table table-striped tscroll horizontal-scrollbar'
+    table.attrs['class'] = 'dataframe table table-striped ' \
+                           'table-sm tscroll horizontal-scrollbar'
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
     args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
-    last_tr = table.find('tbody').find_all('tr')[-1]
+    table_head = table.find('thead')
+
+    table_body = table.find('tbody')
+
+    last_tr = table_body.find_all('tr')[-1]
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
     last_tr.attrs['hx-get'] = reverse_lazy('core:hx_sample_list', args=args) + f"?page={page + 1}"
