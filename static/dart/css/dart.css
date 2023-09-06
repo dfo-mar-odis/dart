@@ -1,22 +1,29 @@
-
-table.dataframe thead {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    background-color: #FFF;
-}
-
 .tscroll {
     height: 400px;
     overflow: scroll;
 }
 
+.tscroll table {
+    border-collapse: separate;
+}
+
 .tscroll table thead {
+    position: -webkit-sticky;
     position: sticky;
     top: 0;
     z-index: 2;
-    background-color: #FFF;
+    background-color: #b4b4b4;
 }
+
+.tscroll table thead th {
+    border-top: none !important;
+    border-bottom: none !important;
+    box-shadow: insert 0 2px 0 black, insert 0 -2px 0 black;
+    padding: 4px 3px;
+    background-color: #f3F3F3;
+    background-clip: padding-box;
+}
+
 
 .tscroll table thead th:first-child {
     position: sticky;
@@ -24,6 +31,7 @@ table.dataframe thead {
     top: 0;
     z-index: 3;
     background-color: #FFF;
+    border-top: none !important;
 }
 
 .tscroll tbody th:first-child {
@@ -31,6 +39,28 @@ table.dataframe thead {
     left: 0;
     z-index: 1;
     background-color: #FFF;
+}
+
+table.dataframe table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+table.dataframe thead {
+    position: -webkit-sticky;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background-color: #b4b4b4;
+}
+
+table.dataframe thead th {
+    border-top: none !important;
+    border-bottom: none !important;
+    box-shadow: insert 0 2px 0 black, insert 0 -2px 0 black;
+    padding: 4px 3px;
+    background-color: #f3F3F3;
+    background-clip: padding-box;
 }
 
 .vertical-scrollbar {

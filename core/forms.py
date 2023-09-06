@@ -7,7 +7,7 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
 from django import forms
 from django.core.exceptions import ValidationError
-from django.db.models import Q
+from django.db.models import Q, Min, Max
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
@@ -449,13 +449,13 @@ class BioChemUpload(forms.Form):
 
         if 'mission_id' in self.initial and 'sample_type_id' in self.initial:
             mission_id = self.initial['mission_id']
-            sample_type_id = self.initial['sample_type_id']
-            samples = models.Sample.objects.filter(bottle__event__mission_id=mission_id, type_id=sample_type_id)
+            min_max = models.Bottle.objects.filter(event__mission_id=mission_id).aggregate(
+                Min('bottle_id'), Max('bottle_id'))
             if 'start_sample' not in kwargs['initial']:
-                self.fields['start_sample'].initial = samples.first().bottle.bottle_id
+                self.fields['start_sample'].initial = min_max['bottle_id__min']
 
             if 'end_sample' not in kwargs['initial']:
-                self.fields['end_sample'].initial = samples.last().bottle.bottle_id
+                self.fields['end_sample'].initial = min_max['bottle_id__max']
 
         self.helper = FormHelper(self)
 
