@@ -106,7 +106,7 @@ def process_ros_sensors(exclude_sensors: [str], ros_file: str):
             continue
 
         # if the sensor already exists, skip it
-        if core_models.SampleType.objects.filter(short_name=sensor_mapping[0]).exists():
+        if core_models.SampleType.objects.filter(short_name__iexact=sensor_mapping[0]).exists():
             continue
 
         sensor_type_string, priority, units, other = parse_sensor(sensor_mapping[1])
@@ -162,7 +162,7 @@ def process_common_sensors(sensors: list[str], exclude_sensors: [str]):
             continue
 
         # if the sensor exists, skip it
-        if core_models.SampleType.objects.filter(short_name=sensor).exists():
+        if core_models.SampleType.objects.filter(short_name__iexact=sensor).exists():
             continue
 
         details = parse_sensor_name(sensor)

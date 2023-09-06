@@ -376,7 +376,7 @@ def load_sample_config(request, **kwargs):
         if mission_id is None:
             raise Http404(_("Mission does not exist"))
 
-        context['object'] = models.Mission.objects.get(pk=mission_id)
+        context['mission'] = models.Mission.objects.get(pk=mission_id)
         html = render_to_string("core/mission_samples.html", request=request, context=context)
         return HttpResponse(html)
     elif request.method == "POST":
