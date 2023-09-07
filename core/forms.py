@@ -73,7 +73,7 @@ class MissionSettingsForm(forms.ModelForm):
 
         self.helper.layout = Layout(
             Row(
-                Column(Field('name')),
+                Column(Field('name', autocomplete='true')),
             ),
             Row(
                 Column(Field('start_date')),
