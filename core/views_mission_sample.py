@@ -208,7 +208,7 @@ def save_sample_config(request, **kwargs):
         if 'config_id' in kwargs and 'update_sample_type' in request.GET:
             sample_type = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
             url = reverse_lazy("core:save_sample_config", args=(sample_type.pk,))
-            oob_select = f"#div_id_sample_type_holder, #div_id_{sample_type.pk}:outerHTML"
+            oob_select = f"#div_id_sample_type_holder"
         else:
             url = reverse_lazy("core:save_sample_config")
             oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
@@ -265,11 +265,21 @@ def save_sample_config(request, **kwargs):
             sample_config: models.SampleTypeConfig = sample_type_config_form.save()
             # the load form is immutable to the user it just allows them the delete, send for edit or load the
             # sample into the mission
-            html = '<div id="div_id_loaded_samples_list">'
-            html += render_to_string('core/partials/card_sample_config.html',
+            html = render_to_string('core/partials/card_sample_config.html',
                                      context={'sample_config': sample_config})
-            html += '</div>'
-            return HttpResponse(html)
+            soup = BeautifulSoup(html, 'html.parser')
+
+            div_id = f"div_id_sample_config_card_{ sample_config.id }"
+            div = soup.find(id=div_id)
+            if 'config_id' in kwargs:
+                div.attrs['hx-swap-oob'] = f"#{div_id}"
+            else:
+                new_root = soup.new_tag('div')
+                new_root.attrs['id'] = "div_id_loaded_samples_list"
+                new_root.append(div)
+                soup.append(new_root)
+
+            return HttpResponse(soup)
 
         html = render_crispy_form(sample_type_config_form)
         return HttpResponse(html)
@@ -555,7 +565,8 @@ def load_samples(request, **kwargs):
 def delete_sample_config(request, **kwargs):
     config_id = kwargs['config_id']
     if request.method == "POST":
-        models.MissionSampleConfig.objects.get(config_id=config_id).delete()
+        if models.MissionSampleConfig.objects.filter(config_id=config_id).exists():
+            models.MissionSampleConfig.objects.get(config_id=config_id).delete()
         models.SampleTypeConfig.objects.get(pk=config_id).delete()
 
     return HttpResponse()
