@@ -15,7 +15,7 @@
 {% block title %}
     {{ block.super }}
     {% if new_url %}
-        <span class="col-1"><a class="btn btn-primary" href="{{ new_url }}">{% trans 'New' %}</a></span>
+        <span class="col-1"><a class="btn btn-primary" href="{{ new_url }}" title="{% trans 'New Mission' %}">{% custom_icon 'plus-square' %}</a></span>
     {% endif %}
 {% endblock %}
 

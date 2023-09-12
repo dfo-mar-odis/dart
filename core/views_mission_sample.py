@@ -16,10 +16,11 @@ from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
+from dynamic_db_router import in_database
 from render_block import render_block_to_string
 
-import bio_tables.models
-from biochem import models
+import biochem.upload
+from bio_tables import models as bio_models
 
 from core import forms
 from core import models
@@ -801,6 +802,10 @@ def hx_list_samples(request, **kwargs):
 
 
 def format_all_sensor_table(df, mission_id):
+
+    # start by replacing nan values with '---'
+    df.fillna('---', inplace=True)
+
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
     html = '<div id="sample_table">' + df.to_html() + "</div>"
 
@@ -926,6 +931,9 @@ def format_sensor_table(request, df, mission_id, sensor_id):
 
     upload_button = soup.new_tag('button')
     upload_button.attrs['class'] = 'btn btn-primary btn-sm'
+    upload_button.attrs['hx-get'] = reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sensor_id,))
+    upload_button.attrs['hx-target'] = '#table_id_sample_table'
+    upload_button.attrs['hx-swap'] = 'beforebegin'
 
     upload_button_icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
     upload_button.append(upload_button_icon)
@@ -1003,7 +1011,7 @@ def update_sample_type(request, **kwargs):
         start_sample = request.POST['start_sample']
         end_sample = request.POST['end_sample']
 
-        data_type = bio_tables.models.BCDataType.objects.get(data_type_seq=data_type_code)
+        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
         discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission_id=mission_id,
                                                                     sample__bottle__bottle_id__gte=start_sample,
@@ -1015,3 +1023,23 @@ def update_sample_type(request, **kwargs):
 
         response = hx_list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
         return response
+
+
+def upload_bio_chem(request, **kwargs):
+    mission_id = kwargs['mission_id']
+    sample_id = kwargs['sample_type_id']
+
+    if request.method == "GET":
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'info',
+            'message': _("Uploading"),
+            'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sample_id)),
+            'hx-trigger': 'load',
+        }
+        soup = forms.save_load_component(**attrs)
+        return HttpResponse(soup)
+    elif request.method == "POST":
+        biochem.upload.get_bcd_p_model('test_table')
+
+    return HttpResponse('Hi')
