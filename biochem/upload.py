@@ -56,12 +56,12 @@ def get_bcs_d_model(table_name: str) -> Type[models.BcsD]:
 def get_bcd_p_model(table_name: str) -> Type[models.BcdP]:
     default_db = connections.databases['default']
     biochem_db = {
-        'ENGINE': 'django.db.backends.oracle',
-        'NAME': 'TTRAN',
-        'USER': 'upsonp',
-        'PASSWORD': 'homerun5',
-        'PORT': '1521',
-        'HOST': 'VSNSBIOD78.ENT.DFO-MPO.CA',
+        'ENGINE': '',
+        'NAME': '',
+        'USER': '',
+        'PASSWORD': '',
+        'PORT': '',
+        'HOST': '',
         'TIME_ZONE': None,
         'CONN_HEALTH_CHECKS': False,
         'CONN_MAX_AGE': 0,
