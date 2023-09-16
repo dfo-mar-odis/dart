@@ -26,7 +26,7 @@
         <div class="col">
             {# choose file input #}
             <input id="id_input_sample_file" class="form-control form-control-sm"
-                   type="file" name="sample_file" accept=".csv,.xls,.xlsx,.xlsm"
+                   type="file" name="sample_file" accept=".dat,.csv,.xls,.xlsx,.xlsm"
                    hx-trigger="change"
                    hx-get="{% url 'core:load_sample_config' %}?mission_id={{ mission.pk }}"
                    hx-select-oob="#div_id_sample_type_holder:outerHTML, #div_id_loaded_sample_type:outerHTML"

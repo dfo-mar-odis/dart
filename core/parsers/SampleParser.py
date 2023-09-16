@@ -26,7 +26,7 @@ def get_file_configs(data, file_type):
     curtab = -1
     df = None
     for sample_type in sample_configs:
-        if file_type == 'csv':
+        if file_type == 'csv' or file_type == 'dat':
             if not lowercase_fields:
                 # get the field choices, then see if they match the file_config's sample_type fields
                 tab, skip, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
@@ -60,7 +60,7 @@ def get_file_configs(data, file_type):
 
 def get_headers(data, file_type: str, tab: int = 0, skip: int = -1) -> [int, int, list]:
     field_choices = []
-    if file_type == 'csv':
+    if file_type == 'csv' or file_type == 'dat':
         skip, csv_header = get_csv_header(data.decode('utf-8').split("\r\n"), skip)
         field_choices = [(str(field).lower(), field) for field in csv_header]
     elif file_type in excel_extensions:
