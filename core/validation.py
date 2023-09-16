@@ -13,10 +13,20 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
 
     validation_errors = []
 
+    actions = event.actions.all()
+
     # Don't validate aborted events
-    if event.actions.filter(type=core_models.ActionType.aborted).exists():
+    if actions.filter(type=core_models.ActionType.aborted).exists():
         return validation_errors
 
+    distinct_actions = [action['type'] for action in actions.values('type').distinct()]
+    for action_type in distinct_actions:
+        if len(actions.filter(type=action_type)) > 1:
+            message = _("Event contains duplicate action types")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+
+    # Validate event does not have duplicate action types
     mission = event.mission
     if event.start_date is None or event.end_date is None:
         message = _("Event is missing start and/or end date")

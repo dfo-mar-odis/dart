@@ -609,7 +609,7 @@ class ElogConfig(FileConfiguration):
               ("platform", "Platform", _("Label identifying the ship name used for the mission")),
               ("attached", "Attached", _("Label identifying accessories attached to equipment")),
               ("start_sample_id", "Sample ID", _("Label identifying a lone bottle, or starting bottle in a sequence")),
-              ("end_sample_id", "End_Sample_ID"), _("Label identifying the ending bottle in a sequence"),
+              ("end_sample_id", "End_Sample_ID", _("Label identifying the ending bottle in a sequence")),
               ("comment", "Comment", _("Label identifying an action comment")),
               ("data_collector", "Author", _("Label identifying who logged the elog action")),
               ("sounding", "Sounding", _("Label identifying the sounding depth of the action"))]

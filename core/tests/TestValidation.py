@@ -6,11 +6,38 @@ from django.test import tag
 
 from core import models as core_models
 from core.models import ActionType as action_types
-from core.validation import validate_ctd_event, validate_net_event
+from core.validation import validate_event, validate_ctd_event, validate_net_event
 
 import logging
 
 logger = logging.getLogger('dart.test')
+
+
+@tag('validation', 'validation_general')
+class TestGeneralEventValidation(DartTestCase):
+    def setUp(self) -> None:
+        self.start_date = datetime.datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.end_date = datetime.datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.mission = core_factory.MissionFactory(
+            start_date=self.start_date.date(),
+            end_date=self.end_date.date()
+        )
+
+    def test_validate_actions(self):
+        # Events may not contain actions of the same type, this test has an event with two bottom actions
+
+        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_event(event)
+        logger.debug(errors)
+        self.assertEquals(len(errors), 1)
 
 
 @tag('validation', 'validation_ctd')
