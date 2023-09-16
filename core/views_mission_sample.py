@@ -505,7 +505,7 @@ def load_samples(request, **kwargs):
             mission_sample_type = models.MissionSampleConfig(mission=mission, config=sample_config)
             mission_sample_type.save()
 
-        if file_type == 'csv':
+        if file_type == 'csv' or file_type == 'dat':
             io_stream = io.BytesIO(data)
             dataframe = pd.read_csv(filepath_or_buffer=io_stream, header=sample_config.skip)
         else:
