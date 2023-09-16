@@ -578,11 +578,16 @@ class FileConfigurationMapping(models.Model):
                                on_delete=models.CASCADE)
     field = models.CharField(max_length=100, verbose_name=_("Dart Field"), help_text=_("The field DART is expecting"))
     mapped_to = models.CharField(max_length=100, verbose_name=_("Elog Field"), help_text=_("The field Elog has"))
+    purpose = models.CharField(max_length=127, verbose_name=_("Purpose"), help_text=_("Describe the variable"),
+                               blank=True, null=True)
     required = models.BooleanField(verbose_name=_("Is Required"), default=False,
                                    help_text=_("Indicate if this is a required field for validation"))
 
     def __str__(self):
         return f'{self.config.file_type}: [{self.field}: {self.mapped_to}]'
+
+    class Meta:
+        ordering = ('field',)
 
 
 class ElogConfig(FileConfiguration):
@@ -590,14 +595,24 @@ class ElogConfig(FileConfiguration):
                                    verbose_name=_('Mission'))
 
     # required fields that we cannot continue without
-    required_fields = [("event", "Event"), ("time_position", "Time|Position"), ("station", "Station"),
-                       ("action", "Action"), ("instrument", "Instrument")]
+    required_fields = [("event", "Event", _("Label identifying the elog event number")),
+                       ("time_position", "Time|Position", _("Label identifying the time|position string of an action")),
+                       ("station", "Station", _("Label identifying the station of the event")),
+                       ("action", "Action", _("Label identifying an elog action")),
+                       ("instrument", "Instrument", _("Label identifying the instrument of the event"))]
 
     # optional fields used at various points, but may be event specific. A buoy has no sample ID,
     # or a net will have a sample id, but no end sample id for example
-    fields = [('lead_scientist', 'PI'), ('protocol', "Protocol"), ('cruise', "Cruise"), ("platform", "Platform"),
-              ("attached", "Attached"), ("start_sample_id", "Sample ID"), ("end_sample_id", "End_Sample_ID"),
-              ("comment", "Comment"), ("data_collector", "Author"), ("sounding", "Sounding")]
+    fields = [('lead_scientist', 'PI', _("Label identifying the lead scientists of the mission")),
+              ('protocol', "Protocol", _("Label identifying the protocol of the mission")),
+              ('cruise', "Cruise", _("Label identifying the cruse name of the mission")),
+              ("platform", "Platform", _("Label identifying the ship name used for the mission")),
+              ("attached", "Attached", _("Label identifying accessories attached to equipment")),
+              ("start_sample_id", "Sample ID", _("Label identifying a lone bottle, or starting bottle in a sequence")),
+              ("end_sample_id", "End_Sample_ID", _("Label identifying the ending bottle in a sequence")),
+              ("comment", "Comment", _("Label identifying an action comment")),
+              ("data_collector", "Author", _("Label identifying who logged the elog action")),
+              ("sounding", "Sounding", _("Label identifying the sounding depth of the action"))]
 
     @staticmethod
     def get_default_config(mission):
@@ -618,14 +633,16 @@ class ElogConfig(FileConfiguration):
 
         for field in required_fields:
             if not elog_config.mappings.filter(field=field[0]).exists():
-                mapping = FileConfigurationMapping(config=elog_config, field=field[0], mapped_to=field[1],
-                                                   required=True)
+                mapping = FileConfigurationMapping(config=elog_config,
+                                                   field=field[0], mapped_to=field[1],
+                                                   purpose=field[2], required=True)
                 mapping.save()
 
         for field in optional_fields:
             if not elog_config.mappings.filter(field=field[0]).exists():
-                mapping = FileConfigurationMapping(config=elog_config, field=field[0], mapped_to=field[1],
-                                                   required=False)
+                mapping = FileConfigurationMapping(config=elog_config,
+                                                   field=field[0], mapped_to=field[1],
+                                                   purpose=field[2], required=False)
                 mapping.save()
 
         return elog_config

@@ -55,6 +55,9 @@ urlpatterns = [
 
     path('mission/sample/hx/datatype/', views_mission_sample.update_sample_type, name="hx_update_sample_type"),
 
+    path('mission/sample/hx/upload/biochem/<int:mission_id>/<int:sample_type_id>/',
+         views_mission_sample.upload_bio_chem, name="hx_upload_bio_chem"),
+
     # ###### Mission details and setting ###### #
 
     path('mission/', views.MissionFilterView.as_view(), name="mission_filter"),
@@ -63,6 +66,9 @@ urlpatterns = [
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     # ###### Mission Events (elog) ###### #
+
+    path('mission/elog/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
+    path('mission/update/elog/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
 
     path('mission/event/<int:pk>/', views_mission_event.EventDetails.as_view(), name="event_details"),
 

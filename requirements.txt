@@ -2,6 +2,9 @@
 Django<=4.2.0,>=4.1.0
 asgiref<4,>=3.6.0
 
+# used for dynamic Oracle connections for biochem upload and for copying external sqlite dbs
+django-dynamic-db-router
+
 # useful helper extensions for database fields and admin functions https://django-extensions.readthedocs.io/en/latest/index.html
 django-extensions==3.2.1
 

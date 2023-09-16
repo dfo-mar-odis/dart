@@ -306,6 +306,12 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             event = existing_events.get(event_id=event_id)
 
             if cur_event != event_id:
+                # if this is a new event, or an event that's seen for the first time, clear it's actions and
+                # attachments so we don't end up with duplicate actions and attachments if the event is
+                # being reloaded
+                event.attachments.all().delete()
+                event.actions.all().delete()
+
                 attached = attached_str.split(" | ")
                 for a in attached:
                     if a.strip() != '':

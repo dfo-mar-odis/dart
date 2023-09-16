@@ -84,7 +84,6 @@ def hx_event_update(request, event_id):
     if request.method == "POST":
         mission_id = request.POST['mission']
         event_id = request.POST['event_id']
-        context.update(csrf(request))
         update = models.Event.objects.filter(mission_id=mission_id, event_id=event_id).exists()
 
         if update:

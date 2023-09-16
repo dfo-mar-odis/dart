@@ -142,22 +142,23 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
+# DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
+DATABASE_ROUTERS=['dynamic_db_router.DynamicDbRouter']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, env('LOCAL_DATABASE')),
     },
 }
-if env.bool("BIOCHEM_ENABLED", default=False):
-    DATABASES['mirror_biochem'] = {
-        'ENGINE': 'django.db.backends.oracle',
-        'NAME': env('BIOCHEM_NAME'),
-        'USER': env('BIOCHEM_USER'),
-        'PASSWORD': env('BIOCHEM_PASS'),
-        'PORT': env('BIOCHEM_PORT'),
-        'HOST': env('BIOCHEM_HOST'),
-    }
+# if env.bool("BIOCHEM_ENABLED", default=False):
+#     DATABASES['mirror_biochem'] = {
+#         'ENGINE': 'django.db.backends.oracle',
+#         'NAME': env('BIOCHEM_NAME'),
+#         'USER': env('BIOCHEM_USER'),
+#         'PASSWORD': env('BIOCHEM_PASS'),
+#         'PORT': env('BIOCHEM_PORT'),
+#         'HOST': env('BIOCHEM_HOST'),
+#     }
 
 
 # Password validation

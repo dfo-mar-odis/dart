@@ -82,7 +82,15 @@ def update_geographic_regions(request, **kwargs):
             soup.append(row)
 
             return HttpResponse(soup)
-    if request.method == "POST":
+
+        mission_form = forms.MissionSettingsForm(request.GET)
+        html = render_crispy_form(mission_form)
+        soup = BeautifulSoup(html, "html.parser")
+        geo_region = soup.find(id="id_geographic_region")
+
+        return HttpResponse(geo_region.prettify())
+
+    elif request.method == "POST":
         mission_dict = request.POST.copy()
         if 'geographic_region' in request.POST and (region_name := request.POST['geographic_region'].strip()):
             if (region := models.GeographicRegion.objects.filter(name=region_name)).exists():
