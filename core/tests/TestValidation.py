@@ -25,6 +25,7 @@ class TestGeneralEventValidation(DartTestCase):
 
     def test_validate_actions(self):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
+        # unless the action type is 'other'
 
         event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
         expected_file = 'test.log'
@@ -38,6 +39,24 @@ class TestGeneralEventValidation(DartTestCase):
         errors = validate_event(event)
         logger.debug(errors)
         self.assertEquals(len(errors), 1)
+
+
+    def test_validate_actions_other(self):
+        # Events may not contain actions of the same type, this test has an event with two bottom actions
+        # unless the action type is 'other'
+
+        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.other, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.other, file=expected_file,
+                                   date_time=self.start_date)
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.bottom, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_event(event)
+        logger.debug(errors)
+        self.assertEquals(len(errors), 0)
 
 
 @tag('validation', 'validation_ctd')
