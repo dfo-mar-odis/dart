@@ -40,7 +40,6 @@ class TestGeneralEventValidation(DartTestCase):
         logger.debug(errors)
         self.assertEquals(len(errors), 1)
 
-
     def test_validate_actions_other(self):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
         # unless the action type is 'other'
