@@ -19,8 +19,11 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
     if actions.filter(type=core_models.ActionType.aborted).exists():
         return validation_errors
 
+    # Don't validate duplicates of the 'other' action_type
     distinct_actions = [action['type'] for action in actions.values('type').distinct()]
-    distinct_actions.remove(core_models.ActionType.other)
+    if core_models.ActionType.other in distinct_actions:
+        distinct_actions.remove(core_models.ActionType.other)
+
     for action_type in distinct_actions:
         if len(actions.filter(type=action_type)) > 1:
             message = _("Event contains duplicate action types")
