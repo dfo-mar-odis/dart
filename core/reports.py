@@ -119,7 +119,20 @@ def profile_summary(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    sample_types = core_models.SampleType.objects.filter(samples__bottle__event__mission=mission).distinct()
+    exclude = []
+    mission_included_sampletypes = core_models.SampleType.objects.filter(samples__bottle__event__mission_id=mission_id)
+
+    # if the mean chl and/or phae sampletypes are used then there's no need to include an average of the chl and/or
+    # phae sampletypes because that's what the chl_mean/phae_mean
+    if 'chl_mean' in [st.short_name for st in mission_included_sampletypes]:
+        exclude.append('chl')
+
+    if 'phae_mean' in [st.short_name for st in mission_included_sampletypes]:
+        exclude.append('phae')
+
+    sample_types = core_models.SampleType.objects.filter(
+        samples__bottle__event__mission=mission
+    ).exclude(short_name__in=exclude).distinct()
 
     header = ['Mission', "Station", "Event", 'Gear', 'Pressure', "Sample"] + [st.short_name for st in sample_types]
     data = ",".join(header) + '\n'
