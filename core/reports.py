@@ -166,17 +166,19 @@ def std_sample_report(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    sample_types = core_models.SampleType.objects.filter(short_name__in=kwargs['sensors'])
-
     data = ",".join(kwargs['headers']) + '\n'
 
     bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
 
     for bottle in bottles:
         row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]
-        row += bottle.samples.filter(type__in=sample_types).values_list('discrete_values__value', flat=True)
-        row += bottle.samples.filter(type__short_name__in=kwargs['samples']).values_list('discrete_values__value',
-                                                                                         flat=True)
+        for sensor in kwargs['sensors']:
+            row += bottle.samples.filter(type__short_name__iexact=sensor).values_list('discrete_values__value',
+                                                                                      flat=True)
+
+        for sample in kwargs['samples']:
+            row += bottle.samples.filter(type__short_name__iexact=sample).values_list('discrete_values__value',
+                                                                                             flat=True)
         data += ",".join([str(val) for val in row]) + '\n'
 
     file_to_send = ContentFile(data)
