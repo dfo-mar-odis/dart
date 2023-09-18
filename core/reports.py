@@ -166,17 +166,19 @@ def std_sample_report(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    sample_types = core_models.SampleType.objects.filter(short_name__in=kwargs['sensors'])
-
     data = ",".join(kwargs['headers']) + '\n'
 
     bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
 
     for bottle in bottles:
         row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]
-        row += bottle.samples.filter(type__in=sample_types).values_list('discrete_values__value', flat=True)
-        row += bottle.samples.filter(type__short_name__in=kwargs['samples']).values_list('discrete_values__value',
-                                                                                         flat=True)
+        for sensor in kwargs['sensors']:
+            row += bottle.samples.filter(type__short_name__iexact=sensor).values_list('discrete_values__value',
+                                                                                      flat=True)
+
+        for sample in kwargs['samples']:
+            row += bottle.samples.filter(type__short_name__iexact=sample).values_list('discrete_values__value',
+                                                                                             flat=True)
         data += ",".join([str(val) for val in row]) + '\n'
 
     file_to_send = ContentFile(data)
@@ -194,7 +196,7 @@ def std_sample_report(request, **kwargs):
 # The problem with this report is it depends on there being a SampleType with a short name 'oxy'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def oxygen_report(request, **kwargs):
-    sensors = ['sbeox0V', 'sbeox1V']
+    sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
     samples = ['oxy']
     header = ["Station", "Event", 'Pressure', "Sample", 'Oxy_CTD_P', 'Oxy_CTD_S', 'oxy_W_Rep1', 'oxy_W_Rep2']
 
