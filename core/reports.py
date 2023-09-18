@@ -194,7 +194,7 @@ def std_sample_report(request, **kwargs):
 # The problem with this report is it depends on there being a SampleType with a short name 'oxy'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def oxygen_report(request, **kwargs):
-    sensors = ['sbeox0V', 'sbeox1V']
+    sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
     samples = ['oxy']
     header = ["Station", "Event", 'Pressure', "Sample", 'Oxy_CTD_P', 'Oxy_CTD_S', 'oxy_W_Rep1', 'oxy_W_Rep2']
 
