@@ -482,7 +482,7 @@ class Sample(models.Model):
 
 # Most samples loaded are 'Discrete' chemical or mineral measurements. The DiscreteSampleValue table tracks those
 # values, but can also be used to keep track of replicates (when a sample has more than one value), data quality flags
-# individual BioChem datatypes (for when the data type is differenet or more descriptive than the sensor/sample
+# individual BioChem datatypes (for when the data type is different or more descriptive than the sensor/sample
 # general datatype), and comments related to the sample.
 class DiscreteSampleValue(models.Model):
     sample = models.ForeignKey(Sample, verbose_name=_("Sample"), on_delete=models.CASCADE,

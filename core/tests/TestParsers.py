@@ -52,7 +52,7 @@ class TestSampleXLSParser(DartTestCase):
 
         expected_header_row = 10
         df = SampleParser.get_excel_dataframe(file, 0, expected_header_row)
-        self.assertEquals(df.index.start, expected_header_row-1)
+        self.assertEquals(df.shape[0], 414)  # there are 424 rows in this file -expected_header_row gives 414
         self.assertEquals([str(c) for c in df.columns], expected_oxy_columns)
 
 
