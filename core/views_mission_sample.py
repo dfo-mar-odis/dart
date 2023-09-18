@@ -1,4 +1,5 @@
 import io
+import re
 
 import numpy as np
 import os
@@ -333,8 +334,16 @@ def new_sample_config(request, **kwargs):
         else:
             tab = int(request.POST['tab']) if 'tab' in request.POST else 0
             skip = int(request.POST['skip']) if 'skip' in request.POST else -1
+            field_choices = []
 
-            tab, skip, field_choices = get_headers(data, file_type, tab, skip)
+            try:
+                tab, skip, field_choices = get_headers(data, file_type, tab, skip)
+            except Exception as ex:
+                logger.exception(ex)
+                if isinstance(ex, ValueError):
+                    logger.error("Likely chosen tab or header line is outside of the workbook")
+                pass
+
             file_initial = {"file_type": file_type, "skip": skip, "tab": tab}
             if 'sample_type' in kwargs:
                 file_initial['sample_type'] = kwargs['sample_type']

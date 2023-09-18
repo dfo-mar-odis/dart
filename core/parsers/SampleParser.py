@@ -104,10 +104,6 @@ def get_excel_dataframe(stream, sheet_number=-1, header_row=-1):
         df = find_header(df, header_row)
     else:
         df = pd.read_excel(io=stream, sheet_name=sheet_number, header=header_row)
-        if header_row > 0:
-            df = df[(header_row - 1):]
-        else:
-            df = df[(header_row):]
 
     return df
 
