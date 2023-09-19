@@ -16,8 +16,9 @@
             <div class="card-body">
                 <div class="card-title"><h2>{% trans 'Table Of Contents' %}</h2></div>
                 <ul class="list-group">
-                    <li class="list-group-item"><a href="{% url 'docs:mission_filter' %}">{% trans 'Mission Filter' %}</a></li>
-                    <li class="list-group-item"><a href="{% url 'docs:new_mission_form' %}">{% trans 'New Mission Form' %}</a></li>
+                    <li class="list-group-item"><a href="{% url 'docs:mission_filter' %}">{% trans 'Mission Filter Page' %}</a> - {% trans 'Dart Landing page choose/create missions' %}</li>
+                    <li class="list-group-item"><a href="{% url 'docs:new_mission_form' %}">{% trans 'New Mission Form' %}</a> - {% trans 'Mission creation/updating form for modifying missions' %}</li>
+                    <li class="list-group-item"><a href="{% url 'docs:mission_events' %}">{% trans 'Mission Events Page' %}</a> - {% trans 'Load Elog events or create events manually' %}</li>
                 </ul>
             </div>
         </div>
