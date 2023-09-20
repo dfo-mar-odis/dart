@@ -17,6 +17,9 @@ class EventDetails(MissionMixin, GenericDetailView):
     page_title = _("Missions Events")
     template_name = "core/mission_events.html"
 
+    def get_page_title(self):
+        return _("Mission Events") + " : " + self.object.name
+
     def get_settings_url(self):
         return reverse_lazy("core:mission_edit", args=(self.object.pk, ))
 

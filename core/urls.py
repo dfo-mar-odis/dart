@@ -1,13 +1,15 @@
 from django.urls import path
 
 import core.views_mission_event
-from . import views, views_mission_sample, views_mission_event, views_sample_type, htmx, reports
+from . import views, views_mission_sample, views_mission_event, views_sample_type, views_mission_plankton, htmx, reports
 
 app_name = 'core'
 
 urlpatterns = [
-    # ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
+    # ###### Plankton loading ###### #
+    path('plankton/<int:pk>/', views_mission_plankton.PlanktonDetails.as_view(), name="plankton"),
 
+    # ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
     # show the create a sample type form
     path('sample_type/', views_sample_type.SampleTypeList.as_view(), name="sample_type_details"),
     path('sample_type/hx/new/', views_mission_sample.new_sample_type, name="new_sample_type"),

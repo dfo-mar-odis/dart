@@ -59,7 +59,7 @@
                     <a class="btn btn-primary" href="{% url 'core:mission_edit' mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
                     <a class="btn btn-primary" href="{% url 'core:event_details' mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
                     <a class="btn btn-primary" href="{% url 'core:sample_details' mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
-                    <a class="btn btn-outline-danger" href="{% url 'core:sample_details' mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
+                    <a class="btn btn-primary" href="{% url 'core:plankton' mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
                 </td>
                 <td><button type="button" class="btn btn-danger"
                             hx-target="#mission_table" hx-post="{% url 'core:hx_mission_delete' mission.id %}"

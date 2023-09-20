@@ -1,5 +1,4 @@
 import io
-import re
 
 import numpy as np
 import os
@@ -100,6 +99,9 @@ def get_error_list(soup, card_id, errors):
 class SampleDetails(MissionMixin, GenericDetailView):
     page_title = _("Mission Samples")
     template_name = "core/mission_samples.html"
+
+    def get_page_title(self):
+        return _("Mission Samples") + " : " + self.object.name
 
     def get_settings_url(self):
         return reverse_lazy("core:mission_edit", args=(self.object.pk, ))

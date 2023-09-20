@@ -1,11 +1,10 @@
-{% extends 'generic_create.html' %}
+{% extends 'base.html' %}
 {% load i18n %}
 {% load bootstrap5 %}
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
 {% block nav_button_block %}
-    {% if object %}
     <li class="nav-item me-2">
         <a href="{% url 'core:event_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
@@ -15,27 +14,10 @@
            title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:plankton' object.pk %}" class="btn btn-primary"
-           title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' object.pk %}"
+           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
     </li>
-    {% endif %}
 {% endblock %}
-
 
 {% block content %}
-    <div id="app">
-        <form method="POST" >
-            {% csrf_token %}
-            {% crispy form %}
-        </form>
-    </div>
-{% endblock %}
-
-{% block body_js %}
-    <script>
-
-        function notify_of_event_validation() {
-            alert("{% trans "About to re-validate events, this may take a moment." %}");
-        }
-    </script>
 {% endblock %}
