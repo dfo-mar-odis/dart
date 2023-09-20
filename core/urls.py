@@ -8,6 +8,7 @@ app_name = 'core'
 urlpatterns = [
     # ###### Plankton loading ###### #
     path('plankton/<int:pk>/', views_mission_plankton.PlanktonDetails.as_view(), name="plankton"),
+    path('plankton/', views_mission_plankton.load_plankton, name="load_plankton"),
 
     # ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
     # show the create a sample type form

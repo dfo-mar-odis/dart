@@ -20,4 +20,42 @@
 {% endblock %}
 
 {% block content %}
+    <div class="container-fluid" id="div_content_block_id"
+     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title row">
+                <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                        href="#div_new_sample">{% custom_icon 'caret-down' %}</button>
+                <h6 class="col-auto align-self-end">{% trans "Load Sample from file" %}</h6></div>
+        </div>
+        <div class="collapse col" id="div_new_sample">
+            <div class="card-body">
+                <div class="mb-2 col">
+                    <div id="new_plankton_form" class="card-body">
+                    <form hx-encoding="multipart/form-data" onkeydown="return event.key != 'Enter';">
+                        <input type="hidden" name="mission_id" value="{{ mission.pk }}" />
+                        <div class="row">
+                            <div class="col">
+                                {# choose file input #}
+                                <input id="id_input_sample_file" class="form-control form-control-sm"
+                                       {# for now plankton comes from an xls file so only allow xls types. #}
+                                       type="file" name="plankton_file" accept=".xls,.xlsx,.xlsm"
+                                       hx-trigger="change"
+                                       hx-get="{% url 'core:load_plankton' %}?mission_id={{ mission.pk }}"
+                                       hx-target="#div_id_message"
+                                />
+                            </div>
+                        </div>
+                        <div id="div_id_message" class="row">
+
+                        </div>
+                    </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
 {% endblock %}
