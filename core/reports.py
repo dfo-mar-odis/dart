@@ -12,9 +12,9 @@ def convert_timedelta_to_string(delta: timedelta) -> str:
     minutes, seconds = divmod(rem, 60)
     days = f"{int(delta.days):02}" if delta.days > 0 else "00"
 
-    hours = f"{int(hours):02}" if (hours + (delta.days*24)) > 0 else "00"
-    minutes = f"{int(minutes):02}" if minutes > 0 else "00"
-    seconds = f"{int(seconds):02}" if seconds > 0 else "00"
+    hours = f"{int(hours+ (delta.days*24)):02d}" if (hours + (delta.days*24)) > 0 else "00"
+    minutes = f"{int(minutes):02d}" if minutes > 0 else "00"
+    seconds = f"{int(seconds):02d}" if seconds > 0 else "00"
     elapsed = f"{hours}:{minutes}:{seconds}"
 
     return elapsed
@@ -24,8 +24,8 @@ def elog(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    header = ['Event', 'Station', 'Instrument', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_lon', 'SDate', 'STime',
-              'EDate', 'Etime', 'Duration', 'Name', 'Description', 'Elapsed_Time', 'Comments']
+    header = ['Mission', 'Event', 'Station', 'Instrument', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_lon', 'SDate', 'STime',
+              'EDate', 'Etime', 'Duration', 'Elapsed_Time', 'Comments']
 
     events = core_models.Event.objects.filter(mission_id=mission_id).annotate(
         start=Min("actions__date_time")).order_by('start')
@@ -33,7 +33,7 @@ def elog(request, **kwargs):
     data = ",".join(header) + "\n"
     last_event = None
     for event in events:
-        row = [event.event_id, event.station.name, event.instrument.name]
+        row = [mission.name, event.event_id, event.station.name, event.instrument.name]
 
         slocation = event.start_location
         elocation = event.end_location
@@ -51,7 +51,7 @@ def elog(request, **kwargs):
         row.append(edate.strftime('%H:%M:%S'))
 
         row.append(convert_timedelta_to_string(event.drift_time))
-        row.append(mission.name)
+
         elapsed = "00:00:00"
         if last_event:
             delta = (event.start_date - last_event.end_date)
