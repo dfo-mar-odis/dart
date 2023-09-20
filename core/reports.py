@@ -62,7 +62,7 @@ def elog(request, **kwargs):
         comments = ""
         for action in event.actions.all():
             if action.comment:
-                comments += f"###{action.get_type_display()}###: {action.comment}"
+                comments += f"\"***{action.get_type_display()}*** {action.comment}\" "
         row.append(comments)
         # make sure all values are strings.
         row = [str(val) for val in row]
