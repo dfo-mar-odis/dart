@@ -11,10 +11,20 @@ class Home(GenericViewMixin, TemplateView):
 
 
 class MissionFilter(GenericViewMixin, TemplateView):
-    page_title = _("Mission Filter")
+    page_title = _("Mission Filter Page")
     template_name = 'docs/mission_filter.html'
 
 
 class NewMissionForm(GenericViewMixin, TemplateView):
     page_title = _("New Mission Form")
     template_name = 'docs/new_mission_form.html'
+
+
+class MissionEvents(GenericViewMixin, TemplateView):
+    page_title = _("Mission Events Page")
+    template_name = 'docs/mission_events.html'
+
+
+class MissionSamples(GenericViewMixin, TemplateView):
+    page_title = _("Mission Samples Page")
+    template_name = 'docs/mission_samples.html'

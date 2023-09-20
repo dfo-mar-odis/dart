@@ -48,5 +48,61 @@
             </div>
         </div>
     </section>
+
+    <section id="update_mission" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Update Mission' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'Allows updating properties of an existing mission ' %}<a href="{% url 'docs:new_mission_form' %}">{% trans '(see New Mission Form)'%}</a></p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-update_mission.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="mission_events" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Mission Events' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'Access the events page for a mission ' %}<a href="{% url 'docs:mission_events' %}">{% trans '(see Mission Events Page)'%}</a></p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-mission_events.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="mission_samples" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Mission Samples' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'Access the samples page for a mission ' %}<a href="{% url 'docs:mission_samples' %}">{% trans '(see Mission Samples Page)'%}</a></p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-mission_samples.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="mission_plankton" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Mission Plankton' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'To be added ' %}<a href="">{% trans '(see Mission Plankton)'%}</a></p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-mission_plankton.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="delete_mission" class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">{% trans 'Delete Mission' %}</h3>
+        </div>
+        <div class="card-body">
+            <p>{% trans 'Removes the mission, be careful with this one ' %}</p>
+            <div class="col">
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_filter-mission_delete.png' %}" />
+            </div>
+        </div>
+    </section>
 </div>
 {% endblock %}
