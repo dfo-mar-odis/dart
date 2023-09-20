@@ -65,7 +65,10 @@ def elog(request, **kwargs):
                 if comments != "":
                     comments += " "
                 comments += f"***{action.get_type_display()}*** {action.comment}"
+
+        if comments != "":
             comments = f"\"{comments}\""
+
         row.append(comments)
         # make sure all values are strings.
         row = [str(val) for val in row]
