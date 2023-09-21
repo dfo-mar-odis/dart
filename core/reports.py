@@ -1,3 +1,5 @@
+import numpy as np
+
 from datetime import datetime, timedelta
 
 from django.core.files.base import ContentFile
@@ -24,8 +26,8 @@ def elog(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    header = ['Mission', 'Event', 'Station', 'Instrument', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_lon', 'SDate', 'STime',
-              'EDate', 'Etime', 'Duration', 'Elapsed_Time', 'Comments']
+    header = ['Mission', 'Event', 'Station', 'Instrument', 'Avg_Sounding', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_lon',
+              'SDate', 'STime', 'EDate', 'Etime', 'Duration', 'Elapsed_Time', 'Comments']
 
     events = core_models.Event.objects.filter(mission_id=mission_id).annotate(
         start=Min("actions__date_time")).order_by('start')
@@ -34,6 +36,13 @@ def elog(request, **kwargs):
     last_event = None
     for event in events:
         row = [mission.name, event.event_id, event.station.name, event.instrument.name]
+
+        sounding = event.actions.all().exclude(sounding=None).values_list('sounding', flat=True)
+        avg_sounding = ''
+        if None not in sounding:
+            avg_sounding = np.average(sounding)
+        avg_sounding = '' if np.isnan(avg_sounding) or avg_sounding == '' else avg_sounding
+        row.append(avg_sounding)
 
         slocation = event.start_location
         elocation = event.end_location
