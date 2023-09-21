@@ -203,7 +203,6 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
     # messge objects are 'actions', and event can have multiple actions. Track event_ids for events we've just
     # created and only add events to the new_events queue if they haven't been previously processed
     processed_events = []
-    new_events = []
 
     create_events = []
     update_events = {'objects': [], 'fields': set()}
@@ -225,7 +224,7 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
 
             # if the event doesn't already exist, create it. Otherwise update the existing
             # event with new data if required
-            if event_id in processed_events or existing_events.filter(event_id=event_id).exists():
+            if existing_events.filter(event_id=event_id).exists():
                 attrs = {
                     'station': station,
                     'instrument': instrument,
@@ -234,6 +233,13 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
                 }
                 event = existing_events.get(event_id=event_id)
                 update_attributes(event, attrs, update_events)
+                continue
+            elif event_id in processed_events:
+                event = [event for event in create_events if event.event_id == event_id][0]
+                event.station = station if station else event.station
+                event.instrument = instrument if instrument else event.instrument
+                event.sample_id = sample_id if sample_id.strip() else event.sample_id
+                event.end_sample_id = end_sample_id if end_sample_id.strip() else event.end_sample_id
                 continue
 
             new_event = core_models.Event(mission=mission, event_id=event_id)
@@ -244,10 +250,7 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             # sample IDs are optional fields, they may be blank. If they are they should be None on the event
             new_event.sample_id = sample_id if sample_id.strip() else None
             new_event.end_sample_id = end_sample_id if end_sample_id.strip() else None
-
-            new_events.append(event_id)
             create_events.append(new_event)
-
             processed_events.append(event_id)
         except KeyError as ex:
             logger.error(ex)
