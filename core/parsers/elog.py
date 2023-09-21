@@ -359,8 +359,10 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                 if comment and comment != "":
                     action.comment = comment
 
-                if sounding and sounding != "" and str(sounding).isnumeric():
-                    action.sounding = sounding
+                try:
+                    action.sounding = float(sounding)
+                except ValueError:
+                    action.sounding = None
 
                 if action_type == core_models.ActionType.other:
                     action.action_type_other = action_type_text
