@@ -191,6 +191,8 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
         tmp = dataframe[[sid, rid]].groupby(sid, group_keys=True).apply(
             lambda x: pd.Series((np.arange(len(x)) + 1), x.index)
         )
+        # sort the temp array holding all the rids by their row number so they line up
+        # with the dataframe and then assign them to the rid column
         dataframe[rid] = tmp.sort_index(level=1).values
 
     dataframe[[sid, rid]] = dataframe[[sid, rid]].apply(pd.to_numeric)
@@ -272,6 +274,11 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
                 errors.append(error)
                 logger.warning(message)
                 continue
+            elif replicate > 2:
+                message = _("More than two replicates found for sample ") + sample_id
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                errors.append(error)
+                logger.warning(message)
 
             comment = None
             if comment_field and comment_field in row[1] and not pd.isna(row[1][comment_field]):
