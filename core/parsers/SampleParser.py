@@ -189,16 +189,12 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
     # set the replicate ids
     if dataframe[rid].isnull().values.any():
         tmp = dataframe[[sid, rid]].groupby(sid, group_keys=True).apply(
-            lambda x: get_rid(x)
+            lambda x: pd.Series((np.arange(len(x)) + 1), x.index)
         )
         dataframe[rid] = tmp.sort_index(level=1).values
 
     dataframe[[sid, rid]] = dataframe[[sid, rid]].apply(pd.to_numeric)
     return dataframe
-
-
-def get_rid(x):
-    return pd.Series((np.arange(len(x)) + 1), x.index)
 
 
 # once all the options are figured out (e.g what tab, what's the sample row, what's the value column)
