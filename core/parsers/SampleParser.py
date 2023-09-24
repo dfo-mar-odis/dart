@@ -172,8 +172,6 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
     if not file_settings.allow_blank:
         dataframe = dataframe[dataframe[file_settings.sample_field].notna()]
 
-    dataframe.dropna(subset=[file_settings.value_field], inplace=True)
-
     # if samples have underscores in their column split, them up and create the initial 's_id', 'r_id' columns
     dataframe[[sid, rid]] = dataframe[file_settings.sample_field].apply(
         lambda x: pd.Series(_split_function(x))
@@ -185,6 +183,9 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
 
     # drop and 's_id' row that is not numeric, keeping any nan rows
     dataframe = dataframe[dataframe["sid"] != "N/A"]
+
+    # Drop rows that that have no data in the value columns
+    dataframe.dropna(subset=[file_settings.value_field], inplace=True)
 
     # set the replicate ids
     if dataframe[rid].isnull().values.any():
