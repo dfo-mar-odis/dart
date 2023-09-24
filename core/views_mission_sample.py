@@ -761,15 +761,21 @@ def hx_list_samples(request, **kwargs):
         try:
             sensors = models.SampleType.objects.filter(samples__bottle__event__mission=mission).distinct()
             df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+            # we want a column for every sensor and every replicate for every sensor for all sensors in the mission
+            for sensor in sensors:
+                replicate_count = sensor.samples.aggregate(replicates=Max('discrete_values__replicate'))
+                for i in range(1, replicate_count['replicates']+1):
+                    if not df.columns.isin([(sensor.pk, i)]).any():
+                        df[(sensor.pk, i)] = df.apply(lambda _: np.nan, axis=1)
 
             # if the initial sample/sensor doesn't have any values on the first page, then they won't be in the
             # table header. So add in blank columns for them, which pandas/Django is smart enough to fill in later.
-            missing = np.setdiff1d([s.pk for s in sensors.order_by('pk').distinct()], [v[0] for v in df.columns.values])
-            if len(missing) > 0:
-                for m in missing:
-                    replicate_count = sensors.get(pk=m).samples.aggregate(replicates=Max('discrete_values__replicate'))
-                    for i in range(replicate_count['replicates']):
-                        df[m, i] = df.apply(lambda _: np.nan, axis=1)
+            # missing = np.setdiff1d([s.pk for s in sensors.order_by('pk').distinct()], [v[0] for v in df.columns.values])
+            # if len(missing) > 0:
+            #     for m in missing:
+            #         replicate_count = sensors.get(pk=m).samples.aggregate(replicates=Max('discrete_values__replicate'))
+            #         for i in range(replicate_count['replicates']):
+            #             df[m, i] = df.apply(lambda _: np.nan, axis=1)
 
             df = df.reindex(sorted(df.columns), axis=1)
             soup = format_all_sensor_table(df, mission_id)

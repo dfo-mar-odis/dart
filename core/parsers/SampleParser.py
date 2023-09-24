@@ -172,8 +172,6 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
     if not file_settings.allow_blank:
         dataframe = dataframe[dataframe[file_settings.sample_field].notna()]
 
-    dataframe.dropna(subset=[file_settings.value_field], inplace=True)
-
     # if samples have underscores in their column split, them up and create the initial 's_id', 'r_id' columns
     dataframe[[sid, rid]] = dataframe[file_settings.sample_field].apply(
         lambda x: pd.Series(_split_function(x))
@@ -186,12 +184,17 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
     # drop and 's_id' row that is not numeric, keeping any nan rows
     dataframe = dataframe[dataframe["sid"] != "N/A"]
 
+    # Drop rows that that have no data in the value columns
+    dataframe.dropna(subset=[file_settings.value_field], inplace=True)
+
     # set the replicate ids
     if dataframe[rid].isnull().values.any():
         tmp = dataframe[[sid, rid]].groupby(sid, group_keys=True).apply(
             lambda x: pd.Series((np.arange(len(x)) + 1), x.index)
         )
-        dataframe[rid] = tmp.values
+        # sort the temp array holding all the rids by their row number so they line up
+        # with the dataframe and then assign them to the rid column
+        dataframe[rid] = tmp.sort_index(level=1).values
 
     dataframe[[sid, rid]] = dataframe[[sid, rid]].apply(pd.to_numeric)
     return dataframe
@@ -228,6 +231,7 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
         replicate_field = sample_config.replicate_field
 
         sample_type = sample_config.sample_type
+        current_sample = None
         for row in dataframe.iterrows():
             replicate = 1  # All samples will have at least one 'replicate'
             sample_id = int(row[1][sample_id_field])
@@ -264,14 +268,21 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
             elif replicate_id_field:
                 replicate = row[1][replicate_id_field]
 
-                # if replicates aren't allowed on this datatype then there should be an error here if the
-                # replicate values is greater than 1
+            # if replicates aren't allowed on this datatype then there should be an error here if the
+            # replicate values is greater than 1
             if not sample_config.allow_replicate and replicate > 1:
-                message = _("Duplicate bottle found for sample ") + sample_id
+                message = _("Duplicate bottle found for sample ") + str(sample_id)
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
                 logger.warning(message)
                 continue
+            elif replicate > 2:
+                # we want to alert the user if there's more than 2 replicates. It can happen, but it's not
+                # standard practice so people should be aware in case it is a mistake.
+                message = _("More than two replicates found for sample ") + str(sample_id)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                errors.append(error)
+                logger.warning(message)
 
             comment = None
             if comment_field and comment_field in row[1] and not pd.isna(row[1][comment_field]):
@@ -281,26 +292,12 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
             if flag_field and flag_field in row[1] and not pd.isna(row[1][flag_field]):
                 flag = row[1][flag_field]
 
-            # if db_sample doesn't have a pk, then it hasn't been created yet
-            if db_sample.pk and (replicates := db_sample.discrete_values.filter(replicate=replicate)).exists():
-                if len(replicates) > 1:
-                    message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
-                    error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
-                    errors.append(error)
-                    logger.warning(message)
-                    continue
+            # If db_sample has a pk, then it has been created and we want to clear its replicates.
+            if db_sample.pk and current_sample != db_sample:
+                db_sample.discrete_values.all().delete()
+                current_sample = db_sample
 
-                discrete_sample = db_sample.discrete_values.get(replicate=replicate)
-                update_discrete_values['fields'].add(updated_value(discrete_sample, 'value', value))
-                update_discrete_values['fields'].add(updated_value(discrete_sample, 'comment', comment))
-                update_discrete_values['fields'].add(updated_value(discrete_sample, 'flag', flag))
-
-                if '' in update_discrete_values['fields']:
-                    update_discrete_values['fields'].remove('')
-
-                if len(update_discrete_values['fields']) > 0:
-                    update_discrete_values['models'].append(discrete_sample)
-            elif f'{db_sample.bottle_id}_{replicate}' in create_discrete_values:
+            if f'{db_sample.bottle_id}_{replicate}' in create_discrete_values:
                 message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
