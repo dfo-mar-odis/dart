@@ -4,6 +4,7 @@ from django.utils.translation import gettext as _
 
 from core.views import MissionMixin
 from core import forms
+from core import models as core_models
 
 from dart2.views import GenericDetailView
 
