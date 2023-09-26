@@ -22,6 +22,24 @@ import logging
 logger = logging.getLogger("dart.test")
 
 
+@tag('forms', 'form_mission_plankton')
+class TestMissionPlanktonForm(DartTestCase):
+
+    def setUp(self) -> None:
+        self.client = Client()
+        self.mission = core_factory.MissionFactory()
+
+    def test_plankton_form(self):
+        url = reverse('core:plankton_details', args=(self.mission.id,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        upload_form = soup.find(id='form_id_plankton_upload')
+        self.assertIsNotNone(upload_form)
+
+
 @tag('forms', 'form_mission_samples')
 class TestMissionSamplesForm(DartTestCase):
 
