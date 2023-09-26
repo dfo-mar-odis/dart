@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import core.models
 from core import models as core_models
 from django.utils.translation import gettext as _
 from django.db.models import Q
@@ -69,6 +70,12 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
 
     if not event.end_sample_id:
         message = _("Missing an ending sample ID")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
+    if ctd_events.exclude(pk=event.id).filter(sample_id__range=(event.sample_id, event.end_sample_id)).exists():
+        message = _("Multiple overlapping samples for sample ids ") + f"[{event.sample_id} - {event.end_sample_id}]"
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
