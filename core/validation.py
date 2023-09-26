@@ -74,8 +74,9 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
         validation_errors.append(err)
 
     ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
-    if ctd_events.exclude(pk=event.id).filter(sample_id__range=(event.sample_id, event.end_sample_id)).exists():
-        message = _("Multiple overlapping samples for sample ids ") + f"[{event.sample_id} - {event.end_sample_id}]"
+    if (evt:=ctd_events.exclude(pk=event.id).filter(sample_id__range=(event.sample_id, event.end_sample_id))).exists():
+        message = _("Multiple overlapping samples for sample ids ") + f"[{event.sample_id} - {event.end_sample_id}] "
+        message += _("Events") + "(" + ",".join(e for e in evt) + ")"
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
