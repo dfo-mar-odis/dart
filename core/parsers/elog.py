@@ -363,6 +363,11 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                     action.sounding = float(sounding)
                 except ValueError:
                     action.sounding = None
+                    message = _("Missing sounding for event") + f" {event.event_id} "
+                    message += _("action") + f" {action.get_type_display()}"
+                    logger.warning(message)
+                    ex = ValueError({'message': message})
+                    errors.append((mid, message, ex))
 
                 if action_type == core_models.ActionType.other:
                     action.action_type_other = action_type_text
