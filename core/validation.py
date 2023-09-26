@@ -30,6 +30,12 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
             validation_errors.append(err)
             break
 
+    for action in actions:
+        if not action.sounding:
+            message = _("Event is missing a depth for action") + f' {action.get_type_display()}'
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+
     # Validate event does not have duplicate action types
     mission = event.mission
     if event.start_date is None or event.end_date is None:
@@ -63,6 +69,7 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
     if event.actions.filter(type=core_models.ActionType.aborted).exists():
         return validation_errors
 
+    # all CTD events should have a starting and ending ID
     if not event.sample_id:
         message = _("Missing a starting sample ID")
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
@@ -73,8 +80,10 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
-    ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
-    if (evt := ctd_events.exclude(pk=event.id).filter(
+    # CTD events should not have overlapping IDs
+    ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd).exclude(
+        pk=event.id).exclude(actions__type=core_models.ActionType.aborted)
+    if (evt := ctd_events.filter(
             sample_id__range=(event.sample_id, event.end_sample_id))).exists():
         message = _("Multiple overlapping samples for sample ids ") + f"[{event.sample_id} - {event.end_sample_id}] "
         message += _("Events") + "(" + ",".join([str(e) for e in evt]) + ")"
