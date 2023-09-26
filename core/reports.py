@@ -87,12 +87,9 @@ def elog(request, **kwargs):
 
     file_to_send = ContentFile(data)
 
-    time = datetime.now()
-    timestamp = f'{time.year}{time.month}{time.day}{time.hour}{time.minute}{time.second}'
-
     response = HttpResponse(file_to_send, content_type="text/csv")
     response['Content-Length'] = file_to_send.size
-    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Elog_Summary{timestamp}.csv"'
+    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Elog_Summary.csv"'
 
     return response
 
@@ -121,12 +118,9 @@ def error_report(request, **kwargs):
 
     file_to_send = ContentFile(data)
 
-    time = datetime.now()
-    timestamp = f'{time.year}{time.month}{time.day}{time.hour}{time.minute}{time.second}'
-
     response = HttpResponse(file_to_send, content_type="text/csv")
     response['Content-Length'] = file_to_send.size
-    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Error_Report_{timestamp}.csv"'
+    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Error_Report.csv"'
 
     return response
 
@@ -168,12 +162,9 @@ def profile_summary(request, **kwargs):
 
     file_to_send = ContentFile(data)
 
-    time = datetime.now()
-    timestamp = f'{time.year}{time.month}{time.day}{time.hour}{time.minute}{time.second}'
-
     response = HttpResponse(file_to_send, content_type="text/csv")
     response['Content-Length'] = file_to_send.size
-    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Profile_Summary_{timestamp}.csv"'
+    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Profile_Summary.csv"'
 
     return response
 
@@ -199,12 +190,9 @@ def std_sample_report(request, **kwargs):
 
     file_to_send = ContentFile(data)
 
-    time = datetime.now()
-    timestamp = f'{time.year}{time.month}{time.day}{time.hour}{time.minute}{time.second}'
-
     response = HttpResponse(file_to_send, content_type="text/csv")
     response['Content-Length'] = file_to_send.size
-    response['Content-Disposition'] = f'attachment; filename="{mission.name}_{kwargs["report_name"]}_{timestamp}.csv"'
+    response['Content-Disposition'] = f'attachment; filename="{mission.name}_{kwargs["report_name"]}.csv"'
 
     return response
 
