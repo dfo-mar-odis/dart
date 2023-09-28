@@ -690,7 +690,7 @@ class BottleSelection(forms.Form):
         self.helper.attrs = {
             "id": "form_id_ctd_bottle_upload",
             "hx_get": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],)),
-            "hx_swap": 'beforeend'
+            'hx_target': '#div_id_bottle_upload_btn_row',
         }
 
         url = reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],))
@@ -708,10 +708,10 @@ class BottleSelection(forms.Form):
         submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm", type='input',
                                      title=_("Load Selected"))
         self.helper.layout = Layout(
-            Row(Column(all_button)),
+            Row(Column(submit_button, css_class='col'), Column(all_button, css_class='col-auto'),
+                id='div_id_bottle_upload_btn_row'),
             Hidden('bottle_dir', kwargs['initial']['bottle_dir']),
             Row(Column(Field('file_name')), css_class='mt-2'),
-            submit_button
         )
         self.helper.form_show_labels = False
 

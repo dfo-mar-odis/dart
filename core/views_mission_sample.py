@@ -606,28 +606,32 @@ def hx_sample_upload_ctd(request, mission_id):
             response = HttpResponse(soup)
             return response
 
-        bottle_dir = request.GET['bottle_dir']
+        mission = models.Mission.objects.get(pk=mission_id)
+        bottle_dir = mission.bottle_directory
+        if 'bottle_dir' in request.GET:
+            bottle_dir = request.GET['bottle_dir']
 
         initial_args = {'mission': mission_id, 'bottle_dir': bottle_dir}
-        if 'show_all' in request.GET:
-            files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl')]
-            initial_args['show_all'] = True
-        else:
-            loaded_files = [f[0] for f in models.Sample.objects.filter(
-                    type__is_sensor=True,
-                    bottle__event__mission_id=mission_id).values_list('file').distinct()]
-            files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl') if f not in loaded_files]
-            initial_args['show_some'] = True
+        if bottle_dir:
+            if 'show_all' in request.GET:
+                files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl')]
+                initial_args['show_all'] = True
+            else:
+                loaded_files = [f[0] for f in models.Sample.objects.filter(
+                        type__is_sensor=True,
+                        bottle__event__mission_id=mission_id).values_list('file').distinct()]
+                files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl') if f not in loaded_files]
+                initial_args['show_some'] = True
 
-        files.sort(key=lambda fn: os.path.getmtime(os.path.join(bottle_dir, fn)))
+            files.sort(key=lambda fn: os.path.getmtime(os.path.join(bottle_dir, fn)))
 
-        initial_args['file_name'] = files
+            initial_args['file_name'] = files
 
         context['file_form'] = forms.BottleSelection(initial=initial_args)
-        html = render_block_to_string('core/mission_samples.html', 'ctd_list', context=context)
+        html = render_block_to_string('core/partials/card_bottle_load_header.html', 'ctd_list', context=context)
         response = HttpResponse(html)
+        response['HX-Trigger'] = 'update_samples'
 
-        mission = models.Mission.objects.get(pk=mission_id)
         mission.bottle_directory = bottle_dir
         mission.save()
 
