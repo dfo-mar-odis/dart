@@ -3,7 +3,7 @@
 {% load crispy_forms_tags %}
 
 <form class="container-fluid" id="form_id_bottle_load"
-     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
       hx-target="#div_bottle_list_id"
       hx-get="{% url "core:hx_sample_upload_ctd" mission.pk %}"
 >

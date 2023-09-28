@@ -27,7 +27,7 @@
     {% if sample_type %}
         {% include 'core/partials/card_sample_upload_header.html' %}
     {% else %}
-        <div class="container-fluid">
+        <div id="div_content_block_id" class="container-fluid" hx-swap-oob="outerHTML:#div_content_block_id">
             <div class="row">
             {% include 'core/partials/card_bottle_load_header.html' %}
             </div>
