@@ -210,7 +210,7 @@ def htmx_validate_events(request, mission_id, file_name):
 
 
 def get_mission_elog_errors(mission):
-    errors = mission.file_errors.filter(file_name__iendswith='.log').order_by('file_name')
+    errors = mission.file_errors.all().order_by('file_name')
     files = errors.values_list('file_name').distinct()
 
     error_dict = {}
