@@ -766,9 +766,11 @@ def hx_list_samples(request, **kwargs):
             # we want a column for every sensor and every replicate for every sensor for all sensors in the mission
             for sensor in sensors:
                 replicate_count = sensor.samples.aggregate(replicates=Max('discrete_values__replicate'))
-                for i in range(1, replicate_count['replicates']+1):
-                    if not df.columns.isin([(sensor.pk, i)]).any():
-                        df[(sensor.pk, i)] = df.apply(lambda _: np.nan, axis=1)
+                if replicate_count['replicates']:
+                    for i in range(0, replicate_count['replicates']):
+                        replicate = i+1
+                        if not df.columns.isin([(sensor.pk, replicate)]).any():
+                            df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
             # if the initial sample/sensor doesn't have any values on the first page, then they won't be in the
             # table header. So add in blank columns for them, which pandas/Django is smart enough to fill in later.
