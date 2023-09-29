@@ -301,17 +301,27 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
     new_samples: [core_models.DiscreteSampleValue] = []
     update_samples: [core_models.DiscreteSampleValue] = []
+    bottle_id_columns = ['Bottle']
+    if 'Bottle_' in data_frame_avg.columns:
+        bottle_id_columns.append('Bottle_')
+
     for column_name in column_headers:
         try:
             sensor_type = core_models.SampleType.objects.get(short_name__iexact=column_name)
 
-            df = data_frame_avg[["Bottle", column_name]]
+            columns = bottle_id_columns
+            columns.append(column_name)
+            df = data_frame_avg[columns]
             create_sensors: {int: core_models.Sample} = {}
             for data in df.iterrows():
                 bottle = event.bottles.filter(bottle_number=data[1]["Bottle"])
                 if not bottle.exists():
-                    logger.warning(f"Bottle {data[1]['Bottle']} for event {event.event_id} does not exist, "
-                                   f"there should be a File Error")
+                    message = _('Bottle') + f" {data[1]['Bottle']}"
+                    if 'Bottle_' in bottle_id_columns:
+                        message += " " + _('with bottle id') + f" {data[1]['Bottle_']}"
+                    message += " " + _('for event') + f" {event.event_id}"
+                    message += " " + _("does not exist. It may be outside the bottle range for the event")
+                    logger.warning(message)
                     continue
 
                 bottle = bottle[0]

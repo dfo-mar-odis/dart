@@ -237,9 +237,13 @@ def get_mission_validation_errors(mission):
 
 def get_file_errors(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
-    context = {'errors': get_mission_elog_errors(mission),
-               'validation_errors': get_mission_validation_errors(mission)}
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'error_block', context))
+    context = {
+        'mission': mission,
+        'errors': get_mission_elog_errors(mission),
+        'validation_errors': get_mission_validation_errors(mission)
+    }
+    html = render_to_string('core/partials/card_event_validation.html', context=context)
+    response = HttpResponse(html)
 
     return response
 
