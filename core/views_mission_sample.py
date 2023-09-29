@@ -630,7 +630,7 @@ def hx_sample_upload_ctd(request, mission_id):
         context['file_form'] = forms.BottleSelection(initial=initial_args)
         html = render_block_to_string('core/partials/card_bottle_load_header.html', 'ctd_list', context=context)
         response = HttpResponse(html)
-        response['HX-Trigger'] = 'update_samples'
+        response['HX-Trigger'] = 'update_samples, event_updated'
 
         mission.bottle_directory = bottle_dir
         mission.save()

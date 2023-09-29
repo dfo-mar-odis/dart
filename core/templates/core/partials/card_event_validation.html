@@ -1,44 +1,51 @@
 {% load i18n %}
+{% load bootstrap_icons %}
 
+<div>
 <div class="card">
-    <div class="card-header d-flex justify-content-between">
-        <div class="card-title">
-            {% trans "Validation Warnings" %}
+    <div class="card-header">
+        <div class="row">
+            <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                    href="#div_id_error_card_body">{% custom_icon 'caret-down' %}</button>
+            <span class="card-title col-auto align-self-end h6">{% trans "Validation Warnings" %}</span>
         </div>
     </div>
-    <div class="card-body vertical-scrollbar" hx-trigger="load, event_updated from:body" hx-target="#errors"
-          hx-swap="outerHTML" hx-select="#errors"
-         hx-get="{% url 'core:hx_get_file_errors' mission.pk %}">
-        <div id="errors">
-            {% for event, error_list in validation_errors.items %}
-            <div id="div_validation_error_id" class="card mb-3">
-                <div class="card-header">
-                    <div class="card-title">{% trans 'Event' %} {{ event }}</div>
-                </div>
-                <div class="card-body">
-                    <ul>
-                        {% for error in error_list %}
-                            <li>{{ error.message }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-            </div>
-            {% endfor %}
-
-            {% for file, error_list in errors.items %}
-                <div class="card mb-3">
+    <div class="collapse col" id="div_id_error_card_body">
+        <div class="card-body vertical-scrollbar" hx-trigger="load, event_updated from:body" hx-target="#errors"
+              hx-swap="outerHTML" hx-select="#errors"
+             hx-get="{% url 'core:hx_get_file_errors' mission.pk %}">
+            <div id="errors">
+                {% for event, error_list in validation_errors.items %}
+                <div id="div_validation_error_id" class="card mb-3">
                     <div class="card-header">
-                        <div class="card-title">{{ file }}</div>
+                        <div class="card-title">{% trans 'Event' %} {{ event }}</div>
                     </div>
                     <div class="card-body">
                         <ul>
                             {% for error in error_list %}
-                                <li>{{ error.get_type_display }}: {{ error.message }}</li>
+                                <li>{{ error.message }}</li>
                             {% endfor %}
                         </ul>
                     </div>
                 </div>
-            {% endfor %}
+                {% endfor %}
+
+                {% for file, error_list in errors.items %}
+                    <div class="card mb-3">
+                        <div class="card-header">
+                            <div class="card-title">{{ file }}</div>
+                        </div>
+                        <div class="card-body">
+                            <ul>
+                                {% for error in error_list %}
+                                    <li>{{ error.get_type_display }}: {{ error.message }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
         </div>
     </div>
+</div>
 </div>

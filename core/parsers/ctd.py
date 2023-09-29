@@ -370,6 +370,16 @@ def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_
 def read_btl(mission: core_models.Mission, btl_file: str):
     data_frame = ctd.from_btl(btl_file)
 
+    file_name = data_frame._metadata['name']
+    core_models.FileError.objects.filter(file_name=file_name).delete()
+    if file_name not in btl_file:
+        message = _("Name of bottle file does not match name in the bottle file. Check the .hdr file and reprocess.")
+        message += f" {btl_file} =/= {file_name}"
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+                                    file_name=file_name)
+        err.save()
+        return
+
     event_number = get_event_number_bio(data_frame=data_frame)
     event = get_elog_event_bio(mission=mission, event_number=event_number)
 

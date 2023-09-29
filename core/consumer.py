@@ -3,11 +3,10 @@ from bs4 import BeautifulSoup
 from channels.generic.websocket import WebsocketConsumer
 from django.template.loader import render_to_string
 
-from core.htmx import get_mission_elog_errors
+from core.htmx import get_mission_elog_errors, get_mission_validation_errors
 
 import logging
 
-from render_block import render_block_to_string
 
 logger = logging.getLogger('dart.debug')
 
@@ -65,10 +64,11 @@ class CoreConsumer(WebsocketConsumer):
     def update_errors(self, event):
         mission = event['mission']
 
-        error_dict = get_mission_elog_errors(mission=mission)
+        context = {
+            'mission': mission,
+            'errors': get_mission_elog_errors(mission),
+            'validation_errors': get_mission_validation_errors(mission)
+        }
+        html = render_to_string('core/partials/card_event_validation.html', context=context)
 
-        context = {'errors': error_dict}
-
-        html = render_block_to_string('core/mission_events.html', 'error_block',
-                                      context=context)
         self.send(text_data=html)
