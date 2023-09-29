@@ -86,7 +86,9 @@ class TestCTDParser(DartTestCase):
 
         # our sample file is for event 1, it should create 19 bottles with no errors
         event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
-        errors = ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+
+        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
         self.assertEquals(len(errors), 0)
 
@@ -113,7 +115,8 @@ class TestCTDParser(DartTestCase):
         bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
         self.assertEquals(bottle.pressure, initial_pressure)
 
-        errors = ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
         self.assertEquals(len(errors), 0)
 
@@ -128,20 +131,34 @@ class TestCTDParser(DartTestCase):
         # For CTD event 6 of the JC24301 mission, as an after though, there were 10 extra bottle fired at the surface
         # for calibration reasons. This meant that there were 10 bottles outside the intended sample ID range.
         # Those errors should be reported as Validation errors to let someone know the bottle file has more bottles
-        # than are expected
+        # than are expected. There will also be a bottle mismatch validation error to make the error count 11
 
         # our sample file is for event 6, it should contain 10 errors
         event = core_factory.CTDEventFactory(event_id=6, sample_id=495290, end_sample_id=495303)
 
-        errors = ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_006)
+        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_006)
+        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
-        self.assertEquals(len(errors), 10)
+        self.assertEquals(len(errors), 11)
         for error in errors:
-            self.assertIsInstance(error, core_models.FileError)
+            self.assertIsInstance(error, core_models.ValidationError)
 
         # 14 bottles should have been created even though there are 24 bottles in the BTL file
         bottles = core_models.Bottle.objects.filter(event=event)
         self.assertEquals(len(bottles), 14)
+
+    # The number of bottles loaded from a dataframe should match (event.end_sample_id - event.sample_id)
+    def test_bottle_count_match_event_validation(self):
+        # Given an event with a end_sample_id and a sample_id, and a dataframe an error should be returned if
+        # there is a mismatch in the number of bottles in the bottle file compared to the (end_sample_id-sample_id)
+
+        event = core_factory.CTDEventFactory(event_id=1, sample_id=495200, end_sample_id=495300)
+
+        # There are only 19 bottles in ctd_data_frame_001
+        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
+        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
+
+        self.assertEquals(len(errors), 1)
 
     def test_process_sensors(self):
         # Todo:

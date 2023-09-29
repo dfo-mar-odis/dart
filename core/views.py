@@ -112,11 +112,11 @@ def load_ctd_files(mission):
     # The mission_samples.html page has a websocket notifications element on it. We can send messages
     # to the notifications element to display progress to the user, but we can also use it to
     # send an update request to the page when loading is complete.
-    url = reverse_lazy("core:hx_sample_list", args=(mission.pk,))
+    url = reverse_lazy("core:hx_sample_upload_ctd", args=(mission.pk,))
     hx = {
         'hx-get': url,
         'hx-trigger': 'load',
-        'hx-target': '#form_id_ctd_bottle_upload',
+        'hx-target': '#div_id_upload_ctd_load',
         'hx-swap': 'outerHTML'
     }
     core.htmx.send_user_notification_close(group_name, **hx)
