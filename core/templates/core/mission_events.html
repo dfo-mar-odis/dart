@@ -1,3 +1,6 @@
+{# ################################################################################################ #}
+{# This template represents the events page were elog events are loaded for a mission #}
+{# ################################################################################################ #}
 {% extends 'base.html' %}
 {% load i18n %}
 {% load bootstrap5 %}
@@ -137,19 +140,7 @@
             <div class="row mt-2">
                 {# hx-ext="ws" ws-connect="/ws/notifications/" >#}
                 <div id="div_notifications_id" class="col">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between">
-                            <div class="card-title">
-                                {% trans "Notifications" %}
-                            </div>
-                        </div>
-                        <div class="card-body vertical-scrollbar" hx-trigger="load, event_updated from:body" hx-target="#errors"
-                             hx-get="{% url 'core:hx_get_file_errors' object.pk %}">
-                            {% block error_block %}
-                                {% include 'core/partials/event_errors.html' %}
-                            {% endblock %}
-                        </div>
-                    </div>
+                    {% include 'core/partials/card_event_validation.html' with mission=object %}
                 </div>
             </div>
         </div>
