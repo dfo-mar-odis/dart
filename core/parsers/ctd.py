@@ -227,6 +227,10 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
     if "Longitude" in data_frame_avg.columns:
         dataframe_columns.append("Longitude")
 
+    if "Bottle_" in data_frame_avg.columns:
+        # if present this is the Bottle ID to use instead of the event.sample_id + Bottle number
+        dataframe_columns.append("Bottle_")
+
     b_create = []
     b_update = {"data": [], "fields": set()}
     bottle_data = data_frame_avg[dataframe_columns]
