@@ -29,6 +29,9 @@
     {% else %}
         <div id="div_content_block_id" class="container-fluid" hx-swap-oob="outerHTML:#div_content_block_id">
             <div class="row">
+                {% include 'core/partials/card_event_validation.html' %}
+            </div>
+            <div class="row mt-2">
             {% include 'core/partials/card_bottle_load_header.html' %}
             </div>
             <div class="row mt-2">

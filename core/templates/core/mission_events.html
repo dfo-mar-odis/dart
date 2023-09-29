@@ -138,10 +138,7 @@
                 </div>
             </div>
             <div class="row mt-2">
-                {# hx-ext="ws" ws-connect="/ws/notifications/" >#}
-                <div id="div_notifications_id" class="col">
-                    {% include 'core/partials/card_event_validation.html' with mission=object %}
-                </div>
+                {% include 'core/partials/card_event_validation.html' with mission=object %}
             </div>
         </div>
     {% endblock %}
