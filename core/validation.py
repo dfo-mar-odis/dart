@@ -80,6 +80,16 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
+    if event.sample_id and event.end_sample_id:
+        if event.end_sample_id < event.sample_id:
+            message = _("End bottle id is less than the starting sample id")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+        elif (event.end_sample_id-event.sample_id)+1 > 24:
+            message = _("There are more than 24 bottles in this event")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+
     # CTD events should not have overlapping IDs
     ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd).exclude(
         pk=event.id).exclude(actions__type=core_models.ActionType.aborted)
@@ -144,7 +154,7 @@ def validate_bottle_sample_range(event: core_models.Event, bottle_id: int) -> \
             (bottle_id > event.end_sample_id or bottle_id < event.sample_id):
         message = f"Warning: Bottle ID ({bottle_id}) for event {event.event_id} " \
                   f"is outside the ID range {event.sample_id} - {event.end_sample_id}"
-        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.missing_id)
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(err)
 
     return errors

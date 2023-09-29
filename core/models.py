@@ -517,6 +517,7 @@ class ErrorType(models.IntegerChoices):
     missing_id = 1, "Missing ID"
     missing_value = 2, "Missing Value"
     validation = 3, "Validation Error"
+    bottle = 4, "Bottle Error"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least

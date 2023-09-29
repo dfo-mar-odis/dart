@@ -5,6 +5,8 @@ import os
 import pandas
 import pytz
 
+from django.utils.translation import gettext as _
+
 from core import models as core_models
 from core import validation
 
@@ -211,7 +213,7 @@ def update_bottle(bottle: core_models.Bottle, check_fields: dict[str, object]) -
     return fields
 
 
-def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [core_models.FileError]:
+def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
     skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
 
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
@@ -228,11 +230,26 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
     b_create = []
     b_update = {"data": [], "fields": set()}
     bottle_data = data_frame_avg[dataframe_columns]
-    errors: [core_models.FileError] = []
+    errors: [core_models.ValidationError] = []
+
+    # clear out the bottle validation errors
+    event.validation_errors.filter(type=core_models.ErrorType.bottle).delete()
+    # end_sample_id-sample_id is includes so it's one less that the bottles in the file
+    if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)['Bottle'] - 1:
+        message = _("Mismatch bottle count for event")
+        validation_err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
+        errors.append(validation_err)
+
     for row in bottle_data.iterrows():
         line = skipped_rows + row[0] + 1
         bottle_number = row[1]["Bottle"]
+
         bottle_id = bottle_number + event.sample_id - 1
+
+        # if the Bottle S/N column is present then use that values as the bottle ID
+        if 'Bottle_' in row[1]:
+            bottle_id = int(row[1]['Bottle_'])
+
         date = row[1]["Date"]
         pressure = row[1]["PrDM"]
         latitude = row[1]["Latitude"] if "Latitude" in dataframe_columns else event.actions.first().latitude
@@ -242,10 +259,8 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
         if not hasattr(date, 'timezone'):
             date = pytz.timezone("UTC").localize(date)
 
-        file_validation = validation.validate_bottle_sample_range(event=event, bottle_id=bottle_id)
-        for err in file_validation:
-            errors.append(core_models.FileError(file_name=file_name, mission=err.event.mission,
-                                                message=err.message, type=err.type, line=line))
+        valid = validation.validate_bottle_sample_range(event=event, bottle_id=bottle_id)
+        errors += valid
 
         if core_models.Bottle.objects.filter(event=event, bottle_number=bottle_number).exists():
             # If a bottle already exists for this event then we'll update it's fields rather than
@@ -259,7 +274,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
             if len(updated_fields) > 0:
                 b_update['data'].append(b)
                 b_update['fields'] = b_update['fields'].union(updated_fields)
-        elif len(file_validation) <= 0:
+        elif len(valid) <= 0:
             # only create a new bottle if the bottle id is in a valid range.
             new_bottle = core_models.Bottle(event=event, pressure=pressure, bottle_number=bottle_number, date_time=date,
                                             bottle_id=bottle_id, latitude=latitude, longitude=longitude)
@@ -269,7 +284,8 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame) -> [
     if len(b_update['data']) > 0:
         core_models.Bottle.objects.bulk_update(objs=b_update['data'], fields=b_update['fields'])
 
-    return errors
+    if len(errors) > 0:
+        core_models.ValidationError.objects.bulk_create(errors)
 
 
 # Todo: This function doesn't follow the standard pattern for creating/updating database elements
@@ -338,21 +354,18 @@ def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_
 
 
 def read_btl(mission: core_models.Mission, btl_file: str):
-    errors: [core_models.FileError] = []
-
-    filename = os.path.basename(btl_file)
-    core_models.FileError.objects.filter(file_name=filename).delete()
-
     data_frame = ctd.from_btl(btl_file)
 
     event_number = get_event_number_bio(data_frame=data_frame)
     event = get_elog_event_bio(mission=mission, event_number=event_number)
 
     # These are columns we either have no use for or we will specifically call and use later
+    # The Bottle column is the rosette number of the bottle
+    # the Bottle_ column, if present, is the bottle.bottle_id for a bottle.
     pop = ['Bottle', 'Bottle_', 'Date', 'Scan', 'TimeS', 'Statistic', "Longitude", "Latitude"]
     col_headers = get_sensor_names(data_frame=data_frame, exclude=pop)
 
-    errors += process_bottles(event=event, data_frame=data_frame)
+    process_bottles(event=event, data_frame=data_frame)
 
     # this will exclude common columns in either a ROS or BTL file
     exclude_sensors = ['scan', 'timeS', 'latitude', 'longitude', 'nbf', 'flag', 'prdm']
@@ -364,7 +377,3 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     process_sensors(btl_file=btl_file, column_headers=columns, exclude_sensors=exclude_sensors)
     process_data(event=event, data_frame=data_frame, column_headers=columns)
 
-    for err in errors:
-        err.file_name = filename
-
-    core_models.FileError.objects.bulk_create(errors)
