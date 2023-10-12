@@ -17,7 +17,6 @@ from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
-from dynamic_db_router import in_database
 from render_block import render_block_to_string
 
 import biochem.upload
@@ -32,6 +31,10 @@ from core.views import sample_file_queue, load_ctd_files, MissionMixin
 from dart2.utils import load_svg
 
 from dart2.views import GenericDetailView
+
+from dynamic_db_router import in_database
+from django.conf import settings
+from dart2.settings import env
 
 import logging
 
@@ -951,7 +954,7 @@ def format_sensor_table(request, df, mission_id, sensor_id):
     # create a button so the user can go back to viewing all loaded sensors/samples
 
     upload_button = soup.new_tag('button')
-    upload_button.attrs['class'] = 'btn btn-primary btn-sm'
+    upload_button.attrs['class'] = 'btn btn-disabled btn-sm'
     upload_button.attrs['hx-get'] = reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sensor_id,))
     upload_button.attrs['hx-target'] = '#table_id_sample_table'
     upload_button.attrs['hx-swap'] = 'beforebegin'
@@ -1061,10 +1064,23 @@ def upload_bio_chem(request, **kwargs):
         soup = forms.save_load_component(**attrs)
         return HttpResponse(soup)
     elif request.method == "POST":
+        biochem = {}
+        if env.bool("BIOCHEM_ENABLED", default=False):
+            biochem = {
+                'ENGINE': 'django.db.backends.oracle',
+                'NAME': env('BIOCHEM_NAME'),
+                'USER': env('BIOCHEM_USER'),
+                'PASSWORD': env('BIOCHEM_PASS'),
+                'PORT': env('BIOCHEM_PORT'),
+                'HOST': env('BIOCHEM_HOST'),
+                'OPTIONS': [],
+            }
+
         mission = models.Mission.objects.get(pk=mission_id)
 
-        bcs_d = biochem.upload.get_bcs_d_model(mission.name)
-        bcd_d = biochem.upload.get_bcd_d_model(mission.name)
+        with in_database(biochem):
+            bcs_d = biochem.upload.get_bcs_d_model(mission.name)
+            bcd_d = biochem.upload.get_bcd_d_model(mission.name)
 
 
     return HttpResponse('Hi')
