@@ -54,41 +54,13 @@ def get_bcs_d_model(table_name: str) -> Type[models.BcsD]:
 
 
 def get_bcd_p_model(table_name: str) -> Type[models.BcdP]:
-    default_db = connections.databases['default']
-    biochem_db = {
-        'ENGINE': '',
-        'NAME': '',
-        'USER': '',
-        'PASSWORD': '',
-        'PORT': '',
-        'HOST': '',
-        'TIME_ZONE': None,
-        'CONN_HEALTH_CHECKS': False,
-        'CONN_MAX_AGE': 0,
-        'AUTOCOMMIT': True,
-        'ATOMIC_REQUESTS': False,
-        'OPTIONS': {}
-    }
 
-    with in_database(biochem_db, write=True):
-        try:
-            bcd_table = 'test_table_bcd_p'
-            opts = {'__module__': 'biochem'}
-            mod = type(bcd_table, (models.BcdP,), opts)
-            mod._meta.db_table = bcd_table
-            key = [key for key in connections.databases.keys()][1]
-            with connections[key].schema_editor() as editor:
-                editor.create_model(mod)
+    bcd_table = table_name + '_bcd_p'
+    opts = {'__module__': 'biochem'}
+    mod = type(bcd_table, (models.BcdP,), opts)
+    mod._meta.db_table = bcd_table
 
-        except Exception as ex:
-            logger.exception(ex)
-
-    # bcd_table = table_name + '_bcd_p'
-    # opts = {'__module__': 'biochem'}
-    # mod = type(bcd_table, (models.BcdP,), opts)
-    # mod._meta.db_table = bcd_table
-    #
-    # return check_and_create_model(upload_model=mod)
+    return check_and_create_model(upload_model=mod)
 
 
 def get_bcs_p_model(table_name: str) -> Type[models.BcsP]:

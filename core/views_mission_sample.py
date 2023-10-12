@@ -1061,6 +1061,10 @@ def upload_bio_chem(request, **kwargs):
         soup = forms.save_load_component(**attrs)
         return HttpResponse(soup)
     elif request.method == "POST":
-        biochem.upload.get_bcd_p_model('test_table')
+        mission = models.Mission.objects.get(pk=mission_id)
+
+        bcs_d = biochem.upload.get_bcs_d_model(mission.name)
+        bcd_d = biochem.upload.get_bcd_d_model(mission.name)
+
 
     return HttpResponse('Hi')
