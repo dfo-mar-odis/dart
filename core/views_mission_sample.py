@@ -32,6 +32,7 @@ from dart2.utils import load_svg
 
 from dart2.views import GenericDetailView
 
+from django.db import connections
 from dynamic_db_router import in_database
 from django.conf import settings
 from dart2.settings import env
@@ -1064,23 +1065,29 @@ def upload_bio_chem(request, **kwargs):
         soup = forms.save_load_component(**attrs)
         return HttpResponse(soup)
     elif request.method == "POST":
-        biochem = {}
+        biochem_db = {}
         if env.bool("BIOCHEM_ENABLED", default=False):
-            biochem = {
+            biochem_db = {
                 'ENGINE': 'django.db.backends.oracle',
                 'NAME': env('BIOCHEM_NAME'),
                 'USER': env('BIOCHEM_USER'),
                 'PASSWORD': env('BIOCHEM_PASS'),
                 'PORT': env('BIOCHEM_PORT'),
                 'HOST': env('BIOCHEM_HOST'),
-                'OPTIONS': [],
+                'TIME_ZONE': None,
+                'CONN_HEALTH_CHECKS': False,
+                'CONN_MAX_AGE': 0,
+                'AUTOCOMMIT': True,
+                'ATOMIC_REQUESTS': False,
+                'OPTIONS': {}
             }
 
         mission = models.Mission.objects.get(pk=mission_id)
-
-        with in_database(biochem):
-            bcs_d = biochem.upload.get_bcs_d_model(mission.name)
-            bcd_d = biochem.upload.get_bcd_d_model(mission.name)
+        with in_database(biochem_db, write=True):
+            dbs = connections.databases
+            db_name = list(dbs.keys())[-1]
+            bcs_d = biochem.upload.get_bcs_d_model(db_name, mission.name)
+            bcd_d = biochem.upload.get_bcd_d_model(db_name, mission.name)
 
 
     return HttpResponse('Hi')

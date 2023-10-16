@@ -647,3 +647,16 @@ class ElogConfig(FileConfiguration):
                 mapping.save()
 
         return elog_config
+
+
+class EngineTypes(models.IntegerChoices):
+    oracle = 1, 'Oracle'
+
+
+class BcDatabaseConnections(models.Model):
+    engine = models.IntegerField(verbose_name=_("Database Type"), choices=EngineTypes.choices)
+    host = models.CharField(verbose_name=_("Database Server Address"), max_length=50)
+    name = models.CharField(verbose_name=_("Database Name"), help_text="TTRAN/PTRAN", max_length=20)
+    port = models.IntegerField(verbose_name=_("Port"), default=1521)
+
+    account_name = models.CharField(verbose_name=_('User Name'), max_length=20)
