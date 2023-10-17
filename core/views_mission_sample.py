@@ -1076,54 +1076,54 @@ def upload_bio_chem(request, **kwargs):
     mission_id = kwargs['mission_id']
     sample_id = kwargs['sample_type_id']
 
+    soup = BeautifulSoup('', 'html.parser')
+    div = soup.new_tag('div')
+    div.attrs = {
+        'id': "div_id_sample_table_msg",
+        'hx-swap-oob': 'true'
+    }
+    soup.append(div)
+
+    #check that the database and password were set in the cache
+    sentinel = object()
+    database_id = caches['biochem_keys'].get('database_id', sentinel)
+    password = caches['biochem_keys'].get('pwd', sentinel)
+    if database_id is sentinel or password is sentinel:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Database connection is unavailable, reconnect and try again."),
+        }
+        alert_soup = forms.blank_alert(**attrs)
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
     if request.method == "GET":
-        if 'biochem_session' in request.session:
-            attrs = {
-                'component_id': 'div_id_upload_biochem',
-                'alert_type': 'info',
-                'message': _("Uploading"),
-                'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sample_id)),
-                'hx-swap': 'none',
-                'hx-trigger': 'load',
-            }
-            soup = forms.save_load_component(**attrs)
-            html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">{str(soup)}</div>'
-            return HttpResponse(html)
-        else:
-            # session = SessionStore()
-            # session['password'] = '1234'
-            # session.create()
-            # request.session['biochem_session'] = session.session_key
-            # html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">{session.session_key}</div>'
-            html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">no session key</div>'
-            return HttpResponse(html)
+
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'info',
+            'message': _("Uploading"),
+            'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sample_id)),
+            'hx-swap': 'none',
+            'hx-trigger': 'load',
+        }
+        alert_soup = forms.save_load_component(**attrs)
+        div.append(alert_soup)
+
     elif request.method == "POST":
-        biochem_db = {}
-        if env.bool("BIOCHEM_ENABLED", default=False):
-            biochem_db = {
-                'ENGINE': 'django.db.backends.oracle',
-                'NAME': env('BIOCHEM_NAME'),
-                'USER': env('BIOCHEM_USER'),
-                'PASSWORD': env('BIOCHEM_PASS'),
-                'PORT': env('BIOCHEM_PORT'),
-                'HOST': env('BIOCHEM_HOST'),
-                'TIME_ZONE': None,
-                'CONN_HEALTH_CHECKS': False,
-                'CONN_MAX_AGE': 0,
-                'AUTOCOMMIT': True,
-                'ATOMIC_REQUESTS': False,
-                'OPTIONS': {}
-            }
+        biochem_db = models.BcDatabaseConnections.objects.get(pk=database_id)
 
         mission = models.Mission.objects.get(pk=mission_id)
         try:
-            with in_database(biochem_db, write=True):
+            with in_database(biochem_db.connect(password), write=True):
                 dbs = connections.databases
                 db_name = list(dbs.keys())[-1]
                 bcs_d = biochem.upload.get_or_create_bcs_d_model(db_name, mission.name)
                 bcd_d = biochem.upload.get_or_create_bcd_d_model(db_name, mission.name)
         except DatabaseError as e:
-            del request.session['biochem_session']
+            caches['biochem_keys'].clear()
             logger.exception(e)
 
             # A 12545 Oracle error means there's an issue with the database connection. This could be because
@@ -1134,14 +1134,13 @@ def upload_bio_chem(request, **kwargs):
             attrs = {
                 'component_id': 'div_id_upload_biochem',
                 'alert_type': 'danger',
-                'message': _("Issue connecting to database, this may be due to VPN. (see ./logs/error.log)"),
+                'message': e.args[0].code + _("Issue connecting to database, "
+                                              "this may be due to VPN. (see ./logs/error.log)."),
             }
-            soup = forms.blank_alert(**attrs)
-            html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">{str(soup)}</div>'
-            return HttpResponse(html)
+            alert_soup = forms.blank_alert(**attrs)
+            div.append(alert_soup)
 
-    html = '<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">No Session Found</div>'
-    return HttpResponse(html)
+    return HttpResponse(soup)
 
 
 def validate_database(request):
@@ -1175,22 +1174,6 @@ def validate_database(request):
                 }
                 soup.append(select)
 
-            # connect_button = soup.new_tag('button')
-            # connect_button.attrs = {
-            #     'id': 'btn_id_connect',
-            #     'title': _("connect"),
-            #     'class': 'btn btn-info btn-sm',
-            #     'name': 'connect',
-            #     'hx-swap': 'outerHTML',
-            #     'hx-get': reverse_lazy('core:hx_validate_database_connection')
-            # }
-            # icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
-            # connect_button.append(icon)
-            #
-            # root.append(alert_soup)
-            # soup.append(root)
-            # soup.append(connect_button)
-
             return HttpResponse(soup)
         elif 'selected_database' in request.GET:
             # if the selected database changes update the form to show the selection
@@ -1206,16 +1189,16 @@ def validate_database(request):
                 caches['biochem_keys'].clear()
 
                 context = {}
-                indicator = render_block_to_string(
+                indicator_html = render_block_to_string(
                     'core\partials\card_biochem_db_connection.html',
                     'db_connection_indicator_block',
                     context=context
                 )
 
-                indicator_soup = BeautifulSoup(indicator, 'html.parser')
-                indicator_soup = indicator_soup.find(id="db_connection_indicator")
-                indicator_soup.attrs['hx-swap-oob'] = "true"
-                soup.append(indicator_soup)
+                indicator_soup = BeautifulSoup(indicator_html, 'html.parser')
+                indicator = indicator_soup.find(id="db_connection_indicator")
+                indicator.attrs['hx-swap-oob'] = "true"
+                soup.append(indicator)
 
             return HttpResponse(soup)
     else:
@@ -1265,19 +1248,20 @@ def validate_database(request):
                 }
 
                 caches['biochem_keys'].set('pwd', password, 3600)
+                caches['biochem_keys'].set('database_id', database_id, 3600)
 
                 # since we have a DB password in the cache we'll update the page to indicate we're connected
                 # get the indicator image from the template
                 context = {'cached_connection': True}
 
-            indicator = render_block_to_string(
+            indicator_html = render_block_to_string(
                 'core\partials\card_biochem_db_connection.html',
                 'db_connection_indicator_block',
                 context=context
             )
 
-            soup = BeautifulSoup(indicator, 'html.parser')
-            indicator = soup.find(id="db_connection_indicator")
+            indicator_soup = BeautifulSoup(indicator_html, 'html.parser')
+            indicator = indicator_soup.find(id="db_connection_indicator")
             indicator.attrs['hx-swap-oob'] = "true"
 
             alert_soup = forms.blank_alert(**attrs)
@@ -1288,6 +1272,7 @@ def validate_database(request):
             }
             div.append(alert_soup)
             soup.append(div)
+            soup.append(indicator_soup)
 
             return HttpResponse(soup)
         else:
