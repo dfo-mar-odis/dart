@@ -1,0 +1,51 @@
+{% load static %}
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<form class="mb-2" id="div_db_connect_content_block_id"
+     hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+>
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title row">
+                <button type="button" class="btn btn-light btn-sm col-auto collapsed" data-bs-toggle="collapse"
+                    href="#div_id_connection_details" aria-expanded="false">{% custom_icon 'caret-down' %}</button>
+
+
+                {% block db_connection_indicator_block %}
+                <div id="div_id_selected_connection" class="col align-self-end">
+                    <img id='db_connection_indicator' class="me-1 mb-1" width="8" height="8" {% if cached_connection %}
+                         src="{% static 'dart/icons/success_indicator.png' %}">
+                    {% else %}
+                         src="{% static 'dart/icons/issue_indicator.png' %}">
+                    {% endif %}
+
+                    <span class="h6">
+                    {% trans 'Biochem Database' %}
+                    </span>
+
+                    <span id="span_id_selected_db_connect">
+                        {% if databases %}
+                        <select id="select_id_db_details" name="selected_database" hx-get="{% url 'core:hx_validate_database_connection' %}" hx-swap="none">
+                            {% for db in databases %}
+                            <option value="{{ db.id }}"{% if selected_db and selected_db == db.id %} selected="selected"{% endif %}>{{ db }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="password" name="selected_db_password" />
+                        <button class="btn btn-primary btn-sm" name="connect" hx-post="{% url 'core:hx_validate_database_connection' %}" hx-swap="none">{% custom_icon 'plug' %}</button>
+                        {% endif %}
+                    </span>
+                </div>
+                {% endblock %}
+            </div>
+        </div>
+        <div id="div_id_connection_details" class="collapsed collapse">
+            <div class="card-body">
+            {% if biochem_db_form %}
+                {% crispy biochem_db_form %}
+            {% endif %}
+            </div>
+        </div>
+    </div>
+</form>

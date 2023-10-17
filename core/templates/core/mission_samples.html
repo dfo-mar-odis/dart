@@ -24,21 +24,22 @@
 {% endblock %}
 
 {% block content %}
+        <div id="div_content_block_id" class="container-fluid" hx-swap-oob="true">
     {% if sample_type %}
+        {% include 'core/partials/card_biochem_db_connection.html' %}
         {% include 'core/partials/card_sample_upload_header.html' %}
     {% else %}
-        <div id="div_content_block_id" class="container-fluid" hx-swap-oob="outerHTML:#div_content_block_id">
-            <div class="row">
-                {% include 'core/partials/card_event_validation.html' %}
-            </div>
-            <div class="row mt-2">
-            {% include 'core/partials/card_bottle_load_header.html' %}
-            </div>
-            <div class="row mt-2">
-            {% include 'core/partials/card_sample_load_header.html' %}
-            </div>
+        <div class="row">
+            {% include 'core/partials/card_event_validation.html' %}
+        </div>
+        <div class="row mt-2">
+        {% include 'core/partials/card_bottle_load_header.html' %}
+        </div>
+        <div class="row mt-2">
+        {% include 'core/partials/card_sample_load_header.html' %}
         </div>
     {% endif %}
+        </div>
 
     {% block ctd_block %}
         {% if sample_type %}

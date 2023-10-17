@@ -2,8 +2,8 @@
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
-<form class="container" id="div_content_block_id"
-     hx-swap-oob="outerHTML:#div_content_block_id"
+<form id="div_id_sample_filter"
+     hx-swap-oob="true"
      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
 >
     <div class="card">

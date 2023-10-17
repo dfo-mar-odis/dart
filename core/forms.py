@@ -716,8 +716,65 @@ class BottleSelection(forms.Form):
         self.helper.form_show_labels = False
 
 
-def save_load_component(component_id, message, **kwargs):
+class DBForm(forms.ModelForm):
+    class Meta:
+        model = models.BcDatabaseConnections
+        exclude = []
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper(self)
+
+        self.helper.attrs = {
+            "id": "form_id_biochem_db_connection",
+        }
+
+        button_column = Column(css_class='align-self-center mb-1')
+
+        url = reverse_lazy('core:hx_validate_database_connection')
+        add_attrs = {
+            'id': 'btn_id_db_details_add',
+            'title': _('Add'),
+            'name': 'add_db',
+            'hx_get': url,
+            'hx_swap': 'none'
+        }
+        icon = load_svg('plus-square')
+        add_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **add_attrs)
+        button_column.append(add_button)
+
+        input_row = Row(
+            Column(Field('account_name')),
+            Column(Field('name')),
+            Column(Field('host')),
+            Column(Field('port')),
+            Column(Field('engine')),
+            button_column,
+            id="div_id_biochem_db_details_input"
+        )
+
+        if self.instance:
+            update_attrs = {
+                'id': 'btn_id_db_details_update',
+                'title': _('Update'),
+                'name': 'update_db',
+                'value': self.instance.pk,
+                'hx_get': url,
+                'hx_swap': 'none'
+            }
+            icon = load_svg('arrow-clockwise')
+            update_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **update_attrs)
+            button_column.append(update_button)
+
+        self.helper.layout = Layout(
+            Row(id="div_id_biochem_alert"),
+            input_row,
+        )
+
+
+
+def blank_alert(component_id, message, **kwargs):
     alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
 
     # return a loading alert that calls this methods post request
@@ -732,10 +789,27 @@ def save_load_component(component_id, message, **kwargs):
 
     # create an alert area saying we're loading
     alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
-    alert_msg = soup.new_tag('div', attrs={'id': f'{component_id}_message'})
+    alert_msg = soup.new_tag("div", attrs={'id': f'{component_id}_message'})
     alert_msg.string = message
 
     alert_div.append(alert_msg)
+
+    root_div.attrs = {
+        'id': component_id,
+    }
+
+    root_div.append(alert_div)
+    soup.append(root_div)
+
+    return soup
+
+
+def save_load_component(component_id, message, **kwargs):
+
+    soup = blank_alert(component_id, message, **kwargs)
+    root_div = soup.find_next()
+
+    alert_div = root_div.find_next()
 
     # create a progress bar to give the user something to stare at while they wait.
     progress_bar = soup.new_tag("div")
@@ -749,14 +823,7 @@ def save_load_component(component_id, message, **kwargs):
 
     alert_div.append(progress_bar_div)
 
-    root_div.attrs = {
-        'id': component_id,
-    }
-
     for attr, val in kwargs.items():
         root_div.attrs[attr] = val
-
-    root_div.append(alert_div)
-    soup.append(root_div)
 
     return soup

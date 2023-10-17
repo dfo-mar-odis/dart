@@ -660,3 +660,28 @@ class BcDatabaseConnections(models.Model):
     port = models.IntegerField(verbose_name=_("Port"), default=1521)
 
     account_name = models.CharField(verbose_name=_('User Name'), max_length=20)
+
+    def __str__(self):
+        return f'{self.account_name} - {self.name}'
+
+    # create a django database connection dictionary to be used with django-dynamic-db-router
+    def connect(self, password):
+        # at the moment we only handle Oracle Biochem DBs, but this could be expanded in the future
+        engine = 'django.db.backends.oracle'
+
+        biochem_db = {
+            'ENGINE': engine,
+            'NAME': self.name,
+            'USER': self.account_name,
+            'PASSWORD': password,
+            'PORT': self.port,
+            'HOST': self.host,
+            'TIME_ZONE': None,
+            'CONN_HEALTH_CHECKS': False,
+            'CONN_MAX_AGE': 0,
+            'AUTOCOMMIT': True,
+            'ATOMIC_REQUESTS': False,
+            'OPTIONS': {}
+        }
+
+        return biochem_db

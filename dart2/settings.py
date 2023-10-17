@@ -305,3 +305,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 FIXTURE_DIRS = [
     os.path.join(BASE_DIR, '../settings'),
 ]
+
+SESSION_COOKIE_AGE = 360
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    },
+    "biochem_keys": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}

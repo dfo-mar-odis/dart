@@ -1,5 +1,4 @@
 import io
-import re
 
 import numpy as np
 import os
@@ -17,6 +16,8 @@ from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
+from django.core.cache import caches
+
 from render_block import render_block_to_string
 
 import biochem.upload
@@ -32,9 +33,8 @@ from dart2.utils import load_svg
 
 from dart2.views import GenericDetailView
 
-from django.db import connections
+from django.db import connections, DatabaseError
 from dynamic_db_router import in_database
-from django.conf import settings
 from dart2.settings import env
 
 import logging
@@ -126,6 +126,20 @@ class SampleDetails(MissionMixin, GenericDetailView):
                 initial['data_type_code'] = data_type_seq.data_type_seq
 
             context['biochem_form'] = forms.BioChemUpload(initial=initial)
+
+            context['databases'] = models.BcDatabaseConnections.objects.all()
+
+            if context['databases'].exists():
+                # todo: add a BcDatabaseConnects parameter to figure out what the last database used was, then
+                #       use the most recently used database here instead of just the first one in the list
+                context['biochem_db_form'] = forms.DBForm(instance=context['databases'].first())
+            else:
+                context['biochem_db_form'] = forms.DBForm()
+
+            # check to see if the user has a chached password. If so show the connection as success
+            sentinel = object()
+            if not caches['biochem_keys'].get('pwd', sentinel) is sentinel:
+                context['cached_connection'] = True
 
         return context
 
@@ -892,7 +906,6 @@ def format_all_sensor_table(df, mission_id):
         column.string = ''
         button.attrs['class'] = 'btn btn-sm ' + ('btn-secondary' if not upload_date else 'btn-primary')
         button.attrs['style'] = 'width: 100%'
-        button.attrs['hx-trigger'] = 'click'
         button.attrs['hx-get'] = reverse_lazy('core:sample_details', args=(mission_id, sampletype.pk,))
         button.attrs['hx-target'] = "#sample_table"
         button.attrs['hx-push-url'] = 'true'
@@ -926,6 +939,11 @@ def format_sensor_table(request, df, mission_id, sensor_id):
     sample_table = soup.find(id="sample_table")
     sample_table.attrs['class'] = "vertical-scrollbar"
 
+    # add a message area that will hold saving, loading, error alerts
+    msg_div = soup.new_tag("div")
+    msg_div.attrs['id'] = "div_id_sample_table_msg"
+    sample_table.insert(0, msg_div)
+
     # delete the row with the 'replicates' labels
     # soup.find("thead").find('tr').findNext('tr').decompose()
 
@@ -955,10 +973,14 @@ def format_sensor_table(request, df, mission_id, sensor_id):
     # create a button so the user can go back to viewing all loaded sensors/samples
 
     upload_button = soup.new_tag('button')
-    upload_button.attrs['class'] = 'btn btn-disabled btn-sm'
+    if 'biochem_session' in request.session:
+        upload_button.attrs['class'] = 'btn btn-primary btn-sm'
+    else:
+        upload_button.attrs['class'] = 'btn btn-disabled btn-sm'
+
+    # The response to this should do a hx-swap-oob="#div_id_sample_table_msg"
     upload_button.attrs['hx-get'] = reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sensor_id,))
-    upload_button.attrs['hx-target'] = '#table_id_sample_table'
-    upload_button.attrs['hx-swap'] = 'beforebegin'
+    upload_button.attrs['hx-swap'] = 'none'
 
     upload_button_icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
     upload_button.append(upload_button_icon)
@@ -1055,15 +1077,26 @@ def upload_bio_chem(request, **kwargs):
     sample_id = kwargs['sample_type_id']
 
     if request.method == "GET":
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'info',
-            'message': _("Uploading"),
-            'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sample_id)),
-            'hx-trigger': 'load',
-        }
-        soup = forms.save_load_component(**attrs)
-        return HttpResponse(soup)
+        if 'biochem_session' in request.session:
+            attrs = {
+                'component_id': 'div_id_upload_biochem',
+                'alert_type': 'info',
+                'message': _("Uploading"),
+                'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sample_id)),
+                'hx-swap': 'none',
+                'hx-trigger': 'load',
+            }
+            soup = forms.save_load_component(**attrs)
+            html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">{str(soup)}</div>'
+            return HttpResponse(html)
+        else:
+            # session = SessionStore()
+            # session['password'] = '1234'
+            # session.create()
+            # request.session['biochem_session'] = session.session_key
+            # html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">{session.session_key}</div>'
+            html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">no session key</div>'
+            return HttpResponse(html)
     elif request.method == "POST":
         biochem_db = {}
         if env.bool("BIOCHEM_ENABLED", default=False):
@@ -1083,11 +1116,237 @@ def upload_bio_chem(request, **kwargs):
             }
 
         mission = models.Mission.objects.get(pk=mission_id)
-        with in_database(biochem_db, write=True):
-            dbs = connections.databases
-            db_name = list(dbs.keys())[-1]
-            bcs_d = biochem.upload.get_bcs_d_model(db_name, mission.name)
-            bcd_d = biochem.upload.get_bcd_d_model(db_name, mission.name)
+        try:
+            with in_database(biochem_db, write=True):
+                dbs = connections.databases
+                db_name = list(dbs.keys())[-1]
+                bcs_d = biochem.upload.get_or_create_bcs_d_model(db_name, mission.name)
+                bcd_d = biochem.upload.get_or_create_bcd_d_model(db_name, mission.name)
+        except DatabaseError as e:
+            del request.session['biochem_session']
+            logger.exception(e)
+
+            # A 12545 Oracle error means there's an issue with the database connection. This could be because
+            # the user isn't logged in on VPN so the Oracle DB can't be connected to.
+            if e.args[0].code != 12545:
+                raise e
+
+            attrs = {
+                'component_id': 'div_id_upload_biochem',
+                'alert_type': 'danger',
+                'message': _("Issue connecting to database, this may be due to VPN. (see ./logs/error.log)"),
+            }
+            soup = forms.blank_alert(**attrs)
+            html = f'<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">{str(soup)}</div>'
+            return HttpResponse(html)
+
+    html = '<div id="div_id_sample_table_msg" hx-swap-oob="#div_id_sample_table_msg">No Session Found</div>'
+    return HttpResponse(html)
 
 
-    return HttpResponse('Hi')
+def validate_database(request):
+
+    if request.method == "GET":
+        if 'add_db' in request.GET or 'update_db' in request.GET:
+            soup = BeautifulSoup('', 'html.parser')
+            root = soup.new_tag('div')
+            root.attrs = {
+                'id': 'div_id_biochem_alert',
+                'hx-swap-oob': 'true'
+            }
+            soup.append(root)
+
+            url = reverse_lazy('core:hx_validate_database_connection')
+            attrs = {
+                'component_id': 'div_id_biochem_alert',
+                'message': _("Adding Database"),
+                'hx-post': url,
+                'hx-trigger': 'load'
+            }
+            alert_soup = forms.save_load_component(**attrs)
+            root.append(alert_soup)
+
+            if 'add_db' in request.GET:
+                # if we're adding a new DB, remove the selected input field containing the pk for the db instance
+                select = soup.new_tag('select')
+                select.attrs = {
+                    'id': 'select_id_db_details',
+                    'hx-swap-oob': 'true'
+                }
+                soup.append(select)
+
+            # connect_button = soup.new_tag('button')
+            # connect_button.attrs = {
+            #     'id': 'btn_id_connect',
+            #     'title': _("connect"),
+            #     'class': 'btn btn-info btn-sm',
+            #     'name': 'connect',
+            #     'hx-swap': 'outerHTML',
+            #     'hx-get': reverse_lazy('core:hx_validate_database_connection')
+            # }
+            # icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
+            # connect_button.append(icon)
+            #
+            # root.append(alert_soup)
+            # soup.append(root)
+            # soup.append(connect_button)
+
+            return HttpResponse(soup)
+        elif 'selected_database' in request.GET:
+            # if the selected database changes update the form to show the selection
+            database = models.BcDatabaseConnections.objects.get(pk=request.GET['selected_database'])
+            db_form = forms.DBForm(instance=database)
+            form = render_crispy_form(db_form)
+            soup = BeautifulSoup(form, 'html.parser')
+            soup.find(id="div_id_biochem_db_details_input").attrs['hx-swap-oob'] = 'true'
+
+            # check to see if the user has a cached password. If so clear the cache
+            sentinel = object()
+            if not caches['biochem_keys'].get('pwd', sentinel) is sentinel:
+                caches['biochem_keys'].clear()
+
+                context = {}
+                indicator = render_block_to_string(
+                    'core\partials\card_biochem_db_connection.html',
+                    'db_connection_indicator_block',
+                    context=context
+                )
+
+                indicator_soup = BeautifulSoup(indicator, 'html.parser')
+                indicator_soup = indicator_soup.find(id="db_connection_indicator")
+                indicator_soup.attrs['hx-swap-oob'] = "true"
+                soup.append(indicator_soup)
+
+            return HttpResponse(soup)
+    else:
+        if 'connect' in request.POST:
+            database_id = request.POST['selected_database']
+            password = request.POST['selected_db_password']
+
+            database = models.BcDatabaseConnections.objects.get(pk=database_id)
+
+            soup = BeautifulSoup('', 'html.parser')
+
+            connection_success = False
+            with in_database(database.connect(password)):
+                # we don't care about the table name in this case, we're just checking the connection
+                bcs_d = biochem.upload.get_bcs_d_model('connection_test')
+                try:
+                    bcs_d.objects.exists()
+                    # one hour until the cache is invalidated and the password needs to be re-entered
+                except DatabaseError as e:
+
+                    if e.args[0].code == 942:
+                        # A 942 Oracle error means the connection worked, but the table/objects don't exist.
+                        connection_success = True
+                    elif e.args[0].code == 12545:
+                        # A 12545 Oracle error means there's an issue with the database connection.
+                        # This could be because the user isn't logged in on VPN so the Oracle DB can't be connected to.
+                        logger.exception(e)
+                        attrs = {
+                            'component_id': 'div_id_upload_biochem',
+                            'alert_type': 'danger',
+                            'message': _("Issue connecting to database, this may be due to VPN. (see ./logs/error.log)"),
+                        }
+                    else:
+                        logger.exception(e)
+                        attrs = {
+                            'component_id': 'div_id_upload_biochem',
+                            'alert_type': 'danger',
+                            'message': _("An unexpected database error occured. (see ./logs/error.log)"),
+                        }
+
+            context = {}
+            if connection_success:
+                attrs = {
+                    'component_id': 'div_id_upload_biochem',
+                    'alert_type': 'success',
+                    'message': _("Success"),
+                }
+
+                caches['biochem_keys'].set('pwd', password, 3600)
+
+                # since we have a DB password in the cache we'll update the page to indicate we're connected
+                # get the indicator image from the template
+                context = {'cached_connection': True}
+
+            indicator = render_block_to_string(
+                'core\partials\card_biochem_db_connection.html',
+                'db_connection_indicator_block',
+                context=context
+            )
+
+            soup = BeautifulSoup(indicator, 'html.parser')
+            indicator = soup.find(id="db_connection_indicator")
+            indicator.attrs['hx-swap-oob'] = "true"
+
+            alert_soup = forms.blank_alert(**attrs)
+            div = soup.new_tag('div')
+            div.attrs = {
+                'id': "div_id_biochem_alert",
+                'hx-swap-oob': 'true'
+            }
+            div.append(alert_soup)
+            soup.append(div)
+
+            return HttpResponse(soup)
+        else:
+            soup = BeautifulSoup('', 'html.parser')
+            div = soup.new_tag('div')
+            div.attrs = {
+                'id': 'div_id_biochem_alert',
+                'hx-swap-oob': 'true'
+            }
+            soup.append(div)
+
+            # check to see if the user has a cached password. If so clear the cache
+            sentinel = object()
+            if not caches['biochem_keys'].get('pwd', sentinel) is sentinel:
+                caches['biochem_keys'].clear()
+
+                context = {}
+                indicator = render_block_to_string(
+                    'core\partials\card_biochem_db_connection.html',
+                    'db_connection_indicator_block',
+                    context=context
+                )
+
+                indicator_soup = BeautifulSoup(indicator, 'html.parser')
+                indicator_soup = indicator_soup.find(id="db_connection_indicator")
+                indicator_soup.attrs['hx-swap-oob'] = "true"
+                soup.append(indicator_soup)
+
+            if 'selected_database' in request.POST:
+                database = models.BcDatabaseConnections.objects.get(pk=request.POST['selected_database'])
+                db_form = forms.DBForm(request.POST, instance=database)
+            else:
+                db_form = forms.DBForm(request.POST)
+
+            if db_form.is_valid():
+                db_details = db_form.save()
+                # set the selected database to the updated/saved value
+                databases = models.BcDatabaseConnections.objects.all()
+                context = {'databases': databases, 'selected_db': db_details.id}
+                selected_db_block = render_block_to_string(
+                    'core/partials/card_biochem_db_connection.html',
+                    'db_connection_indicator_block', context=context
+                )
+
+                selected_db_soup = BeautifulSoup(selected_db_block, 'html.parser')
+                selected_db_soup.find(id="div_id_selected_connection").attrs['hx-swap-oob'] = 'true'
+                soup.append(selected_db_soup)
+                response_attrs = {
+                    'component_id': 'div_id_upload_biochem',
+                    'alert_type': 'success',
+                    'message': _("Database added"),
+                }
+                alert_soup = forms.blank_alert(**response_attrs)
+                div.append(alert_soup)
+
+            form_errors = render_crispy_form(db_form)
+            form_soup = BeautifulSoup(form_errors, 'html.parser')
+            form_soup.find(id="div_id_biochem_db_details_input").attrs['hx-swap-oob'] = 'true'
+
+            soup.append(form_soup)
+
+            return HttpResponse(soup)

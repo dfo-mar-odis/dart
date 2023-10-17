@@ -99,6 +99,7 @@ urlpatterns = [
 ]
 
 htmx_urlpatterns = [
+    path('mission/database/validate/', views_mission_sample.validate_database, name='hx_validate_database_connection'),
     path('mission/list/', htmx.list_missions, name="hx_list_missions"),
     path('hx/mission/delete/<int:mission_id>/', htmx.hx_mission_delete, name="hx_mission_delete"),
     path('geographic_region/add/', htmx.add_geo_region, name="hx_geo_region_add"),
