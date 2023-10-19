@@ -75,4 +75,5 @@ beautifulsoup4
 xlrd==2.0.1
 
 # Connection to oracle database
-cx_Oracle~=8.3
+# cx_Oracle~=8.3
+oracledb==1.4.2

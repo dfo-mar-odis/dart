@@ -4,7 +4,7 @@ import re
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Min, Max
@@ -22,6 +22,85 @@ class NoWhiteSpaceCharField(forms.CharField):
         super().validate(value)
         if re.search(r"\s", value):
             raise ValidationError("Field may not contain whitespaces")
+
+
+class CardForm(forms.Form):
+
+    def get_card_title(self):
+        return Div(css_class="card-title row", id=f'div_id_card_title_{self.card_name}')
+
+    def get_card_header(self):
+        return Div(self.get_card_title(), css_class='card-header', id=f'div_id_card_header_{self.card_name}')
+
+    def get_card_body(self):
+        return Div(css_class='card-body', id=f'div_id_card_body_{self.card_name}')
+
+    def get_card(self):
+        card = Div(
+            self.get_card_header(),
+            self.get_card_body(),
+            css_class='card',
+            id=f'div_id_card_{self.card_name}'
+        )
+
+        return card
+
+    def __init__(self, *args, **kwargs):
+        if 'card_name' not in kwargs:
+            raise IndexError("Missing 'card_name' required to identify form components")
+
+        self.card_name = kwargs.pop('card_name')
+
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(self.get_card())
+
+
+class CollapsableCardForm(CardForm):
+
+    def get_card_title(self):
+        return Row(css_class="card-title", id=f'div_id_card_title_{self.card_name}')
+
+    def get_card_header(self):
+
+        header_row = Row()
+        header = Div(header_row, css_class='card-header')
+
+        button_id = f'button_id_collapse_{self.card_name}'
+        button_attrs = {
+            'id': button_id,
+            'data_bs_toggle': "collapse",
+            'href': f"#div_id_card_collapse_{self.card_name}",
+            'aria_expanded': 'false'
+        }
+        icon = load_svg('caret-down')
+        button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed", **button_attrs)
+
+        button_column = Div(button, css_class="col-auto")
+        title_column = Div(self.get_card_title(), css_class="col")
+
+        header_row.append(button_column)
+        header_row.append(title_column)
+
+        return header
+
+    def get_collapsable_card_body(self):
+        inner_body = self.get_card_body()
+        body = Div(inner_body, css_class="collapsed collapse", id=f"div_id_card_collapse_{self.card_name}")
+        return body
+
+    def get_card(self):
+        card = Div(
+            self.get_card_header(),
+            self.get_collapsable_card_body(),
+            css_class='card',
+            id=f'div_id_card_{self.card_name}'
+        )
+
+        return card
 
 
 class MissionSettingsForm(forms.ModelForm):
@@ -714,64 +793,6 @@ class BottleSelection(forms.Form):
             Row(Column(Field('file_name')), css_class='mt-2'),
         )
         self.helper.form_show_labels = False
-
-
-class DBForm(forms.ModelForm):
-    class Meta:
-        model = models.BcDatabaseConnections
-        exclude = []
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper(self)
-
-        self.helper.attrs = {
-            "id": "form_id_biochem_db_connection",
-        }
-
-        button_column = Column(css_class='align-self-center mb-1')
-
-        url = reverse_lazy('core:hx_validate_database_connection')
-        add_attrs = {
-            'id': 'btn_id_db_details_add',
-            'title': _('Add'),
-            'name': 'add_db',
-            'hx_get': url,
-            'hx_swap': 'none'
-        }
-        icon = load_svg('plus-square')
-        add_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **add_attrs)
-        button_column.append(add_button)
-
-        input_row = Row(
-            Column(Field('account_name')),
-            Column(Field('name')),
-            Column(Field('host')),
-            Column(Field('port')),
-            Column(Field('engine')),
-            button_column,
-            id="div_id_biochem_db_details_input"
-        )
-
-        if self.instance:
-            update_attrs = {
-                'id': 'btn_id_db_details_update',
-                'title': _('Update'),
-                'name': 'update_db',
-                'value': self.instance.pk,
-                'hx_get': url,
-                'hx_swap': 'none'
-            }
-            icon = load_svg('arrow-clockwise')
-            update_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **update_attrs)
-            button_column.append(update_button)
-
-        self.helper.layout = Layout(
-            Row(id="div_id_biochem_alert"),
-            input_row,
-        )
-
 
 
 def blank_alert(component_id, message, **kwargs):

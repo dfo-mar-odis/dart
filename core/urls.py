@@ -1,7 +1,6 @@
 from django.urls import path
 
-import core.views_mission_event
-from . import views, views_mission_sample, views_mission_event, views_sample_type, htmx, reports
+from . import views, views_mission_sample, views_sample_type, htmx, reports, form_biochem_database, views_mission_event
 
 app_name = 'core'
 
@@ -99,7 +98,7 @@ urlpatterns = [
 ]
 
 htmx_urlpatterns = [
-    path('mission/database/validate/', views_mission_sample.validate_database, name='hx_validate_database_connection'),
+    path('mission/database/validate/', form_biochem_database.validate_database, name='hx_validate_database_connection'),
     path('mission/list/', htmx.list_missions, name="hx_list_missions"),
     path('hx/mission/delete/<int:mission_id>/', htmx.hx_mission_delete, name="hx_mission_delete"),
     path('geographic_region/add/', htmx.add_geo_region, name="hx_geo_region_add"),

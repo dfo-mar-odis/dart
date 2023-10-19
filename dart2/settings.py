@@ -11,11 +11,14 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 import os
-from pathlib import Path
 import environ
+import sys
+import oracledb
 
+from pathlib import Path
 from django.utils.translation import gettext_lazy as _
-# read the private data from the environment file
+
+# read setup data from the environment file
 env = environ.Env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,6 +28,10 @@ MEDIA_DIR = os.path.join(BASE_DIR, 'media')
 
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+# We're going to use the newer python-oracledb package instead of cx_oracle
+oracledb.version = "8.3.0"
+sys.modules['cx_Oracle'] = oracledb
+oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -142,8 +149,8 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-# DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
-DATABASE_ROUTERS = ['dynamic_db_router.DynamicDbRouter']
+DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
+# DATABASE_ROUTERS = ['dynamic_db_router.DynamicDbRouter']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
