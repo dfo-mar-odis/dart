@@ -112,11 +112,10 @@ def get_or_create_bcs_p_model(db_name: str, table_name: str) -> Type[models.BcsP
 
 # This actually just uploads bottle data for the mission. It doesn't upload sample values.
 def upload_bcs_d(uploader: str, mission: core_models.Mission, batch_name: str = None):
+    WRITE_LIMIT = 100
+
     bcs_objects_to_create = []
     bcs_objects_to_update = []
-
-    updated_fields = set()
-    updated_fields.add('')
 
     # TODO: This could throw an error and should be caught and reported to the users web browser somehow.
     #  It doesn't fit the standard model for using a core_models.Error though and would be difficult to
@@ -130,7 +129,10 @@ def upload_bcs_d(uploader: str, mission: core_models.Mission, batch_name: str = 
 
     bottles = core_models.Bottle.objects.filter(event__mission=mission)
 
+    updated_fields = set()
     for bottle in bottles:
+        updated_fields.add('')
+
         event = bottle.event
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:02d}_{bottle.bottle_id}'
@@ -198,17 +200,30 @@ def upload_bcs_d(uploader: str, mission: core_models.Mission, batch_name: str = 
             batch_name = f'{event.start_date.strftime("%Y")}{mission.pk}'
         updated_fields.add(updated_value(bcs_row, 'batch_seq', batch_name))
 
+        updated_fields.remove('')
+
         if not existing_sample:
             bcs_objects_to_create.append(bcs_row)
         elif len(updated_fields) > 0:
             bcs_objects_to_update.append(bcs_row)
 
+        # if len(bcs_objects_to_create) >= WRITE_LIMIT:
+        #     print(f"Createing BCS rows: {len(bcs_objects_to_create)}")
+        #     upload_model.objects.bulk_create(bcs_objects_to_create)
+        #     bcs_objects_to_create.clear()
+        #
+        # if len(bcs_objects_to_update) >= WRITE_LIMIT:
+        #     print(f"Updating BCS rows: {len(bcs_objects_to_update)}")
+        #     upload_model.objects.bulk_update(bcs_objects_to_update, updated_fields)
+        #     bcs_objects_to_update.clear()
+        #     updated_fields.clear()
+        #     updated_fields.add('')
+
     if len(bcs_objects_to_create) > 0:
         print(f"Createing BCS rows: {len(bcs_objects_to_create)}")
         upload_model.objects.bulk_create(bcs_objects_to_create)
 
-    updated_fields.remove('')
-    if len(updated_fields) > 0:
+    if len(bcs_objects_to_update) > 0:
         print(f"Updating BCS rows: {len(bcs_objects_to_update)}")
         upload_model.objects.bulk_update(bcs_objects_to_update, updated_fields)
 

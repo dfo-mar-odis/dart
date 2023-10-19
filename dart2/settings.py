@@ -13,7 +13,6 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 import os
 import environ
 import sys
-import oracledb
 
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
@@ -28,10 +27,17 @@ MEDIA_DIR = os.path.join(BASE_DIR, 'media')
 
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
-# We're going to use the newer python-oracledb package instead of cx_oracle
-oracledb.version = "8.3.0"
-sys.modules['cx_Oracle'] = oracledb
-oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
+# This was an experiment in using the newer oracledb package instead of cx_oracle
+# The oralcedb package works, but I did receive odd PGA Memory errors at one point,
+# but I couldn't reproduce them after switching back and forth between the cx_oracle
+# and oracledb packages. However, the cx_oracle package is natively supported by Django
+# and doesn't require the use of the oracle instant client so I'm sticking with
+# cx_oracle for now.
+
+# import oracledb
+# oracledb.version = "8.3.0"
+# sys.modules['cx_Oracle'] = oracledb
+# oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/

@@ -75,5 +75,6 @@ beautifulsoup4
 xlrd==2.0.1
 
 # Connection to oracle database
-# cx_Oracle~=8.3
-oracledb==1.4.2
+cx_Oracle~=8.3
+# oracledb is the eventual replacement for cx_oracle see note in dart2/settings.py
+# oracledb==1.4.2
