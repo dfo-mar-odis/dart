@@ -26,12 +26,12 @@ class ParserType(Enum):
 # Validates that a field exists in a mid object's buffer and either raises an error or returns the mapped field
 # from the elog configuration
 def get_field(elog_configuration: core_models.ElogConfig, field: str, buffer: [str]) -> str:
-    mapped_field = elog_configuration.get_mapping(field)
+    mapped_field = elog_configuration.mappings.get(field=field)
 
-    if mapped_field not in buffer:
+    if mapped_field.required and mapped_field.mapped_to not in buffer:
         raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field})
 
-    return mapped_field
+    return mapped_field.mapped_to
 
 
 # Validate a message object ensuring it has all the required keys
@@ -172,6 +172,16 @@ def get_instrument(instrument_name: str) -> core_models.Instrument:
     return core_models.Instrument.objects.get(name=instrument_name)
 
 
+# sample id is valid if it's None or a number.
+def valid_sample_id(sample_id):
+    id = sample_id.strip() if sample_id else None
+
+    if id and not id.isnumeric():
+        return False
+
+    return True
+
+
 def process_instruments(instrument_queue: [str]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
@@ -248,8 +258,21 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             new_event.instrument = instrument
 
             # sample IDs are optional fields, they may be blank. If they are they should be None on the event
-            new_event.sample_id = sample_id if sample_id.strip() else None
-            new_event.end_sample_id = end_sample_id if end_sample_id.strip() else None
+            # sample IDs must also be numeric, if they're not log an error and use None
+            if valid_sample_id(sample_id):
+                new_event.sample_id = sample_id if sample_id.strip() else None
+            else:
+                message = _("Sample id is not valid")
+                errors.append((mid, message, ValueError({"message": message}),))
+                new_event.sample_id = None
+
+            if valid_sample_id(end_sample_id):
+                new_event.end_sample_id = end_sample_id if end_sample_id.strip() else None
+            else:
+                message = _("End Sample id is not valid")
+                errors.append((mid, message, ValueError({"message": message}),))
+                new_event.end_sample_id = None
+
             create_events.append(new_event)
             processed_events.append(event_id)
         except KeyError as ex:
@@ -257,6 +280,8 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             errors.append((mid, ex.args[0]["message"], ex,))
         except Exception as ex:
             message = _("Error processing events, see error.log for details")
+            if 'message' in ex.args[0]:
+                message = ex.args[0]["message"]
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
@@ -294,6 +319,11 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             action_type_text = buffer[action_field]
             action_type = core_models.ActionType.get(action_type_text)
 
+            if not existing_events.filter(event_id=event_id).exists():
+                # if an event doesn't exist there sould already be an error for why it wasn't created
+                # if it doesn't exist here skip it.
+                continue
+
             # We're done with these objects so remove them from the buffer
             attached_str = buffer.pop(attached_field)
 
@@ -304,7 +334,9 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
                                   'expected': time_position_field})
 
             time_position = buffer.pop(time_position_field).split(" | ")
-            comment = buffer.pop(comment_field)
+            comment = None
+            if comment_field in buffer:
+                comment = buffer.pop(comment_field)
 
             event = existing_events.get(event_id=event_id)
 
