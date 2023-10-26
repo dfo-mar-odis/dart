@@ -484,7 +484,7 @@ class SampleTypeForm(forms.ModelForm):
         )
 
 
-class BioChemUpload(forms.Form):
+class BioChemDataType(forms.Form):
     sample_type_id = forms.IntegerField(label=_("Sample Type"),
                                         help_text=_("The Sample Type to apply the BioChem datatype to"))
     mission_id = forms.IntegerField(label=_("Mission"),
@@ -558,14 +558,24 @@ class BioChemUpload(forms.Form):
         data_type_description.attrs['hx-select'] = "#id_data_type_code"
 
         apply_attrs = {
-            'name': 'apply_data_type',
-            'title': _('Apply Datatype to Samples'),
+            'name': 'apply_data_type_row',
+            'title': _('Apply Datatype to row(s)'),
             'hx-get': reverse_lazy('core:hx_update_sample_type'),
             'hx-target': "#div_id_data_type_message",
             'hx-swap': 'innerHTML'
         }
-        apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
-                                    **apply_attrs)
+        row_apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
+                                        **apply_attrs)
+
+        apply_attrs = {
+            'name': 'apply_data_type_sensor',
+            'title': _('Apply Datatype to mission'),
+            'hx-get': reverse_lazy('core:hx_update_sample_type'),
+            'hx-target': "#div_id_data_type_message",
+            'hx-swap': 'innerHTML'
+        }
+        sensor_apply_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm ms-2",
+                                           **apply_attrs)
 
         self.helper.form_tag = False
         self.helper.layout = Layout(
@@ -583,7 +593,8 @@ class BioChemUpload(forms.Form):
                 Row(
                     Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
                     Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
-                    Column(apply_button, css_class="col-auto align-self-end mb-3"),
+                    Column(row_apply_button, css_class="col-auto align-self-end mb-3"),
+                    Column(sensor_apply_button, css_class="col-auto align-self-end mb-3"),
                     id="div_id_sample_range"
                 ),
                 Row(
@@ -784,7 +795,7 @@ class BottleSelection(forms.Form):
         icon = load_svg('eye-slash') if 'show_all' in kwargs['initial'] else load_svg('eye')
         all_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **all_attrs)
 
-        submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm", type='input',
+        submit_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm", type='input',
                                      title=_("Load Selected"))
         self.helper.layout = Layout(
             Row(Column(submit_button, css_class='col'), Column(all_button, css_class='col-auto'),

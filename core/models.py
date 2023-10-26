@@ -365,6 +365,8 @@ class Bottle(models.Model):
     latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
     longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
 
+    last_modified = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
 
@@ -399,6 +401,16 @@ class SampleType(models.Model):
 
     def __str__(self):
         return self.short_name + (f" - {self.long_name}" if self.long_name else "")
+
+
+# if a biochem datatype is different from the default sample type for a specific mission use the mission sample type
+class MissionSampleType(models.Model):
+    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
+                                on_delete=models.CASCADE)
+    sample_type = models.ForeignKey(SampleType, verbose_name=_("Sample Type"), related_name="mission_sample_types",
+                                    on_delete=models.CASCADE)
+    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+                                 blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
 
 
 class SampleTypeConfig(models.Model):
@@ -473,9 +485,6 @@ class Sample(models.Model):
     last_modified_date = models.DateTimeField(verbose_name=_("Sample Modified"),
                                               help_text=_("Date sample was last updated"), auto_now=True)
 
-    bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
-                                           help_text=_("Date of last BioChem upload"))
-
     def __str__(self):
         return f'{self.type}: {self.bottle.bottle_id}'
 
@@ -500,6 +509,9 @@ class DiscreteSampleValue(models.Model):
     sample_datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                         blank=True, on_delete=models.SET_NULL)
 
+    bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
+                                           help_text=_("Date of last BioChem upload"))
+
     comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
 
     @property
@@ -518,6 +530,7 @@ class ErrorType(models.IntegerChoices):
     missing_value = 2, "Missing Value"
     validation = 3, "Validation Error"
     bottle = 4, "Bottle Error"
+    biochem = 5, "Biochem Error"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least

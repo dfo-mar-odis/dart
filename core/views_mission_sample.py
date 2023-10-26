@@ -20,7 +20,6 @@ from django.core.cache import caches
 
 from render_block import render_block_to_string
 
-import biochem.upload
 from bio_tables import models as bio_models
 
 from core import forms, form_biochem_database
@@ -32,9 +31,6 @@ from core.views import sample_file_queue, load_ctd_files, MissionMixin
 from dart2.utils import load_svg
 
 from dart2.views import GenericDetailView
-
-from django.db import connections, DatabaseError
-from dynamic_db_router import in_database
 
 import logging
 
@@ -118,27 +114,32 @@ class SampleDetails(MissionMixin, GenericDetailView):
             context['sample_type'] = sample_type
             data_type_seq = sample_type.datatype
 
+            # if a mission specific biochem data type exists use that instead of the general sample type
+            mission_sample_type = self.object.mission_sample_types.filter(sample_type=sample_type)
+            if mission_sample_type.exists():
+                data_type_seq = mission_sample_type.first().datatype
+
             initial = {}
             initial['sample_type_id'] = sample_type.id
             initial['mission_id'] = self.object.id
             if data_type_seq:
                 initial['data_type_code'] = data_type_seq.data_type_seq
 
-            context['biochem_form'] = forms.BioChemUpload(initial=initial)
-
+            context['biochem_form'] = forms.BioChemDataType(initial=initial)
+        else:
             context['databases'] = models.BcDatabaseConnection.objects.all()
-            selected_database = context['databases'].first()
+            selected_db = context['databases'].first()
             if context['databases'].exists():
                 sentinel = object()
                 db_id = caches['biochem_keys'].get('database_id', sentinel)
                 if db_id is sentinel:
-                    db_id = selected_database.pk
-
-                context['biochem_db_card_form'] = form_biochem_database.DBForm(
-                    instance=selected_database, initial={'selected_database': db_id}
+                    db_id = selected_db.pk
+                initial = {'selected_database': db_id}
+                context['biochem_db_card_form'] = form_biochem_database.BiochemUploadForm(
+                    self.object.id, instance=selected_db, initial=initial
                 )
             else:
-                context['biochem_db_card_form'] = form_biochem_database.DBForm()
+                context['biochem_db_card_form'] = form_biochem_database.BiochemUploadForm(self.object.id)
 
         return context
 
@@ -885,6 +886,13 @@ def format_all_sensor_table(df, mission_id):
 
     index_headers.decompose()
 
+    upload_row = soup.new_tag('tr')
+    upload_row_title = soup.new_tag('th')
+    upload_row_title.attrs['colspan'] = 2
+    upload_row_title.string = _("Biochem upload")
+    upload_row.append(upload_row_title)
+    soup.find("thead").insert(0, upload_row)
+
     column = sensor_column.findNext('th')  # Sensor column
 
     # if the sensor_id is not present then we're showing all of the sensor/sample tables with each
@@ -897,20 +905,57 @@ def format_all_sensor_table(df, mission_id):
 
         pk = column.string
         sampletype = models.SampleType.objects.get(pk=pk)
-        upload_date = models.Sample.objects.filter(bottle__event__mission_id=mission_id,
-                                                   type_id=pk).order_by('bio_upload_date').first().bio_upload_date
+        upload_status = sampletype.samples.filter(
+            bottle__event__mission_id=mission_id
+        ).values_list(
+            'discrete_values__bio_upload_date',
+            'type__mission_sample_types__datatype'
+        ).distinct().first()
+
+        title = sampletype.long_name if sampletype.long_name else sampletype.short_name
+        # if the sensor/sample is fine, but not uploaded make it grey to indicate it hasn't been uploaded
+        button_colour = 'btn-secondary'
+        if upload_status[1]:
+            datatype = bio_models.BCDataType.objects.get(pk=upload_status[1])
+            title += f': {str(datatype)}'
+        elif sampletype.datatype:
+            # if the sensor/sample uses the general datatype make it yellow
+            title += f': {str(sampletype.datatype)}'
+            button_colour = 'btn-warning'
+        else:
+            button_colour = 'btn-danger'
+            title += f': ' + _('Missing Biochem datatype')
+
+        if upload_status[0]:
+            # if the sensor/sample has an upload date set it to primary
+            button_colour = 'btn-primary'
 
         button = soup.new_tag("button")
         button.string = f'{sampletype.short_name}'
         column.string = ''
-        button.attrs['class'] = 'btn btn-sm ' + ('btn-secondary' if not upload_date else 'btn-primary')
+        button.attrs['class'] = 'btn btn-sm ' + button_colour
         button.attrs['style'] = 'width: 100%'
         button.attrs['hx-get'] = reverse_lazy('core:sample_details', args=(mission_id, sampletype.pk,))
         button.attrs['hx-target'] = "#sample_table"
         button.attrs['hx-push-url'] = 'true'
-        button.attrs['title'] = sampletype.long_name
+        button.attrs['title'] = title
 
         column.append(button)
+
+        upload = soup.new_tag('th')
+        upload.attrs['class'] = 'text-center text-nowrap'
+        if hasattr(column, 'attrs') and 'colspan' in column.attrs:
+            upload.attrs['colspan'] = column.attrs['colspan']
+
+        check = soup.new_tag('input')
+        check.attrs['type'] = 'checkbox'
+        check.attrs['name'] = 'add_sensor'
+        check.attrs['value'] = sampletype.id
+        check.attrs['hx-post'] = reverse_lazy('core:hx_add_sensor_to_upload', args=(mission_id,))
+        check.attrs['hx-swap'] = 'none'
+
+        upload.append(check)
+        upload_row.append(upload)
 
         column = column.find_next_sibling('th')
 
@@ -978,11 +1023,11 @@ def format_sensor_table(request, df, mission_id, sensor_id):
         upload_button.attrs['class'] = 'btn btn-disabled btn-sm'
 
     # The response to this should do a hx-swap-oob="#div_id_sample_table_msg"
-    upload_button.attrs['hx-get'] = reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sensor_id,))
-    upload_button.attrs['hx-swap'] = 'none'
-
-    upload_button_icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
-    upload_button.append(upload_button_icon)
+    # upload_button.attrs['hx-get'] = reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sensor_id,))
+    # upload_button.attrs['hx-swap'] = 'none'
+    #
+    # upload_button_icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
+    # upload_button.append(upload_button_icon)
 
     table = soup.find('table')
     table.attrs['id'] = 'table_id_sample_table'
@@ -1022,33 +1067,7 @@ def hx_sample_delete(request, **kwargs):
     return hx_list_samples(request, mission_id=mission)
 
 
-def update_sample_type(request, **kwargs):
-
-    if request.method == "GET":
-        if 'apply_data_type' in request.GET:
-            attrs = {
-                'component_id': 'div_id_data_type_update_save',
-                'message': _("Saving"),
-                'hx-post': reverse_lazy('core:hx_update_sample_type'),
-                'hx-trigger': 'load',
-                'hx-target': '#div_id_data_type_message',
-                'hx-select': '#div_id_data_type_message',
-                'hx-select-oob': '#table_id_sample_table'
-            }
-            soup = forms.save_load_component(**attrs)
-            return HttpResponse(soup)
-
-        if 'data_type_filter' in request.GET:
-            biochem_form = forms.BioChemUpload(initial={'data_type_filter': request.GET['data_type_filter']})
-            html = render_crispy_form(biochem_form)
-            return HttpResponse(html)
-
-        data_type_code = request.GET['data_type_code'] if 'data_type_code' in request.GET else \
-            request.GET['data_type_description']
-
-        biochem_form = forms.BioChemUpload(initial={'data_type_code': data_type_code})
-        html = render_crispy_form(biochem_form)
-        return HttpResponse(html)
+def update_sample_type_row(request, **kwargs):
     if request.method == "POST":
 
         mission_id = request.POST['mission_id']
@@ -1070,71 +1089,63 @@ def update_sample_type(request, **kwargs):
         response = hx_list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
         return response
 
+    return Http404("Invalid action")
 
-def upload_bio_chem(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    sample_id = kwargs['sample_type_id']
 
-    soup = BeautifulSoup('', 'html.parser')
-    div = soup.new_tag('div')
-    div.attrs = {
-        'id': "div_id_sample_table_msg",
-        'hx-swap-oob': 'true'
-    }
-    soup.append(div)
+def update_sample_type_mission(request, **kwargs):
+    if request.method == "POST":
 
-    #check that the database and password were set in the cache
-    sentinel = object()
-    database_id = caches['biochem_keys'].get('database_id', default=sentinel)
-    password = caches['biochem_keys'].get(f'pwd', default=sentinel, version=database_id)
-    if database_id is sentinel or password is sentinel:
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': _("Database connection is unavailable, reconnect and try again."),
-        }
-        alert_soup = forms.blank_alert(**attrs)
-        div.append(alert_soup)
+        mission_id = request.POST['mission_id']
+        sample_type_id = request.POST['sample_type_id']
+        data_type_code = request.POST['data_type_code']
 
-        return HttpResponse(soup)
+        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
+
+        mission = models.Mission.objects.get(pk=mission_id)
+        sample_type = models.SampleType.objects.get(pk=sample_type_id)
+
+        mission_sample_type = None
+        if mission.mission_sample_types.filter(sample_type=sample_type).exists():
+            mission_sample_type = mission.mission_sample_types.get(sample_type=sample_type)
+            mission_sample_type.datatype = data_type
+        else:
+            mission_sample_type = models.MissionSampleType(mission=mission, sample_type=sample_type, datatype=data_type)
+        mission_sample_type.save()
+
+        response = hx_list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
+        return response
+
+    return Http404("Invalid action")
+
+
+def update_sample_type(request, **kwargs):
 
     if request.method == "GET":
-
         attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'info',
-            'message': _("Uploading"),
-            'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id, sample_id)),
-            'hx-swap': 'none',
+            'component_id': 'div_id_data_type_update_save',
+            'message': _("Saving"),
             'hx-trigger': 'load',
+            'hx-target': '#div_id_data_type_message',
+            'hx-select': '#div_id_data_type_message',
+            'hx-select-oob': '#table_id_sample_table'
         }
-        alert_soup = forms.save_load_component(**attrs)
-        div.append(alert_soup)
+        if 'apply_data_type_row' in request.GET:
+            attrs['hx-post'] = reverse_lazy('core:hx_update_sample_type_row')
+            soup = forms.save_load_component(**attrs)
+            return HttpResponse(soup)
+        elif 'apply_data_type_sensor' in request.GET:
+            attrs['hx-post'] = reverse_lazy('core:hx_update_sample_type_mission')
+            soup = forms.save_load_component(**attrs)
+            return HttpResponse(soup)
 
-    elif request.method == "POST":
-        mission = models.Mission.objects.get(pk=mission_id)
-        try:
-            dbs = connections.databases
-            db_name = list(dbs.keys())[-1]
-            biochem.upload.upload_bcs_d("upsonp", mission)
-            # bcd_d = biochem.upload.get_or_create_bcd_d_model(db_name, mission.name)
-        except DatabaseError as e:
-            caches['biochem_keys'].delete('pwd', version=database_id)
-            form_biochem_database.update_connection_button(soup=soup, error=True)
-            logger.exception(e)
+        if 'data_type_filter' in request.GET:
+            biochem_form = forms.BioChemDataType(initial={'data_type_filter': request.GET['data_type_filter']})
+            html = render_crispy_form(biochem_form)
+            return HttpResponse(html)
 
-            # A 12545 Oracle error means there's an issue with the database connection. This could be because
-            # the user isn't logged in on VPN so the Oracle DB can't be connected to.
-            if e.args[0].code != 12545:
-                raise e
+        data_type_code = request.GET['data_type_code'] if 'data_type_code' in request.GET else \
+            request.GET['data_type_description']
 
-            attrs = {
-                'component_id': 'div_id_upload_biochem',
-                'alert_type': 'danger',
-                'message': f'{e.args[0].code} : ' + _("Issue connecting to database, "
-                                              "this may be due to VPN. (see ./logs/error.log)."),
-            }
-            alert_soup = forms.blank_alert(**attrs)
-            div.append(alert_soup)
-
-    return HttpResponse(soup)
+        biochem_form = forms.BioChemDataType(initial={'data_type_code': data_type_code})
+        html = render_crispy_form(biochem_form)
+        return HttpResponse(html)

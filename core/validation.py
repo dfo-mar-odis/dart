@@ -158,3 +158,17 @@ def validate_bottle_sample_range(event: core_models.Event, bottle_id: int) -> \
         errors.append(err)
 
     return errors
+
+
+def validate_samples_for_biochem(mission: core_models.Mission) -> list[core_models.Error]:
+    errors = []
+    samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
+    sample_types = core_models.SampleType.objects.filter(samples__in=samples).distinct()
+
+    for sample_type in sample_types:
+        if not sample_type.datatype:
+            message = str(sample_type) + " : " + _("Sensor/Sample is missing a Biochem Datatype")
+            err = core_models.Error(mission=mission, message=message, type=core_models.ErrorType.biochem)
+            errors.append(err)
+
+    return errors

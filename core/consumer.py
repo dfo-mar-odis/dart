@@ -2,6 +2,7 @@ from asgiref.sync import async_to_sync
 from bs4 import BeautifulSoup
 from channels.generic.websocket import WebsocketConsumer
 from django.template.loader import render_to_string
+from django.utils.translation import gettext as _
 
 from core.htmx import get_mission_elog_errors, get_mission_validation_errors
 
@@ -15,10 +16,10 @@ message_queue = []
 
 class CoreConsumer(WebsocketConsumer):
 
+    GROUP_NAME = 'mission_events'
     def connect(self):
         logger.info(self.channel_name)
 
-        self.GROUP_NAME = 'mission_events'
         async_to_sync(self.channel_layer.group_add)(
             self.GROUP_NAME, self.channel_name
         )
@@ -31,7 +32,7 @@ class CoreConsumer(WebsocketConsumer):
 
     def close_render_queue(self, event):
 
-        html = BeautifulSoup(f'<div id="status"></div>', 'html.parser')
+        html = BeautifulSoup(f'<div id="status">event["message"]</div>', 'html.parser')
         status_div = html.find('div')
         for key, value in event.items():
             status_div.attrs[key] = value
@@ -44,15 +45,20 @@ class CoreConsumer(WebsocketConsumer):
         progress_bar.attrs = {
             'class': "progress-bar progress-bar-striped progress-bar-animated",
             'role': "progressbar",
-            'style': f'width: {event["queue"]}%'
         }
-        progress_bar.string = event["queue"]
 
         progress_bar_div = soup.new_tag("div", attrs={'class': "progress", 'id': 'progress_bar'})
         progress_bar_div.append(progress_bar)
-        progress_bar_div.attrs['aria-valuenow'] = event["queue"]
-        progress_bar_div.attrs['aria-valuemin'] = "0"
-        progress_bar_div.attrs['aria-valuemax'] = "100"
+
+        if event['queue']:
+            progress_bar.attrs['style'] = f'width: {event["queue"]}%'
+            progress_bar.string = event["queue"] + "%"
+            progress_bar_div.attrs['aria-valuenow'] = event["queue"]
+            progress_bar_div.attrs['aria-valuemin'] = "0"
+            progress_bar_div.attrs['aria-valuemax'] = "100"
+        else:
+            progress_bar.attrs['style'] = f'width: 100%'
+            progress_bar.string = _("Working")
 
         soup.append(progress_bar_div)
         self.send(text_data=soup)
@@ -72,3 +78,7 @@ class CoreConsumer(WebsocketConsumer):
         html = render_to_string('core/partials/card_event_validation.html', context=context)
 
         self.send(text_data=html)
+
+
+class BiochemConsumer(CoreConsumer):
+    GROUP_NAME = "biochem"

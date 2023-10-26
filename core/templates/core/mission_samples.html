@@ -26,7 +26,6 @@
 {% block content %}
         <div id="div_content_block_id" class="container-fluid" hx-swap-oob="true">
     {% if sample_type %}
-        {% include 'core/partials/card_biochem_db_connection.html' %}
         {% include 'core/partials/card_sample_upload_header.html' %}
     {% else %}
         <div class="row">
@@ -69,6 +68,12 @@
                     {% include 'core/partials/table_sample.html' %}
                 </div>
             </div>
+        </div>
+        <div class="mt-2">
+            {% include 'core/partials/card_biochem_db_connection.html' %}
+        </div>
+        <div class="mt-2">
+            {% include 'core/partials/card_biochem_validation.html' %}
         </div>
         {% endif %}
     {% endblock %}

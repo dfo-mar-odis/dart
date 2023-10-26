@@ -138,6 +138,8 @@ def send_user_notification_close(group_name, **kwargs):
     event = {
         'type': 'close_render_queue',
     }
+    if 'message' in kwargs:
+        event['message'] = kwargs.pop('message')
     for key, value in kwargs.items():
         if key.startswith('hx'):
             event[key] = value
@@ -145,7 +147,7 @@ def send_user_notification_close(group_name, **kwargs):
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
-def send_user_notification_queue(group_name, message, queue):
+def send_user_notification_queue(group_name, message, queue=None):
     channel_layer = get_channel_layer()
     event = {
         'type': 'process_render_queue',

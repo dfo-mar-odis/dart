@@ -3,7 +3,7 @@
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
-<form class="mb-2" id="form_id_db_connect" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<form id="form_id_db_connect" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% if biochem_db_card_form %}
         {% crispy biochem_db_card_form %}
     {% endif %}
