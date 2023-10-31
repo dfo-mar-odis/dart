@@ -9,7 +9,7 @@ from core.htmx import get_mission_elog_errors, get_mission_validation_errors
 import logging
 
 
-logger = logging.getLogger('dart.debug')
+logger = logging.getLogger('dart.user')
 
 message_queue = []
 
@@ -59,8 +59,8 @@ class CoreConsumer(WebsocketConsumer):
 
         if event['queue']:
             progress_bar.attrs['style'] = f'width: {event["queue"]}%'
-            progress_bar.string = event["queue"] + "%"
-            progress_bar_div.attrs['aria-valuenow'] = event["queue"]
+            progress_bar.string = f"{event['queue']}%"
+            progress_bar_div.attrs['aria-valuenow'] = str(event["queue"])
             progress_bar_div.attrs['aria-valuemin'] = "0"
             progress_bar_div.attrs['aria-valuemax'] = "100"
         else:
@@ -87,5 +87,31 @@ class CoreConsumer(WebsocketConsumer):
         self.send(text_data=html)
 
 
-class BiochemConsumer(CoreConsumer):
+class BiochemConsumer(CoreConsumer, logging.Handler):
+
     GROUP_NAME = "biochem"
+
+    def connect(self):
+        super().connect()
+        logger.addHandler(self)
+
+    def disconnect(self, code):
+        super().disconnect(code)
+        logger.removeHandler(self)
+
+    def emit(self, record: logging.LogRecord) -> None:
+        component = self.scope['url_route']['kwargs']['component_id']
+
+        if len(record.args) > 0:
+            event = {
+                'message': record.getMessage(),
+                'queue': int((record.args[0]/record.args[1])*100)
+            }
+            self.process_render_queue(event)
+        else:
+            html = BeautifulSoup(f'<div id="status">{record.getMessage()}</div>', 'html.parser')
+            self.send(text_data=html)
+
+    def __init__(self):
+        logging.Handler.__init__(self, level=logging.INFO)
+        CoreConsumer.__init__(self)

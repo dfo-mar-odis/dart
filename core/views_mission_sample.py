@@ -126,6 +126,7 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
 
     button = soup.new_tag("button")
     button.string = f'{sampletype.short_name}'
+    button.attrs['id'] = f'button_id_sample_type_details_{sampletype.pk}'
     button.attrs['class'] = 'btn btn-sm ' + button_colour
     button.attrs['style'] = 'width: 100%'
     button.attrs['hx-get'] = reverse_lazy('core:sample_details', args=(mission_id, sampletype.pk,))

@@ -264,6 +264,10 @@ LOGGERS = (
             "handlers": ["console", "test_handler"],
             "level": "DEBUG",
             "propagate": False
+        },
+        "dart.user": {  # use this logger to notify the user using status updates sent to the web browser
+            "level": "INFO",
+            "propagate": False
         }
     },
 )

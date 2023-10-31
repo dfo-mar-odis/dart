@@ -15,7 +15,7 @@ from core import models as core_models
 
 import logging
 
-logger = logging.getLogger('dart')
+logger = logging.getLogger('dart.user')
 
 
 def create_model(database_name: str, model):
@@ -102,7 +102,7 @@ def get_bcs_p_model(table_name: str) -> Type[models.BcsP]:
 def db_write_by_chunk(model, chunk_size, data, fields=None):
     chunks = math.ceil(len(data) / chunk_size)
     for i in range(0, len(data), chunk_size):
-        logger.info(f"Writing batch {(int(i/chunk_size)+1)}/{chunks}")
+        logger.info(_("Writing chunk to database") + " : %d/%d", (int(i/chunk_size)+1), chunks)
         batch = data[i:i + chunk_size]
         if fields:
             model.objects.bulk_update(batch, fields)
@@ -114,11 +114,11 @@ def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.Bcs
                  updated_fields: [str]):
     chunk_size = 100
     if len(bcs_rows_to_create) > 0:
-        logger.info(f"Createing BCS rows: {len(bcs_rows_to_create)}")
+        logger.info(_("Creating BCS rows") + f" : {len(bcs_rows_to_create)}")
         db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_create)
 
     if len(bcs_rows_to_update) > 0:
-        logger.info(f"Updating BCS rows: {len(bcs_rows_to_update)}")
+        logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
         db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
@@ -134,7 +134,9 @@ def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[
                         bcs_d_model.objects.all()}
 
     updated_fields = set()
-    for bottle in bottles:
+    total_bottles = len(bottles)
+    for count, bottle in enumerate(bottles):
+        logger.info(_("Compiling Bottle") + " : %d/%d", (count+1), total_bottles)
         # some of the fields below may be the same as the current value if updating. When that happens
         # a blank string is added tot he updated_fields set. Before adding a record to the 'things that need
         # updating' list we check to see if the updated_fields set is empty by first removing the blank string
@@ -306,7 +308,10 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
     logger.info("Compiling BCD samples")
 
     updated_fields = set()
-    for ds_sample in samples:
+    total_samples = len(samples)
+    for count, ds_sample in enumerate(samples):
+        logger.info(_("Compiling sample") + f" : {ds_sample.sample.type.short_name} - " + "%d/%d",
+                    (count+1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event

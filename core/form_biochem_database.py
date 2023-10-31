@@ -20,14 +20,15 @@ from core import models
 from core import forms as core_forms
 from core.htmx import send_user_notification_queue, send_user_notification_html_update
 from core.validation import validate_samples_for_biochem
+from core.views_mission_sample import get_sensor_table_button, get_sensor_table_upload_checkbox
 from dart2.utils import load_svg
 
 import logging
 
-logger = logging.getLogger('dart')
+logger = logging.getLogger('dart.user')
 
-logging.
 
+# convenience method to convert html attributes from a string into a dictionary
 def get_crispy_element_attributes(element):
     attr_dict = {k: v.replace("\"", "") for k, v in [attr.split('=') for attr in element.flat_attrs.strip().split(" ")]}
     return attr_dict
@@ -460,10 +461,12 @@ def upload_bcs_d_data(mission: models.Mission, uploader: str):
 
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
-        send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        logger.info(_("Compiling BCS rows"))
         bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_d_rows(uploader, bcs_d, bottles)
 
-        send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        #send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        logger.info(_("Creating/updating BCS rows"))
         biochem.upload.upload_bcs_d(bcs_d, bcs_create, bcs_update, updated_fields)
 
 
@@ -542,8 +545,9 @@ def upload_bio_chem(request, **kwargs):
     uploader = database.uploader if database.uploader else database.account_name
     if request.method == "GET":
 
+        message_component_id = 'div_id_upload_biochem'
         attrs = {
-            'component_id': 'div_id_upload_biochem',
+            'component_id': message_component_id,
             'alert_type': 'info',
             'message': _("Uploading"),
             'hx-post': reverse_lazy('core:hx_upload_bio_chem', args=(mission_id,)),
@@ -551,7 +555,7 @@ def upload_bio_chem(request, **kwargs):
             'hx-trigger': 'load',
             'hx-target': "#div_id_biochem_alert_biochem_db_details",
             'hx-ext': "ws",
-            'ws-connect': "/ws/biochem/notifications/"
+            'ws-connect': f"/ws/biochem/notifications/{message_component_id}/"
         }
         alert_soup = core_forms.save_load_component(**attrs)
 
@@ -590,15 +594,14 @@ def upload_bio_chem(request, **kwargs):
 
         # validate that the checked off sensors/samples have a biochem datatypes
         sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
-        samples = models.Sample.objects.filter(bottle__event__mission=mission)
-        data_types = [dt for dt in models.DiscreteSampleValue.objects.filter(
-            sample__in=samples).values_list('sample_datatype', flat=True).distinct()]
 
-        send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
+        # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
+        logger.info(_("Validating Sensor/Sample Datatypes"))
         errors = validate_samples_for_biochem(mission=mission, sample_types=sample_types)
 
         if errors:
-            send_user_notification_queue('biochem', _("Datatypes missing see errors"))
+            #send_user_notification_queue('biochem', _("Datatypes missing see errors"))
+            logger.info(_("Datatypes missing see errors"))
             models.Error.objects.bulk_create(errors)
 
         try:
@@ -630,7 +633,7 @@ def upload_bio_chem(request, **kwargs):
                     'component_id': 'div_id_upload_biochem',
                     'alert_type': 'danger',
                     'message': f'{e.args[0].code} : ' + _("Issue connecting to database, "
-                                                  "this may be due to VPN. (see ./logs/error.log)."),
+                                                          "this may be due to VPN. (see ./logs/error.log)."),
                 }
             else:
                 attrs = {
@@ -670,8 +673,9 @@ def add_sensor_to_upload(request, **kwargs):
     sensor_id = kwargs['sensor_id']
     soup = BeautifulSoup('', 'html.parser')
     if request.method == 'POST':
-        check = soup.new_tag('input')
-        check.attrs['type'] = 'checkbox'
+        check = get_sensor_table_upload_checkbox(soup, mission_id, sensor_id)
+        button = get_sensor_table_button(soup, mission_id, sensor_id)
+        button.attrs['hx-swap-oob'] = 'true'
 
         sensors: list = caches['biochem_keys'].get('sensor_upload', [])
 
@@ -686,12 +690,9 @@ def add_sensor_to_upload(request, **kwargs):
 
         caches['biochem_keys'].set('sensor_upload', sensors, 3600)
 
-        check.attrs['id'] = f'input_id_sample_type_{sensor_id}'
-        check.attrs['value'] = sensor_id
-        check.attrs['hx-post'] = reverse_lazy('core:hx_add_sensor_to_upload', args=(mission_id, sensor_id,))
-        check.attrs['hx-swap'] = "outerHTML"
-        check.attrs['hx-target'] = f"#{check.attrs['id']}"
         soup.append(check)
+        soup.append(button)
+
         return HttpResponse(soup)
 
     logger.error("user has entered an unmanageable state")
