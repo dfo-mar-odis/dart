@@ -1,12 +1,14 @@
+import math
 from typing import Type
-
-from django.db import connections, DatabaseError
 
 from datetime import datetime
 
-from django.db.models import Avg, QuerySet
-from django.db.models.base import ModelBase
 
+from django.db import connections, DatabaseError
+from django.db.models import QuerySet
+from django.utils.translation import gettext as _
+
+import core.models
 from biochem import models
 from dart2.utils import updated_value
 from core import models as core_models
@@ -36,6 +38,7 @@ def check_and_create_model(database_name: str, upload_model) -> bool:
         # A 942 Oracle error means a table doesn't exist, in this case create the model. Otherwise pass the error along
         if e.args[0].code == 942:
             create_model(database_name, upload_model)
+            return True
         else:
             raise e
 
@@ -96,10 +99,32 @@ def get_bcs_p_model(table_name: str) -> Type[models.BcsP]:
     return mod
 
 
-# This actually just uploads bottle data for the mission. It doesn't upload sample values.
-def upload_bcs_d(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[core_models.Bottle],
-                 batch_name: str = None):
-    WRITE_LIMIT = 100
+def db_write_by_chunk(model, chunk_size, data, fields=None):
+    chunks = math.ceil(len(data) / chunk_size)
+    for i in range(0, len(data), chunk_size):
+        logger.info(f"Writing batch {(int(i/chunk_size)+1)}/{chunks}")
+        batch = data[i:i + chunk_size]
+        if fields:
+            model.objects.bulk_update(batch, fields)
+        else:
+            model.objects.bulk_create(batch)
+
+
+def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.BcsD], bcs_rows_to_update: [models.BcsD],
+                 updated_fields: [str]):
+    chunk_size = 100
+    if len(bcs_rows_to_create) > 0:
+        logger.info(f"Createing BCS rows: {len(bcs_rows_to_create)}")
+        db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_create)
+
+    if len(bcs_rows_to_update) > 0:
+        logger.info(f"Updating BCS rows: {len(bcs_rows_to_update)}")
+        db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_update, updated_fields)
+
+
+# returns the rows to create, rows to update and fields to update
+def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[core_models.Bottle],
+                 batch_name: str = None) -> [[models.BcsD], [models.BcsD], [str]]:
 
     logger.info("Creating/updating BCS table")
     bcs_objects_to_create = []
@@ -195,64 +220,108 @@ def upload_bcs_d(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[co
         elif len(updated_fields) > 0:
             bcs_objects_to_update.append(bcs_row)
 
-        # if len(bcs_objects_to_create) >= WRITE_LIMIT:
-        #     print(f"Createing BCS rows: {len(bcs_objects_to_create)}")
-        #     upload_model.objects.bulk_create(bcs_objects_to_create)
-        #     bcs_objects_to_create.clear()
-        #
-        # if len(bcs_objects_to_update) >= WRITE_LIMIT:
-        #     print(f"Updating BCS rows: {len(bcs_objects_to_update)}")
-        #     upload_model.objects.bulk_update(bcs_objects_to_update, updated_fields)
-        #     bcs_objects_to_update.clear()
-        #     updated_fields.clear()
-        #     updated_fields.add('')
-
-    if len(bcs_objects_to_create) > 0:
-        logger.info(f"Createing BCS rows: {len(bcs_objects_to_create)}")
-        bcs_d_model.objects.bulk_create(bcs_objects_to_create)
-
-    if len(bcs_objects_to_update) > 0:
-        logger.info(f"Updating BCS rows: {len(bcs_objects_to_update)}")
-        bcs_d_model.objects.bulk_update(bcs_objects_to_update, updated_fields)
+    return [bcs_objects_to_create, bcs_objects_to_update, updated_fields]
 
 
-def upload_bcd_d(uploader: str, bcd_d_model: Type[models.BcdD], samples: QuerySet[core_models.DiscreteSampleValue],
-                 batch_name: str = None):
+def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteSampleValue],
+                 bcd_rows_to_create: [models.BcdD], bcd_rows_to_update: [models.BcdD], updated_fields: [str]):
+    chunk_size = 100
+
+    update_discrete_fields = set()
+    update_discrete_fields.add('bio_upload_date')
+    if len(bcd_rows_to_create) > 0:
+        logger.info(f"Createing BCD rows: {len(bcd_rows_to_create)}")
+
+        # writting thousands of rows at one time is... apparently bad. Break the data up into manageable chunks.
+        db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_create)
+
+        logger.info(f"Updating collector keys")
+        update_rows: [models.BcdD] = []
+        for ds_sample in samples:
+            data_type_seq = ds_sample.datatype.data_type_seq
+            collector_id = f'{ds_sample.sample.bottle.bottle_id}_{ds_sample.replicate}'
+            try:
+                bc_row = bcd_d_model.objects.get(dis_detail_data_type_seq=data_type_seq,
+                                                 dis_detail_collector_samp_id=collector_id)
+            except bcd_d_model.DoesNotExist as e:
+                logger.exception(e)
+                logger.error(f"row matching data_type_seq {data_type_seq} and id {collector_id} does not exist")
+                continue
+
+            bc_row.dis_detail_collector_samp_id = ds_sample.sample.bottle.bottle_id
+
+            ds_sample.dis_data_num = bc_row.dis_data_num
+            ds_sample.bio_upload_date = datetime.now().strftime("%Y-%m-%d")
+
+            update_rows.append(bc_row)
+
+        update_discrete_fields.add('dis_data_num')
+        db_write_by_chunk(bcd_d_model, chunk_size, update_rows, ['dis_detail_collector_samp_id'])
+
+        # if new rows are being created then the dis_data_num in the local database needs to be updated
+        # to the same dis_data_num used by the biochem tables
+        logger.info("Updating discrete sample dis_data_num for biochem link")
+        core_models.DiscreteSampleValue.objects.bulk_update(samples, [field for field in update_discrete_fields])
+
+    if len(bcd_rows_to_update) > 0:
+        logger.info(f"Updating BCD rows: {len(bcd_rows_to_update)}")
+        db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_update, updated_fields)
+
+        for ds_sample in samples:
+            ds_sample.bio_upload_date = datetime.now().strftime("%Y-%m-%d")
+
+
+# Todo: Documentation
+# get_bcd_d_rows checks the local database against the BCD model and creates a list of BCD rows
+# to either be created or updated. It returns [rows_to_create, rows_to_update, fields_names_to_update]
+# if errors occur they'll be written to the local database Error table.
+#
+# When returned, the rows_to_create list will have the dis_detail_collector_samp_id column set as a compound
+# key containing the [bottle_id]_[replicate_number] when written to the database this key needs to be
+# changed to just the bottle_id.
+#
+# Due to database limitations the bcd.dis_data_num (auto generated primary key) can't be retrieved until
+# the row has been created. So the row will have to be written, the bcd.dis_data_num retrieved and attached
+# to the core.models.DiscreteSampleValue and then updated to fix the dis_detail_collector_samp_id key to be
+# just the bottle_id
+def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_models.Mission,
+                   samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str = None
+                   ) -> [[models.BcdD], [models.BcdD], [str]]:
     bcd_objects_to_create = []
     bcd_objects_to_update = []
+    errors = []
 
-    logger.info("Collecting existing Biochem samples")
+    sample_type_ids = [sample_type for sample_type in samples.values_list('sample__type', flat=True).distinct()]
+    sample_types = core_models.SampleType.objects.filter(pk__in=sample_type_ids)
+    mission_sample_types = mission.mission_sample_types.filter(sample_type_id__in=sample_types)
 
-    mission = samples.first().sample.bottle.event.mission
+    sample_type_datatypes = [dt for dt in sample_types.values_list('datatype__data_type_seq', flat=True).distinct()]
+    mission_datatypes = [dt for dt in mission_sample_types.values_list('datatype__data_type_seq', flat=True).distinct()]
+    discreate_datatypes = [dt for dt in samples.values_list('sample_datatype__data_type_seq', flat=True).distinct()]
 
-    # Biochem datatypes can exist in three capacities. The datatype can be set by the general Sample Type,
-    # the general sample types' datatype could be overridden by the mission, and finally
-    # the sample type could be specific to a discrete value.
-    # As a result we have to collect all the possible datatypes and see if there are rows in the
-    # BCD table to figure out if samples already exist and need to be overridden.
-    datatype_set = set()
-    ds_datatypes = samples.values_list('sample_datatype', flat=True).distinct()
-    for dt in ds_datatypes:
-        datatype_set.add(dt)
+    data_types = sample_type_datatypes + mission_datatypes + discreate_datatypes
 
-    sample_datatypes = core_models.SampleType.objects.filter(samples__discrete_values__in=samples).distinct()
-    for dt in sample_datatypes:
-        datatype_set.add(dt.datatype.data_type_seq)
-
-    mission_sampletypes = mission.mission_sample_types.filter(sample_type__in=sample_datatypes)
-    for dt in mission_sampletypes:
-        datatype_set.add(dt.datatype.data_type_seq)
-
-    bc_samples = bcd_d_model.objects.filter(dis_detail_data_type_seq__in=datatype_set)
-    bc_sample_ids = [int(id) for id in bc_samples.values_list('dis_detail_collector_samp_id', flat=True).distinct()]
-    existing_samples = {}
-    for sample_id in bc_sample_ids:
-        existing_samples[int(sample_id)] = bc_samples.filter(dis_detail_collector_samp_id=sample_id)
+    existing_samples = {sample.dis_data_num: sample for sample in
+                        bcd_d_model.objects.filter(dis_detail_data_type_seq__in=data_types)}
+    logger.info("Compiling BCD samples")
 
     updated_fields = set()
-    last_id = None
-    replicate_id = 0
-    for discrete_sample in samples:
+    for ds_sample in samples:
+        sample = ds_sample.sample
+        bottle = sample.bottle
+        event = bottle.event
+        mission = event.mission
+
+        try:
+            bc_data_type = ds_sample.datatype
+        except ValueError as e:
+            msg = e.args[0]['message'] if 'message' in e.args[0] else _("Unknown Error")
+
+            err = core_models.Error(mission=mission, message=msg, type=core_models.ErrorType.biochem)
+            errors.append(err)
+            continue
+
+        existing_sample = False
         # some of the fields below may be the same as the current value if updating. When that happens
         # a blank string is added tot he updated_fields set. Before adding a record to the 'things that need
         # updating' list we check to see if the updated_fields set is empty by first removing the blank string
@@ -260,35 +329,22 @@ def upload_bcd_d(uploader: str, bcd_d_model: Type[models.BcdD], samples: QuerySe
         # definitely exist later.
         updated_fields.add('')
 
-        sample = discrete_sample.sample
-        bottle = sample.bottle
-        event = bottle.event
-        mission = event.mission
         primary_data_center = mission.data_center
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:02d}_{bottle.bottle_id}'
-        # datatype priority is a row specific datatype,
-        # then if there's a mission specific datatype,
-        # then the general sample type datatype
-        bc_data_type = sample.type.datatype
-        if (mission_data_type := mission.mission_sample_types.filter(sample_type=sample.type)).exists():
-            bc_data_type = mission_data_type.first().datatype
 
-        if (row_data_type := sample.discrete_values.first().datatype):
-            bc_data_type = row_data_type
-
-        existing_sample = bottle.bottle_id in bc_sample_ids
-        if existing_sample:
-            if bottle.bottle_id != last_id:
-                replicate_id = 0
-
-            bcd_row = existing_samples[bottle.bottle_id][replicate_id]
-            replicate_id += 1
+        # determine if sample is existing or not here
+        if ds_sample.dis_data_num and ds_sample.dis_data_num in existing_samples.keys():
+            # If the sample does have a dis_data_num, we can get the corresponding row from the BCD table
+            bcd_row = existing_samples[ds_sample.dis_data_num]
+            existing_sample = True
+            # If the modified date on the discrete sample is less than the creation date on the BCD row
+            # nothing needs to be uploaded
         else:
-            bcd_row = bcd_d_model._meta.model(dis_detail_collector_samp_id=bottle.bottle_id)
-            replicate_id = 0
+            # If the sample doesn't have a dis_data_num, it's never been uploaded so needs to be created.
+            collector_id = f'{bottle.bottle_id}_{ds_sample.replicate}'
+            bcd_row = bcd_d_model._meta.model(dis_detail_collector_samp_id=collector_id)
 
-        last_id = bottle.bottle_id
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_type_seq', bc_data_type.data_type_seq))
 
         # ########### Stuff that we get from the bottle object ################################################### #
@@ -312,7 +368,8 @@ def upload_bcd_d(uploader: str, bcd_d_model: Type[models.BcdD], samples: QuerySe
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        updated_fields.add(updated_value(bcd_row, 'batch_seq', f'{event_date.strftime("%Y")}{mission.pk}'))
+        batch = batch_name if batch_name else f'{event_date.strftime("%Y")}{mission.pk}'
+        updated_fields.add(updated_value(bcd_row, 'batch_seq', batch))
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detail_collector', mission.lead_scientist))
 
         # mission descriptor
@@ -331,7 +388,7 @@ def upload_bcd_d(uploader: str, bcd_d_model: Type[models.BcdD], samples: QuerySe
 
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_type_seq', bc_data_type.data_type_seq))
         updated_fields.add(updated_value(bcd_row, 'data_type_method', bc_data_type.method))
-        updated_fields.add(updated_value(bcd_row, 'dis_detail_data_value', discrete_sample.value))
+        updated_fields.add(updated_value(bcd_row, 'dis_detail_data_value', ds_sample.value))
         updated_fields.add(updated_value(bcd_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
         updated_fields.add(updated_value(bcd_row, 'dis_sample_key_value', dis_sample_key_value))
 
@@ -342,10 +399,7 @@ def upload_bcd_d(uploader: str, bcd_d_model: Type[models.BcdD], samples: QuerySe
         elif len(updated_fields) > 0:
             bcd_objects_to_update.append(bcd_row)
 
-    if len(bcd_objects_to_create) > 0:
-        logger.info(f"Createing BCD rows: {len(bcd_objects_to_create)}")
-        bcd_d_model.objects.bulk_create(bcd_objects_to_create)
+    if len(errors) > 0:
+        core_models.Error.objects.bulk_create(errors)
 
-    if len(bcd_objects_to_update) > 0:
-        logger.info(f"Updating BCD rows: {len(bcd_objects_to_update)}")
-        bcd_d_model.objects.bulk_update(bcd_objects_to_update, updated_fields)
+    return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]

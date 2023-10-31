@@ -39,6 +39,13 @@ class CoreConsumer(WebsocketConsumer):
 
         self.send(text_data=html)
 
+    def send_html_update(self, event):
+        html = BeautifulSoup(f'<div id="status"></div>', 'html.parser')
+        status_div = html.find('div')
+        status_div.append(event['html_element'])
+
+        self.send(text_data=html)
+
     def process_render_queue(self, event):
         soup = BeautifulSoup(f'<div id="status">{event["message"]}</div>', 'html.parser')
         progress_bar = soup.new_tag("div")

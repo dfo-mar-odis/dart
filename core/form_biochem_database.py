@@ -1,4 +1,3 @@
-import datetime
 import os.path
 import time
 
@@ -9,18 +8,17 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.conf import settings
 from django.core.cache import caches
-from django.db import DatabaseError
+from django.db import DatabaseError, close_old_connections
 from django.http import HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
-from render_block import render_block_to_string
 
 import biochem.upload
 import dart2.settings
 from core import models
 from core import forms as core_forms
-from core.htmx import send_user_notification_queue, send_user_notification_close
+from core.htmx import send_user_notification_queue, send_user_notification_html_update
 from core.validation import validate_samples_for_biochem
 from dart2.utils import load_svg
 
@@ -28,6 +26,7 @@ import logging
 
 logger = logging.getLogger('dart')
 
+logging.
 
 def get_crispy_element_attributes(element):
     attr_dict = {k: v.replace("\"", "") for k, v in [attr.split('=') for attr in element.flat_attrs.strip().split(" ")]}
@@ -45,7 +44,7 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
     class Meta:
         model = models.BcDatabaseConnection
-        fields = ['account_name', 'name', 'host', 'port', 'engine', 'selected_database', 'db_password']
+        fields = ['account_name', 'uploader', 'name', 'host', 'port', 'engine', 'selected_database', 'db_password']
 
     def get_db_select(self):
         url = reverse_lazy('core:hx_validate_database_connection', args=(self.mission_id,))
@@ -162,6 +161,7 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         input_row = Row(
             Column(Field('account_name')),
+            Column(Field('uploader')),
             Column(Field('name')),
             Column(Field('host')),
             Column(Field('port')),
@@ -200,6 +200,9 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
     # at a minimum a mission_id must be supplied in
     def __init__(self, mission_id, *args, **kwargs):
+        if not mission_id:
+            raise KeyError("missing mission_id for database connection card")
+
         self.mission_id = mission_id
         super().__init__(*args, **kwargs, card_name="biochem_db_details")
 
@@ -218,6 +221,9 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
                 self.fields['db_password'].initial = password
 
 
+# this button is placed in the title of the Database card to indicate if the user is connected, or if there's
+# an issue connecting to the data base. It's used in multiple methods when actions are preformed to change
+# the status of the button.
 def update_connection_button(soup: BeautifulSoup, mission_id, post: bool = False, error: bool = False):
     url = reverse_lazy('core:hx_validate_database_connection', args=(mission_id,))
 
@@ -267,7 +273,7 @@ def validate_database(request, **kwargs):
             }
             soup.append(msg_div)
 
-            url = reverse_lazy('core:hx_validate_database_connection')
+            url = reverse_lazy('core:hx_validate_database_connection', args=(mission_id,))
             attrs = {
                 'component_id': 'div_id_biochem_alert',
                 'message': _("Adding Database"),
@@ -338,6 +344,7 @@ def validate_database(request, **kwargs):
                 soup = BeautifulSoup(db_form_html, 'html.parser')
                 soup.find(id=title_attributes['id']).attrs['hx-swap-oob'] = 'true'
 
+            close_old_connections()
             update_connection_button(soup, mission_id)
             return HttpResponse(soup)
     else:
@@ -410,9 +417,9 @@ def validate_database(request, **kwargs):
 
             if 'selected_database' in request.POST and request.POST['selected_database']:
                 database = models.BcDatabaseConnection.objects.get(pk=request.POST['selected_database'])
-                db_form = BiochemUploadForm(request.POST, instance=database)
+                db_form = BiochemUploadForm(mission_id, request.POST, instance=database)
             else:
-                db_form = BiochemUploadForm(request.POST)
+                db_form = BiochemUploadForm(mission_id, request.POST)
 
             if db_form.is_valid():
                 # if the form is valid we'll render it then send back the elements of the form that have to change
@@ -420,7 +427,7 @@ def validate_database(request, **kwargs):
                 db_details = db_form.save()
 
                 # set the selected database to the updated/saved value
-                new_db_form = BiochemUploadForm(initial={'selected_database': db_details.pk})
+                new_db_form = BiochemUploadForm(mission_id, initial={'selected_database': db_details.pk})
                 selected_db_block = render_crispy_form(new_db_form)
 
                 title_attributes = get_crispy_element_attributes(new_db_form.get_card_title())
@@ -436,6 +443,73 @@ def validate_database(request, **kwargs):
                 soup.append(form_soup)
 
             return HttpResponse(soup)
+
+
+def upload_bcs_d_data(mission: models.Mission, uploader: str):
+    # 1) get bottles from BCS_D table
+    bcs_d = biochem.upload.get_bcs_d_model(mission.get_biochem_table_name)
+    exists = biochem.upload.check_and_create_model('biochem', bcs_d)
+
+    # 2) if the BCS_D table doesn't exist, create with all the bottles
+    bottles = models.Bottle.objects.filter(event__mission=mission)
+    if exists:
+        # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
+        last_uploaded = bcs_d.objects.all().values_list('created_date', flat=True).distinct().last()
+        if last_uploaded:
+            bottles = bottles.filter(last_modified__gt=last_uploaded)
+
+    if bottles.exists():
+        # 4) upload only bottles that are new or were modified since the last biochem upload
+        send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_d_rows(uploader, bcs_d, bottles)
+
+        send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        biochem.upload.upload_bcs_d(bcs_d, bcs_create, bcs_update, updated_fields)
+
+
+def upload_bcd_d_data(mission: models.Mission, uploader: str, sample_types: list[models.SampleType]):
+    # 1) get the biochem BCD_D model
+    bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
+
+    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
+    exists = biochem.upload.check_and_create_model('biochem', bcd_d)
+
+    if exists:
+        # I'm going to break up reading/writing samples by sample type. I selected oxy, salts, chl and
+        # phae as a test and ended up creating 3,200 rows. I feel like this would completely fail if someone
+        # check all the sensors/samples they wanted to upload and ended up writing tens of thousands of rows
+        # all in one shot.
+        for sample_type in sample_types:
+            send_user_notification_queue('biochem', _("Compiling rows for : ") + sample_type.short_name)
+
+            # 3) else filter the samples down to rows based on:
+            # 3a) samples in this mission
+            # 3b) samples of the current sample_type
+            ds_samples = models.DiscreteSampleValue.objects.filter(sample__type=sample_type,
+                                                                   sample__bottle__event__mission=mission)
+
+            if ds_samples.exists():
+                # 4) upload only samples that are new or were modified since the last biochem upload
+                message = _("Compiling BCD rows for sample type") + " : " + sample_type.short_name
+                send_user_notification_queue('biochem', message)
+                bcd_create, bcd_update, update_fields = biochem.upload.get_bcd_d_rows(
+                    uploader, bcd_d, mission, ds_samples)
+
+                message = _("Creating/updating BCD rows for sample type") + " : " + sample_type.short_name
+                send_user_notification_queue('biochem', message)
+                biochem.upload.upload_bcd_d(bcd_d, ds_samples, bcd_create, bcd_update, update_fields)
+
+            soup = BeautifulSoup("<div></div>", 'html.parser')
+            div = soup.find('div')
+            div.attrs['hx-post'] = reverse_lazy('core:hx_add_sensor_to_upload', args=(mission.id, sample_type.id,))
+            div.attrs['hx-trigger'] = 'load'
+            div.attrs['hx-target'] = f'#input_id_sample_type_{sample_type.id}'
+            div.attrs['hx-swap'] = 'outerHTML'
+
+            send_user_notification_html_update('biochem', div)
+
+            # pause and give the browser a second to catch up
+            time.sleep(1)
 
 
 def upload_bio_chem(request, **kwargs):
@@ -464,6 +538,8 @@ def upload_bio_chem(request, **kwargs):
 
         return HttpResponse(soup)
 
+    database = models.BcDatabaseConnection.objects.get(pk=database_id)
+    uploader = database.uploader if database.uploader else database.account_name
     if request.method == "GET":
 
         attrs = {
@@ -492,80 +568,58 @@ def upload_bio_chem(request, **kwargs):
         div.append(alert_soup)
 
     elif request.method == "POST":
-        mission = models.Mission.objects.get(pk=mission_id)
-        try:
-            samples = models.Sample.objects.filter(bottle__event__mission=mission)
-            data_types = [dt for dt in models.DiscreteSampleValue.objects.filter(
-                sample__in=samples).values_list('sample_datatype', flat=True).distinct()]
-
-            # have a couple second pause for the websocket to finish initializing.
-            time.sleep(2)
-            logger.info("Sending user notification")
-            send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
-
-            models.Error.objects.filter(mission=mission).delete()
-
-            errors = validate_samples_for_biochem(mission)
-
-            if errors:
-                send_user_notification_queue('biochem', _("Datatypes missing see errors"))
-                models.Error.objects.bulk_create(errors)
-
-            # The mission_samples.html page has a websocket notifications element on it. We can send messages
-            # to the notifications element to display progress to the user, but we can also use it to
-            # send an update request to the page when loading is complete.
-            url = reverse_lazy("core:hx_get_biochem_errors", args=(mission.pk,))
-            hx = {
-                'hx-get': url,
-                'hx-trigger': 'load',
-                'hx-target': '#div_id_upload_biochem',
-                'hx-swap': 'outerHTML',
-                'message': _("Datatype validation complete")
+        sentinel = object()
+        if (sample_type_ids := caches['biochem_keys'].get('sensor_upload', sentinel)) is sentinel:
+            attrs = {
+                'component_id': 'div_id_upload_biochem',
+                'alert_type': 'info',
+                'message': _("No sensors/samples were selected for upload"),
             }
-            send_user_notification_close('biochem', **hx)
 
-            # 1) get bottles from BCS_D table
-            bcs_d = biochem.upload.get_bcs_d_model(mission.get_biochem_table_name)
-            exists = biochem.upload.check_and_create_model('biochem', bcs_d)
+            alert_soup = core_forms.blank_alert(**attrs)
+            div.append(alert_soup)
+            return HttpResponse(soup)
 
-            # 2) if the BCS_D table doesn't exist, create with all the bottles
-            bottles = models.Bottle.objects.filter(event__mission=mission)
-            if exists:
-                # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
-                last_uploaded = bcs_d.objects.all().values_list('created_date', flat=True).distinct().last()
-                if last_uploaded:
-                    bottles = bottles.filter(last_modified__gt=last_uploaded)
+        # have a couple second pause for the websocket to finish initializing.
+        time.sleep(2)
 
-            if bottles.exists():
-                # 4) upload only bottles that are new or were modified since the last biochem upload
-                biochem.upload.upload_bcs_d('upsonp', bcs_d, bottles)
+        mission = models.Mission.objects.get(pk=mission_id)
+
+        # clear previous errors if there were any from the last upload attempt
+        models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
+
+        # validate that the checked off sensors/samples have a biochem datatypes
+        sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
+        samples = models.Sample.objects.filter(bottle__event__mission=mission)
+        data_types = [dt for dt in models.DiscreteSampleValue.objects.filter(
+            sample__in=samples).values_list('sample_datatype', flat=True).distinct()]
+
+        send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
+        errors = validate_samples_for_biochem(mission=mission, sample_types=sample_types)
+
+        if errors:
+            send_user_notification_queue('biochem', _("Datatypes missing see errors"))
+            models.Error.objects.bulk_create(errors)
+
+        try:
+            # create and upload the BCS data if it doesn't already exist
+            upload_bcs_d_data(mission, uploader)
 
             # upload the BCD, the Sample data
-            # 1) get the biochem BCD_D model
-            bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
-            exists = biochem.upload.check_and_create_model('biochem', bcd_d)
+            upload_bcd_d_data(mission, uploader, sample_types)
 
-            # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
-            if exists:
-                # 3) else filter the samples down to rows based on:
-                # 3a) samples.type = sample_id
-                # 3b) samples.last_upload_date < bcd_d.created_date
-                last_uploaded = bcd_d.objects.filter(dis_detail_data_type_seq__in=data_types).values_list(
-                    'created_date', flat=True).distinct().last()
-                samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
-                # if last_uploaded:
-                #     samples = samples.filter(bio_upload_date__lt=last_uploaded)
+            attrs = {
+                'component_id': 'div_id_upload_biochem',
+                'alert_type': 'success',
+                'message': _("Success"),
+            }
+            alert_soup = core_forms.blank_alert(**attrs)
+            div.append(alert_soup)
 
-            if samples.exists():
-                # 4) upload only samples that are new or were modified since the last biochem upload
-                biochem.upload.upload_bcd_d('upsonp', bcd_d, samples)
-                for sample in samples:
-                    sample.bio_upload_date = datetime.datetime.now().strftime("%Y-%m-%d")
-                models.DiscreteSampleValue.objects.bulk_update(samples, ['bio_upload_date'])
-
-            # bcd_d = biochem.upload.get_or_create_bcd_d_model(db_name, mission.name)
         except DatabaseError as e:
             caches['biochem_keys'].delete('pwd', version=database_id)
+            close_old_connections()
+
             update_connection_button(soup, mission_id, error=True)
             logger.exception(e)
 
@@ -585,7 +639,7 @@ def upload_bio_chem(request, **kwargs):
                     'message': f'{e.args[0].code} : ' + _("An unknown database issue occurred (see ./logs/error.log)."),
                 }
 
-            alert_soup = forms.blank_alert(**attrs)
+            alert_soup = core_forms.blank_alert(**attrs)
             div.append(alert_soup)
 
     return HttpResponse(soup)
@@ -601,11 +655,49 @@ def get_biochem_errors(request, **kwargs):
         html = render_to_string(template_name='core/partials/card_biochem_validation.html', context=context)
 
         return HttpResponse(html)
+
+    logger.error("user has entered an unmanageable state")
+    logger.error(kwargs)
+    logger.error(request.method)
+    logger.error(request.GET)
+    logger.error(request.POST)
+
     return Http404("You shouldn't be here")
 
 
 def add_sensor_to_upload(request, **kwargs):
+    mission_id = kwargs['mission_id']
+    sensor_id = kwargs['sensor_id']
+    soup = BeautifulSoup('', 'html.parser')
     if request.method == 'POST':
+        check = soup.new_tag('input')
+        check.attrs['type'] = 'checkbox'
+
+        sensors: list = caches['biochem_keys'].get('sensor_upload', [])
+
         if 'add_sensor' in request.POST:
-            pass
-        return HttpResponse()
+            sensors.append(sensor_id)
+            check.attrs['name'] = 'remove_sensor'
+            check.attrs['checked'] = 'checked'
+        else:
+            if sensor_id in sensors:
+                sensors.remove(sensor_id)
+            check.attrs['name'] = 'add_sensor'
+
+        caches['biochem_keys'].set('sensor_upload', sensors, 3600)
+
+        check.attrs['id'] = f'input_id_sample_type_{sensor_id}'
+        check.attrs['value'] = sensor_id
+        check.attrs['hx-post'] = reverse_lazy('core:hx_add_sensor_to_upload', args=(mission_id, sensor_id,))
+        check.attrs['hx-swap'] = "outerHTML"
+        check.attrs['hx-target'] = f"#{check.attrs['id']}"
+        soup.append(check)
+        return HttpResponse(soup)
+
+    logger.error("user has entered an unmanageable state")
+    logger.error(kwargs)
+    logger.error(request.method)
+    logger.error(request.GET)
+    logger.error(request.POST)
+
+    return Http404("You shouldn't be here")

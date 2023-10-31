@@ -96,6 +96,59 @@ def get_error_list(soup, card_id, errors):
         ul_list.append(li)
 
 
+def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
+
+    sampletype = models.SampleType.objects.get(pk=sampletype_id)
+    upload_status = sampletype.samples.filter(
+        bottle__event__mission_id=mission_id
+    ).values_list(
+        'discrete_values__bio_upload_date',
+        'type__mission_sample_types__datatype'
+    ).distinct().first()
+
+    title = sampletype.long_name if sampletype.long_name else sampletype.short_name
+    # if the sensor/sample is fine, but not uploaded make it grey to indicate it hasn't been uploaded
+    button_colour = 'btn-secondary'
+    if upload_status[1]:
+        datatype = bio_models.BCDataType.objects.get(pk=upload_status[1])
+        title += f': {str(datatype)}'
+    elif sampletype.datatype:
+        # if the sensor/sample uses the general datatype make it yellow
+        title += f': {str(sampletype.datatype)}'
+        button_colour = 'btn-warning'
+    else:
+        button_colour = 'btn-danger'
+        title += f': ' + _('Missing Biochem datatype')
+
+    if upload_status[0]:
+        # if the sensor/sample has an upload date set it to primary
+        button_colour = 'btn-primary'
+
+    button = soup.new_tag("button")
+    button.string = f'{sampletype.short_name}'
+    button.attrs['class'] = 'btn btn-sm ' + button_colour
+    button.attrs['style'] = 'width: 100%'
+    button.attrs['hx-get'] = reverse_lazy('core:sample_details', args=(mission_id, sampletype.pk,))
+    button.attrs['hx-target'] = "#sample_table"
+    button.attrs['hx-push-url'] = 'true'
+    button.attrs['title'] = title
+
+    return button
+
+
+def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
+    check = soup.new_tag('input')
+    check.attrs['id'] = f'input_id_sample_type_{sampletype_id}'
+    check.attrs['type'] = 'checkbox'
+    check.attrs['name'] = 'add_sensor'
+    check.attrs['value'] = sampletype_id
+    check.attrs['hx-swap'] = 'outerHTML'
+    check.attrs['hx-target'] = f"#{check.attrs['id']}"
+    check.attrs['hx-post'] = reverse_lazy('core:hx_add_sensor_to_upload', args=(mission_id, sampletype_id,))
+
+    return check
+
+
 class SampleDetails(MissionMixin, GenericDetailView):
     page_title = _("Mission Samples")
     template_name = "core/mission_samples.html"
@@ -848,115 +901,78 @@ def format_all_sensor_table(df, mission_id):
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
     html = '<div id="sample_table">' + df.to_html() + "</div>"
 
-    # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
+    # Use BeautifulSoup for html manipulation to post process the HTML table Pandas created
     soup = BeautifulSoup(html, 'html.parser')
 
     # this will be a big table add scrolling
     sample_table = soup.find(id="sample_table")
     sample_table.attrs['class'] = "vertical-scrollbar"
 
-    # remove the first table row pandas adds for the "Value" column header
-    # soup.find("thead").find("tr").decompose()
-
     # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
-    # followed by the 'replicate' row that describes if this is a single, double, triple sample.
+    # followed by the 'replicate' row that describes if this is a single, double, triple, etc. column sample.
 
-    # We're going to flatten the headers down to one row then remove the others.
-
+    # We're going to flatten the headers down to one row then remove the other thead rows.
+    # this is the row containing the sensor/sample short names
     sensor_headers = soup.find("thead").find("tr")
 
-    # this is the replicate column, get rid of it for now
+    # this is the replicate row, but we aren't doing anything with this row so get rid of it
     replicate_headers = sensor_headers.findNext("tr")
-
-    # we aren't doing anything else with these for now.
     replicate_headers.decompose()
 
     # we now have two header rows. The first contains all the sensor/sample names. The second contains the "Sample"
-    # and "Pressure" labels. I want to copy the first two columns from the second header to the first two columns
-    # of the first header (because the labels might be translated) then delete the second row
-    index_headers = soup.find('tr').findNext('tr')
-    index_column = index_headers.find('th')
+    # and "Pressure" labels with a bunch of empty columns afterward. I want to copy the first two columns
+    # from the second header to the sensor_header row (because the labels might be translated)
+    # then delete the second row
+    index_headers = sensor_headers.findNext('tr')
 
+    # copy the 'Sample' label
+    index_column = index_headers.find('th')
     sensor_column = sensor_headers.find('th')
     sensor_column.string = index_column.string
 
+    # copy the 'Pressure' label
     index_column = index_column.findNext('th')
     sensor_column = sensor_column.findNext('th')
     sensor_column.string = index_column.string
 
+    # remove the now unneeded index_header row
     index_headers.decompose()
 
+    # Now add a row to the table header that will contain checkbox inputs for the user to select
+    # a sensor or sample to upload to biochem
     upload_row = soup.new_tag('tr')
+    soup.find("thead").insert(0, upload_row)
+
+    # the first column of the table will have the 'Sample' and 'Pressure' lables under it so it spans two columns
     upload_row_title = soup.new_tag('th')
     upload_row_title.attrs['colspan'] = 2
     upload_row_title.string = _("Biochem upload")
     upload_row.append(upload_row_title)
-    soup.find("thead").insert(0, upload_row)
 
+    # Now we're going to convert all of the sensor/sample column labels, which are actually the
+    # core.models.SampleType ids, into buttons the user can press to open up a specific sensor to set
+    # data types at a row level
     column = sensor_column.findNext('th')  # Sensor column
-
-    # if the sensor_id is not present then we're showing all of the sensor/sample tables with each
-    # column label to take the user to the sensor details page
-
-    # now add htmx tags to the rest of the TH elements in the row so the user
-    # can click that row for details on the sensor
     while column:
         column['class'] = 'text-center text-nowrap'
 
-        pk = column.string
-        sampletype = models.SampleType.objects.get(pk=pk)
-        upload_status = sampletype.samples.filter(
-            bottle__event__mission_id=mission_id
-        ).values_list(
-            'discrete_values__bio_upload_date',
-            'type__mission_sample_types__datatype'
-        ).distinct().first()
+        sampletype_id = column.string
 
-        title = sampletype.long_name if sampletype.long_name else sampletype.short_name
-        # if the sensor/sample is fine, but not uploaded make it grey to indicate it hasn't been uploaded
-        button_colour = 'btn-secondary'
-        if upload_status[1]:
-            datatype = bio_models.BCDataType.objects.get(pk=upload_status[1])
-            title += f': {str(datatype)}'
-        elif sampletype.datatype:
-            # if the sensor/sample uses the general datatype make it yellow
-            title += f': {str(sampletype.datatype)}'
-            button_colour = 'btn-warning'
-        else:
-            button_colour = 'btn-danger'
-            title += f': ' + _('Missing Biochem datatype')
+        button = get_sensor_table_button(soup, mission_id, sampletype_id)
 
-        if upload_status[0]:
-            # if the sensor/sample has an upload date set it to primary
-            button_colour = 'btn-primary'
-
-        button = soup.new_tag("button")
-        button.string = f'{sampletype.short_name}'
+        # clear the column string and add the button instead
         column.string = ''
-        button.attrs['class'] = 'btn btn-sm ' + button_colour
-        button.attrs['style'] = 'width: 100%'
-        button.attrs['hx-get'] = reverse_lazy('core:sample_details', args=(mission_id, sampletype.pk,))
-        button.attrs['hx-target'] = "#sample_table"
-        button.attrs['hx-push-url'] = 'true'
-        button.attrs['title'] = title
-
         column.append(button)
 
+        # add the upload checkbox to the upload_row we created above, copy the attributes of the button column
         upload = soup.new_tag('th')
-        upload.attrs['class'] = 'text-center text-nowrap'
-        if hasattr(column, 'attrs') and 'colspan' in column.attrs:
-            upload.attrs['colspan'] = column.attrs['colspan']
+        upload.attrs = column.attrs
 
-        check = soup.new_tag('input')
-        check.attrs['type'] = 'checkbox'
-        check.attrs['name'] = 'add_sensor'
-        check.attrs['value'] = sampletype.id
-        check.attrs['hx-post'] = reverse_lazy('core:hx_add_sensor_to_upload', args=(mission_id,))
-        check.attrs['hx-swap'] = 'none'
-
+        check = get_sensor_table_upload_checkbox(soup, mission_id, sampletype_id)
         upload.append(check)
         upload_row.append(upload)
 
+        # we're done with this column, get the next column and start again
         column = column.find_next_sibling('th')
 
     return soup

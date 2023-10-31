@@ -45,11 +45,11 @@ class Mission(models.Model):
 
     lead_scientist = models.CharField(verbose_name=_("Lead Scientist"), max_length=50, default="N/A",
                                       help_text=_("Chief scientist / principal investigator; LASTNAME,FIRSTNAME"))
-    platform = models.CharField(verbose_name=_("Platform"), max_length=50, default="N/A",
+    platform = models.CharField(verbose_name=_("Platform"), max_length=75, default="N/A",
                                 help_text=_("May be vessel name, fishing boat, wharf, various small vessels, multiple "
                                             "ships. Check that name is spelled correctly. “Unknown” is acceptable for "
                                             "historical data"))
-    protocol = models.CharField(verbose_name=_("Protocol"), max_length=50, default="N/A",
+    protocol = models.CharField(verbose_name=_("Protocol"), max_length=75, default="N/A",
                                 help_text=_("A citation should be given if standard protocols were used during the "
                                             "mission. The use of non-standard protocols should be noted and further "
                                             "details provided in the collector comments field"))
@@ -514,9 +514,30 @@ class DiscreteSampleValue(models.Model):
 
     comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
 
+    # The dis_data_num is used to link a sample to the BCD version of the sample once it's been uploaded to
+    # the BCD table. This is then used when updates are made to the DART DiscreteSample to keep it in sync
+    # with the BCD sample.
+    dis_data_num = models.IntegerField(verbose_name=_("BioChem Data Number"), null=True, blank=True,
+                                       help_text=_("The BCD unique ID provided once a sample has been uploaded"))
+
     @property
     def datatype(self) -> bio_models.BCDataType:
-        return self.sample_datatype if self.sample_datatype else self.sample.type.datatype
+        # datatype priority is a row specific datatype,
+        # then if there's a mission specific datatype,
+        # then the general sample type datatype
+
+        if self.sample_datatype:
+            return self.sample_datatype
+
+        if sample_type := self.sample.type:
+            mission = self.sample.bottle.event.mission
+            if (mission_data_type := mission.mission_sample_types.filter(sample_type=sample_type)).exists():
+                return mission_data_type.first().datatype
+
+            if sample_type.datatype:
+                return sample_type.datatype
+
+        raise ValueError({'message': _("No Biochem datatype for sample") + " : " + str(self.sample.bottle.bottle_id)})
 
     def __str__(self):
         return f'{self.sample}: {self.value}'
@@ -669,11 +690,13 @@ class EngineType(models.IntegerChoices):
 class BcDatabaseConnection(models.Model):
     engine = models.IntegerField(verbose_name=_("Database Type"), choices=EngineType.choices,
                                  default=EngineType.oracle)
-    host = models.CharField(verbose_name=_("Database Server Address"), max_length=50)
+    host = models.CharField(verbose_name=_("Server Address"), max_length=50)
     name = models.CharField(verbose_name=_("Database Name"), help_text="TTRAN/PTRAN", max_length=20)
     port = models.IntegerField(verbose_name=_("Port"), default=1521)
 
-    account_name = models.CharField(verbose_name=_('User Name'), max_length=20)
+    account_name = models.CharField(verbose_name=_('Account Name'), max_length=20)
+    uploader = models.CharField(verbose_name=_("Uploader Name"), max_length=20, blank=True, null=True,
+                                help_text=_("If not Account Name"))
 
     def __str__(self):
         return f'{self.account_name} - {self.name}'

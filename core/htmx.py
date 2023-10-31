@@ -158,6 +158,16 @@ def send_user_notification_queue(group_name, message, queue=None):
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
+def send_user_notification_html_update(group_name, soup_element):
+    channel_layer = get_channel_layer()
+    event = {
+        'type': 'send_html_update',
+        'html_element': soup_element
+    }
+
+    async_to_sync(channel_layer.group_send)(group_name, event)
+
+
 def send_user_notification_elog(group_name, mission, message):
     channel_layer = get_channel_layer()
     event = {

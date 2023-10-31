@@ -60,7 +60,7 @@ urlpatterns = [
     path('mission/sample/hx/datatype/mission/', views_mission_sample.update_sample_type_mission,
          name="hx_update_sample_type_mission"),
 
-    path('mission/sample/hx/upload/sensor/<int:mission_id>/',
+    path('mission/sample/hx/upload/sensor/<int:mission_id>/<int:sensor_id>/',
          core.form_biochem_database.add_sensor_to_upload, name="hx_add_sensor_to_upload"),
     path('mission/sample/hx/upload/biochem/<int:mission_id>/',
          core.form_biochem_database.upload_bio_chem, name="hx_upload_bio_chem"),

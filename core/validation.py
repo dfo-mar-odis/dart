@@ -160,10 +160,13 @@ def validate_bottle_sample_range(event: core_models.Event, bottle_id: int) -> \
     return errors
 
 
-def validate_samples_for_biochem(mission: core_models.Mission) -> list[core_models.Error]:
+def validate_samples_for_biochem(mission: core_models.Mission,
+                                 sample_types: list[core_models.SampleType] = None) -> list[core_models.Error]:
     errors = []
-    samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
-    sample_types = core_models.SampleType.objects.filter(samples__in=samples).distinct()
+
+    if not sample_types:
+        samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
+        sample_types = core_models.SampleType.objects.filter(samples__in=samples).distinct()
 
     for sample_type in sample_types:
         if not sample_type.datatype:
