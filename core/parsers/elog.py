@@ -29,7 +29,7 @@ def get_field(elog_configuration: core_models.ElogConfig, field: str, buffer: [s
     mapped_field = elog_configuration.mappings.get(field=field)
 
     if mapped_field.required and mapped_field.mapped_to not in buffer:
-        raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field})
+        raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field.mapped_to})
 
     return mapped_field.mapped_to
 
