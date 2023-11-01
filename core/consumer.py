@@ -32,7 +32,7 @@ class CoreConsumer(WebsocketConsumer):
 
     def close_render_queue(self, event):
 
-        html = BeautifulSoup(f'<div id="status">event["message"]</div>', 'html.parser')
+        html = BeautifulSoup(f'<div id="status">{event["message"] if "message" in event else ""}</div>', 'html.parser')
         status_div = html.find('div')
         for key, value in event.items():
             status_div.attrs[key] = value

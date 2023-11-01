@@ -12,10 +12,13 @@
             <div class="row">
                 <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
                         href="#div_id_load_bottle">{% custom_icon 'caret-down' %}</button>
-                <span class="card-title col-auto align-self-end h6">{% trans "Load Bottles" %}</span>
+                <span class="card-title col-auto align-self-end h6">
+                    {% trans "Load Bottles" %}
+                    <button hx-get="{% url 'core:hx_choose_bottle_dir' mission.pk %}" class="btn btn-secondary btn-sm ms-2" title="{% trans "chose dir" %}" >{% custom_icon 'folder-symlink' %}</button>
+                </span>
                 <span class="col">
                     <div class="input-group">
-                    <input class="input-group-sm form-control form-control-sm" type="text" name="bottle_dir" value="{% if mission.bottle_directory %}{{ mission.bottle_directory }}{% endif %}" placeholder="{% trans "Location of the .BTL/.ROS fiels to be loaded." %}"/>
+                    <input id="input_id_bottle_dir" class="input-group-sm form-control form-control-sm" type="text" name="bottle_dir" value="{% if mission.bottle_directory %}{{ mission.bottle_directory }}{% endif %}" placeholder="{% trans "Location of the .BTL/.ROS fiels to be loaded." %}"/>
                     <button class="btn btn-secondary btn-sm" type="submit" title="{% trans "Refresh" %}" >{% custom_icon 'arrow-clockwise' %}</button>
                     </div>
                 </span>

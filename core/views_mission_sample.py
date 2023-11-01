@@ -3,6 +3,8 @@ import io
 import numpy as np
 import os
 import threading
+import easygui
+
 from threading import Thread
 
 import bs4
@@ -692,7 +694,7 @@ def hx_sample_upload_ctd(request, mission_id):
                 loaded_files = [f[0] for f in models.Sample.objects.filter(
                         type__is_sensor=True,
                         bottle__event__mission_id=mission_id).values_list('file').distinct()]
-                files = [f for f in os.listdir(bottle_dir) if f.lower().endswith('.btl') if f not in loaded_files]
+                files = [f for f in os.listdir(bottle_dir) if f.upper().endswith('.BTL') if f.upper() not in loaded_files]
                 initial_args['show_some'] = True
 
             files.sort(key=lambda fn: os.path.getmtime(os.path.join(bottle_dir, fn)))
@@ -1166,3 +1168,27 @@ def update_sample_type(request, **kwargs):
         biochem_form = forms.BioChemDataType(initial={'data_type_code': data_type_code})
         html = render_crispy_form(biochem_form)
         return HttpResponse(html)
+
+
+def choose_bottle_dir(request, **kwargs):
+    mission_id = kwargs['mission_id']
+
+    result = easygui.diropenbox(title="Choose BTL directory")
+    logger.info(result)
+
+    mission = models.Mission.objects.get(pk=mission_id)
+    mission.bottle_directory = result
+    mission.save()
+
+    soup = BeautifulSoup("", 'html.parser')
+    input = soup.new_tag('input')
+    input.attrs['id'] = "input_id_bottle_dir"
+    input.attrs['class'] = "input-group-sm form-control form-control-sm"
+    input.attrs['type'] = "text"
+    input.attrs['name'] = "bottle_dir"
+    input.attrs['value'] = result
+    input.attrs['placeholder'] = _("Location of the.BTL /.ROS fiels to be loaded.")
+    input.attrs['hx-swap-oob'] = 'true'
+    soup.append(input)
+
+    return HttpResponse(soup)

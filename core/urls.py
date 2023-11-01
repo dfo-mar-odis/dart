@@ -42,6 +42,8 @@ urlpatterns = [
 
     # ###### sample details ###### #
 
+    path('mission/sample/bottledir/<int:mission_id>/', views_mission_sample.choose_bottle_dir,
+         name="hx_choose_bottle_dir"),
     path('mission/sample/<int:pk>/', views_mission_sample.SampleDetails.as_view(), name="sample_details"),
     path('mission/sample/<int:pk>/<int:sample_type_id>/', views_mission_sample.SampleDetails.as_view(),
          name="sample_details"),
