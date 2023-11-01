@@ -252,8 +252,8 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
                 attrs = {
                     'station': station,
                     'instrument': instrument,
-                    'sample_id': sample_id if sample_id.strip() else None,
-                    'end_sample_id': end_sample_id if end_sample_id.strip() else None
+                    'sample_id': sample_id,
+                    'end_sample_id': end_sample_id
                 }
                 event = existing_events.get(event_id=event_id)
                 update_attributes(event, attrs, update_events)
