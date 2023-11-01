@@ -29,7 +29,7 @@ def get_field(elog_configuration: core_models.ElogConfig, field: str, buffer: [s
     mapped_field = elog_configuration.mappings.get(field=field)
 
     if mapped_field.required and mapped_field.mapped_to not in buffer:
-        raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field})
+        raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field.mapped_to})
 
     return mapped_field.mapped_to
 
@@ -232,14 +232,28 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             sample_id: str = buffer.pop(sample_id_field)
             end_sample_id: str = buffer.pop(end_sample_id_field)
 
+            if valid_sample_id(sample_id):
+                sample_id = sample_id if sample_id.strip() else None
+            else:
+                message = _("Sample id is not valid")
+                errors.append((mid, message, ValueError({"message": message}),))
+                sample_id = None
+
+            if valid_sample_id(end_sample_id):
+                end_sample_id = end_sample_id if end_sample_id.strip() else None
+            else:
+                message = _("End Sample id is not valid")
+                errors.append((mid, message, ValueError({"message": message}),))
+                end_sample_id = None
+
             # if the event doesn't already exist, create it. Otherwise update the existing
             # event with new data if required
             if existing_events.filter(event_id=event_id).exists():
                 attrs = {
                     'station': station,
                     'instrument': instrument,
-                    'sample_id': sample_id if sample_id.strip() else None,
-                    'end_sample_id': end_sample_id if end_sample_id.strip() else None
+                    'sample_id': sample_id,
+                    'end_sample_id': end_sample_id
                 }
                 event = existing_events.get(event_id=event_id)
                 update_attributes(event, attrs, update_events)
@@ -248,8 +262,8 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
                 event = [event for event in create_events if event.event_id == event_id][0]
                 event.station = station if station else event.station
                 event.instrument = instrument if instrument else event.instrument
-                event.sample_id = sample_id if sample_id.strip() else event.sample_id
-                event.end_sample_id = end_sample_id if end_sample_id.strip() else event.end_sample_id
+                event.sample_id = sample_id
+                event.end_sample_id = end_sample_id
                 continue
 
             new_event = core_models.Event(mission=mission, event_id=event_id)
@@ -259,19 +273,8 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
 
             # sample IDs are optional fields, they may be blank. If they are they should be None on the event
             # sample IDs must also be numeric, if they're not log an error and use None
-            if valid_sample_id(sample_id):
-                new_event.sample_id = sample_id if sample_id.strip() else None
-            else:
-                message = _("Sample id is not valid")
-                errors.append((mid, message, ValueError({"message": message}),))
-                new_event.sample_id = None
-
-            if valid_sample_id(end_sample_id):
-                new_event.end_sample_id = end_sample_id if end_sample_id.strip() else None
-            else:
-                message = _("End Sample id is not valid")
-                errors.append((mid, message, ValueError({"message": message}),))
-                new_event.end_sample_id = None
+            new_event.sample_id = sample_id
+            new_event.end_sample_id = end_sample_id
 
             create_events.append(new_event)
             processed_events.append(event_id)

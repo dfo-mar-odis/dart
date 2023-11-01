@@ -4,7 +4,7 @@ import re
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML, Button
+from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Min, Max
@@ -22,6 +22,85 @@ class NoWhiteSpaceCharField(forms.CharField):
         super().validate(value)
         if re.search(r"\s", value):
             raise ValidationError("Field may not contain whitespaces")
+
+
+class CardForm(forms.Form):
+
+    def get_card_title(self):
+        return Div(css_class="card-title row", id=f'div_id_card_title_{self.card_name}')
+
+    def get_card_header(self):
+        return Div(self.get_card_title(), css_class='card-header', id=f'div_id_card_header_{self.card_name}')
+
+    def get_card_body(self):
+        return Div(css_class='card-body', id=f'div_id_card_body_{self.card_name}')
+
+    def get_card(self):
+        card = Div(
+            self.get_card_header(),
+            self.get_card_body(),
+            css_class='card',
+            id=f'div_id_card_{self.card_name}'
+        )
+
+        return card
+
+    def __init__(self, *args, **kwargs):
+        if 'card_name' not in kwargs:
+            raise IndexError("Missing 'card_name' required to identify form components")
+
+        self.card_name = kwargs.pop('card_name')
+
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(self.get_card())
+
+
+class CollapsableCardForm(CardForm):
+
+    def get_card_title(self):
+        return Row(css_class="card-title", id=f'div_id_card_title_{self.card_name}')
+
+    def get_card_header(self):
+
+        header_row = Row()
+        header = Div(header_row, css_class='card-header')
+
+        button_id = f'button_id_collapse_{self.card_name}'
+        button_attrs = {
+            'id': button_id,
+            'data_bs_toggle': "collapse",
+            'href': f"#div_id_card_collapse_{self.card_name}",
+            'aria_expanded': 'false'
+        }
+        icon = load_svg('caret-down')
+        button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed", **button_attrs)
+
+        button_column = Div(button, css_class="col-auto")
+        title_column = Div(self.get_card_title(), css_class="col")
+
+        header_row.append(button_column)
+        header_row.append(title_column)
+
+        return header
+
+    def get_collapsable_card_body(self):
+        inner_body = self.get_card_body()
+        body = Div(inner_body, css_class="collapsed collapse", id=f"div_id_card_collapse_{self.card_name}")
+        return body
+
+    def get_card(self):
+        card = Div(
+            self.get_card_header(),
+            self.get_collapsable_card_body(),
+            css_class='card',
+            id=f'div_id_card_{self.card_name}'
+        )
+
+        return card
 
 
 class MissionSettingsForm(forms.ModelForm):
@@ -405,7 +484,7 @@ class SampleTypeForm(forms.ModelForm):
         )
 
 
-class BioChemUpload(forms.Form):
+class BioChemDataType(forms.Form):
     sample_type_id = forms.IntegerField(label=_("Sample Type"),
                                         help_text=_("The Sample Type to apply the BioChem datatype to"))
     mission_id = forms.IntegerField(label=_("Mission"),
@@ -479,14 +558,24 @@ class BioChemUpload(forms.Form):
         data_type_description.attrs['hx-select'] = "#id_data_type_code"
 
         apply_attrs = {
-            'name': 'apply_data_type',
-            'title': _('Apply Datatype to Samples'),
+            'name': 'apply_data_type_row',
+            'title': _('Apply Datatype to row(s)'),
             'hx-get': reverse_lazy('core:hx_update_sample_type'),
             'hx-target': "#div_id_data_type_message",
             'hx-swap': 'innerHTML'
         }
-        apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
-                                    **apply_attrs)
+        row_apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
+                                        **apply_attrs)
+
+        apply_attrs = {
+            'name': 'apply_data_type_sensor',
+            'title': _('Apply Datatype to mission'),
+            'hx-get': reverse_lazy('core:hx_update_sample_type'),
+            'hx-target': "#div_id_data_type_message",
+            'hx-swap': 'innerHTML'
+        }
+        sensor_apply_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm ms-2",
+                                           **apply_attrs)
 
         self.helper.form_tag = False
         self.helper.layout = Layout(
@@ -504,7 +593,8 @@ class BioChemUpload(forms.Form):
                 Row(
                     Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
                     Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
-                    Column(apply_button, css_class="col-auto align-self-end mb-3"),
+                    Column(row_apply_button, css_class="col-auto align-self-end mb-3"),
+                    Column(sensor_apply_button, css_class="col-auto align-self-end mb-3"),
                     id="div_id_sample_range"
                 ),
                 Row(
@@ -705,7 +795,7 @@ class BottleSelection(forms.Form):
         icon = load_svg('eye-slash') if 'show_all' in kwargs['initial'] else load_svg('eye')
         all_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **all_attrs)
 
-        submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm", type='input',
+        submit_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm", type='input',
                                      title=_("Load Selected"))
         self.helper.layout = Layout(
             Row(Column(submit_button, css_class='col'), Column(all_button, css_class='col-auto'),
@@ -716,8 +806,7 @@ class BottleSelection(forms.Form):
         self.helper.form_show_labels = False
 
 
-def save_load_component(component_id, message, **kwargs):
-
+def blank_alert(component_id, message, **kwargs):
     alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
 
     # return a loading alert that calls this methods post request
@@ -732,10 +821,27 @@ def save_load_component(component_id, message, **kwargs):
 
     # create an alert area saying we're loading
     alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
-    alert_msg = soup.new_tag('div', attrs={'id': f'{component_id}_message'})
+    alert_msg = soup.new_tag("div", attrs={'id': f'{component_id}_message'})
     alert_msg.string = message
 
     alert_div.append(alert_msg)
+
+    root_div.attrs = {
+        'id': component_id,
+    }
+
+    root_div.append(alert_div)
+    soup.append(root_div)
+
+    return soup
+
+
+def save_load_component(component_id, message, **kwargs):
+
+    soup = blank_alert(component_id, message, **kwargs)
+    root_div = soup.find_next()
+
+    alert_div = root_div.find_next()
 
     # create a progress bar to give the user something to stare at while they wait.
     progress_bar = soup.new_tag("div")
@@ -749,14 +855,7 @@ def save_load_component(component_id, message, **kwargs):
 
     alert_div.append(progress_bar_div)
 
-    root_div.attrs = {
-        'id': component_id,
-    }
-
     for attr, val in kwargs.items():
         root_div.attrs[attr] = val
-
-    root_div.append(alert_div)
-    soup.append(root_div)
 
     return soup

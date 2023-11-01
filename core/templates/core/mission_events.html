@@ -76,10 +76,8 @@
                                            title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="div_event_list_id" class="vertical-scrollbar">
-                            {% block event_import_form %}
+                            <div id="div_id_event_message_area" class="row">
+                                {% block event_import_form %}
                                 <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
                                       hx-encoding="multipart/form-data"
                                       hx-get="{% url "core:hx_upload_elog" object.pk %}"
@@ -89,7 +87,11 @@
                                     <input id="event_file_input_id" type="file" name="event" accept=".log"
                                            multiple="true" class="invisible"/>
                                 </form>
-                            {% endblock %}
+                                {% endblock %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="div_event_list_id" class="vertical-scrollbar">
                                 {% include 'core/partials/table_event.html' with mission=object %}
                             </div>
                         </div>

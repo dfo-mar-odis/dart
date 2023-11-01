@@ -35,11 +35,19 @@ def get_event_number_bio(data_frame: pandas.DataFrame):
     # when a bottle file is read using the ctd package the top part of the file is saved in the _metadata
     metadata = getattr(data_frame, "_metadata")
 
-    # for the Atlantic Region the last three digits of the bottle file name contains the elog event number
+    # for the Atlantic Region the last three digits of the bottle file name contains the elog event number,
+    # but if there's a 'event_number' in the header use that instead.
+    event_number = re.search('event_number: (\d+)\n', metadata['header'], re.IGNORECASE)[1]
+    if event_number.isnumeric():
+        event_number = int(str(event_number)[-3:])
+        return int(event_number)
+
     event_number = re.search(".*(?:\D|^)(\d+)", metadata['name'])[1]
     if len(str(event_number)) > 3:
         event_number = int(str(event_number)[-3:])
-    return int(event_number)
+        return int(event_number)
+
+    raise ValueError("Could not acquire event number from bottle file")
 
 
 def get_sensor_names(data_frame: pandas.DataFrame, exclude=None) -> list:
@@ -218,18 +226,19 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     data_frame_avg = data_frame[data_frame['Statistic'] == 'avg']
-    file_name = data_frame._metadata['name'] + ".BTL"
+    data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
-    dataframe_columns = ["Bottle", "Date", "PrDM"]
-    if "Latitude" in data_frame_avg.columns:
-        dataframe_columns.append("Latitude")
+    dataframe_columns = ["bottle", "date", "prdm"]
 
-    if "Longitude" in data_frame_avg.columns:
-        dataframe_columns.append("Longitude")
+    if "latitude" in data_frame_avg.columns:
+        dataframe_columns.append("latitude")
 
-    if "Bottle_" in data_frame_avg.columns:
+    if "longitude" in data_frame_avg.columns:
+        dataframe_columns.append("longitude")
+
+    if "bottle_" in data_frame_avg.columns:
         # if present this is the Bottle ID to use instead of the event.sample_id + Bottle number
-        dataframe_columns.append("Bottle_")
+        dataframe_columns.append("bottle_")
 
     b_create = []
     b_update = {"data": [], "fields": set()}
@@ -239,25 +248,25 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
     # clear out the bottle validation errors
     event.validation_errors.filter(type=core_models.ErrorType.bottle).delete()
     # end_sample_id-sample_id is includes so it's one less that the bottles in the file
-    if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)['Bottle'] - 1:
+    if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)['bottle'] - 1:
         message = _("Mismatch bottle count for event")
         validation_err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(validation_err)
 
     for row in bottle_data.iterrows():
         line = skipped_rows + row[0] + 1
-        bottle_number = row[1]["Bottle"]
+        bottle_number = row[1]["bottle"]
 
         bottle_id = bottle_number + event.sample_id - 1
 
         # if the Bottle S/N column is present then use that values as the bottle ID
         if 'Bottle_' in row[1]:
-            bottle_id = int(row[1]['Bottle_'])
+            bottle_id = int(row[1]['bottle_'])
 
-        date = row[1]["Date"]
-        pressure = row[1]["PrDM"]
-        latitude = row[1]["Latitude"] if "Latitude" in dataframe_columns else event.actions.first().latitude
-        longitude = row[1]["Longitude"] if "Longitude" in dataframe_columns else event.actions.first().longitude
+        date = row[1]["date"]
+        pressure = row[1]["prdm"]
+        latitude = row[1]["latitude"] if "latitude" in dataframe_columns else event.actions.first().latitude
+        longitude = row[1]["longitude"] if "longitude" in dataframe_columns else event.actions.first().longitude
 
         # assume UTC time if a timezone isn't set
         if not hasattr(date, 'timezone'):

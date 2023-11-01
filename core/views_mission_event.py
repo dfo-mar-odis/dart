@@ -319,11 +319,11 @@ def upload_elog(request, mission_id):
             'message': '',
             'alert_type': "info",
             'hx-post': url,
+            'hx-trigger': "load",
             'hx-target': "#elog_upload_file_form_id",
             'hx-swap': 'outerHTML',
             'hx-ext': "ws",
-            'ws-connect': "/ws/notifications/",
-            'hx-trigger': "load"
+            'ws-connect': "/ws/notifications/"
         }
         soup = forms.save_load_component(**attrs)
         # add a message area for websockets
