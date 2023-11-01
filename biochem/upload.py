@@ -16,6 +16,7 @@ from core import models as core_models
 import logging
 
 logger = logging.getLogger('dart.user')
+error_logger = logging.getLogger('dart')
 
 
 def create_model(database_name: str, model):
@@ -43,7 +44,7 @@ def check_and_create_model(database_name: str, upload_model) -> bool:
             raise e
 
     except Exception as e:
-        logger.exception(e)
+        error_logger.exception(e)
 
     return False
 
@@ -52,17 +53,14 @@ def check_and_create_model(database_name: str, upload_model) -> bool:
 #
 # example usage:
 #
-# with in_database(biochem_db):
-#     bcd_d = upload.get_bcd_d_model('some_table')
-#     try:
-#         bcd_d.objects.exists()
-#     except DatabaseError as e:
-#         # 12545 occurs if we couldn't connect to the DB
-#         # 942 occurs if we can connect, but the table doesn't exist
-#         if e.args[0].code == 12545:
-#             # likely couldn't connect to the database because the DB details were incorrect
-#         elif e.args[0].code == 942:
-#             # we could connect, but the table hasn't been created yet
+# bcd_d = upload.get_bcd_d_model('some_table')
+# try:
+#     bcd_d.objects.exists()
+# except DatabaseError as e:
+#     if e.args[0].code == 12545:
+#         # 12545 occurs if we couldn't connect to the DB so the connection is bad
+#     elif e.args[0].code == 942:
+#         # 942 occurs if we can connect, but the table doesn't exist so the connection is good
 def get_bcd_d_model(table_name: str) -> Type[models.BcdD]:
     bcd_table = table_name + '_bcd_d'
     opts = {'__module__': 'biochem'}
@@ -237,17 +235,18 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
         # writting thousands of rows at one time is... apparently bad. Break the data up into manageable chunks.
         db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_create)
 
-        logger.info(f"Updating collector keys")
         update_rows: [models.BcdD] = []
-        for ds_sample in samples:
+        total_samples = len(samples)
+        for count, ds_sample in enumerate(samples):
+            logger.info(_("Updating keys") + " : %d/%d", (count+1), total_samples)
             data_type_seq = ds_sample.datatype.data_type_seq
             collector_id = f'{ds_sample.sample.bottle.bottle_id}_{ds_sample.replicate}'
             try:
                 bc_row = bcd_d_model.objects.get(dis_detail_data_type_seq=data_type_seq,
                                                  dis_detail_collector_samp_id=collector_id)
             except bcd_d_model.DoesNotExist as e:
-                logger.exception(e)
-                logger.error(f"row matching data_type_seq {data_type_seq} and id {collector_id} does not exist")
+                error_logger.exception(e)
+                error_logger.error(f"row matching data_type_seq {data_type_seq} and id {collector_id} does not exist")
                 continue
 
             bc_row.dis_detail_collector_samp_id = ds_sample.sample.bottle.bottle_id
