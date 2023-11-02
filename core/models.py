@@ -45,11 +45,11 @@ class Mission(models.Model):
 
     lead_scientist = models.CharField(verbose_name=_("Lead Scientist"), max_length=50, default="N/A",
                                       help_text=_("Chief scientist / principal investigator; LASTNAME,FIRSTNAME"))
-    platform = models.CharField(verbose_name=_("Platform"), max_length=75, default="N/A",
+    platform = models.CharField(verbose_name=_("Platform"), max_length=50, default="N/A",
                                 help_text=_("May be vessel name, fishing boat, wharf, various small vessels, multiple "
                                             "ships. Check that name is spelled correctly. “Unknown” is acceptable for "
                                             "historical data"))
-    protocol = models.CharField(verbose_name=_("Protocol"), max_length=75, default="N/A",
+    protocol = models.CharField(verbose_name=_("Protocol"), max_length=50, default="N/A",
                                 help_text=_("A citation should be given if standard protocols were used during the "
                                             "mission. The use of non-standard protocols should be noted and further "
                                             "details provided in the collector comments field"))
