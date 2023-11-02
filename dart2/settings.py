@@ -11,11 +11,13 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 import os
-from pathlib import Path
 import environ
+import sys
 
+from pathlib import Path
 from django.utils.translation import gettext_lazy as _
-# read the private data from the environment file
+
+# read setup data from the environment file
 env = environ.Env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,6 +27,17 @@ MEDIA_DIR = os.path.join(BASE_DIR, 'media')
 
 environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 
+# This was an experiment in using the newer oracledb package instead of cx_oracle
+# The oralcedb package works, but I did receive odd PGA Memory errors at one point,
+# but I couldn't reproduce them after switching back and forth between the cx_oracle
+# and oracledb packages. However, the cx_oracle package is natively supported by Django
+# and doesn't require the use of the oracle instant client so I'm sticking with
+# cx_oracle for now.
+
+# import oracledb
+# oracledb.version = "8.3.0"
+# sys.modules['cx_Oracle'] = oracledb
+# oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
@@ -142,8 +155,8 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-# DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
-DATABASE_ROUTERS=['dynamic_db_router.DynamicDbRouter']
+DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
+# DATABASE_ROUTERS = ['dynamic_db_router.DynamicDbRouter']
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -251,6 +264,10 @@ LOGGERS = (
             "handlers": ["console", "test_handler"],
             "level": "DEBUG",
             "propagate": False
+        },
+        "dart.user": {  # use this logger to notify the user using status updates sent to the web browser
+            "level": "INFO",
+            "propagate": False
         }
     },
 )
@@ -305,3 +322,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 FIXTURE_DIRS = [
     os.path.join(BASE_DIR, '../settings'),
 ]
+
+SESSION_COOKIE_AGE = 360
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    },
+    "biochem_keys": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+    }
+}

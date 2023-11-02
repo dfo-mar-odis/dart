@@ -1,5 +1,7 @@
 import os.path
 
+from django.db.models import DecimalField
+
 from dart2 import settings
 
 import logging
@@ -34,6 +36,12 @@ def updated_value(row, field_name, new_value) -> str:
     new_value = field.to_python(new_value)
 
     current_value = getattr(row, field_name)
+
+    if field.null and type(current_value) is str and current_value == '':
+        current_value = None
+    if type(field) is DecimalField:
+        new_value = round(new_value, field.decimal_places)
+
     if current_value == new_value:
         return ''
 

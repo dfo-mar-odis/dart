@@ -14,7 +14,7 @@
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:plankton' mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:plankton_details' mission.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     <li class="nav-item me-2">
@@ -24,11 +24,21 @@
 {% endblock %}
 
 {% block content %}
+        <div id="div_content_block_id" class="container-fluid" hx-swap-oob="true">
     {% if sample_type %}
         {% include 'core/partials/card_sample_upload_header.html' %}
     {% else %}
+        <div class="row">
+            {% include 'core/partials/card_event_validation.html' %}
+        </div>
+        <div class="row mt-2">
+        {% include 'core/partials/card_bottle_load_header.html' %}
+        </div>
+        <div class="row mt-2">
         {% include 'core/partials/card_sample_load_header.html' %}
+        </div>
     {% endif %}
+        </div>
 
     {% block ctd_block %}
         {% if sample_type %}
@@ -52,30 +62,18 @@
                 <div class="card-header">
                     <div class="row">
                         <div class="card-title col-1">{% trans "CTD" %}</div>
-                            {% block ctd_import_form %}
-                                <form class="col" id="ctd_upload_file_form_id"
-                                      hx-target="#div_ctd_list_id"
-                                      hx-get="{% url "core:hx_sample_upload_ctd" mission.pk %}">
-                                    <span class="input-group col-auto">
-                                        <input class="input-group-sm form-control form-control-sm" type="text" name="bottle_dir" value="{% if mission.bottle_directory %}{{ mission.bottle_directory }}{% endif %}" placeholder="{% trans "Location of the .BTL/.ROS fiels to be loaded." %}"/>
-                                        <button class="btn btn-secondary btn-sm" type="submit" title="{% trans "Upload" %}" >{% custom_icon 'arrow-clockwise' %}</button>
-                                    </span>
-                                </form>
-                            {% endblock %}
                     </div>
                 </div>
                 <div class="card-body">
-                    <div id="div_ctd_list_id">
-                        {% block ctd_list %}
-                            {% if file_form %}
-                                {% crispy file_form %}
-                            {% else %}
-                                {% include 'core/partials/table_sample.html' %}
-                            {% endif %}
-                        {% endblock %}
-                    </div>
+                    {% include 'core/partials/table_sample.html' %}
                 </div>
             </div>
+        </div>
+        <div class="mt-2">
+            {% include 'core/partials/card_biochem_db_connection.html' %}
+        </div>
+        <div class="mt-2">
+            {% include 'core/partials/card_biochem_validation.html' %}
         </div>
         {% endif %}
     {% endblock %}

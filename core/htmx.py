@@ -138,6 +138,8 @@ def send_user_notification_close(group_name, **kwargs):
     event = {
         'type': 'close_render_queue',
     }
+    if 'message' in kwargs:
+        event['message'] = kwargs.pop('message')
     for key, value in kwargs.items():
         if key.startswith('hx'):
             event[key] = value
@@ -145,12 +147,22 @@ def send_user_notification_close(group_name, **kwargs):
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
-def send_user_notification_queue(group_name, message, queue):
+def send_user_notification_queue(group_name, message, queue=None):
     channel_layer = get_channel_layer()
     event = {
         'type': 'process_render_queue',
         'message': message,
         'queue': queue
+    }
+
+    async_to_sync(channel_layer.group_send)(group_name, event)
+
+
+def send_user_notification_html_update(group_name, soup_element):
+    channel_layer = get_channel_layer()
+    event = {
+        'type': 'send_html_update',
+        'html_element': soup_element
     }
 
     async_to_sync(channel_layer.group_send)(group_name, event)
@@ -210,7 +222,7 @@ def htmx_validate_events(request, mission_id, file_name):
 
 
 def get_mission_elog_errors(mission):
-    errors = mission.file_errors.filter(file_name__iendswith='.log').order_by('file_name')
+    errors = mission.file_errors.all().order_by('file_name')
     files = errors.values_list('file_name').distinct()
 
     error_dict = {}
@@ -237,9 +249,13 @@ def get_mission_validation_errors(mission):
 
 def get_file_errors(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
-    context = {'errors': get_mission_elog_errors(mission),
-               'validation_errors': get_mission_validation_errors(mission)}
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'error_block', context))
+    context = {
+        'mission': mission,
+        'errors': get_mission_elog_errors(mission),
+        'validation_errors': get_mission_validation_errors(mission)
+    }
+    html = render_to_string('core/partials/card_event_validation.html', context=context)
+    response = HttpResponse(html)
 
     return response
 

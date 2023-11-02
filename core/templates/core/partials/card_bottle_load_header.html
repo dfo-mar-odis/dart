@@ -1,0 +1,43 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<form id="form_id_bottle_load"
+      hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+      hx-target="#div_bottle_list_id"
+      hx-get="{% url "core:hx_sample_upload_ctd" mission.pk %}"
+>
+    <div class="card">
+        <div class="card-header">
+            <div class="row">
+                <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                        href="#div_id_load_bottle">{% custom_icon 'caret-down' %}</button>
+                <span class="card-title col-auto align-self-end h6">
+                    {% trans "Load Bottles" %}
+                    <button hx-get="{% url 'core:hx_choose_bottle_dir' mission.pk %}" hx-swap="none" class="btn btn-secondary btn-sm ms-2" title="{% trans "chose dir" %}" >{% custom_icon 'folder-symlink' %}</button>
+                </span>
+                <span class="col">
+                    <div class="input-group">
+                    <input id="input_id_bottle_dir" class="input-group-sm form-control form-control-sm" type="text" name="bottle_dir" value="{% if mission.bottle_directory %}{{ mission.bottle_directory }}{% endif %}" placeholder="{% trans "Location of the .BTL/.ROS fiels to be loaded." %}"/>
+                    <button class="btn btn-secondary btn-sm" type="submit" title="{% trans "Refresh" %}" >{% custom_icon 'arrow-clockwise' %}</button>
+                    </div>
+                </span>
+            </div>
+        </div>
+        <div class="collapse col" id="div_id_load_bottle">
+            <div class="card-body">
+                <div class="mb-2 col">
+                    <div id="new_sample_form" class="card-body">
+                        <div id="div_bottle_list_id">
+                        {% block ctd_list %}
+                            {% if file_form %}
+                            {% crispy file_form %}
+                            {% endif %}
+                        {% endblock %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

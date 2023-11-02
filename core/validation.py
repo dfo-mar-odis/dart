@@ -1,5 +1,6 @@
 from datetime import datetime
 
+import core.models
 from core import models as core_models
 from django.utils.translation import gettext as _
 from django.db.models import Q
@@ -28,6 +29,12 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
             err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
             break
+
+    for action in actions:
+        if not action.sounding:
+            message = _("Event is missing a depth for action") + f' {action.get_type_display()}'
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
 
     # Validate event does not have duplicate action types
     mission = event.mission
@@ -62,6 +69,7 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
     if event.actions.filter(type=core_models.ActionType.aborted).exists():
         return validation_errors
 
+    # all CTD events should have a starting and ending ID
     if not event.sample_id:
         message = _("Missing a starting sample ID")
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
@@ -69,6 +77,26 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
 
     if not event.end_sample_id:
         message = _("Missing an ending sample ID")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if event.sample_id and event.end_sample_id:
+        if event.end_sample_id < event.sample_id:
+            message = _("End bottle id is less than the starting sample id")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+        elif (event.end_sample_id-event.sample_id)+1 > 24:
+            message = _("There are more than 24 bottles in this event")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+
+    # CTD events should not have overlapping IDs
+    ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd).exclude(
+        pk=event.id).exclude(actions__type=core_models.ActionType.aborted)
+    if (evt := ctd_events.filter(
+            sample_id__range=(event.sample_id, event.end_sample_id))).exists():
+        message = _("Multiple overlapping samples for sample ids ") + f"[{event.sample_id} - {event.end_sample_id}] "
+        message += _("Events") + "(" + ",".join([str(e) for e in evt]) + ")"
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
@@ -126,7 +154,24 @@ def validate_bottle_sample_range(event: core_models.Event, bottle_id: int) -> \
             (bottle_id > event.end_sample_id or bottle_id < event.sample_id):
         message = f"Warning: Bottle ID ({bottle_id}) for event {event.event_id} " \
                   f"is outside the ID range {event.sample_id} - {event.end_sample_id}"
-        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.missing_id)
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(err)
+
+    return errors
+
+
+def validate_samples_for_biochem(mission: core_models.Mission,
+                                 sample_types: list[core_models.SampleType] = None) -> list[core_models.Error]:
+    errors = []
+
+    if not sample_types:
+        samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
+        sample_types = core_models.SampleType.objects.filter(samples__in=samples).distinct()
+
+    for sample_type in sample_types:
+        if not sample_type.datatype:
+            message = str(sample_type) + " : " + _("Sensor/Sample is missing a Biochem Datatype")
+            err = core_models.Error(mission=mission, message=message, type=core_models.ErrorType.biochem)
+            errors.append(err)
 
     return errors

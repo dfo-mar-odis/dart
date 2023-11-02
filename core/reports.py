@@ -26,8 +26,8 @@ def elog(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    header = ['Mission', 'Event', 'Station', 'Instrument', 'Avg_Sounding', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_lon',
-              'SDate', 'STime', 'EDate', 'Etime', 'Duration', 'Elapsed_Time', 'Comments']
+    header = ['Mission', 'Event', 'Station', 'INSTRUMENT', 'AVG_SOUNDING', 'MIN_LAT', 'MIN_LON', 'MAX_LAT', 'MAX_LON',
+              'SDATE', 'STIME', 'EDATE', 'ETIME', 'DURATION', 'ELAPSED_TIME', 'COMMENTS']
 
     events = core_models.Event.objects.filter(mission_id=mission_id).annotate(
         start=Min("actions__date_time")).order_by('start')
@@ -73,7 +73,7 @@ def elog(request, **kwargs):
             if action.comment:
                 if comments != "":
                     comments += " "
-                comments += f"***{action.get_type_display()}*** {action.comment}"
+                comments += f"{action.get_type_display()}: {action.comment}"
 
         if comments != "":
             comments = f"\"{comments}\""
@@ -98,7 +98,7 @@ def error_report(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    header = ['Mission', "File", "Line/Object", 'Error_Type', 'Message']
+    header = ['MISSION', "FILE", "LINE/OBJECT", 'ERROR_TYPE', 'MESSAGE']
     data = ",".join(header) + '\n'
 
     file_errs = core_models.FileError.objects.filter(mission=mission)
@@ -144,7 +144,7 @@ def profile_summary(request, **kwargs):
         samples__bottle__event__mission=mission
     ).exclude(short_name__in=exclude).distinct()
 
-    header = ['Mission', "Station", "Event", 'Gear', 'Pressure', "Sample"] + [st.short_name for st in sample_types]
+    header = ['MISSION', "STATION", "EVENT", 'GEAR', 'PRESSURE', "SAMPLE"] + [st.short_name.upper() for st in sample_types]
     data = ",".join(header) + '\n'
 
     bottles = core_models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')
@@ -173,7 +173,7 @@ def std_sample_report(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    data = ",".join(kwargs['headers']) + '\n'
+    data = ",".join([h.upper() for h in kwargs['headers']]) + '\n'
 
     bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
 

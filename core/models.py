@@ -365,6 +365,8 @@ class Bottle(models.Model):
     latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
     longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
 
+    last_modified = models.DateTimeField(auto_now=True)
+
     def __str__(self):
         return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
 
@@ -399,6 +401,16 @@ class SampleType(models.Model):
 
     def __str__(self):
         return self.short_name + (f" - {self.long_name}" if self.long_name else "")
+
+
+# if a biochem datatype is different from the default sample type for a specific mission use the mission sample type
+class MissionSampleType(models.Model):
+    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
+                                on_delete=models.CASCADE)
+    sample_type = models.ForeignKey(SampleType, verbose_name=_("Sample Type"), related_name="mission_sample_types",
+                                    on_delete=models.CASCADE)
+    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+                                 blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
 
 
 class SampleTypeConfig(models.Model):
@@ -473,9 +485,6 @@ class Sample(models.Model):
     last_modified_date = models.DateTimeField(verbose_name=_("Sample Modified"),
                                               help_text=_("Date sample was last updated"), auto_now=True)
 
-    bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
-                                           help_text=_("Date of last BioChem upload"))
-
     def __str__(self):
         return f'{self.type}: {self.bottle.bottle_id}'
 
@@ -500,11 +509,35 @@ class DiscreteSampleValue(models.Model):
     sample_datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                         blank=True, on_delete=models.SET_NULL)
 
+    bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
+                                           help_text=_("Date of last BioChem upload"))
+
     comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
+
+    # The dis_data_num is used to link a sample to the BCD version of the sample once it's been uploaded to
+    # the BCD table. This is then used when updates are made to the DART DiscreteSample to keep it in sync
+    # with the BCD sample.
+    dis_data_num = models.IntegerField(verbose_name=_("BioChem Data Number"), null=True, blank=True,
+                                       help_text=_("The BCD unique ID provided once a sample has been uploaded"))
 
     @property
     def datatype(self) -> bio_models.BCDataType:
-        return self.sample_datatype if self.sample_datatype else self.sample.type.datatype
+        # datatype priority is a row specific datatype,
+        # then if there's a mission specific datatype,
+        # then the general sample type datatype
+
+        if self.sample_datatype:
+            return self.sample_datatype
+
+        if sample_type := self.sample.type:
+            mission = self.sample.bottle.event.mission
+            if (mission_data_type := mission.mission_sample_types.filter(sample_type=sample_type)).exists():
+                return mission_data_type.first().datatype
+
+            if sample_type.datatype:
+                return sample_type.datatype
+
+        raise ValueError({'message': _("No Biochem datatype for sample") + " : " + str(self.sample.bottle.bottle_id)})
 
     def __str__(self):
         return f'{self.sample}: {self.value}'
@@ -517,6 +550,8 @@ class ErrorType(models.IntegerChoices):
     missing_id = 1, "Missing ID"
     missing_value = 2, "Missing Value"
     validation = 3, "Validation Error"
+    bottle = 4, "Bottle Error"
+    biochem = 5, "Biochem Error"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least
@@ -646,3 +681,44 @@ class ElogConfig(FileConfiguration):
                 mapping.save()
 
         return elog_config
+
+
+class EngineType(models.IntegerChoices):
+    oracle = 1, 'Oracle'
+
+
+class BcDatabaseConnection(models.Model):
+    engine = models.IntegerField(verbose_name=_("Database Type"), choices=EngineType.choices,
+                                 default=EngineType.oracle)
+    host = models.CharField(verbose_name=_("Server Address"), max_length=50)
+    name = models.CharField(verbose_name=_("Database Name"), help_text="TTRAN/PTRAN", max_length=20)
+    port = models.IntegerField(verbose_name=_("Port"), default=1521)
+
+    account_name = models.CharField(verbose_name=_('Account Name'), max_length=20)
+    uploader = models.CharField(verbose_name=_("Uploader Name"), max_length=20, blank=True, null=True,
+                                help_text=_("If not Account Name"))
+
+    def __str__(self):
+        return f'{self.account_name} - {self.name}'
+
+    # create a django database connection dictionary to be used with django-dynamic-db-router
+    def connect(self, password):
+        # at the moment we only handle Oracle Biochem DBs, but this could be expanded in the future
+        engine = 'django.db.backends.oracle'
+
+        biochem_db = {
+            'ENGINE': engine,
+            'NAME': self.name,
+            'USER': self.account_name,
+            'PASSWORD': password,
+            'PORT': self.port,
+            'HOST': self.host,
+            'TIME_ZONE': None,
+            'CONN_HEALTH_CHECKS': False,
+            'CONN_MAX_AGE': 0,
+            'AUTOCOMMIT': True,
+            'ATOMIC_REQUESTS': False,
+            'OPTIONS': {}
+        }
+
+        return biochem_db

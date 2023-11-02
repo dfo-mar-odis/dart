@@ -55,7 +55,7 @@ class TestMissionSamplesForm(DartTestCase):
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        upload_form = soup.find(id="ctd_upload_file_form_id")
+        upload_form = soup.find(id="form_id_bottle_load")
         self.assertIsNotNone(upload_form)
 
     def test_get_btl_list(self):

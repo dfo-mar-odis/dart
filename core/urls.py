@@ -1,7 +1,8 @@
 from django.urls import path
 
-import core.views_mission_event
-from . import views, views_mission_sample, views_mission_event, views_sample_type, views_mission_plankton, htmx, reports
+import core.form_biochem_database
+from . import views, views_mission_sample, views_sample_type, htmx, reports
+from . import form_biochem_database, views_mission_event, views_mission_plankton
 
 app_name = 'core'
 
@@ -45,6 +46,8 @@ urlpatterns = [
 
     # ###### sample details ###### #
 
+    path('mission/sample/bottledir/<int:mission_id>/', views_mission_sample.choose_bottle_dir,
+         name="hx_choose_bottle_dir"),
     path('mission/sample/<int:pk>/', views_mission_sample.SampleDetails.as_view(), name="sample_details"),
     path('mission/sample/<int:pk>/<int:sample_type_id>/', views_mission_sample.SampleDetails.as_view(),
          name="sample_details"),
@@ -56,10 +59,19 @@ urlpatterns = [
     path('mission/sample/hx/list/<int:mission_id>/<int:sensor_id>', views_mission_sample.hx_list_samples,
          name="hx_sample_list"),
 
-    path('mission/sample/hx/datatype/', views_mission_sample.update_sample_type, name="hx_update_sample_type"),
+    path('mission/sample/hx/datatype/', views_mission_sample.update_sample_type,
+         name="hx_update_sample_type"),
+    path('mission/sample/hx/datatype/row/', views_mission_sample.update_sample_type_row,
+         name="hx_update_sample_type_row"),
+    path('mission/sample/hx/datatype/mission/', views_mission_sample.update_sample_type_mission,
+         name="hx_update_sample_type_mission"),
 
-    path('mission/sample/hx/upload/biochem/<int:mission_id>/<int:sample_type_id>/',
-         views_mission_sample.upload_bio_chem, name="hx_upload_bio_chem"),
+    path('mission/sample/hx/upload/sensor/<int:mission_id>/<int:sensor_id>/',
+         core.form_biochem_database.add_sensor_to_upload, name="hx_add_sensor_to_upload"),
+    path('mission/sample/hx/upload/biochem/<int:mission_id>/',
+         core.form_biochem_database.upload_bio_chem, name="hx_upload_bio_chem"),
+    path('mission/sample/hx/errors/biochem/<int:mission_id>/',
+         core.form_biochem_database.get_biochem_errors, name="hx_get_biochem_errors"),
 
     # ###### Mission details and setting ###### #
 
@@ -102,6 +114,8 @@ urlpatterns = [
 ]
 
 htmx_urlpatterns = [
+    path('mission/database/validate/<int:mission_id>', form_biochem_database.validate_database,
+         name='hx_validate_database_connection'),
     path('mission/list/', htmx.list_missions, name="hx_list_missions"),
     path('hx/mission/delete/<int:mission_id>/', htmx.hx_mission_delete, name="hx_mission_delete"),
     path('geographic_region/add/', htmx.add_geo_region, name="hx_geo_region_add"),

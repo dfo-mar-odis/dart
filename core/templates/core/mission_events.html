@@ -1,3 +1,6 @@
+{# ################################################################################################ #}
+{# This template represents the events page were elog events are loaded for a mission #}
+{# ################################################################################################ #}
 {% extends 'base.html' %}
 {% load i18n %}
 {% load bootstrap5 %}
@@ -10,7 +13,7 @@
            title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:plankton' object.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:plankton_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     <li class="nav-item me-2">
@@ -73,10 +76,8 @@
                                            title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label>
                                 </div>
                             </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="div_event_list_id" class="vertical-scrollbar">
-                            {% block event_import_form %}
+                            <div id="div_id_event_message_area" class="row">
+                                {% block event_import_form %}
                                 <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
                                       hx-encoding="multipart/form-data"
                                       hx-get="{% url "core:hx_upload_elog" object.pk %}"
@@ -86,7 +87,11 @@
                                     <input id="event_file_input_id" type="file" name="event" accept=".log"
                                            multiple="true" class="invisible"/>
                                 </form>
-                            {% endblock %}
+                                {% endblock %}
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div id="div_event_list_id" class="vertical-scrollbar">
                                 {% include 'core/partials/table_event.html' with mission=object %}
                             </div>
                         </div>
@@ -135,22 +140,7 @@
                 </div>
             </div>
             <div class="row mt-2">
-                {# hx-ext="ws" ws-connect="/ws/notifications/" >#}
-                <div id="div_notifications_id" class="col">
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between">
-                            <div class="card-title">
-                                {% trans "Notifications" %}
-                            </div>
-                        </div>
-                        <div class="card-body vertical-scrollbar" hx-trigger="load, event_updated from:body" hx-target="#errors"
-                             hx-get="{% url 'core:hx_get_file_errors' object.pk %}">
-                            {% block error_block %}
-                                {% include 'core/partials/event_errors.html' %}
-                            {% endblock %}
-                        </div>
-                    </div>
-                </div>
+                {% include 'core/partials/card_event_validation.html' with mission=object %}
             </div>
         </div>
     {% endblock %}
