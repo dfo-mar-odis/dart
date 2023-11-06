@@ -812,6 +812,36 @@ class BottleSelection(forms.Form):
         self.helper.form_show_labels = False
 
 
+class PlanktonForm(forms.Form):
+
+    header = forms.IntegerField(label="Header Line")
+    tab = forms.IntegerField(label="Tab")
+
+    def __init__(self, *args, **kwargs):
+        mission_id = kwargs.pop('mission_id')
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        url = reverse_lazy("core:load_plankton", args=(mission_id,))
+        tab_field = Field('tab')
+        tab_field.attrs['hx-post'] = url
+        tab_field.attrs['hx-swap'] = "none"
+
+        header_field = Field('header')
+        header_field.attrs['hx-post'] = url
+        header_field.attrs['hx-swap'] = "none"
+
+        self.helper.layout = Layout(
+            Row(
+                Column(tab_field, css_class='col-auto input-group-sm'),
+                Column(header_field, css_class='col-auto input-group-sm'),
+                css_class='input-group'
+            )
+        )
+
+
 def blank_alert(component_id, message, **kwargs):
     alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
 

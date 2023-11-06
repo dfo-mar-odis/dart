@@ -1,10 +1,43 @@
 import os.path
 
+from django.conf import settings
 from django.core import management
-from django.core.management.commands import dumpdata
+from django.core.management.commands import dumpdata, inspectdb
 
+import dart2.db_routers
 from biochem import models as biochem_models
 from . import models as bio_models
+
+# The label used in settings.DATABASES must match the label the dart2.db_router uses
+database_label = dart2.db_routers.biochem_database_label
+
+
+def connect(user: str, password: str, name: str, host: str, port: int, engine: str = 'django.db.backends.oracle'):
+    biochem_db = {
+        'ENGINE': engine,
+        'NAME': name,
+        'USER': user,
+        'PASSWORD': password,
+        'PORT': port,
+        'HOST': host,
+        'TIME_ZONE': None,
+        'CONN_HEALTH_CHECKS': False,
+        'CONN_MAX_AGE': 0,
+        'AUTOCOMMIT': True,
+        'ATOMIC_REQUESTS': False,
+        'OPTIONS': {}
+    }
+
+    settings.DATABASES[database_label] = biochem_db
+
+
+# tables should be a comma separated list of table names
+def inspect_db(tables: [str]):
+    if database_label not in settings.DATABASES:
+        raise KeyError("Missing database connection details, run sync_tables.connect() with database details")
+
+    for table in tables:
+        management.call_command(inspectdb.Command(), table, database=database_label)
 
 
 def sync_table(bio_table_model, biochem_model, field_map):
@@ -174,11 +207,29 @@ def sync_gear_codes(force_create_fixture=False):
     return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
 
 
+def sync_sex(force_create_fixture=False):
+    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description']
+
+    bio_table_model = bio_models.BCSex
+    biochem_model = biochem_models.Bcsexes
+
+    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
+
+
+def sync_life_history(force_create_fixture=False):
+    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description', 'molt_number']
+
+    bio_table_model = bio_models.BCLifeHistory
+    biochem_model = biochem_models.Bclifehistories
+
+    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
+
+
 def sync_all(force_create_fixture=False):
     updated = force_create_fixture
     fixture_methods = [sync_data_centers(), sync_units(), sync_data_retrievals(), sync_analysis(), sync_storage(),
                        sync_sample_handeling(), sync_preservation(), sync_data_types(), sync_taxon_codes(),
-                       sync_gear_codes()]
+                       sync_gear_codes(), sync_sex(), sync_life_history()]
 
     for method in fixture_methods:
         updated = updated or method

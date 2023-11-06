@@ -132,7 +132,7 @@ def find_header(df, header_row):
 
             return temp_df
 
-    elif header_row >= 0:
+    elif 0 <= header_row < df.shape[0]:
         header = df.iloc[header_row]
         df = df[header_row + 1:]
         df.columns = header

@@ -243,27 +243,27 @@ LOGGERS = (
         "django": {
             "handlers": ["console", "info_handler"],
             "level": "INFO",
-            "propagate": False,
+            "propagate": True,
         },
         "django.request": {
             "handlers": ['error_handler'],
             "level": "ERROR",
-            "propagate": False,
+            "propagate": True,
         },
         "dart": {
             "handlers": ["console", "error_handler"],
             "level": "INFO",
-            "propagate": False
+            "propagate": True
         },
         "dart.debug": {
-            "handlers": ["console", "info_handler", "error_handler"],
+            "handlers": ["info_handler"],
             "level": "DEBUG",
             "propagate": True
         },
         "dart.test": {  # use this logger for unit testing
-            "handlers": ["console", "test_handler"],
+            "handlers": ["test_handler"],
             "level": "DEBUG",
-            "propagate": False
+            "propagate": True
         },
         "dart.user": {  # use this logger to notify the user using status updates sent to the web browser
             "level": "INFO",

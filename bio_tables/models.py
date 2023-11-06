@@ -147,3 +147,21 @@ class BCGear(models.Model):
     gear_size = models.CharField(max_length=20, blank=True, null=True, verbose_name=_("Size"))
     description = models.CharField(max_length=2000, blank=True, null=True, verbose_name=_("Description"))
 
+
+class BCSex(models.Model):
+    sex_seq = models.IntegerField(primary_key=True, help_text='Sex code.')
+    data_center_code = models.ForeignKey(BCDataCenter, on_delete=models.DO_NOTHING, related_name='sex_codes',
+                                         verbose_name=_("Data Center"))
+    name = models.CharField(max_length=30, help_text='Name of the sex.')
+    description = models.CharField(max_length=1000, blank=True, null=True, help_text='Sex description.')
+
+
+class BCLifeHistory(models.Model):
+    life_history_seq = models.IntegerField(primary_key=True,
+                                           help_text='Development stage code (auto generated number).')
+    data_center_code = models.ForeignKey(BCDataCenter, on_delete=models.DO_NOTHING, related_name='life_history_codes',
+                                         verbose_name=_("Data Center"))
+    name = models.CharField(max_length=30, help_text='Development stage name.')
+    description = models.CharField(max_length=1000, blank=True, null=True, help_text='Development stage description.')
+    molt_number = models.CharField(max_length=20, blank=True, null=True,
+                                   help_text='Accepted numeric standard to represent the molt stage.')

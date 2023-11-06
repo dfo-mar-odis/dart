@@ -430,3 +430,26 @@ class Bcnatnltaxoncodes(models.Model):
     class Meta:
         managed = False
         db_table = 'BCNATNLTAXONCODES'
+
+
+class Bcsexes(models.Model):
+    sex_seq = models.IntegerField(primary_key=True)
+    data_center_code = models.IntegerField()
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=1000, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCSEXES'
+
+
+class Bclifehistories(models.Model):
+    life_history_seq = models.IntegerField(primary_key=True,)
+    data_center_code = models.IntegerField()
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=1000, blank=True, null=True)
+    molt_number = models.CharField(max_length=20, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCLIFEHISTORIES'

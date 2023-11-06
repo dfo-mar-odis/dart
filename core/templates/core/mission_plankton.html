@@ -43,8 +43,8 @@
                                        {# for now plankton comes from an xls file so only allow xls types. #}
                                        type="file" name="plankton_file" accept=".xls,.xlsx,.xlsm"
                                        hx-trigger="change"
-                                       hx-get="{% url 'core:load_plankton' %}?mission_id={{ mission.pk }}"
-                                       hx-target="#div_id_message"
+                                       hx-get="{% url 'core:load_plankton' mission.pk %}"
+                                       hx-swap="none"
                                 />
                             </div>
                         </div>
