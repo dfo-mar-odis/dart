@@ -1,6 +1,6 @@
-from enum import Enum
-
 import factory
+import random
+
 from django.utils import timezone
 from factory.django import DjangoModelFactory
 from faker import Faker
@@ -160,3 +160,13 @@ class MissionSampleConfig(DjangoModelFactory):
 
     mission = factory.SubFactory(MissionFactory)
     config = factory.SubFactory(SampleTypeConfigFactory)
+
+
+class PhytoplanktonSampleFactory(DjangoModelFactory):
+    class Meta:
+        model = models.PlanktonSample
+
+    file = factory.lazy_attribute(lambda o: faker.word() + ".xlsx")
+    bottle = factory.SubFactory(BottleFactory)
+    taxa = factory.lazy_attribute(lambda o: random.choice(bio_tables.models.BCNatnlTaxonCode.objects.all()))
+    count = factory.lazy_attribute(lambda o: faker.random.randint(0, 10000))

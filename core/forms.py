@@ -828,16 +828,30 @@ class PlanktonForm(forms.Form):
         tab_field = Field('tab')
         tab_field.attrs['hx-post'] = url
         tab_field.attrs['hx-swap'] = "none"
+        tab_field.attrs['class'] = "form-control form-control-sm"
 
         header_field = Field('header')
         header_field.attrs['hx-post'] = url
         header_field.attrs['hx-swap'] = "none"
+        header_field.attrs['class'] = "form-control form-control-sm"
+
+        importurl = reverse_lazy("core:import_plankton", args=(mission_id,))
+        button_attrs = {
+            'title': _('Import'),
+            'name': 'import',
+            'hx_get': importurl,
+            'hx_swap': 'none'
+        }
+
+        icon = load_svg('arrow-down-square')
+        submit = StrictButton(icon, css_class="btn btn-sm btn-primary", **button_attrs)
 
         self.helper.layout = Layout(
             Row(
-                Column(tab_field, css_class='col-auto input-group-sm'),
-                Column(header_field, css_class='col-auto input-group-sm'),
-                css_class='input-group'
+                Column(tab_field, css_class='col-auto'),
+                Column(header_field, css_class='col-auto'),
+                Column(submit, css_class="align-self-end mb-3"),
+                css_class='input-group input-group-sm'
             )
         )
 

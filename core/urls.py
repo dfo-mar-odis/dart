@@ -10,6 +10,7 @@ urlpatterns = [
     # ###### Plankton loading ###### #
     path('plankton/<int:pk>/', views_mission_plankton.PlanktonDetails.as_view(), name="plankton_details"),
     path('plankton/load/<int:mission_id>/', views_mission_plankton.load_plankton, name="load_plankton"),
+    path('plankton/import/<int:mission_id>/', views_mission_plankton.import_plankton, name="import_plankton"),
 
     # ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
     # show the create a sample type form

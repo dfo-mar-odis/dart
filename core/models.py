@@ -744,13 +744,19 @@ class PlanktonSample(models.Model):
                              related_name="plankton_data", on_delete=models.DO_NOTHING)
 
     # default unassigned BCLIFEHISTORIES 90000000
-    # stage = models.IntegerField(verbose_name=_("Stage of Life"), default=90000000)
+    stage = models.ForeignKey(bio_tables.models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
+                             on_delete=models.DO_NOTHING)
 
     # defualt unassigned BCSEXES 90000000
-    # sex = models.IntegerField(verbose_name=_("Sex"), default=90000000)
+    sex = models.ForeignKey(bio_tables.models.BCSex, verbose_name=_("Sex"), default=90000000,
+                            on_delete=models.DO_NOTHING)
 
     # 1 for phytoplankton, more complicated for zooplankton
     split_fraction = models.FloatField(verbose_name=_("Split Fraction"), default=1)
+
+    # these defaults are for phytoplankton, more complicated for zooplankton
+    min_sieve = models.FloatField(verbose_name=_("Max Sieve"), default=0.002)
+    max_sieve = models.FloatField(verbose_name=_("Max Sieve"), blank=True, null=True, default=0.55)
 
     # The 'what_was_it' code will determine which of these values gets filled out for Zooplankton
     # count = cell_liters for Phytoplankton, the rest are blank
