@@ -220,20 +220,22 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
     update_plankton = {'objects': [], 'fields': set()}
     errors = []
     for line, row in dataframe.iterrows():
+        updated_fields = set("")
 
         line_number = line + dataframe.index.start + 1
         user_logger.info(_("Creating plankton sample") + "%d/%d", line_number, total_rows)
 
         bottle_id = row[row_mapping['SAMPLEID']]
-        taxonomic_name = row[row_mapping['TAXA']]
         ncode = row[row_mapping['NCODE']]
         taxa_id = 90000000000000 + int(ncode)
 
+        # 90000000 means unassigned
         stage_id = row[row_mapping['STAGE']]
-        stage = 90000000 + stage_id if not np.isnan(stage_id) else None
+        stage = 90000000 + stage_id if not np.isnan(stage_id) else 90000000
 
+        # 90000000 means unassigned
         sex_id = row[row_mapping['SEX']]
-        sex = 90000000 + sex_id if not np.isnan(sex_id) else None
+        sex = 90000000 + sex_id if not np.isnan(sex_id) else 90000000
 
         mesh_size = row[row_mapping['GEAR']]
         proc_code = row[row_mapping['PROC_CODE']]
@@ -249,8 +251,9 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
         taxa = bio_models.BCNatnlTaxonCode.objects.get(pk=taxa_id)
 
         # if the ringnet bottle doesn't exist it needs to be created
-        bottle = None
-        if not ringnet_bottles.filter(bottle_id=bottle_id).exists():
+        if (bottle := ringnet_bottles.filter(bottle_id=bottle_id)).exists():
+            bottle = bottle.first()
+        else:
             date = row[row_mapping['DATE']]
             event = events.get(event_id=row[row_mapping['EVENT']])
             pressure = row[row_mapping['DEPTH']]
@@ -261,19 +264,42 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}'
 
         plankton = core_models.PlanktonSample.objects.filter(taxa=taxa, bottle=bottle, stage_id=stage, sex_id=sex)
-        if not plankton.exists():
+        if plankton.exists():
+            # taxa, bottle, stage and sex are all part of a primary key and therefore cannot be updated
+            plankton = plankton.first()
+
+            # Gear_type, min_sieve, max_sieve, split_fraction and values based on 'what_was_it' can be updated
+            updated_fields.add(updated_value(plankton, 'gear_type_id', gear_type.pk))
+            updated_fields.add(updated_value(plankton, 'min_sieve', min_sieve))
+            updated_fields.add(updated_value(plankton, 'max_sieve', max_sieve))
+            updated_fields.add(updated_value(plankton, 'split_fraction', split_fraction))
+
+            match what_was_it:
+                case 1:
+                    updated_fields.add(updated_value(plankton, 'count', value))
+                case 2:
+                    updated_fields.add(updated_value(plankton, 'raw_wet_weight', value))
+                case 3:
+                    updated_fields.add(updated_value(plankton, 'raw_dry_weight', value))
+                case 4:
+                    updated_fields.add(updated_value(plankton, 'volume', value))
+                case 5:
+                    updated_fields.add(updated_value(plankton, 'percent', value))
+                case _:
+                    raise ValueError({'missing_value', 'what_was_it'})
+
+            updated_fields.remove("")
+            if len(updated_fields) > 0:
+                if plankton not in update_plankton['objects']:
+                    update_plankton['objects'].append(plankton)
+                update_plankton['fields'].update(updated_fields)
+
+        else:
             if plankton_key not in create_plankton.keys():
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, gear_type=gear_type, min_sieve=min_sieve, max_sieve=max_sieve,
-                    split_fraction=split_fraction
+                    split_fraction=split_fraction, stage_id=stage, sex_id=sex
                 )
-
-                if stage:
-                    plankton.stage_id = stage
-
-                if sex:
-                    plankton.sex_id = sex
-
                 create_plankton[plankton_key] = plankton
 
             plankton = create_plankton[plankton_key]
@@ -298,3 +324,8 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
     if len(create_plankton) > 0:
         logger.info(_("Creating Zooplankton Samples"))
         core_models.PlanktonSample.objects.bulk_create(create_plankton.values())
+
+    if len(update_plankton['objects']) > 0:
+        logger.info(_("Updating Zooplankton Samples"))
+        fields = [field for field in update_plankton['fields']]
+        core_models.PlanktonSample.objects.bulk_update(update_plankton['objects'], fields)

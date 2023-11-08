@@ -693,9 +693,9 @@ def hx_sample_upload_ctd(request, mission_id):
             files = [f for f in os.listdir(bottle_dir) if f.upper().endswith('.BTL')]
             if 'show_all' not in request.GET:
                 initial_args['show_some'] = True
-                loaded_files = [f[0].upper() for f in models.Sample.objects.filter(
+                loaded_files = [f.upper() for f in models.Sample.objects.filter(
                         type__is_sensor=True,
-                        bottle__event__mission_id=mission_id).values_list('file').distinct()]
+                        bottle__event__mission_id=mission_id).values_list('file', flat=True).distinct()]
                 files = [f for f in files if f.upper() not in loaded_files]
                 initial_args['show_some'] = True
 
@@ -719,7 +719,7 @@ def hx_sample_upload_ctd(request, mission_id):
 
         logger.info(sample_file_queue.empty())
         for file in files:
-            sample_file_queue.put({"mission": mission, "file": file, "bottle_dir": bottle_dir})
+            sample_file_queue.put((mission, file,))
 
         start = True
         for thread in threading.enumerate():

@@ -25,7 +25,8 @@ from dart2.utils import load_svg
 
 import logging
 
-logger = logging.getLogger('dart.user')
+user_logger = logging.getLogger('dart.user')
+logger = logging.getLogger('dart')
 
 
 # convenience method to convert html attributes from a string into a dictionary
@@ -451,8 +452,10 @@ def upload_bcs_d_data(mission: models.Mission, uploader: str):
     bcs_d = biochem.upload.get_bcs_d_model(mission.get_biochem_table_name)
     exists = biochem.upload.check_and_create_model('biochem', bcs_d)
 
-    # 2) if the BCS_D table doesn't exist, create with all the bottles
-    bottles = models.Bottle.objects.filter(event__mission=mission)
+    # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
+    ctd_events = models.Event.objects.filter(mission=mission, instrument__type=models.InstrumentType.ctd)
+    bottles = models.Bottle.objects.filter(event__in=ctd_events)
+    # bottles = models.Bottle.objects.filter(event__mission=mission)
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
         last_uploaded = bcs_d.objects.all().values_list('created_date', flat=True).distinct().last()
@@ -462,11 +465,11 @@ def upload_bcs_d_data(mission: models.Mission, uploader: str):
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-        logger.info(_("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCS rows"))
         bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_d_rows(uploader, bcs_d, bottles)
 
         #send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        logger.info(_("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCS rows"))
         biochem.upload.upload_bcs_d(bcs_d, bcs_create, bcs_update, updated_fields)
 
 
@@ -596,12 +599,12 @@ def upload_bio_chem(request, **kwargs):
         sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
 
         # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
-        logger.info(_("Validating Sensor/Sample Datatypes"))
+        user_logger.info(_("Validating Sensor/Sample Datatypes"))
         errors = validate_samples_for_biochem(mission=mission, sample_types=sample_types)
 
         if errors:
             #send_user_notification_queue('biochem', _("Datatypes missing see errors"))
-            logger.info(_("Datatypes missing see errors"))
+            user_logger.info(_("Datatypes missing see errors"))
             models.Error.objects.bulk_create(errors)
 
         try:

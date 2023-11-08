@@ -15,8 +15,8 @@ from core import models as core_models
 
 import logging
 
-logger = logging.getLogger('dart.user')
-error_logger = logging.getLogger('dart')
+user_logger = logging.getLogger('dart.user')
+logger = logging.getLogger('dart')
 
 
 def create_model(database_name: str, model):
@@ -44,7 +44,7 @@ def check_and_create_model(database_name: str, upload_model) -> bool:
             raise e
 
     except Exception as e:
-        error_logger.exception(e)
+        logger.exception(e)
 
     return False
 
@@ -100,7 +100,7 @@ def get_bcs_p_model(table_name: str) -> Type[models.BcsP]:
 def db_write_by_chunk(model, chunk_size, data, fields=None):
     chunks = math.ceil(len(data) / chunk_size)
     for i in range(0, len(data), chunk_size):
-        logger.info(_("Writing chunk to database") + " : %d/%d", (int(i/chunk_size)+1), chunks)
+        user_logger.info(_("Writing chunk to database") + " : %d/%d", (int(i / chunk_size) + 1), chunks)
         batch = data[i:i + chunk_size]
         if fields:
             model.objects.bulk_update(batch, fields)
@@ -112,11 +112,11 @@ def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.Bcs
                  updated_fields: [str]):
     chunk_size = 100
     if len(bcs_rows_to_create) > 0:
-        logger.info(_("Creating BCS rows") + f" : {len(bcs_rows_to_create)}")
+        user_logger.info(_("Creating BCS rows") + f" : {len(bcs_rows_to_create)}")
         db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_create)
 
     if len(bcs_rows_to_update) > 0:
-        logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
+        user_logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
         db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
@@ -124,7 +124,7 @@ def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.Bcs
 def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[core_models.Bottle],
                  batch_name: str = None) -> [[models.BcsD], [models.BcsD], [str]]:
 
-    logger.info("Creating/updating BCS table")
+    user_logger.info("Creating/updating BCS table")
     bcs_objects_to_create = []
     bcs_objects_to_update = []
 
@@ -134,7 +134,7 @@ def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[
     updated_fields = set()
     total_bottles = len(bottles)
     for count, bottle in enumerate(bottles):
-        logger.info(_("Compiling Bottle") + " : %d/%d", (count+1), total_bottles)
+        user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
         # some of the fields below may be the same as the current value if updating. When that happens
         # a blank string is added tot he updated_fields set. Before adding a record to the 'things that need
         # updating' list we check to see if the updated_fields set is empty by first removing the blank string
@@ -230,7 +230,7 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
     update_discrete_fields = set()
     update_discrete_fields.add('bio_upload_date')
     if len(bcd_rows_to_create) > 0:
-        logger.info(f"Createing BCD rows: {len(bcd_rows_to_create)}")
+        user_logger.info(f"Createing BCD rows: {len(bcd_rows_to_create)}")
 
         # writting thousands of rows at one time is... apparently bad. Break the data up into manageable chunks.
         db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_create)
@@ -238,15 +238,15 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
         update_rows: [models.BcdD] = []
         total_samples = len(samples)
         for count, ds_sample in enumerate(samples):
-            logger.info(_("Updating keys") + " : %d/%d", (count+1), total_samples)
+            user_logger.info(_("Updating keys") + " : %d/%d", (count + 1), total_samples)
             data_type_seq = ds_sample.datatype.data_type_seq
             collector_id = f'{ds_sample.sample.bottle.bottle_id}_{ds_sample.replicate}'
             try:
                 bc_row = bcd_d_model.objects.get(dis_detail_data_type_seq=data_type_seq,
                                                  dis_detail_collector_samp_id=collector_id)
             except bcd_d_model.DoesNotExist as e:
-                error_logger.exception(e)
-                error_logger.error(f"row matching data_type_seq {data_type_seq} and id {collector_id} does not exist")
+                logger.exception(e)
+                logger.error(f"row matching data_type_seq {data_type_seq} and id {collector_id} does not exist")
                 continue
 
             bc_row.dis_detail_collector_samp_id = ds_sample.sample.bottle.bottle_id
@@ -261,11 +261,11 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
 
         # if new rows are being created then the dis_data_num in the local database needs to be updated
         # to the same dis_data_num used by the biochem tables
-        logger.info("Updating discrete sample dis_data_num for biochem link")
+        user_logger.info("Updating discrete sample dis_data_num for biochem link")
         core_models.DiscreteSampleValue.objects.bulk_update(samples, [field for field in update_discrete_fields])
 
     if len(bcd_rows_to_update) > 0:
-        logger.info(f"Updating BCD rows: {len(bcd_rows_to_update)}")
+        user_logger.info(f"Updating BCD rows: {len(bcd_rows_to_update)}")
         db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_update, updated_fields)
 
         for ds_sample in samples:
@@ -304,13 +304,13 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
 
     existing_samples = {sample.dis_data_num: sample for sample in
                         bcd_d_model.objects.filter(dis_detail_data_type_seq__in=data_types)}
-    logger.info("Compiling BCD samples")
+    user_logger.info("Compiling BCD samples")
 
     updated_fields = set()
     total_samples = len(samples)
     for count, ds_sample in enumerate(samples):
-        logger.info(_("Compiling sample") + f" : {ds_sample.sample.type.short_name} - " + "%d/%d",
-                    (count+1), total_samples)
+        user_logger.info(_("Compiling sample") + f" : {ds_sample.sample.type.short_name} - " + "%d/%d",
+                         (count+1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event

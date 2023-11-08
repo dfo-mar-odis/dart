@@ -6,7 +6,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
-from core.parsers.PlanktonParser import parse_phytoplankton
+from core.parsers.PlanktonParser import parse_phytoplankton, parse_zooplankton
 from core.parsers.SampleParser import get_excel_dataframe
 from core.views import MissionMixin
 from core import forms
@@ -199,8 +199,12 @@ def import_plankton(request, **kwargs):
 
         try:
             dataframe = get_excel_dataframe(stream=data, sheet_number=(tab - 1), header_row=(header - 1))
+            dataframe.columns = map(str.upper, dataframe.columns)
 
-            parse_phytoplankton(mission_id, file.name, dataframe)
+            if 'WHAT_WAS_IT' in dataframe.columns:
+                parse_zooplankton(mission_id, file.name, dataframe)
+            else:
+                parse_phytoplankton(mission_id, file.name, dataframe)
 
             message_div.append(forms.blank_alert(**attrs))
             # clear the file input upon success

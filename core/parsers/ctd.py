@@ -2,15 +2,19 @@ import ctd
 import re
 import os
 
+import numpy as np
 import pandas
 import pytz
 
 from django.utils.translation import gettext as _
 
+import core.models
 from core import models as core_models
 from core import validation
 
 import logging
+
+from dart2.utils import updated_value
 
 logger = logging.getLogger("dart")
 
@@ -260,7 +264,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         bottle_id = bottle_number + event.sample_id - 1
 
         # if the Bottle S/N column is present then use that values as the bottle ID
-        if 'Bottle_' in row[1]:
+        if 'bottle_' in row[1] and not np.isnan(row[1]['bottle_']):
             bottle_id = int(row[1]['bottle_'])
 
         date = row[1]["date"]
@@ -301,66 +305,84 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         core_models.ValidationError.objects.bulk_create(errors)
 
 
-# Todo: This function doesn't follow the standard pattern for creating/updating database elements
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     file_name = data_frame._metadata['name'] + ".BTL"
+    skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
+
     data_frame_avg = data_frame[data_frame['Statistic'] == 'avg']
     data_frame_avg._metadata = data_frame._metadata
 
-    new_samples: [core_models.DiscreteSampleValue] = []
-    update_samples: [core_models.DiscreteSampleValue] = []
-    bottle_id_columns = ['Bottle']
-    if 'Bottle_' in data_frame_avg.columns:
-        bottle_id_columns.append('Bottle_')
+    # convert all column names to lowercase
+    data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
-    for column_name in column_headers:
-        try:
-            sensor_type = core_models.SampleType.objects.get(short_name__iexact=column_name)
+    new_samples: [core_models.Sample] = []
+    update_samples: [core_models.Sample] = []
+    new_discrete_samples: [core_models.DiscreteSampleValue] = []
+    update_discrete_samples: [core_models.DiscreteSampleValue] = []
+    # validate and remove bottles that don't exist
+    if data_frame_avg.shape[0] > (event.total_samples + 1):
+        message = _('Event contained more than the expected number of bottles. Additional bottles will be dropped. ')
+        message += _("Event") + f" #{event.event_id} "
+        message += _("Expected") + f"[{(event.total_samples+1)}] "
+        message += _("Found") + f"[{data_frame_avg.shape[0]}]"
+        logger.warning(message)
 
-            columns = bottle_id_columns
-            columns.append(column_name)
-            df = data_frame_avg[columns]
-            create_sensors: {int: core_models.Sample} = {}
-            for data in df.iterrows():
-                bottle = event.bottles.filter(bottle_number=data[1]["Bottle"])
-                if not bottle.exists():
-                    message = _('Bottle') + f" {data[1]['Bottle']}"
-                    if 'Bottle_' in bottle_id_columns:
-                        message += " " + _('with bottle id') + f" {data[1]['Bottle_']}"
-                    message += " " + _('for event') + f" {event.event_id}"
-                    message += " " + _("does not exist. It may be outside the bottle range for the event")
-                    logger.warning(message)
-                    continue
+        drop_rows = data_frame_avg.shape[0] - (event.total_samples + 1)
+        data_frame_avg = data_frame_avg[:-drop_rows]
 
-                bottle = bottle[0]
-                sensor = core_models.Sample.objects.filter(bottle=bottle, type=sensor_type, file=file_name)
-                if sensor.exists():
-                    sensor = sensor[0]
-                elif bottle.bottle_id in create_sensors:
-                    sensor = create_sensors[bottle.bottle_id]
-                else:
-                    sensor = core_models.Sample(bottle=bottle, type=sensor_type, file=file_name)
-                    create_sensors[bottle.bottle_id] = sensor
+    bottles = core_models.Bottle.objects.filter(event=event)
+    sample_types = {
+        column: core.models.SampleType.objects.get(short_name__iexact=column) for column in column_headers
+    }
 
-                # bottle files don't contain replicates for discrete values, there should only be one sample value
-                # per bottle per sensor type
-                if sensor.pk and sensor.discrete_values.all().exists():
-                    discrete_value = sensor.discrete_values.get(replicate=1)
-                    discrete_value.value = data[1][column_name]
-                    update_samples.append(discrete_value)
-                else:
-                    discrete_value = core_models.DiscreteSampleValue(sample=sensor, value=data[1][column_name])
-                    new_samples.append(discrete_value)
+    for row in data_frame_avg.iterrows():
+        bottle_number = row[1]["bottle"]
+        bottle_id = bottle_number + event.sample_id - 1
 
-            if create_sensors:
-                core_models.Sample.objects.bulk_create(create_sensors.values())
-        except Exception as ex:
-            logger.exception(ex)
+        # if the Bottle S/N column is present then use that values as the bottle ID
+        if 'bottle_' in row[1]:
+            bottle_id = int(row[1]['bottle_'])
 
-    core_models.DiscreteSampleValue.objects.bulk_create(new_samples)
-    core_models.DiscreteSampleValue.objects.bulk_update(update_samples, fields=["value"])
+        if not bottles.filter(bottle_id=bottle_id).exists():
+            message = _("Bottle does not exist for event")
+            message += _("Event") + f" #{event.event_id} " + _("Bottle ID") + f" #{bottle_id}"
 
+            logger.warning(message)
+            continue
+
+        bottle = bottles.get(bottle_id=bottle_id)
+        for column in column_headers:
+            if (sample := core_models.Sample.objects.filter(bottle=bottle, type=sample_types[column])).exists():
+                sample = sample.first()
+                if updated_value(sample, 'file', file_name):
+                    update_samples.append(sample)
+
+                discrete_value = sample.discrete_values.all().first()
+                new_value = row[1][column.lower()]
+                if updated_value(discrete_value, 'value', new_value):
+                    update_discrete_samples.append(discrete_value)
+            else:
+                sample = core_models.Sample(bottle=bottle, type=sample_types[column], file=file_name)
+                new_samples.append(sample)
+                discrete_value = core_models.DiscreteSampleValue(sample=sample, value=row[1][column.lower()])
+                new_discrete_samples.append(discrete_value)
+
+    if len(new_samples) > 0:
+        logger.info("Creating CTD samples for file" + f" : {file_name}")
+        core_models.Sample.objects.bulk_create(new_samples)
+
+    if len(update_samples) > 0:
+        logger.info("Creating CTD samples for file" + f" : {file_name}")
+        core_models.Sample.objects.bulk_update(update_samples, ['file'])
+
+    if len(new_discrete_samples) > 0:
+        logger.info("Adding values to samples" + f" : {file_name}")
+        core_models.DiscreteSampleValue.objects.bulk_create(new_discrete_samples)
+
+    if len(update_discrete_samples) > 0:
+        logger.info("Updating sample values" + f" : {file_name}")
+        core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
 # BIO and the NFL region track events within bottle files differently
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
