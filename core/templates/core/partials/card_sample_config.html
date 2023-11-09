@@ -11,7 +11,7 @@
         <h6 class="col align-self-end">{% trans 'File Configuration' %} : {{ sample_config }}</h6>
         <div class="col-auto">
             <button type="button" class="btn btn-danger btn-sm" name='delete'
-                    hx-post="{% url 'core:delete_sample_config' sample_config.pk %}"
+                    hx-post="{% url 'core:mission_samples_delete_sample_config' sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}"
                     hx-swap="delete"
                     hx-confirm="{% trans "Are you sure?" %}"
@@ -19,14 +19,14 @@
         </div>
         <div class="col-auto">
             <button type="button" class="btn btn-primary btn-sm me-1" name='edit'
-                    hx-post="{% url 'core:new_sample_config' sample_config.pk %}"
+                    hx-post="{% url 'core:mission_samples_new_sample_config' sample_config.pk %}"
                     hx-target="#div_id_sample_type_holder"
                     {# just a little javascript to scroll back to the new sample type form #}
                     hx-on="htmx:afterRequest: window.location.href = '#div_id_sample_type';"
             >{% custom_icon 'pencil-square' %}</button>
             <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-secondary{% endif %} btn-sm" name='load'
                     id="div_id_sample_config_card_{{ sample_config.pk }}_load_button"
-                    hx-get="{% url 'core:load_samples' sample_config.pk %}"
+                    hx-get="{% url 'core:mission_samples_load_samples' sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-select="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-swap="outerHTML"

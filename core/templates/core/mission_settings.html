@@ -7,15 +7,15 @@
 {% block nav_button_block %}
     {% if object %}
     <li class="nav-item me-2">
-        <a href="{% url 'core:event_details' object.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_events_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:sample_details' object.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_samples_sample_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:plankton_details' object.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_plankton_plankton_details' object.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     {% endif %}

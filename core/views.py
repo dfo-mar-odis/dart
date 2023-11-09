@@ -22,7 +22,7 @@ import logging
 
 logger = logging.getLogger('dart')
 
-# This queue is used for processing sample files in the hx_sample_upload_ctd function
+# This queue is used for processing sample files in the sample_upload_ctd function
 sample_file_queue = queue.Queue()
 
 reports = {
@@ -57,7 +57,7 @@ class MissionCreateView(MissionMixin, GenericCreateView):
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):
-        success = reverse_lazy("core:event_details", args=(self.object.pk, ))
+        success = reverse_lazy("core:mission_events_details", args=(self.object.pk, ))
         return success
 
 
@@ -139,7 +139,7 @@ def load_ctd_files(mission):
     # The mission_samples.html page has a websocket notifications element on it. We can send messages
     # to the notifications element to display progress to the user, but we can also use it to
     # send an update request to the page when loading is complete.
-    url = reverse_lazy("core:hx_sample_upload_ctd", args=(mission.pk,))
+    url = reverse_lazy("core:mission_samples_sample_upload_ctd", args=(mission.pk,))
     hx = {
         'hx-get': url,
         'hx-trigger': 'load',

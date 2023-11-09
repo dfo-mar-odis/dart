@@ -2,14 +2,18 @@ import logging
 
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
+from django.core.cache import caches
 from django.http import HttpResponse
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
+from django_pandas.io import read_frame
 
+import core.models
 from core.parsers.PlanktonParser import parse_phytoplankton, parse_zooplankton
 from core.parsers.SampleParser import get_excel_dataframe
 from core.views import MissionMixin
-from core import forms
+from core import forms, form_biochem_database
+from core.form_biochem_database import BiochemUploadForm
 
 from dart2.views import GenericDetailView
 
@@ -20,6 +24,9 @@ logger = logging.getLogger('dart')
 class PlanktonDetails(MissionMixin, GenericDetailView):
     page_title = _("Mission Plankton")
     template_name = "core/mission_plankton.html"
+
+    def get_upload_url(self):
+        return reverse_lazy("core:mission_plankton_list_plankton", args=(self.object.pk,))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -35,7 +42,7 @@ def load_plankton(request, **kwargs):
 
     if request.method == 'GET':
         # you can only get the file though a POST request
-        url = reverse_lazy('core:load_plankton', args=(mission_id,))
+        url = reverse_lazy('core:mission_plankton_load_plankton', args=(mission_id,))
         attrs = {
             'component_id': 'div_id_message',
             'message': _("Loading"),
@@ -146,7 +153,7 @@ def import_plankton(request, **kwargs):
 
     if request.method == 'GET':
         # you can only get the file though a POST request
-        url = reverse_lazy('core:import_plankton', args=(mission_id,))
+        url = reverse_lazy('core:mission_plankton_import_plankton', args=(mission_id,))
         attrs = {
             'component_id': 'div_id_message',
             'message': _("Loading"),
@@ -216,7 +223,7 @@ def import_plankton(request, **kwargs):
             input.attrs['name'] = "plankton_file"
             input.attrs['accept'] = ".xls,.xlsx,.xlsm"
             input.attrs['hx-trigger'] = "change"
-            input.attrs['hx-get'] = reverse_lazy('core:load_plankton', args=(mission_id,))
+            input.attrs['hx-get'] = reverse_lazy('core:mission_plankton_load_plankton', args=(mission_id,))
             input.attrs['hx-swap'] = "none"
 
             soup.append(input)
@@ -238,3 +245,88 @@ def import_plankton(request, **kwargs):
             message_div.append(forms.blank_alert(**attrs))
 
         return HttpResponse(soup)
+
+
+def list_plankton(request, **kwargs):
+
+    mission_id = kwargs['mission_id']
+
+    soup = BeautifulSoup('', "html.parser")
+    div = soup.new_tag('div')
+    div.attrs['id'] = "div_id_plankton_data_table"
+    div.attrs['hx-trigger'] = 'update_samples from:body'
+    div.attrs['hx-get'] = reverse_lazy('core:mission_plankton_list_plankton', args=(mission_id,))
+    soup.append(div)
+
+    page = int(request.GET['page'] if 'page' in request.GET else 0)
+    page_limit = 50
+    page_start = page_limit * page
+
+    samples = core.models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id).order_by('bottle__bottle_id')
+    if samples.exists():
+        data_columns = ["Sample", "Pressure", "Type", "Name", "Sex", "Stage", "Count", "Wet", "Dry", "Volume",
+                        "Percent"]
+
+        samples = samples.values("bottle__bottle_id", "bottle__pressure", "bottle__event__instrument__type",
+                                 "taxa__taxonomic_name", "sex__name", "stage__name", "count", "raw_wet_weight",
+                                 "raw_dry_weight", "volume", "percent")
+        samples = samples[page_start:(page_start + page_limit)]
+
+        dataframe = read_frame(samples)
+        dataframe.columns = data_columns
+        dataframe.fillna('---', inplace=True)
+        dataframe['Type'] = dataframe['Type'].map({1: "phyto", 2: "zoo"}, na_action='ignore')
+
+        style = dataframe.style.hide(axis="index")
+
+        table_html = style.to_html()
+        table_soup = BeautifulSoup(table_html, 'html.parser')
+
+        table = table_soup.find('table')
+
+        table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
+
+        last_tr = table.find('tbody').find_all('tr')[-1]
+        last_tr.attrs['hx-trigger'] = 'intersect once'
+        last_tr.attrs['hx-get'] = reverse_lazy('core:mission_plankton_list_plankton', args=(mission_id,)) + f"?page={page + 1}"
+        last_tr.attrs['hx-swap'] = "afterend"
+
+        div.append(table)
+        if page > 0:
+            return HttpResponse(table.find('tbody').find_all('tr'))
+
+        return HttpResponse(soup)
+
+    alert_attrs = {
+        'component_id': 'div_id_plankton_data_table_alert',
+        'alert_type': 'info',
+        'message': _("No Plankton samples loaded")
+    }
+    alert_soup = forms.blank_alert(**alert_attrs)
+    div.append(alert_soup)
+
+    return HttpResponse(soup)
+
+
+def get_plankton_db_card(request, **kwargs):
+    mission_id = kwargs['mission_id']
+    url = reverse_lazy("core:mission_plankton_biochem_upload_plankton")
+
+    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, url)
+
+    return HttpResponse(form_soup)
+
+
+def upload_plankton(request):
+    return None
+
+
+# ###### Plankton loading ###### #
+plankton_urls = [
+    path('plankton/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
+    path('plankton/load/<int:mission_id>/', load_plankton, name="mission_plankton_load_plankton"),
+    path('plankton/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
+    path('plankton/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
+    path('plankton/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
+    path('plankton/biochem/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
+]

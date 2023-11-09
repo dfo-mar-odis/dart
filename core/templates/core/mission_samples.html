@@ -10,11 +10,11 @@
     {#             href="#search_form">{% custom_icon 'search' %}</div>#}
     {#    </li>#}
     <li class="nav-item me-2">
-        <a href="{% url 'core:event_details' mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_events_details' mission.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:plankton_details' mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_plankton_plankton_details' mission.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     <li class="nav-item me-2">
@@ -69,8 +69,7 @@
                 </div>
             </div>
         </div>
-        <div class="mt-2">
-            {% include 'core/partials/card_biochem_db_connection.html' %}
+        <div class="mt-2" hx-trigger="load" hx-get="{% url "core:mission_samples_get_all_discrete_upload_db_card" mission.pk %}">
         </div>
         <div class="mt-2">
             {% include 'core/partials/card_biochem_validation.html' %}

@@ -1,5 +1,6 @@
 from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DetailView, TemplateView
+from django.views.generic.base import ContextMixin
 from django_filters.views import FilterView
 
 from . import urls
@@ -8,7 +9,7 @@ from . import settings
 from biochem import models as upload_models
 
 
-class GenericViewMixin:
+class GenericViewMixin(ContextMixin):
     page_title = None
     home_url = reverse_lazy('core:mission_filter')
     theme = 'light'

@@ -13,7 +13,7 @@
     <div class="collapse col" id="div_id_bio_error_card_body">
         <div class="card-body vertical-scrollbar" hx-trigger="load, biochem_updated from:body" hx-target="#bio_errors"
               hx-swap="outerHTML" hx-select="#bio_errors"
-             hx-get="{% url 'core:hx_get_biochem_errors' mission.pk %}">
+             hx-get="{% url 'core:form_biochem_errors' mission.pk %}">
             <ul id="bio_errors" class="list-group" hx-swap-oob="true">
             {% for error in biochem_errors %}
                 <li class="list-group-item">{{ error.message }}</li>

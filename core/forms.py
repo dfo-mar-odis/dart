@@ -252,10 +252,10 @@ class ActionForm(forms.ModelForm):
 
         event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
         submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#actions_form_id",
-                               hx_post=reverse_lazy('core:hx_action_new'),
+                               hx_post=reverse_lazy('core:mission_events_action_new'),
                                )
         clear_button = Submit('reset', '0', css_class='btn btn-sm btn-secondary', hx_target='#actions_form_id',
-                              hx_get=reverse_lazy('core:hx_action_update', args=(event_pk,)))
+                              hx_get=reverse_lazy('core:mission_events_action_update', args=(event_pk,)))
         action_id_element = None
         if self.instance.pk:
             action_id_element = Hidden('id', self.instance.pk)
@@ -297,10 +297,10 @@ class AttachmentForm(forms.ModelForm):
 
         event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
         submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#attachments_form_id",
-                               hx_post=reverse_lazy('core:hx_attachment_new'),
+                               hx_post=reverse_lazy('core:mission_events_attachment_new'),
                                )
         clear_button = Submit('reset', '0', css_class='btn btn-sm btn-secondary', hx_target='#attachments_form_id',
-                              hx_get=reverse_lazy('core:hx_attachment_update', args=(event_pk,)))
+                              hx_get=reverse_lazy('core:mission_events_attachment_update', args=(event_pk,)))
         attachment_id_element = None
         if self.instance.pk:
             attachment_id_element = Hidden('id', self.instance.pk)
@@ -339,7 +339,7 @@ class EventForm(forms.ModelForm):
         self.helper.form_tag = False
 
         submit_label = 'Submit'
-        submit_url = reverse_lazy('core:hx_event_update')
+        submit_url = reverse_lazy('core:mission_events_update')
         target_id = "#div_event_content_id"
 
         event_element = Column(Field('event_id', css_class='form-control-sm'))
@@ -448,7 +448,7 @@ class SampleTypeForm(forms.ModelForm):
 
         datatype_filter = Field('datatype_filter')
         datatype_filter.attrs = {
-            "hx-get": reverse_lazy('core:new_sample_type'),
+            "hx-get": reverse_lazy('core:sample_type_new'),
             "hx-target": "#div_id_datatype",
             "hx-select": "#div_id_datatype",  # natural id that crispy-forms assigns to the datatype div
             "hx-trigger": "keyup changed delay:1s",
@@ -539,20 +539,20 @@ class BioChemDataType(forms.Form):
         self.helper = FormHelper(self)
 
         data_type_filter = Field('data_type_filter', css_class="form-control form-control-sm")
-        data_type_filter.attrs['hx-get'] = reverse_lazy('core:hx_update_sample_type')
+        data_type_filter.attrs['hx-get'] = reverse_lazy('core:mission_samples_update_sample_type')
         data_type_filter.attrs['hx-trigger'] = 'keyup changed delay:500ms, change'
         data_type_filter.attrs['hx-target'] = "#div_id_data_type_row"
         data_type_filter.attrs['hx-select'] = "#div_id_data_type_row"
 
         data_type_code = Field('data_type_code', id='id_data_type_code', css_class="form-control-sm")
-        data_type_code.attrs['hx-get'] = reverse_lazy('core:hx_update_sample_type')
+        data_type_code.attrs['hx-get'] = reverse_lazy('core:mission_samples_update_sample_type')
         data_type_code.attrs['hx-trigger'] = 'keyup changed delay:500ms, change'
         data_type_code.attrs['hx-target'] = "#id_data_type_description"
         data_type_code.attrs['hx-select-oob'] = "#id_data_type_description"
 
         data_type_description = Field('data_type_description', id='id_data_type_description',
                                       css_class='form-control form-select-sm')
-        data_type_description.attrs['hx-get'] = reverse_lazy('core:hx_update_sample_type')
+        data_type_description.attrs['hx-get'] = reverse_lazy('core:mission_samples_update_sample_type')
         data_type_description.attrs['hx-trigger'] = 'change'
         data_type_description.attrs['hx-target'] = "#id_data_type_code"
         data_type_description.attrs['hx-select'] = "#id_data_type_code"
@@ -560,7 +560,7 @@ class BioChemDataType(forms.Form):
         apply_attrs = {
             'name': 'apply_data_type_row',
             'title': _('Apply Datatype to row(s)'),
-            'hx-get': reverse_lazy('core:hx_update_sample_type'),
+            'hx-get': reverse_lazy('core:mission_samples_update_sample_type'),
             'hx-target': "#div_id_data_type_message",
             'hx-swap': 'innerHTML'
         }
@@ -570,7 +570,7 @@ class BioChemDataType(forms.Form):
         apply_attrs = {
             'name': 'apply_data_type_sensor',
             'title': _('Apply Datatype to mission'),
-            'hx-get': reverse_lazy('core:hx_update_sample_type'),
+            'hx-get': reverse_lazy('core:mission_samples_update_sample_type'),
             'hx-target': "#div_id_data_type_message",
             'hx-swap': 'innerHTML'
         }
@@ -671,7 +671,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.fields['sample_type'].choices = sample_type_choices
 
         hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:new_sample_config'),
+            'hx-post': reverse_lazy('core:mission_samples_new_sample_config'),
             'hx-select': "#div_id_fields_row",
             'hx-target': "#div_id_fields_row",
             'hx-swap': "outerHTML",
@@ -701,7 +701,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         if self.instance.pk:
             config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
 
-        url = reverse_lazy('core:new_sample_config')
+        url = reverse_lazy('core:mission_samples_new_sample_config')
         hx_sample_type_attrs = {
             'hx_get': url,
             'hx_trigger': 'change',
@@ -742,7 +742,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         attrs = {
             'css_class': "btn btn-primary btn-sm ms-2",
             'name': "add_sample_type",
-            'hx_get': reverse_lazy("core:save_sample_config"),
+            'hx_get': reverse_lazy("core:mission_samples_save_sample_config"),
             'hx_target': "#button_row",
             'hx_select': "#div_id_loaded_sample_type_message",
         }
@@ -751,7 +751,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         button_row.fields[0].insert(0, button_new)
 
         if self.instance.pk:
-            attrs['hx_get'] = reverse_lazy("core:save_sample_config", args=(self.instance.pk,))
+            attrs['hx_get'] = reverse_lazy("core:mission_samples_save_sample_config", args=(self.instance.pk,))
             attrs['name'] = "update_sample_type"
 
             attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
@@ -779,11 +779,11 @@ class BottleSelection(forms.Form):
         # self.helper.form_tag = False
         self.helper.attrs = {
             "id": "form_id_ctd_bottle_upload",
-            "hx_get": reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],)),
+            "hx_get": reverse_lazy("core:mission_samples_sample_upload_ctd", args=(kwargs['initial']['mission'],)),
             'hx_target': '#div_id_bottle_upload_btn_row',
         }
 
-        url = reverse_lazy("core:hx_sample_upload_ctd", args=(kwargs['initial']['mission'],))
+        url = reverse_lazy("core:mission_samples_sample_upload_ctd", args=(kwargs['initial']['mission'],))
         url += f"?bottle_dir={kwargs['initial']['bottle_dir']}"
         all_attrs = {
             'title':  _('Show Unloaded'),
@@ -824,7 +824,7 @@ class PlanktonForm(forms.Form):
         self.helper = FormHelper(self)
         self.helper.form_tag = False
 
-        url = reverse_lazy("core:load_plankton", args=(mission_id,))
+        url = reverse_lazy("core:mission_plankton_load_plankton", args=(mission_id,))
         tab_field = Field('tab')
         tab_field.attrs['hx-post'] = url
         tab_field.attrs['hx-swap'] = "none"
@@ -835,7 +835,7 @@ class PlanktonForm(forms.Form):
         header_field.attrs['hx-swap'] = "none"
         header_field.attrs['class'] = "form-control form-control-sm"
 
-        importurl = reverse_lazy("core:import_plankton", args=(mission_id,))
+        importurl = reverse_lazy("core:mission_plankton_import_plankton", args=(mission_id,))
         button_attrs = {
             'title': _('Import'),
             'name': 'import',

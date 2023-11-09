@@ -11,7 +11,7 @@
     {% for event in events %}
         <tr id="event-{{ event.pk }}"
             {% if event.validation_errors.all %}class="eventErr"{% endif %}
-            hx-get="{% url 'core:hx_event_select' event.pk %}"
+            hx-get="{% url 'core:mission_events_select' event.pk %}"
             hx-target="#div_event_details_id"
             hx-on="click: update_selected({{ event.pk }})"
         >
