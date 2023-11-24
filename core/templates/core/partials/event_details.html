@@ -30,6 +30,19 @@
 </table>
 {% endif %}
 
+<table class="table table-striped table-sm">
+    <thead>
+    <tr><th>{% trans 'Wire Out' %}</th><th>{% trans 'Flowmeter Start' %}</th><th>{% trans 'Flowmeter End' %}</th></tr>
+    </thead>
+    <tbody>
+    <tr>
+        <td>{% if event.wire_out %}{{ event.wire_out }}{% else %}---{% endif %}</td>
+        <td>{% if event.flow_start %}{{ event.flow_start }}{% else %}---{% endif %}</td>
+        <td>{% if event.flow_end %}{{ event.flow_end }}{% else %}---{% endif %}</td>
+    </tr>
+    </tbody>
+</table>
+
 {% include 'core/partials/table_action.html' with event=event %}
 {% include 'core/partials/table_attachment.html' with event=event %}
 

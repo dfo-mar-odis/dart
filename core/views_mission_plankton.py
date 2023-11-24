@@ -140,7 +140,9 @@ def load_plankton(request, **kwargs):
 
             form_div.append(form_soup)
 
-            return HttpResponse(soup)
+            response = HttpResponse(soup)
+
+            return response
 
         post_card = forms.blank_alert(**attrs)
         message_div.append(post_card)
@@ -149,20 +151,25 @@ def load_plankton(request, **kwargs):
 
 
 def import_plankton(request, **kwargs):
+
     mission_id = kwargs['mission_id']
 
     if request.method == 'GET':
         # you can only get the file though a POST request
         url = reverse_lazy('core:mission_plankton_import_plankton', args=(mission_id,))
+        component_id = "div_id_message"
         attrs = {
-            'component_id': 'div_id_message',
+            'component_id': component_id,
             'message': _("Loading"),
             'alert_type': 'info',
             'hx-trigger': "load",
             'hx-swap-oob': 'true',
             'hx-post': url,
+            'hx-ext': "ws",
+            'ws-connect': f"/ws/biochem/notifications/{component_id}/"
         }
         load_card = forms.save_load_component(**attrs)
+
         return HttpResponse(load_card)
     elif request.method == 'POST':
 
@@ -213,7 +220,24 @@ def import_plankton(request, **kwargs):
             else:
                 parse_phytoplankton(mission_id, file.name, dataframe)
 
-            message_div.append(forms.blank_alert(**attrs))
+            if (errs := core.models.FileError.objects.filter(mission_id=mission_id,
+                                                             file_name__iexact=file.name)).exists():
+                # might as well add the list of issues while loading the file to the response so the
+                # user knows what went wrong.
+                attrs['message'] = _("Completed with issues")
+                attrs['alert_type'] = 'warning'
+                alert = forms.blank_alert(**attrs)
+                ul = soup.new_tag('ul')
+                ul.attrs['class'] = 'vertical-scrollbar-sm'
+                for err in errs:
+                    li = soup.new_tag('li')
+                    li.string = err.message
+                    ul.append(li)
+                alert.find('div').find('div').append(ul)
+            else:
+                alert = forms.blank_alert(**attrs)
+
+            message_div.append(alert)
             # clear the file input upon success
             input = soup.new_tag('input')
             input.attrs['id'] = "id_input_sample_file"
@@ -244,7 +268,9 @@ def import_plankton(request, **kwargs):
             }
             message_div.append(forms.blank_alert(**attrs))
 
-        return HttpResponse(soup)
+        response = HttpResponse(soup)
+        response['HX-Trigger'] = 'update_samples'
+        return response
 
 
 def list_plankton(request, **kwargs):
@@ -262,14 +288,17 @@ def list_plankton(request, **kwargs):
     page_limit = 50
     page_start = page_limit * page
 
-    samples = core.models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id).order_by('bottle__bottle_id')
+    samples = core.models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id).order_by(
+        'bottle__event__instrument__type', 'bottle__bottle_id'
+    )
     if samples.exists():
-        data_columns = ["Sample", "Pressure", "Type", "Name", "Sex", "Stage", "Count", "Wet", "Dry", "Volume",
-                        "Percent"]
+        data_columns = ["Sample", "Pressure", "Station", "Type", "Name", "Sex", "Stage", "Split", "Count", "Wet", "Dry",
+                        "Volume", "Percent", "Comments"]
 
-        samples = samples.values("bottle__bottle_id", "bottle__pressure", "bottle__event__instrument__type",
-                                 "taxa__taxonomic_name", "sex__name", "stage__name", "count", "raw_wet_weight",
-                                 "raw_dry_weight", "volume", "percent")
+        samples = samples.values("bottle__bottle_id", "bottle__pressure", 'bottle__event__station__name',
+                                 "bottle__event__instrument__type", "taxa__taxonomic_name", "sex__name", "stage__name",
+                                 "split_fraction", "count", "raw_wet_weight", "raw_dry_weight", "volume", "percent",
+                                 "comments")
         samples = samples[page_start:(page_start + page_limit)]
 
         dataframe = read_frame(samples)
@@ -310,15 +339,37 @@ def list_plankton(request, **kwargs):
 
 def get_plankton_db_card(request, **kwargs):
     mission_id = kwargs['mission_id']
-    url = reverse_lazy("core:mission_plankton_biochem_upload_plankton")
+    url = reverse_lazy("core:mission_plankton_biochem_upload_plankton", args=(mission_id,))
 
     form_soup = form_biochem_database.get_database_connection_form(request, mission_id, url)
 
     return HttpResponse(form_soup)
 
 
-def upload_plankton(request):
-    return None
+def upload_plankton(request, **kwargs):
+
+    def upload_samples(mission, database):
+        uploader = database.uploader if database.uploader else database.account_name
+
+        form_biochem_database.upload_bcs_p_data(mission, uploader)
+
+    return form_biochem_database.upload_bio_chem(request, upload_samples, **kwargs)
+
+
+def clear_plankton(request, **kwargs):
+    mission_id = kwargs['mission_id']
+
+    if request.htmx:
+        samples = core.models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id)
+        files = samples.values_list('file', flat=True).distinct()
+        errors = core.models.FileError.objects.filter(mission_id=mission_id, file_name__in=files)
+        errors.delete()
+        samples.delete()
+
+    response = HttpResponse()
+    response['HX-Trigger'] = 'update_samples'
+
+    return response
 
 
 # ###### Plankton loading ###### #
@@ -328,5 +379,6 @@ plankton_urls = [
     path('plankton/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
     path('plankton/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
     path('plankton/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
-    path('plankton/biochem/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
+    path('plankton/biochem/<int:mission_id>/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
+    path('plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 ]

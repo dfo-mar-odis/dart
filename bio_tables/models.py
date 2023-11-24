@@ -165,3 +165,28 @@ class BCLifeHistory(models.Model):
     description = models.CharField(max_length=1000, blank=True, null=True, help_text='Development stage description.')
     molt_number = models.CharField(max_length=20, blank=True, null=True,
                                    help_text='Accepted numeric standard to represent the molt stage.')
+
+
+class BCCollectionMethod(models.Model):
+    collection_method_seq = models.IntegerField(primary_key=True, help_text='Auto generated sequence number.')
+    data_center_code = models.ForeignKey(BCDataCenter, on_delete=models.DO_NOTHING, verbose_name=_("Data Center"),
+                                         related_name='collection_method_codes')
+    name = models.CharField(max_length=30, help_text='Common name of the collection method.')
+    description = models.CharField(max_length=1000, blank=True, null=True,
+                                   help_text='Description of the collection method code.')
+
+
+class BCProcedure(models.Model):
+    procedure_seq = models.IntegerField(primary_key=True, help_text='Procedure code value.')
+    data_center_code = models.ForeignKey(BCDataCenter, on_delete=models.DO_NOTHING, verbose_name=_("Data Center"),
+                                         related_name='procedure_codes')
+    name = models.CharField(max_length=30, help_text='Procedure name.')
+    description = models.CharField(max_length=1000, blank=True, null=True, help_text='Procedure description.')
+
+
+class BCVolumeMethod(models.Model):
+    volume_method_seq = models.IntegerField(primary_key=True, help_text='Volume method code value.')
+    data_center_code = models.ForeignKey(BCDataCenter, on_delete=models.DO_NOTHING, verbose_name=_("Data Center"),
+                                         related_name='volume_method_codes')
+    name = models.CharField(max_length=30, help_text='Volume method name.')
+    description = models.CharField(max_length=1000, blank=True, null=True, help_text='Volume method description.')

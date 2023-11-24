@@ -1,12 +1,5 @@
 [
 {
-    "model": "bio_tables.bcupdate",
-    "pk": 1,
-    "fields": {
-        "last_update": "2023-07-28T19:42:30.948Z"
-    }
-},
-{
     "model": "bio_tables.bcdatacenter",
     "pk": 10,
     "fields": {
@@ -23075,46 +23068,6 @@
         "method": "Temp_CTD_1990",
         "priority": 2,
         "p_code": "TEMP",
-        "bodc_code": ""
-    }
-},
-{
-    "model": "bio_tables.bcdatatype",
-    "pk": 90001133,
-    "fields": {
-        "data_center_code": 20,
-        "data_retrieval": 90000133,
-        "analysis": 90000002,
-        "preservation": 90000001,
-        "sample_handling": 90000001,
-        "storage": 90000001,
-        "unit": 90000001,
-        "description": "WetLabs C-Star Transmissometer Beam transmission",
-        "conversion_equation": "",
-        "originally_entered_by": "BUGDENJ",
-        "method": "CStarTr0",
-        "priority": 2,
-        "p_code": "",
-        "bodc_code": ""
-    }
-},
-{
-    "model": "bio_tables.bcdatatype",
-    "pk": 90001134,
-    "fields": {
-        "data_center_code": 20,
-        "data_retrieval": 90000133,
-        "analysis": 90000002,
-        "preservation": 90000001,
-        "sample_handling": 90000001,
-        "storage": 90000001,
-        "unit": 90000066,
-        "description": "WetLabs C-Star Transmissometer Attenuation",
-        "conversion_equation": "",
-        "originally_entered_by": "BUGDENJ",
-        "method": "CStarAt0",
-        "priority": 2,
-        "p_code": "",
         "bodc_code": ""
     }
 },
@@ -117834,6 +117787,474 @@
         "name": "Tentacles",
         "description": "Damaged tentacles alone. Main body of specimen not encountered",
         "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "vertical",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "horizontal",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "double oblique",
+        "description": "example ssip 03"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "sawtooth oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "surface",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ssip old stepped oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ssip new stepped oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hydrographic",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique tow with light_1",
+        "description": "oblique tow with attached strobe light"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique tow with light_2",
+        "description": "oblique tow with attached unspecified light"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "multiple vertical casts",
+        "description": "vertical tow from surface to bottom to surface to bottom; unspecified number of repetitions"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hydrographic - integrated",
+        "description": "combined samples from discrete water 'bottles'"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 25,
+        "name": "stepped oblique - 10 min tow",
+        "description": "10 minute stepped oblique tow"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 20,
+        "name": "horizontal type2",
+        "description": "net lowered, towed horizontally at depth for specified time and then retrieved.  (Entire water column sampled)"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 20,
+        "name": "epibenthic tow",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Stepped oblique",
+        "description": "details related to sampling time at specific depths and the duration of the tow should be included in the cruise metadata"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gear_specific",
+        "description": "see gear description and associated sampling methodology"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not analysed",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "quant analysis complete",
+        "description": "quantitative"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "quant analysis incomplet",
+        "description": "quantitative selected groups analysed"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "sorting info not available"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 20,
+        "name": "lost",
+        "description": "sample lost in transit"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 20,
+        "name": "rotten",
+        "description": "sample rotten"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 20,
+        "name": "hit bottom",
+        "description": "sample hit bottom and not sorted"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 20,
+        "name": "damaged during analysis",
+        "description": "sample damaged during sort"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 20,
+        "name": "do not analyse",
+        "description": "sample not to be sorted for various reasons"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 20,
+        "name": "not representative",
+        "description": "sample not representative"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 20,
+        "name": "qualitative analysis",
+        "description": "qualitative only, see species/cruise comments"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 20,
+        "name": "quantitative (Flow Cytometry)",
+        "description": "counts from flow cytometer"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 30,
+        "name": "quantitative analysis",
+        "description": "quantitative complete or selected groups analyzed (not defined, example for legacy datasets taxonomic groups may have been identified separately and it is unclear if when the results were combined if all groups were examined )"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 20,
+        "name": "quantitative (bacteria counts)",
+        "description": "for method refer to Bunch 1979 Fisheries and Marine Service Manuscript Report no 1515, April 1979"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Vilks_1970",
+        "description": "foraminifera quantitative analysis"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Mixed analysis",
+        "description": "Sample completely analyzed (all taxa are identified) but there was a mix of quantitative and qualitative analysis. (all the taxa of a certain group were quantitatively analyzed and for all the others presence was noted)"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Experimental",
+        "description": "Sample collected for experimental purposes: Not analyzed for species abundance"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter",
+        "description": "electronic readout of volume of water filtered"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter",
+        "description": "volume calculated from recorded revolutions and flow meter calibrations"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "calculated",
+        "description": "volume calculated using depth, wire angle and net mouth opening"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "estimated",
+        "description": "estimate of volume calculated using depth and gear mouth opening (wire angle ignored)"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "method used to calculate volume of water filtered was not recorded"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "qualitative",
+        "description": "unable to calculate volume of water filtered"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": "this field should be updated with correct value"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flag",
+        "description": "data entered as previously calculated values; volume filtered not recorded"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter bad",
+        "description": "flow meter not working"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "NA",
+        "description": "not applicable; perhaps net lost; perhaps data from a bottle"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "volume should be recalculated",
+        "description": "use raw data and recalculate volume"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 30,
+        "name": "flow meter",
+        "description": "volume calculated from recorded revolutions and flow meter calibrations; NOTE:  one of the variables/factors in the equation may be suspect and the result may be \"low."
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 20,
+        "name": "flow meter",
+        "description": "data report indicates use of flow metres and the report also provided the volume of water filtered."
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gear_specific",
+        "description": "gear specific; example refer to box core sample analysis methodology"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "conversion1 (per millilitre)",
+        "description": "volume value set to convert data to units per cubic metre; data values are in units of per millilitre; volume = 0.000001m³ (which is 1 mL). The query will return 1000000 count/m³ for 1 bacteria/mL"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "conversion2 (per litre)",
+        "description": "volume value set to convert data to units per cubic metre; data values are in units of per litre; volume = 0.001 m³ (which is 1L). The query will return 1000 count/m³ for 1 cell/L"
     }
 }
 ]

@@ -62,7 +62,12 @@
         <div class="card">
             <div class="card-header">
                 <div class="card-title row">
-                    <h6 class="col-auto align-self-end">{% trans "Plankton Samples" %}</h6>
+                    <div class="col">
+                        <h6 class="align-self-end">{% trans "Plankton Samples" %}</h6>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-sm btn-danger" hx-swap="none" hx-confirm="{% trans "Are you sure?" %}" hx-get="{% url 'core:mission_plankton_clear' mission.pk %}">{% custom_icon 'dash-square' %}</button>
+                    </div>
                 </div>
             </div>
             <div class="card-body">

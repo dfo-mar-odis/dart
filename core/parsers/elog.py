@@ -4,6 +4,7 @@ import re
 
 from enum import Enum
 
+import dart2.utils
 from bio_tables import models as local_biochem_models
 from core import models as core_models
 
@@ -26,7 +27,31 @@ class ParserType(Enum):
 # Validates that a field exists in a mid object's buffer and either raises an error or returns the mapped field
 # from the elog configuration
 def get_field(elog_configuration: core_models.ElogConfig, field: str, buffer: [str]) -> str:
-    mapped_field = elog_configuration.mappings.get(field=field)
+    try:
+        mapped_field = elog_configuration.mappings.get(field=field)
+    except core_models.FileConfigurationMapping.DoesNotExist as e:
+        required = False
+
+        # if a mapping hasn't been set then create it from the default, this shouldn't happen unless a new field
+        # was added and a user is using an existing deployment that was just updated from the git repo
+        required_fields = {f[0]: (f[1], f[2]) for f in core_models.ElogConfig.required_fields}
+        optional_fields = {f[0]: (f[1], f[2]) for f in core_models.ElogConfig.fields}
+        if field in required_fields.keys():
+            mapped_field = required_fields[field][0]
+            purpose = required_fields[field][1]
+            required = True
+        elif field in optional_fields.keys():
+            mapped_field = optional_fields[field][0]
+            purpose = optional_fields[field][1]
+        else:
+            logger.exception(e)
+            logger.error("Mapping for field does not exist in core.models.ElogConfig")
+            raise e
+
+        new_mapping = core_models.FileConfigurationMapping(
+            field=field, mapped_to=mapped_field, required=required, purpose=purpose
+        )
+        elog_configuration.mappings.add(new_mapping)
 
     if mapped_field.required and mapped_field.mapped_to not in buffer:
         raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field.mapped_to})
@@ -69,6 +94,10 @@ def set_attributes(obj, attr_key, attr) -> bool:
 # and what fields for those objects were modified.
 def update_attributes(obj, attributes: dict, update_dictionary: dict) -> None:
     update = False
+
+    if obj in update_dictionary['objects']:
+        update_dictionary['objects'].remove(obj)
+
     for attr_key, attribute in attributes.items():
         # we don't want to override values with blanks
         if attribute and set_attributes(obj, attr_key, attribute):
@@ -214,16 +243,21 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
     # created and only add events to the new_events queue if they haven't been previously processed
     processed_events = []
 
-    create_events = []
-    update_events = {'objects': [], 'fields': set()}
+    create_events = {}
+    update_events = []
+    update_fields = set()
 
     for mid, buffer in mid_dictionary_buffer.items():
+        update_fields.add("")
         try:
             event_field = get_field(elog_configuration, 'event', buffer)
             station_field = get_field(elog_configuration, 'station', buffer)
             instrument_field = get_field(elog_configuration, 'instrument', buffer)
             sample_id_field = get_field(elog_configuration, 'start_sample_id', buffer)
             end_sample_id_field = get_field(elog_configuration, 'end_sample_id', buffer)
+            wire_out_field = get_field(elog_configuration, 'wire_out', buffer)
+            flow_start_field = get_field(elog_configuration, 'flow_start', buffer)
+            flow_end_field = get_field(elog_configuration, 'flow_end', buffer)
 
             event_id = int(buffer[event_field])
 
@@ -231,6 +265,10 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             instrument = instruments.get(name__iexact=buffer.pop(instrument_field))
             sample_id: str = buffer.pop(sample_id_field)
             end_sample_id: str = buffer.pop(end_sample_id_field)
+
+            wire_out: str = buffer.pop(wire_out_field) if wire_out_field in buffer else None
+            flow_start: str = buffer.pop(flow_start_field) if flow_start_field in buffer else None
+            flow_end: str = buffer.pop(flow_end_field) if flow_end_field in buffer else None
 
             if valid_sample_id(sample_id):
                 sample_id = sample_id if sample_id.strip() else None
@@ -246,38 +284,65 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
                 errors.append((mid, message, ValueError({"message": message}),))
                 end_sample_id = None
 
+            # we have to test that wire_out, flow_start and flow_end are numbers because someone might enter
+            # a unit on the value i.e '137.4m' which will then crash the function when bulk creating/updating the
+            # events. If the numbers aren't valid numbers then set the field blank and report the error.
+            if wire_out is not None and \
+                    ((stripped := wire_out.strip()) == '' or not stripped.replace('.', '', 1).isdigit()):
+                message = _("Invalid wire out value")
+                errors.append((mid, message, ValueError({"message": message}),))
+                wire_out = None
+
+            if flow_start is not None and ((stripped := flow_start.strip()) == '' or not stripped.isdigit()):
+                message = _("Invalid flow meter start")
+                errors.append((mid, message, ValueError({"message": message}),))
+                flow_start = None
+
+            if flow_end is not None and ((stripped := flow_end.strip()) == '' or not stripped.isdigit()):
+                message = _("Invalid flow meter end")
+                errors.append((mid, message, ValueError({"message": message}),))
+                flow_end = None
+
             # if the event doesn't already exist, create it. Otherwise update the existing
             # event with new data if required
-            if existing_events.filter(event_id=event_id).exists():
-                attrs = {
-                    'station': station,
-                    'instrument': instrument,
-                    'sample_id': sample_id,
-                    'end_sample_id': end_sample_id
-                }
+            if exists := existing_events.filter(event_id=event_id).exists():
                 event = existing_events.get(event_id=event_id)
-                update_attributes(event, attrs, update_events)
-                continue
-            elif event_id in processed_events:
-                event = [event for event in create_events if event.event_id == event_id][0]
-                event.station = station if station else event.station
-                event.instrument = instrument if instrument else event.instrument
-                event.sample_id = sample_id
-                event.end_sample_id = end_sample_id
-                continue
+                if event in update_events:
+                    idx = update_events.index(event)
+                    event = update_events.pop(idx)
+            elif event_id in create_events.keys():
+                event = create_events[event_id]
+            else:
+                event = core_models.Event(mission=mission, event_id=event_id)
+                create_events[event_id] = event
 
-            new_event = core_models.Event(mission=mission, event_id=event_id)
+            # only override values if the new value is not none. If a value was set as part of a previous action
+            # then we'll keep that previous actions value so as to not null out values that were in a deployed
+            # action, but might be missing from a recovered action.
+            station = station if station else event.station
+            instrument = instrument if instrument else event.instrument
+            sample_id = sample_id if sample_id else event.sample_id
+            end_sample_id = end_sample_id if end_sample_id else event.end_sample_id
+            wire_out = wire_out if wire_out else event.wire_out
+            flow_start = flow_start if flow_start else event.flow_start
+            flow_end = flow_end if flow_end else event.flow_end
 
-            new_event.station = station
-            new_event.instrument = instrument
+            update_fields.add(dart2.utils.updated_value(event, 'station_id', station.pk))
+            update_fields.add(dart2.utils.updated_value(event, 'instrument_id', instrument.pk))
+            update_fields.add(dart2.utils.updated_value(event, 'sample_id', sample_id))
+            update_fields.add(dart2.utils.updated_value(event, 'end_sample_id', end_sample_id))
+            update_fields.add(dart2.utils.updated_value(event, 'wire_out', wire_out))
+            update_fields.add(dart2.utils.updated_value(event, 'flow_start', flow_start))
+            update_fields.add(dart2.utils.updated_value(event, 'flow_end', flow_end))
 
-            # sample IDs are optional fields, they may be blank. If they are they should be None on the event
-            # sample IDs must also be numeric, if they're not log an error and use None
-            new_event.sample_id = sample_id
-            new_event.end_sample_id = end_sample_id
+            update_fields.remove('')
 
-            create_events.append(new_event)
-            processed_events.append(event_id)
+            if len(update_fields) > 0:
+                if exists:
+                    update_events.append(event)
+                else:
+                    create_events[event_id] = event
+
         except KeyError as ex:
             logger.error(ex)
             errors.append((mid, ex.args[0]["message"], ex,))
@@ -288,9 +353,11 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
-    core_models.Event.objects.bulk_create(create_events)
-    if update_events['fields']:
-        core_models.Event.objects.bulk_update(objs=update_events['objects'], fields=update_events['fields'])
+    if len(create_events) > 0:
+        core_models.Event.objects.bulk_create(create_events.values())
+
+    if len(update_events) > 0:
+        core_models.Event.objects.bulk_update(objs=update_events, fields=update_fields)
 
     return errors
 

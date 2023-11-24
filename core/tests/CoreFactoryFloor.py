@@ -1,7 +1,10 @@
+import datetime
+
 import factory
 import random
 
 from django.utils import timezone
+from factory import post_generation
 from factory.django import DjangoModelFactory
 from faker import Faker
 
@@ -73,6 +76,20 @@ class CTDEventFactory(EventFactory):
 class NetEventFactory(EventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     instrument = factory.SubFactory(InstrumentFactory, name="RingNet", type=models.InstrumentType.net)
+
+    @post_generation
+    def add_actions(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        date_time = faker.date_time(tzinfo=timezone.get_current_timezone())
+        ActionFactory(event=self, date_time=date_time, type=models.ActionType.deployed)
+
+        date_time = date_time + datetime.timedelta(minutes=30)
+        ActionFactory(event=self, date_time=date_time, type=models.ActionType.bottom)
+
+        date_time = date_time + datetime.timedelta(minutes=30)
+        ActionFactory(event=self, date_time=date_time, type=models.ActionType.recovered)
 
 
 class ActionFactory(DjangoModelFactory):

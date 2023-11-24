@@ -6,6 +6,7 @@ from pandas import DataFrame
 
 from django.utils.translation import gettext as _
 
+import core.models
 from core import models as core_models
 from bio_tables import models as bio_models
 from dart2.utils import updated_value
@@ -44,6 +45,7 @@ zoo_column_dict = {
     'PROC_CODE': 'PROC_CODE',
     'WHAT_WAS_IT': 'WHAT_WAS_IT'
 }
+
 
 def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, row_mapping=None):
     if row_mapping is None:
@@ -166,7 +168,7 @@ def get_min_sieve(proc_code: int, mesh_size: int):
     if proc_code in [21]:
         return 10
     elif proc_code in [20, 22, 23, 50, 99]:
-        return mesh_size/1000
+        return mesh_size / 1000
 
     return None
 
@@ -210,7 +212,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
                                               instrument__type=core_models.InstrumentType.net)
 
     # don't care about aborted events
-    events = events.exclude(actions__type=core_models.ActionType.aborted)
+    # events = events.exclude(actions__type=core_models.ActionType.aborted)
     ringnet_bottles = core_models.Bottle.objects.filter(event__in=events)
 
     core_models.FileError.objects.filter(mission=mission, file_name=filename).delete()
@@ -222,7 +224,9 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
     for line, row in dataframe.iterrows():
         updated_fields = set("")
 
-        line_number = line + dataframe.index.start + 1
+        # both the line and dataframe start start at zero, but should start at 1 for human readability
+        line_number = (line + 1) + (dataframe.index.start + 1)
+
         user_logger.info(_("Creating plankton sample") + "%d/%d", line_number, total_rows)
 
         bottle_id = row[row_mapping['SAMPLEID']]
@@ -255,15 +259,56 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
             bottle = bottle.first()
         else:
             date = row[row_mapping['DATE']]
-            event = events.get(event_id=row[row_mapping['EVENT']])
+            if date is None:
+                message = _("Missing date for bottle.")
+                message += " " + _("Bottle ID") + f" : {bottle_id}"
+                message += " " + _("Line") + f" : {line_number}"
+
+                err = core_models.FileError(mission=mission, file_name=filename, line=line_number, message=message,
+                                            type=core_models.ErrorType.missing_value)
+                errors.append(err)
+
+                user_logger.error(message)
+                logger.error(message)
+                continue
+
+            try:
+                event = events.get(event_id=row[row_mapping['EVENT']])
+            except core.models.Event.DoesNotExist as e:
+                message = _("Event matching ID doesn't exist.")
+                message += " " + _("Bottle ID") + f" : {bottle_id}"
+                message += " " + _("Event") + f" : {row[row_mapping['EVENT']]}"
+                message += " " + _("Line") + f" : {line_number}"
+
+                err = core_models.FileError(mission=mission, file_name=filename, line=line_number, message=message,
+                                            type=core_models.ErrorType.missing_value)
+                errors.append(err)
+
+                user_logger.error(message)
+                logger.error(message)
+                continue
+
             pressure = row[row_mapping['DEPTH']]
+            if pressure is None or np.isnan(pressure):
+                message = _("Missing depth for bottle.")
+                message += " " + _("Bottle ID") + f" : {bottle_id}"
+                message += " " + _("Line") + f" : {line_number}"
+
+                err = core_models.FileError(mission=mission, file_name=filename, line=line_number, message=message,
+                                            type=core_models.ErrorType.missing_value)
+                errors.append(err)
+
+                user_logger.error(message)
+                logger.error(message)
+                continue
 
             bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=pressure, date_time=date)
             create_bottles.append(bottle)
 
-        plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}'
+        plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
 
-        plankton = core_models.PlanktonSample.objects.filter(taxa=taxa, bottle=bottle, stage_id=stage, sex_id=sex)
+        plankton = core_models.PlanktonSample.objects.filter(taxa=taxa, bottle=bottle, stage_id=stage, sex_id=sex,
+                                                             proc_code=proc_code)
         if plankton.exists():
             # taxa, bottle, stage and sex are all part of a primary key and therefore cannot be updated
             plankton = plankton.first()
@@ -273,6 +318,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
             updated_fields.add(updated_value(plankton, 'min_sieve', min_sieve))
             updated_fields.add(updated_value(plankton, 'max_sieve', max_sieve))
             updated_fields.add(updated_value(plankton, 'split_fraction', split_fraction))
+            updated_fields.add(updated_value(plankton, 'file', filename))
 
             match what_was_it:
                 case 1:
@@ -298,7 +344,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
             if plankton_key not in create_plankton.keys():
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, gear_type=gear_type, min_sieve=min_sieve, max_sieve=max_sieve,
-                    split_fraction=split_fraction, stage_id=stage, sex_id=sex
+                    split_fraction=split_fraction, stage_id=stage, sex_id=sex, file=filename, proc_code=proc_code
                 )
                 create_plankton[plankton_key] = plankton
 
@@ -317,6 +363,9 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
                 case _:
                     raise ValueError({'missing_value', 'what_was_it'})
 
+    if len(errors) > 0:
+        core_models.FileError.objects.bulk_create(errors)
+
     if len(create_bottles) > 0:
         logger.info(_("Creating Net Bottles"))
         core_models.Bottle.objects.bulk_create(create_bottles)
@@ -325,7 +374,27 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
         logger.info(_("Creating Zooplankton Samples"))
         core_models.PlanktonSample.objects.bulk_create(create_plankton.values())
 
+    logger.info("Setting collector comments")
+    for plankton in core_models.PlanktonSample.objects.filter(file=filename):
+        new_comment = plankton.comments
+        if plankton.raw_wet_weight == -1 or plankton.raw_dry_weight == -1:
+            new_comment = 'TOO MUCH PHYTOPLANKTON TO WEIGH'
+        elif plankton.raw_wet_weight == -2 or plankton.raw_dry_weight == -2:
+            new_comment = 'TOO MUCH SEDIMENT TO WEIGH'
+        elif plankton.raw_wet_weight == -3 or plankton.raw_dry_weight == -3:
+            new_comment = 'NO FORMALIN - COULD NOT WEIGH'
+        elif plankton.raw_wet_weight == -4 or plankton.raw_dry_weight == -4:
+            new_comment = 'TOO MUCH JELLY TO WEIGH'
+
+        # if the sample has a pk then we're updating it.
+        # If it doesn't have a pk, then it's being created and we should leave it alone
+        if field := updated_value(plankton, 'comments', new_comment):
+            update_plankton['fields'].add(field)
+            if plankton not in update_plankton['objects']:
+                update_plankton['objects'].append(plankton)
+
     if len(update_plankton['objects']) > 0:
         logger.info(_("Updating Zooplankton Samples"))
+
         fields = [field for field in update_plankton['fields']]
         core_models.PlanktonSample.objects.bulk_update(update_plankton['objects'], fields)

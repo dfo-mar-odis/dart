@@ -146,11 +146,11 @@ class TestZooplanktonParser(DartTestCase):
         # of things into account when dealing with the real data. like having a row that has the
         # same NCODE and SampleID, but different Sex or Stage
 
-        # the sample data frame should have 25 samples for id 488275 and 39 samples for id 488685
+        # the sample data frame should have 28 samples for id 488275 and 42 samples for id 488685
         PlanktonParser.parse_zooplankton(self.mission.pk, self.file_name, self.dataframe)
 
         samples = core_models.PlanktonSample.objects.filter(bottle__bottle_id=488275)
-        self.assertEquals(len(samples), 25)
+        self.assertEquals(len(samples), 28)
 
     def test_get_min_sieve(self):
         self.assertEquals(PlanktonParser.get_min_sieve(proc_code=21, mesh_size=202), 10)

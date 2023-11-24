@@ -300,31 +300,33 @@ class BcdPReportModel(BcdP):
 class BcsP(models.Model):
     plank_sample_key_value = models.CharField(primary_key=True, max_length=50)
 
-    mission_name = models.CharField(max_length=50, blank=True, null=True)
-    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
-    mission_leader = models.CharField(max_length=50, blank=True, null=True)
-    mission_sdate = models.DateField(blank=True, null=True)
-    mission_edate = models.DateField(blank=True, null=True)
-    mission_institute = models.CharField(max_length=50, blank=True, null=True)
-    mission_platform = models.CharField(max_length=50, blank=True, null=True)
-    mission_protocol = models.CharField(max_length=50, blank=True, null=True)
-    mission_geographic_region = models.CharField(max_length=100, blank=True, null=True)
-    mission_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
-    mission_more_comment = models.CharField(max_length=2000, blank=True, null=True)
-    mission_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
-    event_sdate = models.DateField(blank=True, null=True)
-    event_edate = models.DateField(blank=True, null=True)
-    event_stime = models.IntegerField(blank=True, null=True)
-    event_etime = models.IntegerField(blank=True, null=True)
-    event_min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
-    event_max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
-    event_min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
-    event_max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
-    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
-    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
-    event_utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
-    event_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
-    event_more_comment = models.CharField(max_length=2000, blank=True, null=True)
+    mission_name = models.CharField(max_length=50, blank=True, null=True)  # done
+    mission_descriptor = models.CharField(max_length=50, blank=True, null=True)  # done
+    mission_leader = models.CharField(max_length=50, blank=True, null=True)  # done
+    mission_sdate = models.DateField(blank=True, null=True)  # done
+    mission_edate = models.DateField(blank=True, null=True)  # done
+    mission_institute = models.CharField(max_length=50, blank=True, null=True)  # done
+    mission_platform = models.CharField(max_length=50, blank=True, null=True)  # done
+    mission_protocol = models.CharField(max_length=50, blank=True, null=True)  # done
+    mission_geographic_region = models.CharField(max_length=100, blank=True, null=True)  # done
+    mission_collector_comment = models.CharField(max_length=2000, blank=True, null=True)  # done
+    mission_more_comment = models.CharField(max_length=2000, blank=True, null=True)  # done
+    mission_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)  # done
+    event_sdate = models.DateField(blank=True, null=True)  # done
+    event_edate = models.DateField(blank=True, null=True)  # done
+    event_stime = models.IntegerField(blank=True, null=True)  # done
+    event_etime = models.IntegerField(blank=True, null=True)  # done
+    event_min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # done
+    event_max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # done
+    event_min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # done
+    event_max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # done
+    event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)  # done
+    event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)  # done
+    event_utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)  # done
+    event_collector_comment = models.CharField(max_length=2000, blank=True, null=True)  # null in existing data
+    event_more_comment = models.CharField(max_length=2000, blank=True, null=True)  # null in existing data
+
+    # Appears as "Created using AZMP Data Entry Template" in existing data.
     event_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
 
     # Partly done, for plankton this depends on if it's zoo or phyto,
@@ -334,42 +336,45 @@ class BcsP(models.Model):
     # this value, but I think it could be a mission level option.
     #
     # ################  Lindsay would prefer if we used 90000002, Niskin of unknown size ###########
-    pl_headr_gear_seq = models.IntegerField(blank=True, null=True)
-    pl_headr_sdate = models.DateField(blank=True, null=True)
-    pl_headr_edate = models.DateField(blank=True, null=True)
-    pl_headr_stime = models.IntegerField(blank=True, null=True)
-    pl_headr_etime = models.IntegerField(blank=True, null=True)
-    pl_headr_phase_of_daylight = models.CharField(max_length=15, blank=True, null=True)
-    pl_headr_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
-    pl_headr_elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
-    pl_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
-    pl_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
-    pl_headr_time_qc_code = models.CharField(max_length=2, blank=True, null=True)
-    pl_headr_position_qc_code = models.CharField(max_length=2, blank=True, null=True)
-    pl_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
-    pl_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    pl_headr_gear_seq = models.IntegerField(blank=True, null=True)  # done
+    pl_headr_sdate = models.DateField(blank=True, null=True)  # done
+    pl_headr_edate = models.DateField(blank=True, null=True)  # done
+    pl_headr_stime = models.IntegerField(blank=True, null=True)  # done
+    pl_headr_etime = models.IntegerField(blank=True, null=True)  # done
+    pl_headr_phase_of_daylight = models.CharField(max_length=15, blank=True, null=True)  # null in existing data
+    pl_headr_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # done
+    pl_headr_elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  # done
+    pl_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # done
+    pl_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  # done
+    pl_headr_time_qc_code = models.CharField(max_length=2, blank=True, null=True)  # done
+    pl_headr_position_qc_code = models.CharField(max_length=2, blank=True, null=True)  # done
+    pl_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)  # done
+    pl_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)  # done
     pl_headr_sounding = models.IntegerField(blank=True, null=True)
     pl_headr_volume = models.DecimalField(max_digits=7, decimal_places=3, blank=True, null=True)
     pl_headr_volume_method_seq = models.IntegerField(blank=True, null=True)
-    pl_headr_lrg_plankton_removed = models.CharField(max_length=1, blank=True, null=True)
-    pl_headr_mesh_size = models.IntegerField(blank=True, null=True)
+    pl_headr_lrg_plankton_removed = models.CharField(max_length=1, blank=True, null=True)  # 'Y'
+    pl_headr_mesh_size = models.IntegerField(blank=True, null=True)  # 0 if phyto, 202 or 76 if zoo
     pl_headr_collection_method_seq = models.IntegerField(blank=True, null=True)
     pl_headr_collector_deplmt_id = models.CharField(max_length=50, blank=True, null=True)
-    pl_headr_collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
-    pl_headr_procedure_seq = models.IntegerField(blank=True, null=True)
-    pl_headr_preservation_seq = models.IntegerField(blank=True, null=True)
-    pl_headr_storage_seq = models.IntegerField(blank=True, null=True)
-    pl_headr_collector = models.CharField(max_length=50, blank=True, null=True)
+    pl_headr_collector_sample_id = models.CharField(max_length=50, blank=True, null=True)  # done
+    pl_headr_procedure_seq = models.IntegerField(blank=True, null=True)  # 90000001 'quantitative'
+    pl_headr_preservation_seq = models.IntegerField(blank=True, null=True)  # 90000039 'formaldehyde'
+    pl_headr_storage_seq = models.IntegerField(blank=True, null=True)  # 90000016 seems to be the default
+    pl_headr_collector = models.CharField(max_length=50, blank=True, null=True)  # seems to be the event data_collector
     pl_headr_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
-    pl_headr_meters_sqd_flag = models.CharField(max_length=1, blank=True, null=True)
+    pl_headr_meters_sqd_flag = models.CharField(max_length=1, blank=True, null=True)  # seems to be 'Y' in existing data
+
+    # Appears as "Created using AZMP Data Entry Template" in existing data.
     pl_headr_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
-    pl_headr_responsible_group = models.CharField(max_length=50, blank=True, null=True)
-    pl_headr_shared_data = models.CharField(max_length=50, blank=True, null=True)
-    created_by = models.CharField(max_length=30)
-    created_date = models.DateField()
-    data_center_code = models.IntegerField(blank=True, null=True)
-    process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch_seq = models.IntegerField(blank=True, null=True)
+
+    pl_headr_responsible_group = models.CharField(max_length=50, blank=True, null=True)  # 'AZMP' in existing data
+    pl_headr_shared_data = models.CharField(max_length=50, blank=True, null=True)  # 'N' in existing data
+    created_by = models.CharField(max_length=30)  # done
+    created_date = models.DateField()  # done
+    data_center_code = models.IntegerField(blank=True, null=True)  # done
+    process_flag = models.CharField(max_length=3, blank=True, null=True)  # done
+    batch_seq = models.IntegerField(blank=True, null=True)  # done
 
     class Meta:
         managed = False
@@ -453,3 +458,36 @@ class Bclifehistories(models.Model):
     class Meta:
         managed = False
         db_table = 'BCLIFEHISTORIES'
+
+
+class Bccollectionmethods(models.Model):
+    collection_method_seq = models.IntegerField(primary_key=True)
+    data_center_code = models.IntegerField()
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=1000, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCCOLLECTIONMETHODS'
+
+
+class Bcprocedures(models.Model):
+    procedure_seq = models.IntegerField(primary_key=True)
+    data_center_code = models.IntegerField()
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=1000, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPROCEDURES'
+
+
+class Bcvolumemethods(models.Model):
+    volume_method_seq = models.IntegerField(primary_key=True)
+    data_center_code = models.IntegerField()
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=1000, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCVOLUMEMETHODS'

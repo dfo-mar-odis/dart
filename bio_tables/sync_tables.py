@@ -1,8 +1,10 @@
 import os.path
+import re
 
 from django.conf import settings
 from django.core import management
 from django.core.management.commands import dumpdata, inspectdb
+from django.db.models.fields.related import ForeignKey
 
 import dart2.db_routers
 from biochem import models as biochem_models
@@ -87,6 +89,35 @@ def sync_table(bio_table_model, biochem_model, field_map):
     return updated
 
 
+def get_mapped_fields(dart_table_model, bio_chem_model) -> list:
+    # Get the list of fields specified by the models doc string
+    dart_table_fields: list = [field.__dict__['name'] for field in dart_table_model._meta.get_fields()
+                               if 'name' in field.__dict__]
+
+    bio_chem_fields: list = [field.__dict__['name'] for field in bio_chem_model._meta.get_fields()
+                             if 'name' in field.__dict__]
+
+    # remove the primary key from the fields
+    dart_table_fields.remove(dart_table_model._meta.pk.name)
+
+    # change foreign key fields to use ('xxx_id', 'xxx')
+    mapped_fields = []
+    for field in dart_table_fields:
+        if type(dart_table_model._meta.get_field(field)) is ForeignKey:
+            # check to see if the field is in the bio_chem_model. if not it probably has '_seq' on the end of it
+            if field in bio_chem_fields:
+                mapped_fields.append((f'{field}_id', field))
+            elif f'{field}_seq' in bio_chem_fields:
+                mapped_fields.append((f'{field}_id', f'{field}_seq'))
+            else:
+                raise ValueError(f"Could not map field {field} for {dart_table_model.__name__}")
+
+        else:
+            mapped_fields.append(field)
+
+    return mapped_fields
+
+
 def create_fixture(bio_table_name: str = None, output_dir: str = "bio_tables/fixtures/"):
     # if a bio_table_name is supplied a fixture for that specific file will be created
     # otherwise a fixture for all bio_tables will be created
@@ -100,7 +131,10 @@ def create_fixture(bio_table_name: str = None, output_dir: str = "bio_tables/fix
     management.call_command(dumpdata.Command(), bio_table, indent=4, output=os.path.join(output_dir, fixture_output))
 
 
-def sync(bio_table_model, biochem_model, field_map, force_create_fixture) -> bool:
+def sync(bio_table_model, biochem_model, force_create_fixture=False, field_map=None) -> bool:
+    if not field_map:
+        field_map = get_mapped_fields(bio_table_model, biochem_model)
+
     updated = sync_table(bio_table_model=bio_table_model, biochem_model=biochem_model,
                          field_map=field_map)
 
@@ -110,129 +144,30 @@ def sync(bio_table_model, biochem_model, field_map, force_create_fixture) -> boo
     return updated
 
 
-def sync_data_centers(force_create_fixture=False):
-    field_map = ['name', 'location', 'description']
-
-    bio_table_model = bio_models.BCDataCenter
-    biochem_model = biochem_models.Bcdatacenters
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_units(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description']
-
-    bio_table_model = bio_models.BCUnit
-    biochem_model = biochem_models.Bcunits
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_data_retrievals(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'parameter_name',
-                 'parameter_description', ('unit_seq_id', 'unit_seq'), 'places_before', 'places_after',
-                 'minimum_value', 'maximum_value', 'originally_entered_by']
-
-    bio_table_model = bio_models.BCDataRetrieval
-    biochem_model = biochem_models.Bcdataretrievals
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_analysis(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description']
-
-    bio_table_model = bio_models.BCAnalysis
-    biochem_model = biochem_models.Bcanalyses
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_storage(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description']
-
-    bio_table_model = bio_models.BCStorage
-    biochem_model = biochem_models.Bcstorages
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_sample_handeling(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description']
-
-    bio_table_model = bio_models.BCSampleHandling
-    biochem_model = biochem_models.Bcsamplehandlings
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_preservation(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description', 'type']
-
-    bio_table_model = bio_models.BCPreservation
-    biochem_model = biochem_models.Bcpreservations
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_data_types(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), ('data_retrieval_id', 'data_retrieval_seq'),
-                 ('analysis_id', 'analysis_seq'), ('preservation_id', 'preservation_seq'),
-                 ('sample_handling_id', 'sample_handling_seq'), ('storage_id', 'storage_seq'),
-                 ('unit_id', 'unit_seq'), 'description', 'conversion_equation', 'originally_entered_by', 'method',
-                 'priority', 'p_code', 'bodc_code']
-
-    bio_table_model = bio_models.BCDataType
-    biochem_model = biochem_models.Bcdatatypes
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_taxon_codes(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'tsn', 'taxonomic_name', 'best_nodc7', 'authority',
-                 'collectors_comment', 'data_managers_comment', 'short_name', 'tsn_itis', 'aphiaid']
-
-    bio_table_model = bio_models.BCNatnlTaxonCode
-    biochem_model = biochem_models.Bcnatnltaxoncodes
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_gear_codes(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'type', 'model', 'gear_size', 'description']
-
-    bio_table_model = bio_models.BCGear
-    biochem_model = biochem_models.Bcgears
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_sex(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description']
-
-    bio_table_model = bio_models.BCSex
-    biochem_model = biochem_models.Bcsexes
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
-def sync_life_history(force_create_fixture=False):
-    field_map = [('data_center_code_id', 'data_center_code'), 'name', 'description', 'molt_number']
-
-    bio_table_model = bio_models.BCLifeHistory
-    biochem_model = biochem_models.Bclifehistories
-
-    return sync(bio_table_model, biochem_model, field_map, force_create_fixture)
-
-
 def sync_all(force_create_fixture=False):
-    updated = force_create_fixture
-    fixture_methods = [sync_data_centers(), sync_units(), sync_data_retrievals(), sync_analysis(), sync_storage(),
-                       sync_sample_handeling(), sync_preservation(), sync_data_types(), sync_taxon_codes(),
-                       sync_gear_codes(), sync_sex(), sync_life_history()]
+    sync_list = [
+        (bio_models.BCDataCenter, biochem_models.Bcdatacenters),
+        (bio_models.BCUnit, biochem_models.Bcunits),
+        (bio_models.BCDataRetrieval, biochem_models.Bcdataretrievals),
+        (bio_models.BCAnalysis, biochem_models.Bcanalyses),
+        (bio_models.BCStorage, biochem_models.Bcstorages),
+        (bio_models.BCSampleHandling, biochem_models.Bcsamplehandlings),
+        (bio_models.BCPreservation, biochem_models.Bcpreservations),
+        (bio_models.BCDataType, biochem_models.Bcdatatypes),
+        (bio_models.BCNatnlTaxonCode, biochem_models.Bcnatnltaxoncodes),
+        (bio_models.BCGear, biochem_models.Bcgears),
+        (bio_models.BCSex, biochem_models.Bcsexes),
+        (bio_models.BCLifeHistory, biochem_models.Bclifehistories),
+        (bio_models.BCCollectionMethod, biochem_models.Bccollectionmethods),
+        (bio_models.BCProcedure, biochem_models.Bcprocedures),
+        (bio_models.BCVolumeMethod, biochem_models.Bcvolumemethods),
+    ]
 
-    for method in fixture_methods:
-        updated = updated or method
+    updated = False
+
+    for sync_model in sync_list:
+        if sync(sync_model[0], sync_model[1], force_create_fixture):
+            updated = True
 
     if updated:
         print("Exporting new fixture file")

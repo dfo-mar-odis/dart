@@ -1,13 +1,15 @@
 import math
+import numpy as np
+
 from typing import Type
 
 from datetime import datetime
-
 
 from django.db import connections, DatabaseError
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
+import bio_tables.models
 import core.models
 from biochem import models
 from dart2.utils import updated_value
@@ -122,8 +124,7 @@ def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.Bcs
 
 # returns the rows to create, rows to update and fields to update
 def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[core_models.Bottle],
-                 batch_name: str = None) -> [[models.BcsD], [models.BcsD], [str]]:
-
+                   batch_name: str = None) -> [[models.BcsD], [models.BcsD], [str]]:
     user_logger.info("Creating/updating BCS table")
     bcs_objects_to_create = []
     bcs_objects_to_update = []
@@ -168,7 +169,7 @@ def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[
         updated_fields.add(updated_value(bcs_row, 'mission_platform', mission.platform))
         updated_fields.add(updated_value(bcs_row, 'mission_protocol', mission.protocol))
         updated_fields.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region.name
-                                         if mission.geographic_region else ""))
+        if mission.geographic_region else ""))
         updated_fields.add(updated_value(bcs_row, 'mission_collector_comment1', mission.collector_comments))
         updated_fields.add(updated_value(bcs_row, 'mission_collector_comment2', mission.more_comments))
         updated_fields.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
@@ -310,7 +311,7 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
     total_samples = len(samples)
     for count, ds_sample in enumerate(samples):
         user_logger.info(_("Compiling sample") + f" : {ds_sample.sample.type.short_name} - " + "%d/%d",
-                         (count+1), total_samples)
+                         (count + 1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
@@ -407,3 +408,214 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
         core_models.Error.objects.bulk_create(errors)
 
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
+
+
+def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: QuerySet[core_models.Bottle],
+                   batch_name: str = None) -> [[models.BcsP], [models.BcsP], [str]]:
+
+    bcs_objects_to_create = []
+    bcs_objects_to_update = []
+    updated_fields = set()
+
+    DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
+
+    mission_id: int = bottles.values_list('event__mission', flat=True).distinct().first()
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    institute: bio_tables.models.BCDataCenter = mission.data_center
+    existing_samples = {sample.plank_sample_key_value: sample for sample in
+                        bcs_p_model.objects.all()}
+
+    total_bottles = len(bottles)
+    for count, bottle in enumerate(bottles):
+        user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
+        # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
+        gears = bottle.plankton_data.values_list('gear_type', flat=True).distinct()
+        event = bottle.event
+
+        sounding = None
+        try:
+            # The current AZMP template uses the bottom action for the sounding
+            bottom_action: core_models.Action = event.actions.get(type=core_models.ActionType.bottom)
+            sounding = bottom_action.sounding
+        except core_models.Action.DoesNotExist as e:
+            logger.error("Could not acquire bottom action for event sounding")
+
+        try:
+            # for calculating volume we need either a wire out or a flow meter start and end. Both of these should
+            # be, at the very least, attached to the last action of an event.
+            recovery_action: core_models.Action = event.actions.get(type=core_models.ActionType.recovered)
+        except core_models.Action.DoesNotExist as e:
+            # if there's no recovery event then we won't be able to complete this row of data, it also means this
+            # event was aborted
+            message = _("Event was likely aborted and contains no recovered action")
+            message += " " + _("Event") + f" : {event.event_id}"
+            logger.error(message)
+            continue
+
+        for gear in gears:
+            row_update = set("")
+            plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{gear}'
+
+            m_start_date = mission.events.first().start_date
+            m_end_date = mission.events.last().end_date
+
+            if exists := plankton_key in existing_samples.keys():
+                bcs_row = existing_samples[plankton_key]
+            else:
+                bcs_row = bcs_p_model._meta.model(plank_sample_key_value=plankton_key)
+
+            # updated_fields.add(updated_value(bcs_row, 'dis_headr_collector_sample_id', bottle.bottle_id))
+            row_update.add(updated_value(bcs_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
+            row_update.add(updated_value(bcs_row, 'created_by', uploader))
+
+            row_update.add(updated_value(bcs_row, 'mission_descriptor', mission.mission_descriptor))
+            row_update.add(updated_value(bcs_row, 'mission_name', mission.name))
+            row_update.add(updated_value(bcs_row, 'mission_leader', mission.lead_scientist))
+            row_update.add(updated_value(bcs_row, 'mission_sdate', m_start_date))
+            row_update.add(updated_value(bcs_row, 'mission_edate', m_end_date))
+            row_update.add(updated_value(bcs_row, 'mission_institute', institute.description if institute else "Not Specified"))
+            row_update.add(updated_value(bcs_row, 'mission_platform', mission.platform))
+            row_update.add(updated_value(bcs_row, 'mission_protocol', mission.protocol))
+            row_update.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region.name
+                                   if mission.geographic_region else ""))
+            row_update.add(updated_value(bcs_row, 'mission_collector_comment', mission.collector_comments))
+            row_update.add(updated_value(bcs_row, 'mission_more_comment', mission.more_comments))
+            row_update.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
+
+            row_update.add(updated_value(bcs_row, 'event_collector_event_id', event.event_id))
+            row_update.add(updated_value(bcs_row, 'event_collector_stn_name', event.station.name))
+            row_update.add(updated_value(bcs_row, 'event_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
+            row_update.add(updated_value(bcs_row, 'event_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
+            row_update.add(updated_value(bcs_row, 'event_stime', datetime.strftime(event.start_date, "%H%M%S")))
+            row_update.add(updated_value(bcs_row, 'event_etime', datetime.strftime(event.end_date, "%H%M%S")))
+            row_update.add(updated_value(bcs_row, 'event_utc_offset', 0))
+            row_update.add(updated_value(bcs_row, 'event_min_lat', min(event.start_location[0], event.end_location[0])))
+            row_update.add(updated_value(bcs_row, 'event_max_lat', max(event.start_location[0], event.end_location[0])))
+            row_update.add(updated_value(bcs_row, 'event_min_lon', min(event.start_location[1], event.end_location[1])))
+            row_update.add(updated_value(bcs_row, 'event_max_lon', max(event.start_location[1], event.end_location[1])))
+
+            row_update.add(updated_value(bcs_row, 'event_collector_comment', None))
+            row_update.add(updated_value(bcs_row, 'event_more_comment', None))
+            row_update.add(updated_value(bcs_row, 'event_data_manager_comment', DART_EVENT_COMMENT))
+
+            row_update.add(updated_value(bcs_row, 'pl_headr_collector_sample_id', bottle.bottle_id))
+            row_update.add(updated_value(bcs_row, 'pl_headr_gear_seq', gear))
+
+            # This was set to 1 in the existing AZMP Template for phyto
+            row_update.add(updated_value(bcs_row, 'pl_headr_time_qc_code', 1))
+
+            # This was set to 1 in the existing AZMP Template for phyto
+            row_update.add(updated_value(bcs_row, 'pl_headr_position_qc_code', 1) if not exists else '')
+
+            # use the event starts and stops if not provided by the bottle.
+            if bottle.date_time:
+                row_update.add(updated_value(bcs_row, 'pl_headr_sdate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
+                row_update.add(updated_value(bcs_row, 'pl_headr_edate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
+                row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(bottle.date_time, "%H%M%S")))
+                row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(bottle.date_time, "%H%M%S")))
+            else:
+                row_update.add(updated_value(bcs_row, 'pl_headr_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
+                row_update.add(updated_value(bcs_row, 'pl_headr_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
+                row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(event.start_date, "%H%M%S")))
+                row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(event.end_date, "%H%M%S")))
+
+            if bottle.latitude:
+                row_update.add(updated_value(bcs_row, 'pl_headr_slat', bottle.latitude))
+                row_update.add(updated_value(bcs_row, 'pl_headr_elat', bottle.latitude))
+            else:
+                row_update.add(updated_value(bcs_row, 'pl_headr_slat', event.start_location[0]))
+                row_update.add(updated_value(bcs_row, 'pl_headr_elat', event.end_location[0]))
+
+            if bottle.longitude:
+                row_update.add(updated_value(bcs_row, 'pl_headr_slon', bottle.longitude))
+                row_update.add(updated_value(bcs_row, 'pl_headr_elon', bottle.longitude))
+            else:
+                row_update.add(updated_value(bcs_row, 'pl_headr_slon', event.start_location[1]))
+                row_update.add(updated_value(bcs_row, 'pl_headr_elon', event.end_location[1]))
+
+            row_update.add(updated_value(bcs_row, 'pl_headr_start_depth', bottle.pressure))
+            row_update.add(updated_value(bcs_row, 'pl_headr_end_depth', bottle.pressure))
+
+            row_update.add(updated_value(bcs_row, 'process_flag', 'NR'))
+            row_update.add(updated_value(bcs_row, 'data_center_code', institute.data_center_code))
+
+            batch = batch_name if batch_name else f'{event.start_date.strftime("%Y")}{mission.pk}'
+            row_update.add(updated_value(bcs_row, 'batch_seq', batch))
+
+            # Maybe this should be averaged?
+            row_update.add(updated_value(bcs_row, 'pl_headr_sounding', sounding))
+
+            mesh_size = 0  # 0 if phytoplankton, which is collected from a CTD
+            collection_method = 90000010  # hydrographic if this is phytoplankton
+            procedure = 90000001
+            storage = 90000016
+            shared = 'N'
+            large_plankton_removed = "N"  # No if phytoplankton
+
+            if event.instrument.type == core_models.InstrumentType.net:
+                mesh_size = 202 if gear == 90000102 else 76  # size of the net mesh if zooplankton
+                collection_method = 90000001  # vertical if this is zooplankton
+                large_plankton_removed = 'Y'  # Yes if Zooplankton
+
+            responsible_group = mission.protocol
+            collector = recovery_action.data_collector
+            comment = recovery_action.comment
+
+            if event.instrument.type == core_models.InstrumentType.net:
+                # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
+                area = np.pi * np.power(0.375, 2)
+
+                if event.flow_start and event.flow_end:
+                    # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
+                    # else use the wire out.
+                    # multiply by 0.3 to compensate for the flow meters prop rotation
+                    height = (event.flow_end - event.flow_start) * 0.3
+                    volume = np.round(height * area, 1)
+
+                    row_update.add(updated_value(bcs_row, 'pl_headr_volume', volume))
+                    # 90000002 - volume calculated from recorded revolutions and flow meter calibrations
+                    row_update.add(updated_value(bcs_row, 'pl_headr_volume_method_seq', 90000002))
+                elif event.wire_out:
+                    volume = np.round(event.wire_out * area, 1)
+
+                    row_update.add(updated_value(bcs_row, 'pl_headr_volume', volume))
+                    # 90000004 - estimate of volume calculated using depth and gear mouth opening (wire angle ignored)
+                    row_update.add(updated_value(bcs_row, 'pl_headr_volume_method_seq', 90000004))
+            else:
+                row_update.add(updated_value(bcs_row, 'pl_headr_volume', 0.001))
+                # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
+                row_update.add(updated_value(bcs_row, 'pl_headr_volume_method_seq', 90000010))
+
+            row_update.add(updated_value(bcs_row, 'pl_headr_lrg_plankton_removed', large_plankton_removed))
+            row_update.add(updated_value(bcs_row, 'pl_headr_mesh_size', mesh_size))
+            row_update.add(updated_value(bcs_row, 'pl_headr_collection_method_seq', collection_method))
+            row_update.add(updated_value(bcs_row, 'pl_headr_collector_deplmt_id', None))
+            row_update.add(updated_value(bcs_row, 'pl_headr_procedure_seq', procedure))
+            row_update.add(updated_value(bcs_row, 'pl_headr_storage_seq', storage))
+            row_update.add(updated_value(bcs_row, 'pl_headr_collector', collector))
+            row_update.add(updated_value(bcs_row, 'pl_headr_collector_comment', comment))
+            row_update.add(updated_value(bcs_row, 'pl_headr_meters_sqd_flag', "Y"))
+            row_update.add(updated_value(bcs_row, 'pl_headr_data_manager_comment', DART_EVENT_COMMENT))
+            row_update.add(updated_value(bcs_row, 'pl_headr_responsible_group', responsible_group))
+            row_update.add(updated_value(bcs_row, 'pl_headr_shared_data', shared))
+
+            row_update.remove('')
+
+            if not exists:
+                bcs_objects_to_create.append(bcs_row)
+            elif len(row_update) > 0:
+                updated_fields.update(row_update)
+                bcs_objects_to_update.append(bcs_row)
+
+    return bcs_objects_to_create, bcs_objects_to_update, updated_fields
+
+
+def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to_update, updated_fields):
+    chunk_size = 100
+    if len(bcs_rows_to_create) > 0:
+        user_logger.info(_("Creating BCS rows") + f" : {len(bcs_rows_to_create)}")
+        db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_create)
+
+    if len(bcs_rows_to_update) > 0:
+        user_logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
+        db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_update, updated_fields)

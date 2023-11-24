@@ -148,6 +148,10 @@ class Event(models.Model):
     sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
     end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
+    wire_out = models.FloatField(verbose_name=_("Wire Out"), null=True, blank=True)
+    flow_start = models.IntegerField(verbose_name=_("Flow Meter Start"), null=True, blank=True)
+    flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
+
     @property
     def files(self):
         files = set()
@@ -578,7 +582,7 @@ class ValidationError(AbstractError):
         return f"{self.get_type_display()} : {self.message}"
 
 
-# File errors occur when reading data from a file before an object is created, it's fundmentally something wrong with
+# File errors occur when reading data from a file before an object is created, it's fundamentally something wrong with
 # the file itself like when columns or specific tags are missing or if a file is improperly formatted.
 class FileError(AbstractError):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='file_errors',
@@ -647,7 +651,11 @@ class ElogConfig(FileConfiguration):
               ("end_sample_id", "End_Sample_ID", _("Label identifying the ending bottle in a sequence")),
               ("comment", "Comment", _("Label identifying an action comment")),
               ("data_collector", "Author", _("Label identifying who logged the elog action")),
-              ("sounding", "Sounding", _("Label identifying the sounding depth of the action"))]
+              ("sounding", "Sounding", _("Label identifying the sounding depth of the action")),
+              ("wire_out", "Wire out", _("Label identifying how much wire was unspooled for a net event")),
+              ("flow_start", "Flowmeter Start", _("Label for the starting value of a flowmeter for a net event")),
+              ("flow_end", "Flowmeter End", _("Label for the ending value of a flowmeter for a net event")),
+              ]
 
     @staticmethod
     def get_default_config(mission):
@@ -747,7 +755,7 @@ class PlanktonSample(models.Model):
     stage = models.ForeignKey(bio_tables.models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
                              on_delete=models.DO_NOTHING)
 
-    # defualt unassigned BCSEXES 90000000
+    # default unassigned BCSEXES 90000000
     sex = models.ForeignKey(bio_tables.models.BCSex, verbose_name=_("Sex"), default=90000000,
                             on_delete=models.DO_NOTHING)
 
@@ -767,6 +775,12 @@ class PlanktonSample(models.Model):
     percent = models.FloatField(verbose_name=_("Percent"), blank=True, null=True)
 
     comments = models.CharField(verbose_name=_("Comments"), blank=True, null=True, max_length=255)
+
+    # The procedure code is because parsing zooplankton is dumb. The same plankton will show up
+    # multiple times for one sample and the proc_code determines what record the value should be written
+    # to, but it's also used for totals. Large_biomass, Small_biomass, Totwt and dry_weight all use the same
+    # NCODE and 'what_was_it' value. The only thing unique about them in the file is the proc_code.
+    proc_code = models.IntegerField(verbose_name=_("Procedure Code"), default=9999)
 
     @property
     def plank_sample_key_value(self):
