@@ -174,7 +174,7 @@ def std_sample_report(request, **kwargs):
     mission_id = kwargs['mission_id']
     mission = core_models.Mission.objects.get(pk=mission_id)
 
-    data = ",".join([h.upper() for h in kwargs['headers']]) + '\n'
+    data = ",".join(kwargs['headers']) + '\n'
 
     bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
 
@@ -203,9 +203,9 @@ def std_sample_report(request, **kwargs):
 def oxygen_report(request, **kwargs):
     sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
     samples = ['oxy']
-    header = ["Station", "Event", 'Pressure', "Sample", 'Oxy_CTD_P', 'Oxy_CTD_S', 'oxy_W_Rep1', 'oxy_W_Rep2']
+    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S', 'Oxy_W_Rep1', 'Oxy_W_Rep2']
 
-    return std_sample_report(request, report_name='Oxygen_Summary', headers=header,
+    return std_sample_report(request, report_name='Oxygen_Rpt', headers=header,
                              sensors=sensors, samples=samples, **kwargs)
 
 
@@ -214,7 +214,7 @@ def oxygen_report(request, **kwargs):
 def salt_report(request, **kwargs):
     sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
     samples = ['salts']
-    header = ["Station", "Event", 'Pressure', "Sample", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
+    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
               'Sal_CTD_P', 'Sal_CTD_S', 'Sal_Rep1', 'Sal_Rep2']
 
     return std_sample_report(request, report_name='Salinity_Summary', headers=header,
@@ -225,7 +225,7 @@ def salt_report(request, **kwargs):
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def chl_report(request, **kwargs):
     sensors = ['flECO-AFL', 'wetCDOM']
-    header = ["Station", "Event", 'Pressure', "Sample", 'flECO-AFL', 'wetCDOM', 'Chl_Rep1', 'Chl_Rep2']
+    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'flECO-AFL', 'wetCDOM', 'Chl_Rep1', 'Chl_Rep2']
     samples = ['chl']
 
     return std_sample_report(request, report_name='Chl_Summary', headers=header,
