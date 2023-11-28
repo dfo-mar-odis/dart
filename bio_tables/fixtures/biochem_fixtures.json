@@ -5697,7 +5697,7 @@
         "unit_seq": 90000066,
         "places_before": 6,
         "places_after": 3,
-        "minimum_value": "0.00024",
+        "minimum_value": "-0.00400",
         "maximum_value": "5.00000",
         "originally_entered_by": "Test user"
     }
@@ -23068,46 +23068,6 @@
         "method": "Temp_CTD_1990",
         "priority": 2,
         "p_code": "TEMP",
-        "bodc_code": ""
-    }
-},
-{
-    "model": "bio_tables.bcdatatype",
-    "pk": 90001133,
-    "fields": {
-        "data_center_code": 20,
-        "data_retrieval": 90000133,
-        "analysis": 90000002,
-        "preservation": 90000001,
-        "sample_handling": 90000001,
-        "storage": 90000001,
-        "unit": 90000001,
-        "description": "WetLabs C-Star Transmissometer Beam transmission",
-        "conversion_equation": "",
-        "originally_entered_by": "BUGDENJ",
-        "method": "CStarTr0",
-        "priority": 2,
-        "p_code": "",
-        "bodc_code": ""
-    }
-},
-{
-    "model": "bio_tables.bcdatatype",
-    "pk": 90001134,
-    "fields": {
-        "data_center_code": 20,
-        "data_retrieval": 90000133,
-        "analysis": 90000002,
-        "preservation": 90000001,
-        "sample_handling": 90000001,
-        "storage": 90000001,
-        "unit": 90000066,
-        "description": "WetLabs C-Star Transmissometer Attenuation",
-        "conversion_equation": "",
-        "originally_entered_by": "BUGDENJ",
-        "method": "CStarAt0",
-        "priority": 2,
-        "p_code": "",
         "bodc_code": ""
     }
 },
@@ -112880,6 +112840,54 @@
     }
 },
 {
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006120,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 1195714,
+        "taxonomic_name": "Robustosergia robusta",
+        "best_nodc7": 6177020409,
+        "authority": "(Smith, 1882)",
+        "collectors_comment": "Formerly Sergia robusta",
+        "data_managers_comment": "NOTE - NODC is for Sergia robusta; there is no NODC for Robustosergia robusta",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 1056517
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006121,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 166116,
+        "taxonomic_name": "Scopelogadus beanii",
+        "best_nodc7": 88080204,
+        "authority": "(Günther, 1887)",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 127278
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006122,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 85394,
+        "taxonomic_name": "Spinocalanus antarcticus",
+        "best_nodc7": 6118060304,
+        "authority": "Wolfenden, 1906",
+        "collectors_comment": "",
+        "data_managers_comment": "NODC has the authority as WOLFENDEN, 1911",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 254612
+    }
+},
+{
     "model": "bio_tables.bcgear",
     "pk": 90000000,
     "fields": {
@@ -115066,6 +115074,3187 @@
         "model": "HydroBios mini",
         "gear_size": "0.35cmx0.35cm",
         "description": "multinet gear, 5 pcs, length: 160cm, net opening: 0.35cmx0.35cm=0.125m2\r\n(Product ID:438 120)"
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "UNASSIGNED",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "male",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "female",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "indeterminate",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "undeterminable",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 20,
+        "name": "reassign",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": "all",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "no information",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not determined",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "damaged",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unidentifiable",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "exoskeletons",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "remains - fragments",
+        "description": "eg. Phytoplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "all stages excluding eggs",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "actinula",
+        "description": "hydrozoa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "adult",
+        "description": "all",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "adult developing female",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "adult gravid female",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "adult spent female",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "aggregate",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "antizoel",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "name": "auricularia",
+        "description": "holothuroidea,doliolaria",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 90,
+        "name": "bipinnaria",
+        "description": "echinoderm",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 90,
+        "name": "blastozooid",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 90,
+        "name": "brachiolaria",
+        "description": "echinoderm",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 90,
+        "name": "bracts",
+        "description": "jelly",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 90,
+        "name": "calyptopis",
+        "description": "euphausiid",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 90,
+        "name": "calyptopis and furcilia",
+        "description": "euphausiid",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 90,
+        "name": "chain",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 90,
+        "name": "polyp",
+        "description": "anthrozoa - polyp_colonial",
+        "molt_number": "colonial"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 90,
+        "name": "colony",
+        "description": "hydrozoa,ascidian",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_I",
+        "molt_number": "I"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_II",
+        "molt_number": "II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_III",
+        "molt_number": "III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_IV",
+        "molt_number": "IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000029,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_V",
+        "molt_number": "V "
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000030,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI",
+        "molt_number": "VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000031,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_devel",
+        "molt_number": "VI DEVELOPING"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000032,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_gravid",
+        "molt_number": "VI GRAVID"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_spent",
+        "molt_number": "VI SPENT"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_I-II",
+        "molt_number": "I-II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000035,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_I-III",
+        "molt_number": "I-III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000036,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_I-IV",
+        "molt_number": "I-IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000037,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_I-V",
+        "molt_number": "I-V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_II-III",
+        "molt_number": "II-III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000039,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_II-IV",
+        "molt_number": "II-IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_II-V",
+        "molt_number": "II-V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_III-IV",
+        "molt_number": "III-IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000042,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_III-V",
+        "molt_number": "III-V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000043,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_IV-V",
+        "molt_number": "IV-V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000044,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_IV-VI",
+        "molt_number": "IV-VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000045,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod - copepodite_V-VI",
+        "molt_number": "V-VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000046,
+    "fields": {
+        "data_center_code": 90,
+        "name": "copepodite",
+        "description": "copepod",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000047,
+    "fields": {
+        "data_center_code": 90,
+        "name": "crytopia",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000048,
+    "fields": {
+        "data_center_code": 90,
+        "name": "cydippid",
+        "description": "cnidaria.  free swimming larvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000049,
+    "fields": {
+        "data_center_code": 90,
+        "name": "cyphonaute",
+        "description": "bivalved larval stage of certain bryzoans, thysanoessa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000050,
+    "fields": {
+        "data_center_code": 90,
+        "name": "cyprid",
+        "description": "larva of certain crustaceans such as cirriped",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000051,
+    "fields": {
+        "data_center_code": 90,
+        "name": "cyst",
+        "description": "eg. Dinoflagellates",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000052,
+    "fields": {
+        "data_center_code": 90,
+        "name": "damaged",
+        "description": "all",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000053,
+    "fields": {
+        "data_center_code": 90,
+        "name": "doliolaria",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000054,
+    "fields": {
+        "data_center_code": 90,
+        "name": "echinopluteus",
+        "description": "echinoderm",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000055,
+    "fields": {
+        "data_center_code": 90,
+        "name": "egg",
+        "description": "all",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000056,
+    "fields": {
+        "data_center_code": 90,
+        "name": "egg case",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000057,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ephyra",
+        "description": "scyphozoa.  young medusae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000058,
+    "fields": {
+        "data_center_code": 90,
+        "name": "furcilia",
+        "description": "euphausiid",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000059,
+    "fields": {
+        "data_center_code": 90,
+        "name": "furcilia and adults",
+        "description": "euphausiid",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000060,
+    "fields": {
+        "data_center_code": 90,
+        "name": "furcilia and juveniles",
+        "description": "euphausiid",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000061,
+    "fields": {
+        "data_center_code": 90,
+        "name": "glaucothoe",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000062,
+    "fields": {
+        "data_center_code": 90,
+        "name": "house",
+        "description": "tunicate",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000063,
+    "fields": {
+        "data_center_code": 90,
+        "name": "immature",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000064,
+    "fields": {
+        "data_center_code": 90,
+        "name": "juvenile",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000065,
+    "fields": {
+        "data_center_code": 90,
+        "name": "juvenile and small",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000066,
+    "fields": {
+        "data_center_code": 90,
+        "name": "juvenile and adult",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000067,
+    "fields": {
+        "data_center_code": 90,
+        "name": "size - large",
+        "description": "large",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000068,
+    "fields": {
+        "data_center_code": 90,
+        "name": "larvae",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 90,
+        "name": "larvae, juvenile and adult",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000070,
+    "fields": {
+        "data_center_code": 90,
+        "name": "larvae and adult",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000071,
+    "fields": {
+        "data_center_code": 90,
+        "name": "leptocephalus",
+        "description": "eel larvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000072,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mastigopus",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000073,
+    "fields": {
+        "data_center_code": 90,
+        "name": "medusa",
+        "description": "jelly, hydrozoa, scyphozoa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000074,
+    "fields": {
+        "data_center_code": 90,
+        "name": "megalopa",
+        "description": "post larval stage",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000075,
+    "fields": {
+        "data_center_code": 90,
+        "name": "metanauplius",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000076,
+    "fields": {
+        "data_center_code": 90,
+        "name": "metatrochophore",
+        "description": "polychaet",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000077,
+    "fields": {
+        "data_center_code": 90,
+        "name": "metazoea",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000078,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mysis",
+        "description": "decapod",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000079,
+    "fields": {
+        "data_center_code": 90,
+        "name": "nauplius",
+        "description": "crustaceans",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000080,
+    "fields": {
+        "data_center_code": 90,
+        "name": "nauplius and calyptosis",
+        "description": "euphausiid",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000081,
+    "fields": {
+        "data_center_code": 90,
+        "name": "nectophore",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000082,
+    "fields": {
+        "data_center_code": 90,
+        "name": "nurse",
+        "description": "tunicate",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000083,
+    "fields": {
+        "data_center_code": 90,
+        "name": "nymph",
+        "description": "insecta",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000084,
+    "fields": {
+        "data_center_code": 90,
+        "name": "nurse",
+        "description": "tunicate - nurse_old",
+        "molt_number": "old"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000085,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oozoid",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000086,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ophiopluteus",
+        "description": "echinoderm",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000087,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pentacrinoid",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000088,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pentacula",
+        "description": "sea cucumber",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000089,
+    "fields": {
+        "data_center_code": 90,
+        "name": "physonect",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000090,
+    "fields": {
+        "data_center_code": 90,
+        "name": "planula",
+        "description": "hydrozoa, scyphozoa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000091,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pluteus",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000092,
+    "fields": {
+        "data_center_code": 90,
+        "name": "polyp",
+        "description": "hydrozoa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000093,
+    "fields": {
+        "data_center_code": 90,
+        "name": "postflexion",
+        "description": "fish; see also postlarvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000094,
+    "fields": {
+        "data_center_code": 90,
+        "name": "postlarvae",
+        "description": "fish; see also preflexion",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000095,
+    "fields": {
+        "data_center_code": 90,
+        "name": "protozoea",
+        "description": "decapod",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000096,
+    "fields": {
+        "data_center_code": 90,
+        "name": "protozoea and calyptosis",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000097,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pupa",
+        "description": "insecta",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000098,
+    "fields": {
+        "data_center_code": 90,
+        "name": "remains",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000099,
+    "fields": {
+        "data_center_code": 90,
+        "name": "scyphistoma",
+        "description": "scyphozoa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000100,
+    "fields": {
+        "data_center_code": 90,
+        "name": "size - small",
+        "description": "small",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000101,
+    "fields": {
+        "data_center_code": 90,
+        "name": "solitary",
+        "description": "salp",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000102,
+    "fields": {
+        "data_center_code": 90,
+        "name": "polyp",
+        "description": "anthrozoa - polyp_solitary",
+        "molt_number": "solitary"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000103,
+    "fields": {
+        "data_center_code": 90,
+        "name": "spores",
+        "description": "eg. resting spores Chaetoceros",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000104,
+    "fields": {
+        "data_center_code": 90,
+        "name": "strobilia",
+        "description": "scyphozoa",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000105,
+    "fields": {
+        "data_center_code": 90,
+        "name": "to be assigned",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000106,
+    "fields": {
+        "data_center_code": 90,
+        "name": "tornaria",
+        "description": "hemichordata",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000107,
+    "fields": {
+        "data_center_code": 90,
+        "name": "trochophore",
+        "description": "bivalve, polychaet,mollusc",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000108,
+    "fields": {
+        "data_center_code": 90,
+        "name": "veliger",
+        "description": "mollusks, echinodermata",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000109,
+    "fields": {
+        "data_center_code": 90,
+        "name": "vitellaria",
+        "description": "generalized echinoderm larvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000110,
+    "fields": {
+        "data_center_code": 90,
+        "name": "yolksac larvae",
+        "description": "fish",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000111,
+    "fields": {
+        "data_center_code": 90,
+        "name": "zoea",
+        "description": "decapod",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000112,
+    "fields": {
+        "data_center_code": 90,
+        "name": "zoea and furcilia",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000113,
+    "fields": {
+        "data_center_code": 90,
+        "name": "damaged and exoskeletons",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000114,
+    "fields": {
+        "data_center_code": 90,
+        "name": "preflexion",
+        "description": "fish; see also prelarvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000115,
+    "fields": {
+        "data_center_code": 90,
+        "name": "prelarvae",
+        "description": "fish; see also preflexion",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000116,
+    "fields": {
+        "data_center_code": 90,
+        "name": "eudoxoid bract",
+        "description": "arctic dimophyes attica",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000117,
+    "fields": {
+        "data_center_code": 90,
+        "name": "polygastric phase",
+        "description": "dimophyes artica-polygastric p/ohase",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000118,
+    "fields": {
+        "data_center_code": 90,
+        "name": "eudoxoid phase no genophore",
+        "description": "dimophyes artica-eudoxid phase-no genophore",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000119,
+    "fields": {
+        "data_center_code": 90,
+        "name": "eudoxoid phase immat gonophore",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000120,
+    "fields": {
+        "data_center_code": 90,
+        "name": "gonophore medusae",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000121,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mature gonophore medusae",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000122,
+    "fields": {
+        "data_center_code": 90,
+        "name": "fecal pellets",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000123,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not specified",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000124,
+    "fields": {
+        "data_center_code": 90,
+        "name": "adults, juveniles and eggs",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000125,
+    "fields": {
+        "data_center_code": 90,
+        "name": "invertebrate",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000126,
+    "fields": {
+        "data_center_code": 20,
+        "name": "unknown",
+        "description": "unknown",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000127,
+    "fields": {
+        "data_center_code": 20,
+        "name": "post calyptopis",
+        "description": "from american CPR",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000128,
+    "fields": {
+        "data_center_code": 20,
+        "name": "immat sexually, or juvenile",
+        "description": "from american CPR:  IMMATURE (SEXUALLY), OR JUVENILE",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000129,
+    "fields": {
+        "data_center_code": 20,
+        "name": "immat sexually, juv or adult",
+        "description": "from american CPR:  IMMATURE (SEXUALLY), OR JUVENILE, OR ADULT",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000130,
+    "fields": {
+        "data_center_code": 90,
+        "name": "manca",
+        "description": "MYSID",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000131,
+    "fields": {
+        "data_center_code": 90,
+        "name": "remains - protoplasts",
+        "description": "eg. dinoflagellates",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000132,
+    "fields": {
+        "data_center_code": 20,
+        "name": "zoea",
+        "description": "ZOEA I",
+        "molt_number": "I"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000133,
+    "fields": {
+        "data_center_code": 20,
+        "name": "zoea",
+        "description": "ZOEA II",
+        "molt_number": "II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000134,
+    "fields": {
+        "data_center_code": 20,
+        "name": "zoea",
+        "description": "ZOEA III",
+        "molt_number": "III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000135,
+    "fields": {
+        "data_center_code": 20,
+        "name": "zoea",
+        "description": "ZOEA IV",
+        "molt_number": "IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000136,
+    "fields": {
+        "data_center_code": 20,
+        "name": "zoea",
+        "description": "ZOEA V",
+        "molt_number": "V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000138,
+    "fields": {
+        "data_center_code": 20,
+        "name": "larvae",
+        "description": "FIRST STAGE LARVAE",
+        "molt_number": "STAGE I"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000139,
+    "fields": {
+        "data_center_code": 20,
+        "name": "larvae",
+        "description": "SECOND STAGE LARVAE",
+        "molt_number": "STAGE II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000140,
+    "fields": {
+        "data_center_code": 20,
+        "name": "larvae",
+        "description": "THIRD STAGE LARVAE",
+        "molt_number": "STAGE III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000141,
+    "fields": {
+        "data_center_code": 20,
+        "name": "larvae",
+        "description": "FOURTH STAGE LARVAE",
+        "molt_number": "STAGE IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000142,
+    "fields": {
+        "data_center_code": 30,
+        "name": "nauplius",
+        "description": "COPEPOD-NAUPLIUS_I-II",
+        "molt_number": "I-II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000143,
+    "fields": {
+        "data_center_code": 30,
+        "name": "nauplius",
+        "description": "COPEPOD-NAUPLIUS_III-VI",
+        "molt_number": "III-VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000144,
+    "fields": {
+        "data_center_code": 30,
+        "name": "nauplius",
+        "description": "COPEPOD-NAUPLIUS_I-VI",
+        "molt_number": "I-VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000145,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nauplius",
+        "description": "example copepod nauplius stage 1",
+        "molt_number": "I"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000146,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nauplius",
+        "description": "example copepod nauplius stage 2",
+        "molt_number": "II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000147,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nauplius",
+        "description": "example copepod nauplius stage 3",
+        "molt_number": "III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000148,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nauplius",
+        "description": "example copepod nauplius stage 4",
+        "molt_number": "IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000149,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nauplius",
+        "description": "example copepod nauplius stage 5",
+        "molt_number": "V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000150,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nauplius",
+        "description": "example copepod nauplius stage 6",
+        "molt_number": "VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000151,
+    "fields": {
+        "data_center_code": 20,
+        "name": "egg",
+        "description": "first stage egg",
+        "molt_number": "STAGE I"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000152,
+    "fields": {
+        "data_center_code": 20,
+        "name": "egg",
+        "description": "second stage egg",
+        "molt_number": "STAGE II"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000153,
+    "fields": {
+        "data_center_code": 20,
+        "name": "egg",
+        "description": "third stage egg",
+        "molt_number": "STAGE III"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000154,
+    "fields": {
+        "data_center_code": 20,
+        "name": "egg",
+        "description": "fourth stage egg",
+        "molt_number": "STAGE IV"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000155,
+    "fields": {
+        "data_center_code": 20,
+        "name": "egg",
+        "description": "fifth stage egg",
+        "molt_number": "STAGE V"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000156,
+    "fields": {
+        "data_center_code": 20,
+        "name": "VEGETATIVE CELL",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000157,
+    "fields": {
+        "data_center_code": 20,
+        "name": "HYPNOSPORE",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000158,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TEMPORARY CYST",
+        "description": "sometimes created when stressed",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000159,
+    "fields": {
+        "data_center_code": 20,
+        "name": "FLAGELLATE",
+        "description": "could be anything...no further info available",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000160,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ADULT F BEARING SPERMATOPHORES",
+        "description": "female bearing carrying attached spermatophore(s), eg copepods",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000161,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP.",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000162,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP.",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000163,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. A",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000164,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. B",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000165,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. 1",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000166,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. 2",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000167,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. 3",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000168,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. 4",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000169,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. 5",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000170,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER ?",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000171,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP.?",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000172,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP.?",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000173,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SMALL",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000174,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MEDIUM",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000175,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER LARGE",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000176,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER OBLATE SPHEROID",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000177,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER UNIDENTIFIED 1",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000178,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER UNIDENTIFIED 2",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000179,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER UNIDENTIFIED 3",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000180,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER 100 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000181,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER 200 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000182,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER 60 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000183,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 15-20 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000184,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 20-30 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000185,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 30-40 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000186,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 40-50 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000187,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 50-60 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000188,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 60-70 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000189,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 70-80 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000190,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 80-90 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000191,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 90-100 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000192,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. >100 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000193,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER 100 MICRON EGG",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000194,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER 200 MICRON EGG",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000195,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER 60 MICRON EGG",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000196,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER LARGE NAUPLII",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000197,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MEDIUM NAUPLII",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000198,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SMALL NAUPLII",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000199,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. CYST",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000200,
+    "fields": {
+        "data_center_code": 30,
+        "name": "MODIFIER NAUPLIUS SP. 1",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000201,
+    "fields": {
+        "data_center_code": 30,
+        "name": "MODIFIER NAUPLIUS SP. 2",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000202,
+    "fields": {
+        "data_center_code": 30,
+        "name": "MODIFIER MACROZOOPLANKTON",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000203,
+    "fields": {
+        "data_center_code": 30,
+        "name": "MODIFIER LARGE MACROZOOPLNKT",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000204,
+    "fields": {
+        "data_center_code": 30,
+        "name": "MODIFIER SMALL MACROZOOPLNKT",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000205,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MESOZOOPLANKTON LARVA",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000206,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MACRZOOPLANKTON LARVA",
+        "description": "modifier description",
+        "molt_number": "STAGE1"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000207,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EMBRYONIC",
+        "description": "stage 1",
+        "molt_number": "STAGE1"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000208,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EMBRYONIC",
+        "description": "stage 2",
+        "molt_number": "STAGE2"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000209,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EMBRYONIC",
+        "description": "stage 3",
+        "molt_number": "STAGE3"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000210,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EMBRYONIC",
+        "description": "stage 4",
+        "molt_number": "STAGE4"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000211,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EMBRYONIC",
+        "description": "stage 5",
+        "molt_number": "STAGE5"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000212,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EMBRYONIC",
+        "description": "stage 6",
+        "molt_number": "STAGE6"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000213,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EGG",
+        "description": "resting egg",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000214,
+    "fields": {
+        "data_center_code": 20,
+        "name": "EGG",
+        "description": "undeveloped (amorphorus)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000215,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MACROZOOPL JUVENILE",
+        "description": "modifier description for macrozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000216,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MACROZOOPL MANCA",
+        "description": "modifier description for macrozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000217,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MESOZOOPL MANCA",
+        "description": "modifier description for mesozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000218,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MACROZOOPL FURCILLA",
+        "description": "modifier description for macrozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000219,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MESOZOOPL FURCILLA",
+        "description": "modifier description for mesozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000220,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MACROZOOPL ZOEA",
+        "description": "modifier description for macrozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000221,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MESOZOOPL ZOEA",
+        "description": "modifier description for mesozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000222,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 1-5 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000223,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 6-10 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000224,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 10-25 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000225,
+    "fields": {
+        "data_center_code": 20,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_gravid female, stage 1=immature",
+        "molt_number": "VI GRAVID (STAGE1)"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000226,
+    "fields": {
+        "data_center_code": 20,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_gravid female, stage 2=low maturation",
+        "molt_number": "VI GRAVID (STAGE2)"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000227,
+    "fields": {
+        "data_center_code": 20,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_gravid female, stage 3=moderate maturation",
+        "molt_number": "VI GRAVID (STAGE3)"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000228,
+    "fields": {
+        "data_center_code": 20,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_gravid female, stage 4=high maturation",
+        "molt_number": "VI GRAVID (STAGE4)"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000229,
+    "fields": {
+        "data_center_code": 20,
+        "name": "copepodite",
+        "description": "copepod - copepodite_VI_gravid female, stage 5=decreased maturation",
+        "molt_number": "VI GRAVID (STAGE5)"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000230,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SMALL EGG",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000231,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MEDIUM EGG",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000232,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER LARGE EGG",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000233,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER MACROZOOPL MEGALOPA",
+        "description": "modifier description for macrozooplankton",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000234,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SP. 6",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000235,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER SPP. 500 MICRONS",
+        "description": "modifier description",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000236,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER CONIFEROUS, GRAINS",
+        "description": "modifier description (type of pollen)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000237,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STATE1",
+        "description": "modifier description (state 1 = good condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000238,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 411STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000239,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 412STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000240,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 413STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000241,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 414STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000242,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 415STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000243,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 416STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000244,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 610STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000245,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 620STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000246,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 650STATE10",
+        "description": "modifier description (state 10 = damaged condition)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000247,
+    "fields": {
+        "data_center_code": 20,
+        "name": "FLEXION",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000248,
+    "fields": {
+        "data_center_code": 20,
+        "name": "larva and juvenile",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000249,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER EMBRYONIC (no stage)",
+        "description": "embryon inside a broken egg",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000250,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER Larvae?",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000251,
+    "fields": {
+        "data_center_code": 20,
+        "name": "phycoma",
+        "description": "kyste de certaines prasinophycées; cyst of some Prasinophyceae (algae green) ",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000252,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 524 STATE5",
+        "description": "modifier description (state 5 fish larvae, poor condition but measureable)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000253,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MODIFIER NAFC STAGE 524 STATE6",
+        "description": "modifier description (state 6 fish larvae, poor condition and not measureable)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000254,
+    "fields": {
+        "data_center_code": 20,
+        "name": "copepodite",
+        "description": "copepod - copepodite_III-VI",
+        "molt_number": "III-VI"
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000255,
+    "fields": {
+        "data_center_code": 20,
+        "name": "egg and larvae",
+        "description": "ova (egg) and larvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000256,
+    "fields": {
+        "data_center_code": 30,
+        "name": "pilidium",
+        "description": "Nemertea larva",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000257,
+    "fields": {
+        "data_center_code": 20,
+        "name": "pollen",
+        "description": "unidentified pollen (PLANTAE)",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000258,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Y-cypris",
+        "description": "Facetotectan larvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000259,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Y-nauplius",
+        "description": "Facetotectan larvae",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000260,
+    "fields": {
+        "data_center_code": 30,
+        "name": "veliger and trochophore",
+        "description": "",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000261,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Egg Sack",
+        "description": "Copepod terminology for egg case",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000262,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Pneumatophore",
+        "description": "Float from top of Siphonophore colony",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000263,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Embryo",
+        "description": "Not yet free living, broken loose from marsupium or egg",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000264,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Epibenthic",
+        "description": "Bottom-dwelling species, not strictly planktonic; stirred into water column during collecting event.",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000265,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Tentacles",
+        "description": "Damaged tentacles alone. Main body of specimen not encountered",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "vertical",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "horizontal",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "double oblique",
+        "description": "example ssip 03"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "sawtooth oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "surface",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ssip old stepped oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ssip new stepped oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hydrographic",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique tow with light_1",
+        "description": "oblique tow with attached strobe light"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique tow with light_2",
+        "description": "oblique tow with attached unspecified light"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "multiple vertical casts",
+        "description": "vertical tow from surface to bottom to surface to bottom; unspecified number of repetitions"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hydrographic - integrated",
+        "description": "combined samples from discrete water 'bottles'"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 25,
+        "name": "stepped oblique - 10 min tow",
+        "description": "10 minute stepped oblique tow"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 20,
+        "name": "horizontal type2",
+        "description": "net lowered, towed horizontally at depth for specified time and then retrieved.  (Entire water column sampled)"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 20,
+        "name": "epibenthic tow",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Stepped oblique",
+        "description": "details related to sampling time at specific depths and the duration of the tow should be included in the cruise metadata"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gear_specific",
+        "description": "see gear description and associated sampling methodology"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not analysed",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "quant analysis complete",
+        "description": "quantitative"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "quant analysis incomplet",
+        "description": "quantitative selected groups analysed"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "sorting info not available"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 20,
+        "name": "lost",
+        "description": "sample lost in transit"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 20,
+        "name": "rotten",
+        "description": "sample rotten"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 20,
+        "name": "hit bottom",
+        "description": "sample hit bottom and not sorted"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 20,
+        "name": "damaged during analysis",
+        "description": "sample damaged during sort"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 20,
+        "name": "do not analyse",
+        "description": "sample not to be sorted for various reasons"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 20,
+        "name": "not representative",
+        "description": "sample not representative"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 20,
+        "name": "qualitative analysis",
+        "description": "qualitative only, see species/cruise comments"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 20,
+        "name": "quantitative (Flow Cytometry)",
+        "description": "counts from flow cytometer"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 30,
+        "name": "quantitative analysis",
+        "description": "quantitative complete or selected groups analyzed (not defined, example for legacy datasets taxonomic groups may have been identified separately and it is unclear if when the results were combined if all groups were examined )"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 20,
+        "name": "quantitative (bacteria counts)",
+        "description": "for method refer to Bunch 1979 Fisheries and Marine Service Manuscript Report no 1515, April 1979"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Vilks_1970",
+        "description": "foraminifera quantitative analysis"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Mixed analysis",
+        "description": "Sample completely analyzed (all taxa are identified) but there was a mix of quantitative and qualitative analysis. (all the taxa of a certain group were quantitatively analyzed and for all the others presence was noted)"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Experimental",
+        "description": "Sample collected for experimental purposes: Not analyzed for species abundance"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter",
+        "description": "electronic readout of volume of water filtered"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter",
+        "description": "volume calculated from recorded revolutions and flow meter calibrations"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "calculated",
+        "description": "volume calculated using depth, wire angle and net mouth opening"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "estimated",
+        "description": "estimate of volume calculated using depth and gear mouth opening (wire angle ignored)"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "method used to calculate volume of water filtered was not recorded"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "qualitative",
+        "description": "unable to calculate volume of water filtered"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": "this field should be updated with correct value"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flag",
+        "description": "data entered as previously calculated values; volume filtered not recorded"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter bad",
+        "description": "flow meter not working"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "NA",
+        "description": "not applicable; perhaps net lost; perhaps data from a bottle"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "volume should be recalculated",
+        "description": "use raw data and recalculate volume"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 30,
+        "name": "flow meter",
+        "description": "volume calculated from recorded revolutions and flow meter calibrations; NOTE:  one of the variables/factors in the equation may be suspect and the result may be \"low."
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 20,
+        "name": "flow meter",
+        "description": "data report indicates use of flow metres and the report also provided the volume of water filtered."
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gear_specific",
+        "description": "gear specific; example refer to box core sample analysis methodology"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "conversion1 (per millilitre)",
+        "description": "volume value set to convert data to units per cubic metre; data values are in units of per millilitre; volume = 0.000001m³ (which is 1 mL). The query will return 1000000 count/m³ for 1 bacteria/mL"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "conversion2 (per litre)",
+        "description": "volume value set to convert data to units per cubic metre; data values are in units of per litre; volume = 0.001 m³ (which is 1L). The query will return 1000 count/m³ for 1 cell/L"
     }
 }
 ]

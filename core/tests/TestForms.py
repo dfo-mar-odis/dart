@@ -22,6 +22,24 @@ import logging
 logger = logging.getLogger("dart.test")
 
 
+@tag('forms', 'form_mission_plankton')
+class TestMissionPlanktonForm(DartTestCase):
+
+    def setUp(self) -> None:
+        self.client = Client()
+        self.mission = core_factory.MissionFactory()
+
+    def test_plankton_form(self):
+        url = reverse('core:mission_plankton_plankton_details', args=(self.mission.id,))
+
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        upload_form = soup.find(id='form_id_plankton_upload')
+        self.assertIsNotNone(upload_form)
+
+
 @tag('forms', 'form_mission_samples')
 class TestMissionSamplesForm(DartTestCase):
 
@@ -31,7 +49,7 @@ class TestMissionSamplesForm(DartTestCase):
 
     def test_ctd_card(self):
         # The CTD card should have a form with a text input and a refresh button
-        url = reverse('core:sample_details', args=(self.mission.id,))
+        url = reverse('core:mission_samples_sample_details', args=(self.mission.id,))
 
         response = self.client.get(url)
 
@@ -41,9 +59,9 @@ class TestMissionSamplesForm(DartTestCase):
         self.assertIsNotNone(upload_form)
 
     def test_get_btl_list(self):
-        # provided a directory a get request to hx_sample_upload_ctd should return a form
+        # provided a directory a get request to sample_upload_ctd should return a form
         # with a list of files that can be uploaded when selected.
-        url = reverse('core:hx_sample_upload_ctd', args=(self.mission.id,))
+        url = reverse('core:mission_samples_sample_upload_ctd', args=(self.mission.id,))
         dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
 
         response = self.client.get(url, {"bottle_dir": dir})
@@ -54,9 +72,9 @@ class TestMissionSamplesForm(DartTestCase):
 
     def test_event_upload_selected(self):
         # Upon selecting files and clicking the submit button a get request should be made to
-        # hx_sample_upload_ctd that will return a loading dialog that will make a post request
-        # to hx_sample_upload_ctd with a websocket on it.
-        url = reverse('core:hx_sample_upload_ctd', args=(self.mission.id,))
+        # sample_upload_ctd that will return a loading dialog that will make a post request
+        # to sample_upload_ctd with a websocket on it.
+        url = reverse('core:mission_samples_sample_upload_ctd', args=(self.mission.id,))
 
         dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
 
@@ -77,7 +95,7 @@ class TestMissionEventForm(DartTestCase):
 
     def test_events_card(self):
         # the mission events page should have a card on it that contains an upload button
-        url = reverse("core:event_details", args=(self.mission.id,))
+        url = reverse("core:mission_events_details", args=(self.mission.id,))
 
         response = self.client.get(url)
 
@@ -93,7 +111,7 @@ class TestMissionEventForm(DartTestCase):
         # the response from a get request to core:hx_elog_upload url should contain a loading alert
         # the loading alert should have a post request to core:hx_elog_upload to start the processing
         # of uploaded files.
-        url = reverse("core:hx_upload_elog", args=(self.mission.id,))
+        url = reverse("core:mission_events_upload_elog", args=(self.mission.id,))
 
         response = self.client.get(url)
 
@@ -134,7 +152,7 @@ class TestSampleFileConfiguration(DartTestCase):
             self.assertEquals(ex.args[0]["message"], "missing initial \"file_type\"")
 
     def test_form_exists(self):
-        url = reverse("core:load_sample_config") + f"?mission={self.mission.pk}"
+        url = reverse("core:mission_samples_load_sample_config") + f"?mission={self.mission.pk}"
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -163,7 +181,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # first action is for a user to choose a file, which should send back an 'alert alert-info' element
         # stating that loading is taking place and will post the file to the 'load_sample_config' url
 
-        url = reverse("core:load_sample_config")
+        url = reverse("core:mission_samples_load_sample_config")
         response = self.client.get(url + "?sample_file=''")
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -181,7 +199,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # provided a file, if no configs are available the div_id_sample_type_holder
         # tag should contain a message that no configs were found
 
-        url = reverse("core:load_sample_config")
+        url = reverse("core:mission_samples_load_sample_config")
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp})
 
@@ -197,7 +215,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # When the 'add' sample_type button is clicked an alert dialog should be swapped in indicating that a loading
         # operation is taking place, this is a get request so no file is needed. The alert will then call
         # new_sample_config with a post request to retrieve the details
-        url = reverse("core:new_sample_config")
+        url = reverse("core:mission_samples_new_sample_config")
 
         response = self.client.get(url)
 
@@ -207,7 +225,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         self.assertIsNotNone(message)
         self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], reverse("core:new_sample_config"))
+        self.assertEquals(message.attrs['hx-post'], reverse("core:mission_samples_new_sample_config"))
 
         alert = message.find('div')
         self.assertEquals(alert.text, "Loading")
@@ -216,7 +234,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # When the 'add' sample_type button is clicked if no file has been selected a message should be
         # swapped into the div_id_sample_type_holder tag saying no file has been selected
 
-        url = reverse("core:new_sample_config")
+        url = reverse("core:mission_samples_new_sample_config")
 
         # anything that requires access to a file will need to be a post method
         response = self.client.post(url, {'sample_file': ''})
@@ -238,7 +256,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         expected_form_html = render_crispy_form(expected_config_form)
 
-        url = reverse("core:new_sample_config")
+        url = reverse("core:mission_samples_new_sample_config")
 
         # anything that requres accss to a file will need to be a post method
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
@@ -251,7 +269,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # After the form has been filled out and the user clicks the submit button the 'save_sample_config' url
         # should be called with a get request to get the saving alert
 
-        url = reverse("core:save_sample_config")
+        url = reverse("core:mission_samples_save_sample_config")
 
         response = self.client.get(url)
 
@@ -281,7 +299,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         expected_form_html = render_crispy_form(expected_config_form)
 
-        url = reverse("core:save_sample_config")
+        url = reverse("core:mission_samples_save_sample_config")
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp,
@@ -309,7 +327,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         expected_sample_type_load_form_id = f'div_id_sample_config_card_{1}'
 
-        url = reverse("core:save_sample_config")
+        url = reverse("core:mission_samples_save_sample_config")
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk,
@@ -350,7 +368,7 @@ class TestSampleFileConfiguration(DartTestCase):
                                     context={'sample_config': oxy_sample_type_config})
         expected_soup = BeautifulSoup(f'<div id="div_id_loaded_samples_list">{expected}</div>', 'html.parser')
 
-        url = reverse("core:load_sample_config")
+        url = reverse("core:mission_samples_load_sample_config")
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp})
 
@@ -382,7 +400,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:new_sample_config", args=(oxy_sample_type.pk,))
+        url = reverse("core:mission_samples_new_sample_config", args=(oxy_sample_type.pk,))
 
         expected_config_form = forms.SampleTypeConfigForm(instance=oxy_sample_type_config,
                                                           field_choices=self.expected_headers)
@@ -414,7 +432,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:save_sample_config", args=(oxy_sample_type_config.pk,))
+        url = reverse("core:mission_samples_save_sample_config", args=(oxy_sample_type_config.pk,))
 
         response = self.client.get(url, {'update_sample_type': ''})
 
@@ -448,7 +466,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:save_sample_config", )
+        url = reverse("core:mission_samples_save_sample_config", )
 
         response = self.client.get(url)
 
@@ -482,7 +500,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:save_sample_config", args=(oxy_sample_type_config.pk,))
+        url = reverse("core:mission_samples_save_sample_config", args=(oxy_sample_type_config.pk,))
 
         # anything that requires access to a file will need to be a post method
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
@@ -515,7 +533,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:load_samples", args=(oxy_sample_type_config.pk,))
+        url = reverse("core:mission_samples_load_samples", args=(oxy_sample_type_config.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -550,7 +568,7 @@ class TestSampleFileConfiguration(DartTestCase):
         )
 
         message_div_id = f'div_id_sample_config_card_{oxy_sample_type_config.pk}'
-        url = reverse("core:load_samples", args=(oxy_sample_type_config.pk,))
+        url = reverse("core:mission_samples_load_samples", args=(oxy_sample_type_config.pk,))
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
@@ -577,18 +595,18 @@ class TestSampleFileConfiguration(DartTestCase):
         expected_form = forms.SampleTypeForm()
         expected_html = render_crispy_form(expected_form)
 
-        url = reverse("core:new_sample_type")
+        url = reverse("core:sample_type_new")
 
         response = self.client.get(url)
 
         self.assertEquals(response.content.decode('utf-8'), expected_html)
 
     def test_new_sample_type_on_config(self):
-        # if -1 is passed as the sample_type id to the 'core:new_sample_config' url the
+        # if -1 is passed as the sample_type id to the 'core:mission_samples_new_sample_config' url the
         # SampleTypeConfigForm should be returned with the sample_type dropdown replaced
         # with a SampleTypeForm and a button to submit the new sample type
 
-        url = reverse("core:new_sample_config")
+        url = reverse("core:mission_samples_new_sample_config")
 
         response = self.client.get(url, {'sample_type': -1})
 
@@ -610,7 +628,7 @@ class TestSampleFileConfiguration(DartTestCase):
             long_name='Oxygen'
         )
 
-        url = reverse("core:new_sample_config")
+        url = reverse("core:mission_samples_new_sample_config")
 
         response = self.client.get(url, {'sample_type': oxy_sample_type.pk})
 
@@ -623,12 +641,12 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertEquals(int(selected.attrs['value']), oxy_sample_type.pk)
 
     def test_new_sample_type_on_config_save(self):
-        # if the 'core:save_sample_config' url recieves a POST containing the 'new_sample'
+        # if the 'core:mission_samples_save_sample_config' url recieves a POST containing the 'new_sample'
         # attribute then it should create a SampleTypeForm and save the POST vars, then return
         # a SampleTypeConfigForm with the sample_type set to the new sample_type object that was
         # just created.
 
-        url = reverse("core:save_sample_config")
+        url = reverse("core:mission_samples_save_sample_config")
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'new_sample': '',
@@ -653,12 +671,12 @@ class TestSampleTypeCard(DartTestCase):
         pass
 
     def test_form_exists(self):
-        # given a sample type id of an existing sample type the 'core:load_sample_type' url
+        # given a sample type id of an existing sample type the 'core:sample_type_load' url
         # should return a 'core/partials/card_sample_type.html' template
 
         sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
 
-        url = reverse('core:load_sample_type', args=(sample_type.pk,))
+        url = reverse('core:sample_type_load', args=(sample_type.pk,))
 
         response = self.client.get(url)
 
@@ -666,7 +684,7 @@ class TestSampleTypeCard(DartTestCase):
         self.assertIsNotNone(soup.find(id=f"div_id_sample_type_{sample_type.pk}"))
 
     # when the delete sample type button is clicked on the sample type card
-    # the 'core:delete_sample_type' url should be called with a post request.
+    # the 'core:sample_type_delete' url should be called with a post request.
     # The results should be an alert that will be swapped into the message area
     # upon success the alert will have a hx-trigger='load' that targets the
     # cards id and a hx-swap='delete' that will remove the card.
@@ -675,7 +693,7 @@ class TestSampleTypeCard(DartTestCase):
 
         sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
 
-        url = reverse('core:delete_sample_type', args=(sample_type.pk,))
+        url = reverse('core:sample_type_delete', args=(sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -689,7 +707,7 @@ class TestSampleTypeCard(DartTestCase):
 
         core_factory.SampleFactory(type=oxy_sample_type)
 
-        url = reverse('core:delete_sample_type', args=(oxy_sample_type.pk,))
+        url = reverse('core:sample_type_delete', args=(oxy_sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -698,7 +716,7 @@ class TestSampleTypeCard(DartTestCase):
 
     def test_save_sample_type_invalid(self):
         # if no short_name is provided then an invalid form should be returned
-        url = reverse('core:save_sample_type')
+        url = reverse('core:sample_type_save')
         response = self.client.post(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -713,7 +731,7 @@ class TestSampleTypeCard(DartTestCase):
         # to be swapped into the 'core/sample_settings.html' template
         kwargs = {'short_name': 'oxy', 'priority': '1'}
 
-        url = reverse('core:save_sample_type')
+        url = reverse('core:sample_type_save')
         response = self.client.post(url, kwargs)
 
         sample_type = core.models.SampleType.objects.filter(short_name='oxy')
@@ -728,12 +746,12 @@ class TestSampleTypeCard(DartTestCase):
         self.assertIsNotNone(new_card)
 
     def test_edit_sample_type(self):
-        # provided a sample_type.pk to the 'core:edit_sample_type' url a SampleTypeForm should be returned
+        # provided a sample_type.pk to the 'core:sample_type_edit' url a SampleTypeForm should be returned
         # populated with the sample_type details
 
         sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name='Oxygen')
 
-        url = reverse('core:edit_sample_type', args=(sample_type.pk,))
+        url = reverse('core:sample_type_edit', args=(sample_type.pk,))
 
         response = self.client.get(url)
 
@@ -750,7 +768,7 @@ class TestSampleTypeCard(DartTestCase):
         # provided an existing sample type with updated post arguments the sample_type should be updated
         sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name='Oxygen')
 
-        url = reverse('core:save_sample_type', args=(sample_type.pk,))
+        url = reverse('core:sample_type_save', args=(sample_type.pk,))
 
         response = self.client.post(url, {'short_name': sample_type.short_name,
                                           'priority': sample_type.priority,

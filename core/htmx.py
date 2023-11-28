@@ -6,7 +6,7 @@ from crispy_forms.utils import render_crispy_form
 from django.contrib import messages
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
-from django.urls import reverse_lazy
+from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django.http import HttpResponseRedirect, HttpResponse
 
@@ -290,3 +290,15 @@ def event_list_action(request, event_id):
     response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_table_block', context))
 
     return response
+
+
+htmx_urls = [
+    path('mission/list/', list_missions, name="hx_list_missions"),
+    path('hx/mission/delete/<int:mission_id>/', hx_mission_delete, name="hx_mission_delete"),
+    path('geographic_region/add/', add_geo_region, name="hx_geo_region_add"),
+    path('update_regions/', update_geographic_regions, name="hx_update_regions"),
+    path('mission/errors/<int:mission_id>/', get_file_errors, name="hx_get_file_errors"),
+    path('event/action/blank/<int:event_id>/', event_action, name="hx_get_blank_action"),
+    path('event/action/list/<int:event_id>/', event_list_action, name="hx_list_actions"),
+
+]

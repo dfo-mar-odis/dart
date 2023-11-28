@@ -22,7 +22,7 @@ import logging
 
 logger = logging.getLogger('dart')
 
-# This queue is used for processing sample files in the hx_sample_upload_ctd function
+# This queue is used for processing sample files in the sample_upload_ctd function
 sample_file_queue = queue.Queue()
 
 reports = {
@@ -57,7 +57,7 @@ class MissionCreateView(MissionMixin, GenericCreateView):
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):
-        success = reverse_lazy("core:event_details", args=(self.object.pk, ))
+        success = reverse_lazy("core:mission_events_details", args=(self.object.pk, ))
         return success
 
 
@@ -76,24 +76,50 @@ class MissionUpdateView(MissionCreateView, GenericUpdateView):
 
 def load_ctd_files(mission):
 
+    time.sleep(2)  # brief pause and wait for the websocket to initialize
+
+    logger.level = logging.DEBUG
     group_name = 'mission_events'
 
     jobs = {}
     completed = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
-        while not sample_file_queue.empty():
-            processed = (len(completed) / (sample_file_queue.qsize() + len(completed))) * 100.0
+    total_jobs = 0
+    max_jobs = 2
+
+    def load_ctd_file(ctd_mission: models.Mission, ctd_file):
+        bottle_dir = ctd_mission.bottle_directory
+        status = 'Success'
+        # group_name = 'mission_events'
+
+        logger.debug(f"Loading file {ctd_file}")
+
+        ctd_file_path = os.path.join(bottle_dir, ctd_file)
+        try:
+            ctd.read_btl(ctd_mission, ctd_file_path)
+        except Exception as ctd_ex:
+            logger.exception(ctd_ex)
+            status = "Fail"
+
+        completed.append(ctd_file)
+
+        processed = 0
+        if total_jobs > 0:
+            processed = (len(completed) / total_jobs) * 100.0
             processed = str(round(processed, 2))
 
-            kw = sample_file_queue.get()
-            jobs[executor.submit(load_ctd_file, **kw)] = kw['file']
+        core.htmx.send_user_notification_queue(group_name, f"Loaded {len(completed)}/{total_jobs}", processed)
 
-            logger.info(f"Processed {processed}")
+        # update the user on our progress
+        return status
 
-            # update the user on our progress
-            core.htmx.send_user_notification_queue(group_name, f"Loading {kw['file']}", processed)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=max_jobs) as executor:
+        while True:
+            while not sample_file_queue.empty():
+                args = sample_file_queue.get()
+                jobs[executor.submit(load_ctd_file, *args)] = args[1]  # args[1] is the file name to be processed
+                total_jobs += 1
 
-            done, not_done = concurrent.futures.wait(jobs)
+            done, not_done = concurrent.futures.wait(jobs, timeout=1)
 
             # remove jobs from the job queue if they've been completed
             for future in done:
@@ -104,15 +130,16 @@ def load_ctd_files(mission):
                 except Exception as ex:
                     logger.exception(ex)
 
-                completed.append(file)
                 del jobs[future]
 
+            if len(jobs) <= 0 and sample_file_queue.empty() and len(not_done) <= 0:
+                break
 
-    time.sleep(2)
+    # time.sleep(2)
     # The mission_samples.html page has a websocket notifications element on it. We can send messages
     # to the notifications element to display progress to the user, but we can also use it to
     # send an update request to the page when loading is complete.
-    url = reverse_lazy("core:hx_sample_upload_ctd", args=(mission.pk,))
+    url = reverse_lazy("core:mission_samples_sample_upload_ctd", args=(mission.pk,))
     hx = {
         'hx-get': url,
         'hx-trigger': 'load',
@@ -120,23 +147,6 @@ def load_ctd_files(mission):
         'hx-swap': 'outerHTML'
     }
     core.htmx.send_user_notification_close(group_name, **hx)
-
-
-def load_ctd_file(mission, file, bottle_dir):
-    status = 'Success'
-    group_name = 'mission_events'
-
-    message = f"Loading file {file}"
-    logger.info(message)
-
-    ctd_file = os.path.join(bottle_dir, file)
-    try:
-        ctd.read_btl(mission, ctd_file)
-    except Exception as ex:
-        logger.exception(ex)
-        status = "Fail"
-
-    return status
 
 
 class ElogDetails(GenericDetailView):

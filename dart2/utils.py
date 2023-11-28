@@ -37,10 +37,11 @@ def updated_value(row, field_name, new_value) -> str:
 
     current_value = getattr(row, field_name)
 
-    if field.null and type(current_value) is str and current_value == '':
-        current_value = None
-    if type(field) is DecimalField:
-        new_value = round(new_value, field.decimal_places)
+    if new_value:
+        if field.null and type(current_value) is str and current_value == '':
+            current_value = None
+        if type(field) is DecimalField:
+            new_value = round(new_value, field.decimal_places)
 
     if current_value == new_value:
         return ''

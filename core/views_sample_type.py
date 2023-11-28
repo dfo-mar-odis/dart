@@ -1,6 +1,8 @@
 from bs4 import BeautifulSoup
+from crispy_forms.utils import render_crispy_form
 from django.http import Http404, HttpResponse
 from django.template.loader import render_to_string
+from django.urls import path
 from django.utils.translation import gettext as _
 from django.views.generic import TemplateView
 from render_block import render_block_to_string
@@ -26,6 +28,22 @@ class SampleTypeList(GenericViewMixin, TemplateView):
         context['sample_types'] = core_models.SampleType.objects.all()
 
         return context
+
+
+def new_sample_type(request, **kwargs):
+    response = None
+    if request.method == "GET":
+        if request.htmx:
+            # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
+            # field after the Datatype_filter has been triggered.
+            sample_type_form = forms.SampleTypeForm(initial=request.GET)
+            html = render_crispy_form(sample_type_form)
+            return HttpResponse(html)
+
+        html = render_crispy_form(forms.SampleTypeForm())
+        response = HttpResponse(html)
+
+    return response
 
 
 def load_sample_type(request, **kwargs):
@@ -132,3 +150,17 @@ def save_sample_type(request, **kwargs):
                                        block_name="loaded_samples", context=context)
         response = HttpResponse(html)
         return response
+
+
+# ###### SAMPLE TYPES AND FILE CONFIGURATIONS ###### #
+sample_type_urls = [
+    # show the create a sample type form
+    path('sample_type/', SampleTypeList.as_view(), name="sample_type_details"),
+    path('sample_type/hx/new/', new_sample_type, name="sample_type_new"),
+    path('sample_type/hx/save/', save_sample_type, name="sample_type_save"),
+    path('sample_type/hx/save/<int:sample_type_id>/', save_sample_type, name="sample_type_save"),
+    path('sample_type/hx/load/<int:sample_type_id>/', load_sample_type, name="sample_type_load"),
+    path('sample_type/hx/edit/', edit_sample_type, name="sample_type_edit"),
+    path('sample_type/hx/edit/<int:sample_type_id>/', edit_sample_type, name="sample_type_edit"),
+    path('sample_type/hx/delete/<int:sample_type_id>/', delete_sample_type, name="sample_type_delete"),
+]

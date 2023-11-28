@@ -25,11 +25,11 @@
         <td>{{ action.drift_distance|floatformat:2 }}</td>
         {% if editable %}
         <td>
-            <button class="btn" hx-swap="outerHTML" hx-target="#actions_form_id" hx-get="{% url 'core:hx_action_update' action.pk %}">
+            <button class="btn" hx-swap="outerHTML" hx-target="#actions_form_id" hx-get="{% url 'core:mission_events_action_update' action.pk %}">
                 {% custom_icon 'pencil' %}</button>
         </td>
         <td>
-            <button class="btn" hx-confirm="{% trans 'Are you sure you want to delete' %} {{ action }}?" hx-swap="outerHTML" hx-target="#action_table_id" hx-post="{% url 'core:hx_action_delete' action.pk %}">x</button>
+            <button class="btn" hx-confirm="{% trans 'Are you sure you want to delete' %} {{ action }}?" hx-swap="outerHTML" hx-target="#action_table_id" hx-post="{% url 'core:mission_events_action_delete' action.pk %}">x</button>
         </td>
         {% endif %}
     </tr>

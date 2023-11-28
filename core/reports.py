@@ -5,6 +5,7 @@ from datetime import datetime, timedelta
 from django.core.files.base import ContentFile
 from django.db.models import Min, Avg
 from django.http import HttpResponse
+from django.urls import path
 
 from . import models as core_models
 
@@ -231,4 +232,11 @@ def chl_report(request, **kwargs):
                              sensors=sensors, samples=samples, **kwargs)
 
 
-
+report_urls = [
+    path('mission/report/elog/<int:mission_id>/', elog, name="hx_report_elog"),
+    path('mission/report/error/<int:mission_id>/', error_report, name="hx_report_error"),
+    path('mission/report/profile_sumamry/<int:mission_id>/', profile_summary, name="hx_report_profile"),
+    path('mission/report/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
+    path('mission/report/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
+    path('mission/report/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),
+]

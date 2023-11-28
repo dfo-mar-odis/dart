@@ -14,7 +14,7 @@
     {% endif %}
         <h6 class="col align-self-end">{% if sample_type.pk %}{% trans 'Edit Sample Type' %}{% else %}{% trans 'New Sample Type' %}{% endif %}</h6>
         <button type="button" class="col-auto btn btn-secondary btn-sm"
-                            hx-get="{% url 'core:edit_sample_type' %}"
+                            hx-get="{% url 'core:sample_type_edit' %}"
                             hx-target="#div_id_sample_type_form"
                             hx-swap="outerHTML"
         >{% custom_icon 'eraser' %}</button>
@@ -30,7 +30,7 @@
         {% if sample_type %}
             {# if a sample_type is provided then we're editing an existing sample_type #}
         <button class="btn btn-primary btn-sm"
-            hx-post="{% url 'core:save_sample_type' sample_type.pk %}"
+            hx-post="{% url 'core:sample_type_save' sample_type.pk %}"
             hx-target="#div_id_sample_type_form"
             hx-select="#div_id_sample_type_form"
             hx-swap="outerHTML"
@@ -39,7 +39,7 @@
         {% else %}
             {# if a sample_type isn't provided then we're creating a new sample_type #}
         <button id="button_id_new_sample_type_submit" name="new_sample" title="{% trans 'Submit' %}" class="btn btn-primary btn-sm"
-            hx-post="{% url 'core:save_sample_type' %}"
+            hx-post="{% url 'core:sample_type_save' %}"
             hx-target="#div_id_sample_type_form"
             hx-select="#div_id_sample_type_form"
             hx-swap="outerHTML"

@@ -7,21 +7,186 @@ import ctd
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-import core.tests.CoreFactoryFloor
-
 from django.test import tag
+
+import bio_tables.models
 from dart2.tests.DartTestCase import DartTestCase
 from dart2 import settings
 
 from core import models as core_models
 from core.parsers import elog
 from core.parsers import ctd as ctd_parser
-from core.parsers import SampleParser
+from core.parsers import SampleParser, PlanktonParser
 from core.tests import CoreFactoryFloor as core_factory
 
 import logging
 
 logger = logging.getLogger('dart.test')
+
+
+@tag('parsers', 'parsers_plankton', 'parsers_plankton_phyto')
+class TestPhytoplanktonParser(DartTestCase):
+
+    def setUp(self) -> None:
+        self.file_name = "sample_phyto.xlsx"
+        self.dataframe = pd.read_excel(os.path.join('core', 'tests', 'sample_data', self.file_name))
+
+        # test that a PlanktonSample is created from a dataframe.
+        # this also means that the mission, event, station and bottle id must exist
+        # phytoplankton are taken from CTD events
+        self.mission = core_factory.MissionFactory(name="HUD2021185")
+        self.station = core_factory.StationFactory(name="HL_02")
+        self.event_mission_start = core_factory.CTDEventFactory(mission=self.mission, station=self.station,
+                                                                sample_id=488275, end_sample_id=488285, event_id=7)
+        self.event_mission_end = core_factory.CTDEventFactory(mission=self.mission, station=self.station,
+                                                              sample_id=488685, end_sample_id=488695, event_id=92)
+        self.bottle_mission_start = core_factory.BottleFactory(event=self.event_mission_start, bottle_id=488275)
+        self.bottle_mission_end = core_factory.BottleFactory(event=self.event_mission_end, bottle_id=488685)
+
+    def test_parser(self):
+
+        # this should create 32 plankton samples
+        PlanktonParser.parse_phytoplankton(mission_id=self.mission.pk, filename=self.file_name,
+                                           dataframe=self.dataframe)
+        samples = core_models.PlanktonSample.objects.all()
+        self.assertEquals(len(samples), 32)
+
+    def test_update(self):
+        # if a plankton sample already exists then it should be updated.
+        taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(aphiaid=148912, taxonomic_name__iexact="Thalassiosira")
+        core_factory.PhytoplanktonSampleFactory(bottle=self.bottle_mission_start, file=self.file_name, taxa=taxa,
+                                                count=1000)
+
+        expected_plankton = core_models.PlanktonSample.objects.get(bottle=self.bottle_mission_start, taxa=taxa)
+        self.assertEquals(expected_plankton.count, 1000)
+
+        PlanktonParser.parse_phytoplankton(mission_id=self.mission.pk, filename=self.file_name,
+                                           dataframe=self.dataframe)
+
+        expected_plankton = core_models.PlanktonSample.objects.get(bottle=self.bottle_mission_start, taxa=taxa)
+        self.assertEquals(expected_plankton.count, 200)
+
+
+@tag('parsers', 'parsers_plankton', 'parsers_plankton_zoo')
+class TestZooplanktonParser(DartTestCase):
+
+    def setUp(self) -> None:
+        self.file_name = "sample_zoo.xlsx"
+        self.dataframe = pd.read_excel(os.path.join('core', 'tests', 'sample_data', self.file_name))
+
+        # this mission/event load-out matches the events described in the sample_zoo.xlsx file
+
+        # zooplankton needs the mission, event, station and bottle id must exist
+        # zooplankton are taken from ringnet events
+        self.mission = core_factory.MissionFactory(name="HUD2021185")
+        self.station = core_factory.StationFactory(name="HL_02")
+
+        self.event_mission_start = core_factory.NetEventFactory(mission=self.mission, station=self.station,
+                                                                sample_id=488275, event_id=2)
+        self.event_mission_end = core_factory.NetEventFactory(mission=self.mission, station=self.station,
+                                                                sample_id=488685, event_id=88)
+
+    def test_create_zooplankton(self):
+        # test that a Zooplankton is created from a dataframe.
+        dataframe = pd.DataFrame(data={
+            'MISSION': ["HUD2021_185"],
+            'DATE': ["2021-09-16"],
+            'STN': ["HL_02"],
+            'TOW#': ["1-1"],
+            'GEAR': [202],
+            'EVENT': [2],
+            'SAMPLEID': [self.event_mission_start.sample_id],
+            'DEPTH': [132],
+            'ANALYSIS': [2],
+            'SPLIT': [2],
+            'ALIQUOT': [0.1],
+            'SPLIT_FRACTION': [0.025],
+            'TAXA': ["Calanus finmarchicus"],
+            'NCODE': [58],
+            'STAGE': [30],
+            'SEX': [2],
+            'DATA_VALUE': [15],
+            'PROC_CODE': [20],
+            'WHAT_WAS_IT': [1]
+        })
+
+        PlanktonParser.parse_zooplankton(mission_id=1, filename=self.file_name, dataframe=dataframe)
+
+        # the taxa key is 90000000000000 plus whatever the ncode is
+        taxa_key = 90000000000000 + 58
+        taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(pk=taxa_key)
+
+        bottle = core_models.Bottle.objects.get(bottle_id=self.event_mission_start.sample_id)
+        plankton = core_models.PlanktonSample.objects.filter(bottle=bottle, taxa=taxa)
+
+        self.assertTrue(plankton.exists())
+
+        plankton = plankton.first()
+        self.assertEquals(plankton.taxa.pk, taxa_key)
+        self.assertEquals(plankton.stage.pk, 90000030)
+        self.assertEquals(plankton.sex.pk, 90000002)
+
+        # this is a 202 net so it should use a 90000102 gear_type
+        self.assertEquals(plankton.gear_type.pk, 90000102)
+
+        # proc_code is 20 so the min_sieve should be mesh_size/1000
+        self.assertEquals(plankton.min_sieve, 202/1000)
+
+        # proc_code is 20 so the max_sieve should be 10
+        self.assertEquals(plankton.max_sieve, 10)
+
+        # proc_code is 20 so the split_fraction should be rounded to 4 decimal places
+        self.assertEquals(plankton.split_fraction, 0.025)
+
+        # what_was_it is 1 so this is a count
+        self.assertEquals(plankton.count, 15)
+
+    def test_parser_with_data(self):
+        # The first parser test is to create a PlanktonSample object, but it doesn't take a lot
+        # of things into account when dealing with the real data. like having a row that has the
+        # same NCODE and SampleID, but different Sex or Stage
+
+        # the sample data frame should have 28 samples for id 488275 and 42 samples for id 488685
+        PlanktonParser.parse_zooplankton(self.mission.pk, self.file_name, self.dataframe)
+
+        samples = core_models.PlanktonSample.objects.filter(bottle__bottle_id=488275)
+        self.assertEquals(len(samples), 28)
+
+    def test_get_min_sieve(self):
+        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=21, mesh_size=202), 10)
+
+        expected = 202/1000
+        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=20, mesh_size=202), expected)
+        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=22, mesh_size=202), expected)
+        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=23, mesh_size=202), expected)
+        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=50, mesh_size=202), expected)
+        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=99, mesh_size=202), expected)
+
+    def test_get_max_sieve(self):
+        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=20), 10)
+        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=22), 10)
+        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=50), 10)
+        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=99), 10)
+
+        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=21), None)
+        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=23), None)
+
+    def test_get_split_fraction(self):
+        split = 0.02349
+        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=20, split=split), 0.0235)
+        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=21, split=split), 1)
+        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=22, split=split), 1)
+        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=23, split=split), 1)
+        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=50, split=split), 0.5)
+        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=99, split=split), split)
+
+    def test_get_gear_size_202(self):
+        gear_type = PlanktonParser.get_gear_type(202)
+        self.assertEquals(gear_type.pk, 90000102)
+
+    def test_get_gear_size_76(self):
+        gear_type = PlanktonParser.get_gear_type(76)
+        self.assertEquals(gear_type.pk, 90000105)
 
 
 @tag('parsers', 'parsers_xls')
@@ -193,8 +358,8 @@ class TestSampleCSVParser(DartTestCase):
 
         # this is a setup for the James Cook 2022 mission JC24301,
         # all bottles are attached to one ctd event for simplicity
-        self.mission = core.tests.CoreFactoryFloor.MissionFactory(name='JC24301')
-        self.ctd_event = core.tests.CoreFactoryFloor.CTDEventFactory(mission=self.mission)
+        self.mission = core_factory.MissionFactory(name='JC24301')
+        self.ctd_event = core_factory.CTDEventFactory(mission=self.mission)
 
         self.file_name = "sample_oxy.csv"
         self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)

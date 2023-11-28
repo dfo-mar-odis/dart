@@ -148,6 +148,10 @@ class Event(models.Model):
     sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
     end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
+    wire_out = models.FloatField(verbose_name=_("Wire Out"), null=True, blank=True)
+    flow_start = models.IntegerField(verbose_name=_("Flow Meter Start"), null=True, blank=True)
+    flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
+
     @property
     def files(self):
         files = set()
@@ -543,6 +547,87 @@ class DiscreteSampleValue(models.Model):
         return f'{self.sample}: {self.value}'
 
 
+class PlanktonSample(models.Model):
+
+    file = models.FileField(verbose_name=_("File"))
+
+    # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
+    bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)
+
+    # Phytoplankton is collected from multiple Niskin bottles for ONLY station HL_02. Previously, the AZMP template
+    # used the code 90000019, which is for a 10L Niskin bottle. Lindsay has asked me to use 90000002 for a Niskin
+    # bottle, size unknown, with an option for the user to set the "bottle" type in the future.
+    #
+    # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
+    # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
+    gear_type = models.ForeignKey(bio_tables.models.BCGear, verbose_name="Gear Type", related_name="plankton_data",
+                                  on_delete=models.DO_NOTHING, default=90000002)
+
+    taxa = models.ForeignKey(bio_tables.models.BCNatnlTaxonCode, verbose_name=_("Taxonomy"),
+                             related_name="plankton_data", on_delete=models.DO_NOTHING)
+
+    # default unassigned BCLIFEHISTORIES 90000000
+    stage = models.ForeignKey(bio_tables.models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
+                             on_delete=models.DO_NOTHING)
+
+    # default unassigned BCSEXES 90000000
+    sex = models.ForeignKey(bio_tables.models.BCSex, verbose_name=_("Sex"), default=90000000,
+                            on_delete=models.DO_NOTHING)
+
+    # 1 for phytoplankton, more complicated for zooplankton
+    split_fraction = models.FloatField(verbose_name=_("Split Fraction"), default=1)
+
+    # these defaults are for phytoplankton, more complicated for zooplankton
+    min_sieve = models.FloatField(verbose_name=_("Max Sieve"), default=0.002)
+    max_sieve = models.FloatField(verbose_name=_("Max Sieve"), blank=True, null=True, default=0.55)
+
+    # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
+    # The mesh can normally be used to determine the gear_type, but if the gear type is set to
+    # 90000105 (0.5m diameter ring), the net could be a 76um *or* a 70um mesh.
+    # The mesh size goes into the BCS_P table so it has to be tracked for later.
+    mesh_size = models.IntegerField(verbose_name=_("Mesh Size"), help_text=_("Mesh size of the net material in um"),
+                                    blank=True, null=True)
+
+    # The 'what_was_it' code will determine which of these values gets filled out for Zooplankton
+    # count = cell_liters for Phytoplankton, the rest are blank
+    count = models.IntegerField(verbose_name=_("count"), blank=True, null=True)
+    raw_wet_weight = models.FloatField(verbose_name=_("Weight Weight"), blank=True, null=True)
+    raw_dry_weight = models.FloatField(verbose_name=_("Dry Weight"), blank=True, null=True)
+    volume = models.FloatField(verbose_name=_("Volume"), blank=True, null=True)
+    percent = models.FloatField(verbose_name=_("Percent"), blank=True, null=True)
+
+    comments = models.CharField(verbose_name=_("Comments"), blank=True, null=True, max_length=255)
+
+    # The procedure code is because parsing zooplankton is dumb. The same plankton will show up
+    # multiple times for one sample and the proc_code determines what record the value should be written
+    # to, but it's also used for totals. Large_biomass, Small_biomass, Totwt and dry_weight all use the same
+    # NCODE and 'what_was_it' value. The only thing unique about them in the file is the proc_code.
+    proc_code = models.IntegerField(verbose_name=_("Procedure Code"), default=9999)
+
+    plank_data_num = models.IntegerField(verbose_name=_("Plankton data number"), blank=True, null=True,
+                                         help_text=_("key linking this plankton sample to a biochem staging table"))
+    @property
+    def plank_sample_key_value(self):
+        event = self.bottle.event
+        mission = event.mission
+        return f'{mission.mission_descriptor}_{event.event_id:03d}_{self.bottle.bottle_id}_{self.gear_type.gear_seq}'
+
+    @property
+    def collector_comment(self):
+        if self.raw_wet_weight == -1 or self.raw_dry_weight == -1:
+            return 'TOO MUCH PHYTOPLANKTON TO WEIGH'
+
+        if self.raw_wet_weight == -2 or self.raw_dry_weight == -2:
+            return 'TOO MUCH SEDIMENT TO WEIGH'
+
+        if self.raw_wet_weight == -3 or self.raw_dry_weight == -3:
+            return 'NO FORMALIN - COULD NOT WEIGH'
+
+        if self.raw_wet_weight == -4 or self.raw_dry_weight == -4:
+            return 'TOO MUCH JELLY TO WEIGH'
+
+        return None
+
 # These are some of the common errors that occur when processing data and allow us to sort various errors depending
 # on what problems we're using the errors to solve.
 class ErrorType(models.IntegerChoices):
@@ -578,7 +663,7 @@ class ValidationError(AbstractError):
         return f"{self.get_type_display()} : {self.message}"
 
 
-# File errors occur when reading data from a file before an object is created, it's fundmentally something wrong with
+# File errors occur when reading data from a file before an object is created, it's fundamentally something wrong with
 # the file itself like when columns or specific tags are missing or if a file is improperly formatted.
 class FileError(AbstractError):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='file_errors',
@@ -647,7 +732,11 @@ class ElogConfig(FileConfiguration):
               ("end_sample_id", "End_Sample_ID", _("Label identifying the ending bottle in a sequence")),
               ("comment", "Comment", _("Label identifying an action comment")),
               ("data_collector", "Author", _("Label identifying who logged the elog action")),
-              ("sounding", "Sounding", _("Label identifying the sounding depth of the action"))]
+              ("sounding", "Sounding", _("Label identifying the sounding depth of the action")),
+              ("wire_out", "Wire out", _("Label identifying how much wire was unspooled for a net event")),
+              ("flow_start", "Flowmeter Start", _("Label for the starting value of a flowmeter for a net event")),
+              ("flow_end", "Flowmeter End", _("Label for the ending value of a flowmeter for a net event")),
+              ]
 
     @staticmethod
     def get_default_config(mission):
@@ -722,3 +811,156 @@ class BcDatabaseConnection(models.Model):
         }
 
         return biochem_db
+
+
+
+# Proc Codes
+# 20 = Gear / 1000 for min Sieve and 10 for Max Sieve
+# 21 = 10 for min Sieve and Null for Max Sieve
+# 22 = Gear / 1000 for min Sieve and 10 for Max Sieve
+# 23 = Gear / 1000 for min Sieve and Null for Max Sieve
+# 50 = Gear / 1000 for min Sieve and 10 for Max Sieve
+# 99 = Gear / 1000 for min Sieve and 10 for Max Sieve
+
+# What_was_it codes
+# 1 = count
+# 2 = Wet Weight
+# 3 = Dry Weight
+# 4 = Volume
+# 5 = percent
+
+# Sex Codes (BCSexes table)
+# 1 = male
+# 2 = Female
+# 3 = indeterminate
+# 4 = unknown
+# 0 = UNASSIGNED
+# 5 = undeterminable
+# 6 = reassign
+# class Zooplankton(models.Model):
+#
+#     raw_split_fraction = models.FloatField(verbose_name=_("Split Fraction"))
+#     gear_size = models.IntegerField(verbose_name=_("Gear Size"))  # should be 202 or 76
+#
+#     aliquot = models.IntegerField(verbose_name=_("Aliquot"))
+#
+#     proc_code = models.IntegerField(verbose_name=_("Procedure Code"))
+
+    # @property
+    # def min_sieve(self):
+    #     if self.proc_code in [21]:
+    #         return 10
+    #
+    #     if self.proc_code in [20, 22, 23, 50, 99]:
+    #         return self.gear_size/1000
+    #
+    #     raise ValueError(f"Unexpected proc_code {self.proc_code}")
+    #
+    # @property
+    # def max_sieve(self):
+    #     if self.proc_code in [20, 22, 50, 99]:
+    #         return 10
+    #
+    #     if self.proc_code in [21, 23]:
+    #         return None
+    #
+    #     raise ValueError(f"Unexpected proc_code {self.proc_code}")
+    #
+    # @property
+    # def collector_comment(self):
+    #     if self.raw_wet_weight == -1 or self.raw_dry_weight == -1:
+    #         return 'TOO MUCH PHYTOPLANKTON TO WEIGH'
+    #
+    #     if self.raw_wet_weight == -2 or self.raw_dry_weight == -2:
+    #         return 'TOO MUCH SEDIMENT TO WEIGH'
+    #
+    #     if self.raw_wet_weight == -3 or self.raw_dry_weight == -3:
+    #         return 'NO FORMALIN - COULD NOT WEIGH'
+    #
+    #     if self.raw_wet_weight == -4 or self.raw_dry_weight == -4:
+    #         return 'TOO MUCH JELLY TO WEIGH'
+    #
+    #     return None
+    #
+    # @property
+    # def wet_weight(self):
+    #     if self.raw_wet_weight is None or self.raw_wet_weight < 0:
+    #         return None
+    #
+    #     return self.raw_wet_weight
+    #
+    # @property
+    # def dry_weight(self):
+    #     if self.raw_dry_weight is None or self.raw_dry_weight < 0:
+    #         return None
+    #
+    #     return self.raw_dry_weight
+
+    # split_fraction derived from AZMP Template code (see https://github.com/upsonp/dart/issues/100)
+    # @property
+    # def split_fraction(self):
+    #     if self.proc_code == 20:
+    #         return round(self.raw_split_fraction, 4)
+    #
+    #     if self.proc_code in [21, 22, 23]:
+    #         return 1
+    #
+    #     if self.proc_code == 50:
+    #         return 0.5
+    #
+    #     if self.proc_code == 99:
+    #         return self.raw_split_fraction
+    #
+    #     return 9999
+
+
+# class Phytoplankton(models.Model):
+#
+#     modifier = models.CharField(verbose_name=_("Modifier"), max_length=5)
+#     category = models.IntegerField(verbose_name=_("Category"))
+#     cell_litre = models.IntegerField(verbose_name=_("Cell Litre"))
+#     category_name = models.CharField(verbose_name=_("Category Name"), max_length=150)
+#     category_group = models.CharField(verbose_name=_("Category Group"), max_length=45)
+#
+#     life_history = models.IntegerField(verbose_name=_("Life History"), blank=True, null=True)
+#     certainty = models.CharField(verbose_name=_("Certainty"), blank=True, null=True, max_length=255)
+#     comments = models.CharField(verbose_name=_("Comments"), blank=True, null=True, max_length=255)
+#
+#     @property
+#     def collector_comment(self):
+#         comment = ""
+#         if self.certainty:
+#             comment += self.certainty
+#
+#         if self.comments:
+#             if comment != "":
+#                 comment += " "
+#             comment += self.comments
+#         return comment
+#
+#     @property
+#     def split_fraction(self):
+#         return 1
+#
+#     @property
+#     def max_sieve(self):
+#         return 0.55
+#
+#     @property
+#     def min_sieve(self):
+#         return 0.002
+#
+#     @property
+#     def sex(self):
+#         return 90000000
+#
+#     @property
+#     def stage(self):
+#         base_history = 90000000
+#         if not self.life_history:
+#             return base_history
+#
+#         if self.life_history < base_history:
+#             return self.life_history + base_history
+#
+#         return self.life_history

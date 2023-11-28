@@ -65,6 +65,7 @@ pytz~=2022.6
 # math and data processing packages
 numpy~=1.23
 pandas~=1.5
+jinja2==3.1.2
 matplotlib~=3.6.2
 django-pandas==0.6.6
 
