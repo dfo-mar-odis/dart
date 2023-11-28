@@ -240,7 +240,8 @@ class BcsDReportModel(BcsD):
 
 
 class BcdP(models.Model):
-    plank_data_num = models.IntegerField(primary_key=True)
+    plank_data_num = models.AutoField(primary_key=True)
+
     plank_sample_key_value = models.CharField(max_length=50)
 
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)

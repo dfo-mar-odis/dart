@@ -544,6 +544,34 @@ def upload_bcs_p_data(mission: models.Mission, uploader: str):
         biochem.upload.upload_bcs_p(bcs_p, bcs_create, bcs_update, updated_fields)
 
 
+def upload_bcd_p_data(mission: models.Mission, uploader: str):
+    # 1) get bottles from BCD_P table
+    bcd_p = biochem.upload.get_bcd_p_model(mission.get_biochem_table_name)
+    exists = biochem.upload.check_and_create_model('biochem', bcd_p)
+
+    # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
+    samples = models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    bottle_ids = samples.values_list('bottle_id').distinct()
+    bottles = models.Bottle.objects.filter(pk__in=bottle_ids)
+
+    # bottles = models.Bottle.objects.filter(event__mission=mission)
+    # if exists:
+    #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
+    #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
+    #     if last_uploaded:
+    #         bottles = bottles.filter(last_modified__gt=last_uploaded)
+
+    if bottles.exists():
+        # 4) upload only bottles that are new or were modified since the last biochem upload
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCD rows"))
+        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(uploader, bcd_p, bottles)
+
+        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCD rows"))
+        biochem.upload.upload_bcd_p(bcd_p, bcd_create, bcd_update, updated_fields)
+
+
 def get_biochem_errors(request, **kwargs):
     mission_id = kwargs['mission_id']
     if request.method == 'GET':

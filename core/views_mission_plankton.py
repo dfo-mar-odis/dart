@@ -352,6 +352,7 @@ def upload_plankton(request, **kwargs):
         uploader = database.uploader if database.uploader else database.account_name
 
         form_biochem_database.upload_bcs_p_data(mission, uploader)
+        form_biochem_database.upload_bcd_p_data(mission, uploader)
 
     return form_biochem_database.upload_bio_chem(request, upload_samples, **kwargs)
 

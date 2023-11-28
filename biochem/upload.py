@@ -429,7 +429,7 @@ def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: Query
     for count, bottle in enumerate(bottles):
         user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
-        gears = bottle.plankton_data.values_list('gear_type', flat=True).distinct()
+        gears = bottle.plankton_data.values_list('gear_type', 'mesh_size').distinct()
         event = bottle.event
 
         sounding = None
@@ -452,7 +452,7 @@ def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: Query
             logger.error(message)
             continue
 
-        for gear in gears:
+        for gear, mesh_size in gears:
             row_update = set("")
             plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{gear}'
 
@@ -508,16 +508,10 @@ def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: Query
             row_update.add(updated_value(bcs_row, 'pl_headr_position_qc_code', 1) if not exists else '')
 
             # use the event starts and stops if not provided by the bottle.
-            if bottle.date_time:
-                row_update.add(updated_value(bcs_row, 'pl_headr_sdate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
-                row_update.add(updated_value(bcs_row, 'pl_headr_edate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
-                row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(bottle.date_time, "%H%M%S")))
-                row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(bottle.date_time, "%H%M%S")))
-            else:
-                row_update.add(updated_value(bcs_row, 'pl_headr_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
-                row_update.add(updated_value(bcs_row, 'pl_headr_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
-                row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(event.start_date, "%H%M%S")))
-                row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(event.end_date, "%H%M%S")))
+            row_update.add(updated_value(bcs_row, 'pl_headr_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
+            row_update.add(updated_value(bcs_row, 'pl_headr_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
+            row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(event.start_date, "%H%M%S")))
+            row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(event.end_date, "%H%M%S")))
 
             if bottle.latitude:
                 row_update.add(updated_value(bcs_row, 'pl_headr_slat', bottle.latitude))
@@ -545,7 +539,6 @@ def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: Query
             # Maybe this should be averaged?
             row_update.add(updated_value(bcs_row, 'pl_headr_sounding', sounding))
 
-            mesh_size = 0  # 0 if phytoplankton, which is collected from a CTD
             collection_method = 90000010  # hydrographic if this is phytoplankton
             procedure = 90000001
             storage = 90000016
@@ -553,7 +546,6 @@ def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: Query
             large_plankton_removed = "N"  # No if phytoplankton
 
             if event.instrument.type == core_models.InstrumentType.net:
-                mesh_size = 202 if gear == 90000102 else 76  # size of the net mesh if zooplankton
                 collection_method = 90000001  # vertical if this is zooplankton
                 large_plankton_removed = 'Y'  # Yes if Zooplankton
 
@@ -587,7 +579,7 @@ def get_bcs_p_rows(uploader: str, bcs_p_model: Type[models.BcsP], bottles: Query
                 row_update.add(updated_value(bcs_row, 'pl_headr_volume_method_seq', 90000010))
 
             row_update.add(updated_value(bcs_row, 'pl_headr_lrg_plankton_removed', large_plankton_removed))
-            row_update.add(updated_value(bcs_row, 'pl_headr_mesh_size', mesh_size))
+            row_update.add(updated_value(bcs_row, 'pl_headr_mesh_size', mesh_size if mesh_size else 0))
             row_update.add(updated_value(bcs_row, 'pl_headr_collection_method_seq', collection_method))
             row_update.add(updated_value(bcs_row, 'pl_headr_collector_deplmt_id', None))
             row_update.add(updated_value(bcs_row, 'pl_headr_procedure_seq', procedure))
@@ -619,3 +611,143 @@ def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to
     if len(bcs_rows_to_update) > 0:
         user_logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
         db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_update, updated_fields)
+
+
+def get_bcd_p_rows(uploader: str, bcd_p_model: Type[models.BcdP], bottles: QuerySet[core_models.Bottle],
+                   batch_name: str = None) -> [[models.BcdP], [models.BcdP], [str]]:
+
+    create_bcd_rows: [models.BcdP] = []
+    update_bcd_rows: [models.BcdP] = []
+    updated_fields = set()
+
+    samples: QuerySet[core_models.PlanktonSample] = core_models.PlanktonSample.objects.filter(bottle__in=bottles)
+
+    existing_samples = {int(sample.plank_data_num): sample for sample in bcd_p_model.objects.all()}
+
+    total_samples = len(samples)
+    for count, sample in enumerate(samples):
+        row_update = set("")
+        user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_samples)
+
+        bottle = sample.bottle
+        event = bottle.event
+        mission = event.mission
+        gear = sample.gear_type.pk
+
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{gear}'
+
+        # determine if sample is existing or not here
+        exists = False
+        if sample.plank_data_num and sample.plank_data_num in existing_samples.keys():
+            # If the sample does have a dis_data_num, we can get the corresponding row from the BCD table
+            bcd_row = existing_samples[sample.plank_data_num]
+            exists = True
+            # If the modified date on the discrete sample is less than the creation date on the BCD row
+            # nothing needs to be uploaded
+        else:
+            # If the sample doesn't have a dis_data_num, it's never been uploaded so needs to be created.
+            collector_id = f'{bottle.bottle_id}'
+            bcd_row = bcd_p_model._meta.model(plank_sample_key_value=plankton_key)
+
+        # ########### Stuff that we get from the event object #################################################### #
+        # PLANK_DATA_NUM - is the autogenerated primary key
+        # PLANK_SAMPLE_KEY_VALUE - is unique to a mission_event_sample_xxx
+
+        # ########### Stuff that we get from the sample object #################################################### #
+        # updated_fields.add(uploader.updated_value(bcd_row, 'plank_sample_key_value', sample.plank_sample_key_value))
+
+        taxonomic_id = sample.taxa.taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_national_taxonomic_seq', sample.taxa.pk))
+        row_update.add(updated_value(bcd_row, 'pl_gen_collector_taxonomic_id', taxonomic_id))
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_life_history_seq', sample.stage.pk))
+        row_update.add(updated_value(bcd_row, 'pl_gen_trophic_seq', 90000000))
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_min_sieve', sample.min_sieve))
+        row_update.add(updated_value(bcd_row, 'pl_gen_max_sieve', sample.max_sieve))
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_split_fraction', sample.split_fraction))
+        row_update.add(updated_value(bcd_row, 'pl_gen_sex_seq', sample.sex.pk))
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_counts', sample.count))
+        row_update.add(updated_value(bcd_row, 'pl_gen_count_pct', sample.percent))
+        row_update.add(updated_value(bcd_row, 'pl_gen_wet_weight', sample.raw_wet_weight))
+        row_update.add(updated_value(bcd_row, 'pl_gen_dry_weight', sample.raw_dry_weight))
+        row_update.add(updated_value(bcd_row, 'pl_gen_bio_volume', sample.volume))
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_presence', 'Y'))
+        row_update.add(updated_value(bcd_row, 'pl_gen_collector_comment', sample.collector_comment))
+
+        row_update.add(updated_value(bcd_row, 'pl_gen_source', "UNASSIGNED"))
+
+        # PL_GEN_DATA_MANAGER_COMMENT
+        # PL_FREQ_DATA_TYPE_SEQ
+        # PL_FREQ_UPPER_BIN_SIZE
+        # PL_FREQ_LOWER_BIN_SIZE
+        # PL_FREQ_BUG_COUNT
+        # PL_FREQ_BUG_SEQ
+        # PL_FREQ_DATA_VALUE
+        # PL_FREQ_DATA_QC_CODE
+        # PL_FREQ_DETAIL_COLLECTOR
+        # PL_DETAIL_DATA_TYPE_SEQ
+        # PL_DETAIL_DATA_VALUE
+        # PL_DETAIL_DATA_QC_CODE
+        # PL_DETAIL_DETAIL_COLLECTOR
+        # PL_INDIV_DATA_TYPE_SEQ
+        # PL_INDIV_BUG_SEQ
+        # PL_INDIV_DATA_VALUE
+        # PL_INDIV_DATA_QC_CODE
+        # PL_INDIV_DATA_COLLECTOR
+        # PL_GEN_MODIFIER
+        # PL_GEN_UNIT
+
+        # ########### Stuff that we get from the bottle object #################################################### #
+        bottle = sample.bottle
+
+        # ########### Stuff that we get from the event object #################################################### #
+        event = bottle.event
+
+        row_update.add(updated_value(bcd_row, 'event_collector_event_id', event.event_id))
+        row_update.add(updated_value(bcd_row, 'event_collector_stn_name', event.station.name))
+
+        event_date = event.start_date
+
+        # ########### Stuff that we get from the Mission object #################################################### #
+        mission = event.mission
+
+        row_update.add(updated_value(bcd_row, 'batch_seq', f'{event_date.strftime("%Y")}{mission.pk}'))
+
+        # mission descriptor
+        # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code
+        # 18VA13666 <- HL_02, 2013, fixstation
+        # 18HU21185 <- Hudson, AZMP, 2021
+        #
+        # According to Robert Benjamin, this identifier is provided by MEDS and will have to be part of the
+        # core.models.Mission object as it gets entered later on.
+        row_update.add(updated_value(bcd_row, 'mission_descriptor', mission.mission_descriptor))
+        row_update.add(updated_value(bcd_row, 'created_by', uploader))
+        row_update.add(updated_value(bcd_row, 'data_center_code', mission.data_center.data_center_code))
+        row_update.add(updated_value(bcd_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
+        row_update.add(updated_value(bcd_row, 'process_flag', 'NR'))
+
+        row_update.remove('')
+
+        if not exists:
+            create_bcd_rows.append(bcd_row)
+        elif len(row_update) > 0:
+            updated_fields.update(row_update)
+            update_bcd_rows.append(bcd_row)
+
+    return create_bcd_rows, update_bcd_rows, updated_fields
+
+
+def upload_bcd_p(bcd_p_model: Type[models.BcdP], bcd_rows_to_create, bcd_rows_to_update, updated_fields):
+    chunk_size = 100
+    if len(bcd_rows_to_create) > 0:
+        user_logger.info(_("Creating BCS rows") + f" : {len(bcd_rows_to_create)}")
+        db_write_by_chunk(bcd_p_model, chunk_size, bcd_rows_to_create)
+
+    if len(bcd_rows_to_update) > 0:
+        user_logger.info(_("Updating BCS rows") + f": {len(bcd_rows_to_update)}")
+        db_write_by_chunk(bcd_p_model, chunk_size, bcd_rows_to_update, updated_fields)

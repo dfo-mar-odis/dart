@@ -157,7 +157,7 @@ def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, ro
 def get_gear_type(mesh_size: int):
     if mesh_size == 202:
         return bio_models.BCGear.objects.get(pk=90000102)
-    elif mesh_size == 76:
+    elif mesh_size == 76 or mesh_size == 70:
         return bio_models.BCGear.objects.get(pk=90000105)
 
     return None
@@ -254,24 +254,12 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
 
         taxa = bio_models.BCNatnlTaxonCode.objects.get(pk=taxa_id)
 
+        event = events.filter(sample_id=bottle_id)
+
         # if the ringnet bottle doesn't exist it needs to be created
         if (bottle := ringnet_bottles.filter(bottle_id=bottle_id)).exists():
             bottle = bottle.first()
         else:
-            date = row[row_mapping['DATE']]
-            if date is None:
-                message = _("Missing date for bottle.")
-                message += " " + _("Bottle ID") + f" : {bottle_id}"
-                message += " " + _("Line") + f" : {line_number}"
-
-                err = core_models.FileError(mission=mission, file_name=filename, line=line_number, message=message,
-                                            type=core_models.ErrorType.missing_value)
-                errors.append(err)
-
-                user_logger.error(message)
-                logger.error(message)
-                continue
-
             try:
                 event = events.get(event_id=row[row_mapping['EVENT']])
             except core.models.Event.DoesNotExist as e:
@@ -302,7 +290,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
                 logger.error(message)
                 continue
 
-            bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=pressure, date_time=date)
+            bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=pressure)
             create_bottles.append(bottle)
 
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
@@ -315,6 +303,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
 
             # Gear_type, min_sieve, max_sieve, split_fraction and values based on 'what_was_it' can be updated
             updated_fields.add(updated_value(plankton, 'gear_type_id', gear_type.pk))
+            updated_fields.add(updated_value(plankton, 'mesh_size', mesh_size))
             updated_fields.add(updated_value(plankton, 'min_sieve', min_sieve))
             updated_fields.add(updated_value(plankton, 'max_sieve', max_sieve))
             updated_fields.add(updated_value(plankton, 'split_fraction', split_fraction))
@@ -344,7 +333,8 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
             if plankton_key not in create_plankton.keys():
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, gear_type=gear_type, min_sieve=min_sieve, max_sieve=max_sieve,
-                    split_fraction=split_fraction, stage_id=stage, sex_id=sex, file=filename, proc_code=proc_code
+                    split_fraction=split_fraction, stage_id=stage, sex_id=sex, file=filename, proc_code=proc_code,
+                    mesh_size=mesh_size
                 )
                 create_plankton[plankton_key] = plankton
 
