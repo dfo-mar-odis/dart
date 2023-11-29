@@ -29,7 +29,6 @@
                    type="file" name="sample_file" accept=".dat,.csv,.xls,.xlsx,.xlsm"
                    hx-trigger="change"
                    hx-get="{% url 'core:mission_samples_load_sample_config' %}?mission_id={{ mission.pk }}"
-                   hx-select-oob="#div_id_sample_type_holder:outerHTML, #div_id_loaded_sample_type:outerHTML"
             />
         </div>
         <div class="col-auto">

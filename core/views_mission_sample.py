@@ -404,6 +404,36 @@ def new_sample_config(request, **kwargs):
         return HttpResponse(html)
 
 
+def get_file_error_card(request, **kwargs):
+    soup = BeautifulSoup("", "html.parser")
+
+    errors = models.FileError.objects.filter(mission_id=request.GET['mission_id'], file_name=request.GET['file_name'])
+    if errors.exists():
+        attrs = {
+            'card_name': "file_warnings",
+            'card_title': _("File Warnings"),
+            'card_class': "text-bg-warning"
+        }
+        error_card_form = forms.CollapsableCardForm(**attrs)
+        error_card_html = render_crispy_form(error_card_form)
+        error_card = BeautifulSoup(error_card_html, 'html.parser')
+
+        card_div = error_card.find("div")
+
+        card_body = card_div.find(id=error_card_form.get_card_body_id())
+        card_body.attrs['class'].append('vertical-scrollbar-sm')
+
+        ul = soup.new_tag("ul")
+        card_body.append(ul)
+        for error in errors:
+            li = soup.new_tag('li')
+            li.string = error.message
+            ul.append(li)
+
+        soup.append(card_div)
+    return HttpResponse(soup)
+
+
 def load_sample_config(request, **kwargs):
     context = {}
     context.update(csrf(request))
@@ -415,25 +445,31 @@ def load_sample_config(request, **kwargs):
         if loading:
             # Let's make some soup
             url = reverse_lazy("core:mission_samples_load_sample_config")
-            oob_select = "#div_id_loaded_samples_list:outerHTML, #div_id_sample_type_holder:outerHTML"
 
-            soup = BeautifulSoup('<div id="div_id_loaded_sample_type"><div id=div_id_loaded_samples_list></div</div>',
-                                 "html.parser")
+            soup = BeautifulSoup('', "html.parser")
+
+            div_sampletype_holder = soup.new_tag("div")
+            div_sampletype_holder.attrs['id'] = "div_id_sample_type_holder"
+            div_sampletype_holder.attrs['hx-swap-oob'] = "true"
+
+            div_loaded_sample_types = soup.new_tag("div")
+            div_loaded_sample_types.attrs['id'] = "div_id_loaded_samples_list"
+            div_loaded_sample_types.attrs['hx-swap-oob'] = "true"
 
             attrs = {
                 'component_id': "div_id_loaded_sample_type_message",
                 'message': _("Loading"),
                 'alert_type': 'info',
-                'hx-target': "#div_id_loaded_sample_type_message",
                 'hx-post': url,
                 'hx-trigger': "load",
-                'hx-swap': "outerHTML",
-                'hx-select-oob': oob_select,
+                'hx-swap-oob': "#div_id_sample_type_holder",
             }
             dialog_soup = forms.save_load_component(**attrs)
-            root_div = dialog_soup.find(id='div_id_loaded_sample_type_message')
 
-            soup.find(id="div_id_loaded_sample_type").append(root_div)
+            div_sampletype_holder.append(dialog_soup)
+
+            soup.append(div_sampletype_holder)
+            soup.append(div_loaded_sample_types)
 
             return HttpResponse(soup)
 
@@ -459,7 +495,7 @@ def load_sample_config(request, **kwargs):
 
         if 'config' in kwargs:
             return new_sample_config(request, config=kwargs['config'])
-
+        mission_id = request.POST['mission_id']
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
@@ -467,27 +503,44 @@ def load_sample_config(request, **kwargs):
         # We want to locate file configurations that match this file_type
         file_configs = SampleParser.get_file_configs(data, file_type)
 
-        html = '<div id="div_id_sample_type_holder"></div>'  # used to clear the message saying a file has to be loaded
+        soup = BeautifulSoup("", 'html.parser')
+        div_sample_type_holder = soup.new_tag("div")
+        div_sample_type_holder.attrs['id'] = "div_id_sample_type_holder"
+        div_sample_type_holder.attrs['hx-swap-oob'] = 'true'
+
+        soup.append(div_sample_type_holder)
+
+        div_sample_type_list = soup.new_tag("div")
+        div_sample_type_list.attrs['id'] = "div_id_loaded_samples_list"
+        div_sample_type_list.attrs['class'] = "mt-2"
+        div_sample_type_holder.append(div_sample_type_list)
+
         if file_configs:
-            html += '<div id=div_id_loaded_samples_list>'
+
+            file_error_url = reverse_lazy("core:mission_samples_get_file_errors")
+            file_error_url += f"?mission_id={mission_id}&file_name={file_name}"
+            div_error_list = soup.new_tag('div')
+            div_error_list.attrs['id'] = "div_id_error_list"
+            div_error_list.attrs['hx-get'] = file_error_url
+            div_error_list.attrs['hx-trigger'] = "load, file_errors_updated from:body"
+            div_sample_type_list.append(div_error_list)
+
             for config in file_configs:
-                errors = models.FileError.objects.filter(file_name=file_name).exists()
-                html += render_to_string('core/partials/card_sample_config.html',
-                                         context={'sample_config': config, 'errors': errors})
-
-            html += "</div>"
+                html = render_to_string('core/partials/card_sample_config.html', context={'sample_config': config})
+                sample_type = BeautifulSoup(html, 'html.parser')
+                div_sample_type_list.append(sample_type.find("div"))
         else:
-            html += '<div id=div_id_loaded_samples_list></div>'
-
-            soup = BeautifulSoup(html, 'html.parser')
-            alert_div = soup.new_tag("div", attrs={'class': "alert alert-warning mt-2"})
-            alert_div.string = _("No File Configurations Found")
+            attrs = {
+                'component_id': "",
+                'message': _("No File Configurations Found"),
+                'type': 'info'
+            }
+            alert_div = forms.blank_alert(**attrs)
             soup.find(id="div_id_sample_type_holder").append(alert_div)
-            return HttpResponse(soup)
 
         # html = render_block_to_string("core/partials/form_sample_type.html", "loaded_samples_block",
         #                               context=context)
-        return HttpResponse(html)
+        return HttpResponse(soup)
 
 
 def load_samples(request, **kwargs):
@@ -575,7 +628,7 @@ def load_samples(request, **kwargs):
         soup = BeautifulSoup('', 'html.parser')
 
         button_class = "btn btn-success btn-sm"
-        icon = BeautifulSoup(load_svg("folder-check"), 'html.parser').svg
+        icon = BeautifulSoup(load_svg("arrow-down-square"), 'html.parser').svg
         try:
             logger.info(f"Starting sample load for file {file_name}")
 
@@ -584,20 +637,18 @@ def load_samples(request, **kwargs):
 
             SampleParser.parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
 
-            if (errors := models.FileError.objects.filter(file_name=file_name)).exists():
+            if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name=file_name)).exists():
                 button_class = "btn btn-warning btn-sm"
-                icon = BeautifulSoup(load_svg("folder-symlink"), 'html.parser').svg
-                get_error_list(soup, message_div_id, errors)
-            else:
-                # create an empty message div to remove the loading alert
-                msg_div = soup.new_tag('div')
-                msg_div.attrs['id'] = f'{message_div_id}_message'
-                soup.append(msg_div)
+                # get_error_list(soup, message_div_id, errors)
+
+            # create an empty message div to remove the loading alert
+            msg_div = soup.new_tag('div')
+            msg_div.attrs['id'] = f'{message_div_id}_message'
+            soup.append(msg_div)
 
         except Exception as ex:
             logger.error(f"Failed to load file {file_name}")
             logger.exception(ex)
-            icon = BeautifulSoup(load_svg("folder-x"), 'html.parser').svg
             button_class = "btn btn-danger btn-sm"
 
         # url = reverse_lazy('core:mission_samples_load_samples', args=(file_config.pk,))
@@ -619,7 +670,7 @@ def load_samples(request, **kwargs):
         response = HttpResponse(soup)
 
         # This will trigger the Sample table on the 'core/mission_samples.html' template to update
-        response['HX-Trigger'] = 'update_samples'
+        response['HX-Trigger'] = 'update_samples, file_errors_updated'
         return response
 
 
@@ -1266,6 +1317,7 @@ mission_sample_urls = [
     # used to reload elements on the sample form if a GET htmx request
     path('sample_config/hx/', load_sample_config, name="mission_samples_load_sample_config"),
     path('sample_config/hx/<int:config>/', load_sample_config, name="mission_samples_load_sample_config"),
+    path('sample_config/hx/file_errors/', get_file_error_card, name="mission_samples_get_file_errors"),
 
     # show the create a sample config form
     path('sample_config/hx/new/', new_sample_config, name="mission_samples_new_sample_config"),

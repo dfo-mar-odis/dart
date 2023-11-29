@@ -26,21 +26,44 @@ class NoWhiteSpaceCharField(forms.CharField):
 
 class CardForm(forms.Form):
 
+    card_title = None
+    card_title_class = None
+    card_header_class = None
+
+    def get_card_title_id(self):
+        return f'div_id_card_title_{self.card_name}'
+
+    def get_card_title_class(self):
+        return 'card-title' + (f" {self.card_title_class}" if self.card_title_class else "")
+
     def get_card_title(self):
-        return Div(css_class="card-title row", id=f'div_id_card_title_{self.card_name}')
+        title = HTML(f'<h6>{self.card_title}</h6>') if self.card_title else None
+        return Div(title, css_class=self.get_card_title_class(), id=self.get_card_title_id())
+
+    def get_card_header_id(self):
+        return f'div_id_card_header_{self.card_name}'
+
+    def get_card_header_class(self):
+        return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
 
     def get_card_header(self):
-        return Div(self.get_card_title(), css_class='card-header', id=f'div_id_card_header_{self.card_name}')
+        return Div(self.get_card_title(), css_class=self.get_card_header_class(), id=self.get_card_header_id())
+
+    def get_card_body_id(self):
+        return f'div_id_card_body_{self.card_name}'
 
     def get_card_body(self):
-        return Div(css_class='card-body', id=f'div_id_card_body_{self.card_name}')
+        return Div(css_class='card-body', id=self.get_card_body_id())
+
+    def get_card_id(self):
+        return f'div_id_card_{self.card_name}'
 
     def get_card(self):
         card = Div(
             self.get_card_header(),
             self.get_card_body(),
             css_class='card',
-            id=f'div_id_card_{self.card_name}'
+            id=self.get_card_id()
         )
 
         return card
@@ -51,6 +74,12 @@ class CardForm(forms.Form):
 
         self.card_name = kwargs.pop('card_name')
 
+        if 'card_title' in kwargs:
+            self.card_title = kwargs.pop('card_title')
+
+        if 'card_class' in kwargs:
+            self.card_header_class = kwargs.pop('card_class')
+
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper()
@@ -58,16 +87,16 @@ class CardForm(forms.Form):
 
         self.helper.layout = Layout(self.get_card())
 
+    def set_title(self, title):
+        self.card_title = title
+
 
 class CollapsableCardForm(CardForm):
-
-    def get_card_title(self):
-        return Row(css_class="card-title", id=f'div_id_card_title_{self.card_name}')
 
     def get_card_header(self):
 
         header_row = Row()
-        header = Div(header_row, css_class='card-header')
+        header = Div(header_row, css_class=self.get_card_header_class())
 
         button_id = f'button_id_collapse_{self.card_name}'
         button_attrs = {
@@ -77,19 +106,21 @@ class CollapsableCardForm(CardForm):
             'aria_expanded': 'false'
         }
         icon = load_svg('caret-down')
-        button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed", **button_attrs)
+        button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed col-auto", **button_attrs)
 
-        button_column = Div(button, css_class="col-auto")
-        title_column = Div(self.get_card_title(), css_class="col")
+        title_column = Div(self.get_card_title(), css_class="col align-self-end")
 
-        header_row.append(button_column)
+        header_row.append(button)
         header_row.append(title_column)
 
         return header
 
+    def get_collapsable_card_body_id(self):
+        return f"div_id_card_collapse_{self.card_name}"
+
     def get_collapsable_card_body(self):
         inner_body = self.get_card_body()
-        body = Div(inner_body, css_class="collapsed collapse", id=f"div_id_card_collapse_{self.card_name}")
+        body = Div(inner_body, css_class="collapsed collapse", id=self.get_collapsable_card_body_id())
         return body
 
     def get_card(self):
@@ -97,7 +128,7 @@ class CollapsableCardForm(CardForm):
             self.get_card_header(),
             self.get_collapsable_card_body(),
             css_class='card',
-            id=f'div_id_card_{self.card_name}'
+            id=self.get_card_id()
         )
 
         return card

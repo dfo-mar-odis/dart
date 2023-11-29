@@ -55,21 +55,23 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         db_select_attributes = {
             'id': title_id,
-            'class': 'form-select form-select-sm',
+            'class': 'form-select form-select-sm mt-1',
             'name': 'selected_database',
             'hx-get': url,
             'hx-swap': 'none'
         }
+        html_css_class = "col-auto col-form-label me-2"
         db_select = Column(
             Row(
                 Column(
-                    HTML('<label class="me-2 pt-1" for="' + title_id + '">' + _("Biochem Database") + '</label>'),
-                    Field('selected_database', template=self.field_template, **db_select_attributes,
-                          wrapper_class='col-auto'),
-                    css_class='input-group input-group-sm'
+                    HTML(f'<label class="{html_css_class}" for="' + title_id + '">' + _("Biochem Database") + '</label>'),
+                    css_class="col-auto"
                 ),
+                Field('selected_database', template=self.field_template, **db_select_attributes,
+                      wrapper_class="col-auto"),
+                css_class='',
+                id=f"div_id_db_select_{self.card_name}",
             ),
-            id=f"div_id_db_select_{self.card_name}",
             css_class="col-auto"
         )
 
@@ -97,20 +99,25 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
         connect_button = StrictButton(connect_button_icon, css_class=connect_button_class, **connect_button_attrs)
 
         password_field_label = f'control_id_password_{self.card_name}'
+        html_css_class = "col-form-label me-2"
         password_field = Column(
             Row(
                 Column(
-                    HTML(
-                        '<label class="me-2 pt-1" for="' + password_field_label + '">' + _("Password") + '</label>'
-                    ),
-                    Field('db_password', id=password_field_label,
-                          template=self.field_template, css_class="form-control form-control-sm"),
-                    connect_button,
-                    css_class='input-group input-group-sm'
+                    HTML(f'<label class="{html_css_class}" for="' + password_field_label + '">' + _("Password") + '</label>'),
+                    css_class="col-auto"
                 ),
-            ),
-            id=f"div_id_db_password_{self.card_name}",
-            css_class="col"
+                Column(
+                    Field('db_password', id=password_field_label, template=self.field_template,
+                          wrapper_class="input-group-sm mt-1"),
+                    Div(
+                        connect_button,
+                        css_class="input-group-sm mt-1"
+                    ),
+                    css_class="input-group input-group-sm"
+                ),
+                css_class='',
+                id=f"div_id_db_password_{self.card_name}",
+            )
         )
 
         return password_field
@@ -139,22 +146,18 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         return upload_field
 
-    def get_card_title(self):
-        title = super().get_card_title()
-
-        title.append(self.get_db_select())
-        title.append(self.get_db_password())
-        title.append(self.get_upload())
-
-        return title
-
     def get_alert_area(self):
         msg_row = Row(id=f"div_id_biochem_alert_{self.card_name}")
         return msg_row
 
     def get_card_header(self):
         header = super().get_card_header()
-        header.append(self.get_alert_area())
+
+        # fields[0] is the card-header, fields[1] is the second column
+        title_row = Row(self.get_db_select(), self.get_db_password(), self.get_upload(),
+                        css_class="mt-1")
+        header.fields[0].fields[1].fields[0].fields.append(title_row)
+        header.fields.append(self.get_alert_area())
         return header
 
     def get_card_body(self):

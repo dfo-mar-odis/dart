@@ -454,7 +454,7 @@ class SampleTypeConfig(models.Model):
                                           help_text=_("Can this sample have replicate sample values?"))
 
     def __str__(self):
-        return f"{self.sample_type} - {self.file_type}"
+        return f"{self.sample_type}"
 
 
 class MissionSampleConfig(models.Model):

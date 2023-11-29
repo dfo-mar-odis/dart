@@ -18,27 +18,22 @@
             >{% custom_icon 'dash-square' %}</button>
         </div>
         <div class="col-auto">
-            <button type="button" class="btn btn-primary btn-sm me-1" name='edit'
+            <button type="button" class="btn btn-secondary btn-sm me-1" name='edit'
                     hx-post="{% url 'core:mission_samples_new_sample_config' sample_config.pk %}"
                     hx-target="#div_id_sample_type_holder"
                     {# just a little javascript to scroll back to the new sample type form #}
                     hx-on="htmx:afterRequest: window.location.href = '#div_id_sample_type';"
             >{% custom_icon 'pencil-square' %}</button>
-            <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-secondary{% endif %} btn-sm" name='load'
+            <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-primary{% endif %} btn-sm" name='load'
                     id="div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-get="{% url 'core:mission_samples_load_samples' sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-select="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-swap="outerHTML"
                     hx-select-oob="#div_id_sample_config_card_{{ sample_config.pk }}_message"
-            >{% if errors %}
-                {# if the loaded file contins errors show the 'reload' icon and set the 'btn-warning' css #}
-                {% custom_icon 'folder-symlink' %}
-             {% else %}
-                {# if the loaded file contins errors show the 'reload' icon and set the 'btn-warning' css #}
-                {% custom_icon 'folder' %}
-             {% endif %}</button>
+            >{% custom_icon 'arrow-down-square' %}</button>
         </div>
+        <div id="div_id_sample_config_card_{{ sample_config.pk }}_message"></div>
     </div>
 </div>
 <div id="div_id_sample_config_card_body_{{ sample_config.pk }}" class="collapsed collapse">
@@ -64,7 +59,6 @@
             <li class="list-group-item">{% trans 'Comment' %} : {{ sample_config.comment_field }}</li>
             {% endif %}
         </ul>
-        <div id="div_id_sample_config_card_{{ sample_config.pk }}_message"></div>
     </div>
 </div>
 </div>
