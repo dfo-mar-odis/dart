@@ -773,6 +773,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         attrs = {
             'css_class': "btn btn-primary btn-sm ms-2",
             'name': "add_sample_type",
+            'title': _("Add as new configuration"),
             'hx_get': reverse_lazy("core:mission_samples_save_sample_config"),
             'hx_target': "#button_row",
             'hx_select': "#div_id_loaded_sample_type_message",
@@ -784,10 +785,17 @@ class SampleTypeConfigForm(forms.ModelForm):
         if self.instance.pk:
             attrs['hx_get'] = reverse_lazy("core:mission_samples_save_sample_config", args=(self.instance.pk,))
             attrs['name'] = "update_sample_type"
-
+            attrs['title'] = _("Update existing configuration")
             attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
             button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
             button_row.fields[0].insert(0, button_update)
+
+        attrs['hx_get'] = reverse_lazy("core:mission_samples_load_sample_config")
+        attrs['name'] = "reload"
+        attrs['title'] = _("Cancel")
+        attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
+        button_cancel = StrictButton(load_svg('arrow-left-square'), **attrs)
+        button_row.fields[0].insert(0, button_cancel)
 
         self.helper[0].layout.fields.append(button_row)
 

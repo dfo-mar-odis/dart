@@ -27,7 +27,7 @@
             {# choose file input #}
             <input id="id_input_sample_file" class="form-control form-control-sm"
                    type="file" name="sample_file" accept=".dat,.csv,.xls,.xlsx,.xlsm"
-                   hx-trigger="change"
+                   hx-trigger="change, reload_sample_file from:body"
                    hx-get="{% url 'core:mission_samples_load_sample_config' %}?mission_id={{ mission.pk }}"
             />
         </div>

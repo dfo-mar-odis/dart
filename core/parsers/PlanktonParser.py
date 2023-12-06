@@ -290,7 +290,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
                 logger.error(message)
                 continue
 
-            bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=pressure)
+            bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=pressure, date_time=event.end_date)
             create_bottles.append(bottle)
 
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'

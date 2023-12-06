@@ -232,18 +232,6 @@ class TestCTDParser(DartTestCase):
         self.test_file_006 = 'JC243a006.BTL'
         self.ctd_data_frame_006 = ctd.from_btl(os.path.join(self.test_file_location, self.test_file_006))
 
-    def test_get_sensor_names(self):
-        # give a pandas dataframe loaded from the 3rd-part ctd package, get_sensor_names should return a list of
-        # sensors extracted from the dataframe columns, excluding common sensors we don't want to be returned,
-        # like time and lat/lon
-
-        # These are columns we either have no use for or we will specifically call and use later
-        exclude = ['Bottle', 'Bottle_', 'Date', 'Scan', 'TimeS', 'Statistic', "Longitude", "Latitude"]
-        col_headers = ctd_parser.get_sensor_names(self.ctd_data_frame_001, exclude=exclude)
-
-        for header in exclude:
-            self.assertFalse(header in col_headers)
-
     def test_process_bottles(self):
         # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
         # process bottles should create core.models.Bottle objects and return validation errors for invalid

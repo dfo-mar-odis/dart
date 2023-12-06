@@ -148,7 +148,10 @@ def find_header(df, header_row):
 def _split_function(x):
     if isinstance(x, str):
         # if the value of x is a string, try to split it
-        s_id, r_id = str(x).split("_") if '_' in str(x) else [x, np.nan]
+        try:
+            s_id, r_id = str(x).split("_") if '_' in str(x) else [x, np.nan]
+        except ValueError as ex:
+            raise ValueError(_("Badly formatted sample id") + f": {x}")
     else:
         # if the value of x is a number keep it and create a nan replica to go with it
         s_id, r_id = [x, np.nan] if not pd.isna(x) else [np.nan, np.nan]
@@ -322,8 +325,8 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
                                                                     update_discrete_values['fields'])
 
     except ValueError as ex:
-        message = f"Could not parse sample id column '{sample_config.sample_field}', " \
-                  f"make sure the right column was selected"
+        message = _("Could not read column") + f" '{settings.config.sample_field}'"
+        message += " - " + str(ex)
         logger.error(message)
         logger.exception(ex)
         error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message)

@@ -439,6 +439,11 @@ def load_sample_config(request, **kwargs):
     context.update(csrf(request))
 
     if request.method == "GET":
+        if 'reload' in request.GET:
+            response = HttpResponse()
+            response['HX-Trigger'] = 'reload_sample_file'
+            return response
+
         mission_id = request.GET['mission'] if 'mission' in request.GET else None
         loading = 'sample_file' in request.GET
 
@@ -531,7 +536,7 @@ def load_sample_config(request, **kwargs):
                 div_sample_type_list.append(sample_type.find("div"))
         else:
             attrs = {
-                'component_id': "",
+                'component_id': "div_id_loaded_samples_alert",
                 'message': _("No File Configurations Found"),
                 'type': 'info'
             }
@@ -545,8 +550,6 @@ def load_sample_config(request, **kwargs):
 
 def load_samples(request, **kwargs):
     # Either delete a file configuration or load the samples from the sample file
-    context = {}
-    context.update(csrf(request))
 
     if 'config_id' not in kwargs:
         raise Http404("Missing Sample ID")
@@ -595,8 +598,7 @@ def load_samples(request, **kwargs):
         mission_id = request.POST['mission_id']
         message_div_id = f'div_id_sample_config_card_{config_id}'
 
-        # Todo: Add a unit test to test that the message block gets shown if no file is
-        #  present when this function is active
+        context = {}
         if 'sample_file' not in request.FILES:
             context['message'] = _("File is required before adding sample")
             html = render_block_to_string("core/partials/form_sample_type.html", load_block,

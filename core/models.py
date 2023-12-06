@@ -225,6 +225,16 @@ class Event(models.Model):
 
         return a2.date_time - a1.date_time
 
+    @property
+    def comments(self):
+        comments = []
+        for action in self.actions.all():
+            if action.comment and action.comment not in comments:
+                # don't add comments that are NoneTypes or if the comment is a duplicate
+                comments.append(action.comment)
+
+        return " ".join(comments)
+
     class Meta:
         unique_together = ("event_id", "mission")
         ordering = ("event_id",)
@@ -364,10 +374,10 @@ class Bottle(models.Model):
     # the bottle number will not be present if this is a RingNet event
     bottle_number = models.IntegerField(verbose_name=_("Bottle Number"), blank=True, null=True)
 
-    pressure = models.FloatField(verbose_name=_("Pressure"), default=0.0)
+    pressure = models.DecimalField(verbose_name=_("Pressure"), default=0.0, decimal_places=3, max_digits=7)
 
-    latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
-    longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
+    latitude = models.DecimalField(verbose_name=_("Latitude"), blank=True, null=True, decimal_places=6, max_digits=8)
+    longitude = models.DecimalField(verbose_name=_("Longitude"), blank=True, null=True, decimal_places=6, max_digits=9)
 
     last_modified = models.DateTimeField(auto_now=True)
 
@@ -404,7 +414,10 @@ class SampleType(models.Model):
         ordering = ('is_sensor', 'short_name')
 
     def __str__(self):
-        return self.short_name + (f" - {self.long_name}" if self.long_name else "")
+        label = self.short_name + (f" - {self.long_name}" if self.long_name else "")
+        label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
+
+        return label
 
 
 # if a biochem datatype is different from the default sample type for a specific mission use the mission sample type

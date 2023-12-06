@@ -173,13 +173,16 @@ def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[
         updated_fields.add(updated_value(bcs_row, 'mission_collector_comment1', mission.collector_comments))
         updated_fields.add(updated_value(bcs_row, 'mission_collector_comment2', mission.more_comments))
         updated_fields.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_institute',
+                                         primary_data_center.name if primary_data_center else "Not Specified"))
 
         updated_fields.add(updated_value(bcs_row, 'event_collector_event_id', event.event_id))
+        updated_fields.add(updated_value(bcs_row, 'event_collector_comment1', event.comments))
         updated_fields.add(updated_value(bcs_row, 'event_collector_stn_name', event.station.name))
         updated_fields.add(updated_value(bcs_row, 'event_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
         updated_fields.add(updated_value(bcs_row, 'event_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
-        updated_fields.add(updated_value(bcs_row, 'event_stime', datetime.strftime(event.start_date, "%H%M%S")))
-        updated_fields.add(updated_value(bcs_row, 'event_etime', datetime.strftime(event.end_date, "%H%M%S")))
+        updated_fields.add(updated_value(bcs_row, 'event_stime', datetime.strftime(event.start_date, "%H%M")))
+        updated_fields.add(updated_value(bcs_row, 'event_etime', datetime.strftime(event.end_date, "%H%M")))
         updated_fields.add(updated_value(bcs_row, 'event_utc_offset', 0))
         updated_fields.add(updated_value(bcs_row, 'event_min_lat', min(event.start_location[0], event.end_location[0])))
         updated_fields.add(updated_value(bcs_row, 'event_max_lat', max(event.start_location[0], event.end_location[0])))
@@ -187,12 +190,20 @@ def get_bcs_d_rows(uploader: str, bcs_d_model: Type[models.BcsD], bottles: list[
         updated_fields.add(updated_value(bcs_row, 'event_max_lon', max(event.start_location[1], event.end_location[1])))
 
         updated_fields.add(updated_value(bcs_row, 'dis_headr_gear_seq', 90000019))  # typically 90000019, not always
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_time_qc_code', 0))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_time_qc_code', 1))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_position_qc_code', 1))
+
+        if (bottom_action := event.actions.filter(type=core_models.ActionType.bottom)).exists():
+            bottom_action = bottom_action[0]
+            updated_fields.add(updated_value(bcs_row, 'dis_headr_sounding', bottom_action.sounding))
+            updated_fields.add(updated_value(bcs_row, 'dis_headr_collector', bottom_action.data_collector))
+
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_responsible_group', mission.protocol))
 
         updated_fields.add(updated_value(bcs_row, 'dis_headr_sdate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
         updated_fields.add(updated_value(bcs_row, 'dis_headr_edate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_stime', datetime.strftime(bottle.date_time, "%H%M%S")))
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_etime', datetime.strftime(bottle.date_time, "%H%M%S")))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_stime', datetime.strftime(bottle.date_time, "%H%M")))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_etime', datetime.strftime(bottle.date_time, "%H%M")))
 
         if bottle.latitude:
             updated_fields.add(updated_value(bcs_row, 'dis_headr_slat', bottle.latitude))  # Maybe required to use
@@ -336,7 +347,7 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
 
         primary_data_center = mission.data_center
 
-        dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:02d}_{bottle.bottle_id}'
+        dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
         # determine if sample is existing or not here
         if ds_sample.dis_data_num and ds_sample.dis_data_num in existing_samples.keys():
@@ -362,18 +373,26 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
         updated_fields.add(updated_value(bcd_row, 'event_collector_event_id', event.event_id))
         updated_fields.add(updated_value(bcd_row, 'event_collector_stn_name', event.station.name))
 
-        location = event.start_location
-        updated_fields.add(updated_value(bcd_row, 'dis_header_slat', location[0]))
-        updated_fields.add(updated_value(bcd_row, 'dis_header_slon', location[1]))
+        if bottle.latitude and bottle.longitude:
+            updated_fields.add(updated_value(bcd_row, 'dis_header_slat', bottle.latitude))
+            updated_fields.add(updated_value(bcd_row, 'dis_header_slon', bottle.longitude))
+        else:
+            location = event.start_location
+            updated_fields.add(updated_value(bcd_row, 'dis_header_slat', location[0]))
+            updated_fields.add(updated_value(bcd_row, 'dis_header_slon', location[1]))
 
-        event_date = event.start_date
-        updated_fields.add(updated_value(bcd_row, 'dis_header_sdate', event_date.strftime("%Y-%m-%d")))
-        updated_fields.add(updated_value(bcd_row, 'dis_header_stime', event_date.strftime("%H%M")))
+        if bottle.date_time:
+            updated_fields.add(updated_value(bcd_row, 'dis_header_sdate', bottle.date_time.strftime("%Y-%m-%d")))
+            updated_fields.add(updated_value(bcd_row, 'dis_header_stime', bottle.date_time.strftime("%H%M")))
+        else:
+            event_date = event.start_date
+            updated_fields.add(updated_value(bcd_row, 'dis_header_sdate', event_date.strftime("%Y-%m-%d")))
+            updated_fields.add(updated_value(bcd_row, 'dis_header_stime', event_date.strftime("%H%M")))
 
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        batch = batch_name if batch_name else f'{event_date.strftime("%Y")}{mission.pk}'
+        batch = batch_name if batch_name else f'{event.start_date.strftime("%Y")}{mission.pk}'
         updated_fields.add(updated_value(bcd_row, 'batch_seq', batch))
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detail_collector', mission.lead_scientist))
 
@@ -386,7 +405,7 @@ def get_bcd_d_rows(uploader: str, bcd_d_model: Type[models.BcdD], mission: core_
         # core.models.Mission object as it gets entered later on.
         updated_fields.add(updated_value(bcd_row, 'mission_descriptor', mission.mission_descriptor))
 
-        updated_fields.add(updated_value(bcd_row, 'dis_detail_data_qc_code', 0))
+        updated_fields.add(updated_value(bcd_row, 'dis_detail_data_qc_code', ds_sample.flag if ds_sample.flag else 0))
         updated_fields.add(updated_value(bcd_row, 'process_flag', 'NR'))
         updated_fields.add(updated_value(bcd_row, 'created_by', uploader))
         updated_fields.add(updated_value(bcd_row, 'data_center_code', primary_data_center.data_center_code))

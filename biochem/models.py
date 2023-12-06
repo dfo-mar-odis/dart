@@ -128,8 +128,8 @@ class BcdD(models.Model):
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
     event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
     event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
-    dis_header_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
-    dis_header_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    dis_header_start_depth = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
+    dis_header_end_depth = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
     dis_header_slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
     dis_header_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     dis_header_sdate = models.DateField(blank=True, null=True)
@@ -211,8 +211,8 @@ class BcsD(models.Model):
     dis_headr_slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     dis_headr_elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
     dis_headr_position_qc_code = models.CharField(max_length=2, blank=True, null=True)
-    dis_headr_start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
-    dis_headr_end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    dis_headr_start_depth = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
+    dis_headr_end_depth = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
     dis_headr_sounding = models.IntegerField(blank=True, null=True)
     dis_headr_collector_deplmt_id = models.CharField(max_length=50, blank=True, null=True),  # Done, value is null
 

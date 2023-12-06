@@ -72,6 +72,20 @@ class CTDEventFactory(EventFactory):
     end_sample_id = factory.lazy_attribute(lambda o: (o.sample_id + faker.random.randint(0, 1000)))
     instrument = factory.SubFactory(CTDInstrumentFactory)
 
+    @post_generation
+    def add_actions(self, create, extracted, **kwargs):
+        if not create:
+            return
+
+        date_time = faker.date_time(tzinfo=timezone.get_current_timezone())
+        ActionFactory(event=self, date_time=date_time, type=models.ActionType.deployed)
+
+        date_time = date_time + datetime.timedelta(minutes=30)
+        ActionFactory(event=self, date_time=date_time, type=models.ActionType.bottom)
+
+        date_time = date_time + datetime.timedelta(minutes=30)
+        ActionFactory(event=self, date_time=date_time, type=models.ActionType.recovered)
+
 
 class NetEventFactory(EventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
