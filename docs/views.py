@@ -28,3 +28,8 @@ class MissionEvents(GenericViewMixin, TemplateView):
 class MissionSamples(GenericViewMixin, TemplateView):
     page_title = _("Mission Samples Page")
     template_name = 'docs/mission_samples.html'
+
+
+class SampleTypes(GenericViewMixin, TemplateView):
+    page_title = _("Standard Sample Types Page")
+    template_name = 'docs/standard_sample_types.html'

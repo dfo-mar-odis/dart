@@ -11,4 +11,5 @@ urlpatterns = [
     path('mission/new_mission_form', views.NewMissionForm.as_view(), name="new_mission_form"),
     path('mission/mission_events', views.MissionEvents.as_view(), name="mission_events"),
     path('mission/mission_samples', views.MissionSamples.as_view(), name="mission_samples"),
+    path('mission/sample_types', views.SampleTypes.as_view(), name="sample_types"),
 ]
