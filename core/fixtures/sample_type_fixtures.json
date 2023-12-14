@@ -7,7 +7,7 @@
         "long_name": "Oxygen",
         "priority": 1,
         "comments": null,
-        "datatype": 90000007,
+        "datatype": 90000203,
         "is_sensor": false
     }
 },
@@ -127,7 +127,7 @@
         "long_name": "Nitrate",
         "priority": 1,
         "comments": null,
-        "datatype": 90000218,
+        "datatype": 90000199,
         "is_sensor": false
     }
 },
