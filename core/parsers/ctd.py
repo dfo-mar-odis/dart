@@ -2,6 +2,7 @@ import ctd
 import re
 import os
 
+import django.db.utils
 import numpy as np
 import pandas
 import pytz
@@ -101,6 +102,8 @@ def process_ros_sensors(sensors: [str], ros_file: str):
     summary = ctd.rosette_summary(ros_file)
     sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
+    existing_sensors = core_models.SampleType.objects.filter(is_sensor=True).values_list('short_name',
+                                                                                         flat=True).distinct()
     new_sensors: [core_models.SampleType] = []
     for sensor in sensor_headings:
         # [column_name]: [sensor_details]
@@ -121,6 +124,9 @@ def process_ros_sensors(sensors: [str], ros_file: str):
 
         if units:
             long_name += f" [{units}]"
+
+        if sensor_mapping[0] in existing_sensors:
+            continue
 
         sensor_type = core_models.SampleType(short_name=sensor_mapping[0], long_name=long_name, is_sensor=True)
         sensor_type.name = sensor_type_string
@@ -421,7 +427,7 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     # The Bottle column is the rosette number of the bottle
     # the Bottle_ column, if present, is the bottle.bottle_id for a bottle.
     exclude = ['bottle', 'bottle_', 'date', 'scan', 'times', 'statistic',
-               'longitude', 'latitude', 'nbf', 'flag', 'prdm', 'prsm']
+               'longitude', 'latitude', 'nbf', 'flag']
     col_headers = [instrument.lower() for instrument in data_frame.columns if instrument.lower() not in exclude]
 
     process_bottles(event=event, data_frame=data_frame)

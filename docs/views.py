@@ -30,6 +30,11 @@ class MissionSamples(GenericViewMixin, TemplateView):
     template_name = 'docs/mission_samples.html'
 
 
+class FileConfigurations(GenericViewMixin, TemplateView):
+    page_title = _("Creating and Modifying File Configurations")
+    template_name = 'docs/file_configurations.html'
+
+
 class SampleTypes(GenericViewMixin, TemplateView):
     page_title = _("Standard Sample Types Page")
     template_name = 'docs/standard_sample_types.html'

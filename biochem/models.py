@@ -123,8 +123,9 @@ class Bcgears(models.Model):
         db_table = 'bcgears'
 
 
+# This matches the Biochem.BCDiscreteDataEdits table
 class BcdD(models.Model):
-    dis_data_num = models.AutoField(primary_key=True)
+    dis_data_num = models.IntegerField(primary_key=True)
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
     event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
     event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)

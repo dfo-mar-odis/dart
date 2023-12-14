@@ -348,9 +348,7 @@ def get_plankton_db_card(request, **kwargs):
 
 def upload_plankton(request, **kwargs):
 
-    def upload_samples(mission, database):
-        uploader = database.uploader if database.uploader else database.account_name
-
+    def upload_samples(mission: core.models.Mission, uploader: str):
         form_biochem_database.upload_bcs_p_data(mission, uploader)
         form_biochem_database.upload_bcd_p_data(mission, uploader)
 

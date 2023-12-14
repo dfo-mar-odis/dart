@@ -44,6 +44,10 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
     # used in a card title
     field_template = os.path.join(dart2.settings.TEMPLATE_DIR, "field.html")
 
+    # the download url can be set when constructing the card if it's desired to have a button to create/download
+    # database table rows instead of writing the rows to the database
+    download_url = None
+
     class Meta:
         model = models.BcDatabaseConnection
         fields = ['account_name', 'uploader', 'name', 'host', 'port', 'engine', 'selected_database', 'db_password']
@@ -146,6 +150,30 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         return upload_field
 
+    def get_download_url(self):
+        return self.download_url
+
+    def get_download(self):
+        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        download_button_icon = load_svg('arrow-down-square')
+        download_button_id = f'btn_id_download_{self.card_name}'
+        download_button_attrs = {
+            'id': download_button_id,
+            'name': 'download',
+            'hx-get': self.get_download_url(),
+            'hx-swap': 'none'
+        }
+        download_button = StrictButton(download_button_icon, css_class='btn btn-sm btn-primary', **download_button_attrs)
+
+        download_field = Column(
+            Div(id='div_id_upload_sensor_type_list'),
+            download_button,
+            id=f"div_id_db_upload_{self.card_name}",
+            css_class="col-auto"
+        )
+
+        return download_field
+
     def get_alert_area(self):
         msg_row = Row(id=f"div_id_biochem_alert_{self.card_name}")
         return msg_row
@@ -156,6 +184,9 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
         # fields[0] is the card-header, fields[1] is the second column
         title_row = Row(self.get_db_select(), self.get_db_password(), self.get_upload(),
                         css_class="mt-1")
+        if self.get_download_url():
+            title_row.fields.append(self.get_download())
+
         header.fields[0].fields[1].fields[0].fields.append(title_row)
         header.fields.append(self.get_alert_area())
         return header
@@ -216,6 +247,9 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         self.mission_id = mission_id
         self.upload_url = upload_url
+
+        if 'download_url' in kwargs:
+            self.download_url = kwargs.pop('download_url')
 
         super().__init__(*args, **kwargs, card_name="biochem_db_details")
 
@@ -484,14 +518,14 @@ def upload_bcs_d_data(mission: models.Mission, uploader: str):
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_d_rows(uploader, bcs_d, bottles)
+        create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, bcs_d_model=bcs_d)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS rows"))
-        biochem.upload.upload_bcs_d(bcs_d, bcs_create, bcs_update, updated_fields)
+        biochem.upload.upload_bcs_d(bcs_d, create, update, fields)
 
 
-def upload_bcd_d_data(mission: models.Mission, uploader: str, sample_type: models.SampleType):  #sample_types: list[models.SampleType]):
+def upload_bcd_d_data(mission: models.Mission, uploader: str):  #sample_types: list[models.SampleType]):
     # 1) get the biochem BCD_D model
     bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
 
@@ -499,24 +533,26 @@ def upload_bcd_d_data(mission: models.Mission, uploader: str, sample_type: model
     exists = biochem.upload.check_and_create_model('biochem', bcd_d)
 
     if exists:
-        user_logger.info(_("Compiling rows for : ") + sample_type.short_name)
+        user_logger.info(_("Compiling rows for : ") + mission.name)
 
         # 3) else filter the samples down to rows based on:
         # 3a) samples in this mission
         # 3b) samples of the current sample_type
-        ds_samples = models.DiscreteSampleValue.objects.filter(sample__type=sample_type,
-                                                               sample__bottle__event__mission=mission)
+        datatypes = models.BioChemUpload.objects.filter(mission=mission).values_list('type', flat=True).distinct()
 
-        if ds_samples.exists():
+        discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
+        discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
+
+        if discreate_samples.exists():
             # 4) upload only samples that are new or were modified since the last biochem upload
-            message = _("Compiling BCD rows for sample type") + " : " + sample_type.short_name
+            message = _("Compiling BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
-            bcd_create, bcd_update, update_fields = biochem.upload.get_bcd_d_rows(
-                uploader, bcd_d, mission, ds_samples)
+            create, update, fields = biochem.upload.get_bcd_d_rows(uploader=uploader, mission=mission,
+                                                                   samples=discreate_samples, bcd_d_model=bcd_d)
 
-            message = _("Creating/updating BCD rows for sample type") + " : " + sample_type.short_name
+            message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
-            biochem.upload.upload_bcd_d(bcd_d, ds_samples, bcd_create, bcd_update, update_fields)
+            biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
 
 
 def upload_bcs_p_data(mission: models.Mission, uploader: str):
@@ -595,7 +631,7 @@ def get_biochem_errors(request, **kwargs):
     return Http404("You shouldn't be here")
 
 
-def get_database_connection_form(request, mission_id, url):
+def get_database_connection_form(request, mission_id, upload_url, download_url):
     database_connections = models.BcDatabaseConnection.objects.all()
     if database_connections.exists():
         selected_db = database_connections.first()
@@ -604,9 +640,10 @@ def get_database_connection_form(request, mission_id, url):
         if db_id is sentinel:
             db_id = selected_db.pk
         initial = {'selected_database': db_id}
-        database_form_crispy = BiochemUploadForm(mission_id, url, instance=selected_db, initial=initial)
+        database_form_crispy = BiochemUploadForm(mission_id, upload_url, download_url=download_url,
+                                                 instance=selected_db, initial=initial)
     else:
-        database_form_crispy = BiochemUploadForm(mission_id, url)
+        database_form_crispy = BiochemUploadForm(mission_id, upload_url, download_url=download_url)
 
     context = {}
     context.update(csrf(request))
@@ -684,7 +721,9 @@ def upload_bio_chem(request, upload_function, **kwargs):
         mission = models.Mission.objects.get(pk=mission_id)
 
         try:
-            upload_function(mission, database)
+            uploader = database.uploader if database.uploader else database.account_name
+
+            upload_function(mission, uploader)
             attrs = {
                 'component_id': 'div_id_upload_biochem',
                 'alert_type': 'success',

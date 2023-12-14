@@ -1,0 +1,16 @@
+{% extends 'base.html' %}
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load static %}
+{% load i18n %}
+
+
+{% block content %}
+<div class="container-fluid">
+    <section id="top" class="card mb-3">
+        <div class="card-body">
+            <p>{% trans "File Configurations tell DART how to read various file formats. These configurations are created under the 'Load Sample from file' card on the Mission Samples page" %} <a href="{% url 'docs:mission_samples' %}">({% trans "See Mission Sampels" %})</a></p>
+            <img class="img-fluid pt-2 mb-2 border-1" src="{% static 'docs/img/file_configurations_new_configuration.png' %}" />
+    </section>
+</div>
+{% endblock %}

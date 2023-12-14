@@ -9,12 +9,69 @@
 <div class="container-fluid">
     <section id="top" class="card mb-3">
         <div class="card-body">
-            <p>{% trans 'The new mission form allows the required, and many optional, values required for adding a mission to DART. The main required fields are Mission Name, Start Cruise Date, End Cruise Date and Data Center. The last three have usable default values' %}</p>
-            <div class="col">
-                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/new_mission_form.png' %}" />
+            <p>{% trans "The Mission Sampels page allows loading of sensor data from BTL/ROS files and discrete sample data from various csv/dat/xls formats. Once loaded Sample Types linking the data to Biochem Data types can be set in order to upload the data to BCD/BCS Biochem staging tables to be ingested into the Biochem database." %}</p>
+        </div>
+    </section>
+    <section id="bottles" class="card mb-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Loading Bottle Data</div>
+            </div>
+            <div class="card-body">
+                <p>{% trans "Sensors data is loaded from BTL/ROS files using the 'Load Bottles' card. For data to be loaded it must be associated with a CTD event loaded on the Mission Events page. The association is maded by either having the event as the last three digits of the file name (e.g 22102006.btl => event 006, jc24301_001.btl => event 001) or by having a line in the BTL file header labeled 'event_number' specifiying the event." %} <a href="{% url 'docs:mission_events' %}">{% trans '(see Mission Events Page)'%}</a></p>
+                <p>{% trans "The data in the bottle file much match the number of bottles defined by the event. There are two ways which DART assigns bottle IDs. If the BTL file has a Bottle S/N column, that number will be used as the bottles ID. Otherwise the starting Bottle for the linked event will be used and the Bottle Number column will be added to the Sample ID. In either case if the IDs don't match the event a warning will be present on the Validation Warnings card." %}</p>
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_load_btl.png' %}" />
+                <p>{% trans "Once a directory has been supplied DART will locate all BTL files. The directory can either be typed or pasted in to the text field or the Chose Dir button can be pressed to use the 'choose BTL directory' selector. A refresh button is also useful for re-loading the list of files if something has changed since the first time the directory was listed." %}</p>
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_load_btls.png' %}" />
+                <p>{% trans "By default all bottle files will be selected and will be loaded using the 'Load Seleted' button." %}
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_upload_btnl.png' %}" /><br/>
+                {% trans "Individual bottles can also be selected for upload." %}<br/>
+                    {%trans "Holding the shift key while clicking will select all files between the first and second click." %}<br/>
+                    {% trans "Holding the 'ctrl' key while clicking will select individual bottles." %}</p>
+                <p>{% trans "Previously loaded files will be hidden, but can be viewed and loaded again using the 'Show All'."%}
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_show_all_btnl.png' %}" /><p>
+                <p>{% trans "Similarly when viewing all BTL files, previsouly loaded files can be hidden using the 'Show Unloaded' button" %}
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_show_unloaded_btnl.png' %}" /></p>
+
             </div>
         </div>
     </section>
-
+    <section id="samples" class="card mb-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Loading Sample Data</div>
+            </div>
+            <div class="card-body">
+                <p>{% trans "The next card is the Load Samples card. Samples are loaded from various comma seprated value formats (.dat, .csv) or from Excel formats (.xls, .xlsm, .xlsx). DART has a built in parser that allows a user to open a file and if the file format has been seen before DART will provide the user with options on how to load the file. Once a file is loaded, or if it has been previously loaded, DART will display the 'File Warnings' card indicating what, if any, issues were encountered." %} <a href="{% url 'docs:file_configurations' %}">{% trans '(See Creating File Configurations)'%}</a></p>
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_load_samples_2.png' %}" />
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_load_samples.png' %}" />
+            </div>
+        </div>
+    </section>
+    <section id="samples" class="card mb-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Validation Warnings</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <p>{% trans "Once a sensors from a BTL file or samples from a sample file have been loaded the validation warning card will show any issues encountered while loading the data. It also shows issues that occured when loading events as issues with the events often lead to issues when loading sensors and samples." %}</p>
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_validation_warnings.png' %}" />
+        </div>
+    </section>
+    <section id="samples" class="card mb-3">
+        <div class="card">
+            <div class="card-header">
+                <div class="card-title">Mission Data</div>
+            </div>
+        </div>
+        <div class="card-body">
+            <p>{% trans "Once a sensors from a BTL file or samples from a sample file have been loaded the sensors and samples data will become visible on the Sensor ans Sample Data card. This card contains a data table that can be scrolled through to view the loaded data, each column under a button heading the column represents the values and/or replicates for the sensor/sample."%}</p>
+            <p>{% trans "The checkboxes along the top of the table allow selecting the sensor or sample to be uploaded to Biochem, however a 'standard' or 'mission' level sample type must be applied to the sensor or sample before it can be checked." %} </p>
+            <p>{% trans "Most samples will likely have at a minium a 'standard' level data type already applied, which is created with the file configuration needed to load a column of data from the sample file." %}</p>
+            <p>{% trans "Sensor information, like the sensor name, is taken from a ROS file that should accompany the BTL file containing the sensor data. Although the information there could be used to make an intellegent guess about what sample type to apply to the seonsor it could lead to issues if a wrong type was applied, so it is expeted the person loading the data (at-sea or post mission) will set the sample type for each sensor either at the 'standard' or 'mission' level. " %}</p>
+                <img class="img-fluid border pt-2 mb-2 border-1" src="{% static 'docs/img/mission_samples_sample_data.png' %}" />
+        </div>
+    </section>
 </div>
 {% endblock %}

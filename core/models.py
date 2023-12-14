@@ -487,9 +487,11 @@ class BioChemUpload(models.Model):
 
     upload_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
                                        help_text=_("The last time this sensor/sample was uploaded to biochem"))
-    modified_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
+    modified_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True, auto_now=True,
                                          help_text=_("The last time this sensor/sample was modified"))
 
+    # Todo: add an action flag on this model that can be used to delete rows from BCS/BCD tables if
+    #       a sensor is removed from the list of sensors to upload to Biochem and it's already been uploaded.
 
 # The Sample model tracks sample/sensor types that can or have been uploaded for a specific bottle. It can also
 # track the file data for the sensor was loaded from
@@ -546,13 +548,11 @@ class DiscreteSampleValue(models.Model):
         if self.sample_datatype:
             return self.sample_datatype
 
-        if sample_type := self.sample.type:
-            mission = self.sample.bottle.event.mission
-            if (mission_data_type := mission.mission_sample_types.filter(sample_type=sample_type)).exists():
-                return mission_data_type.first().datatype
-
-            if sample_type.datatype:
-                return sample_type.datatype
+        mission = self.sample.bottle.event.mission
+        if (mission_type := mission.mission_sample_types.filter(sample_type=self.sample.type)).exists():
+            return mission_type[0].datatype
+        elif self.sample.type.datatype:
+            return self.sample.type.datatype
 
         raise ValueError({'message': _("No Biochem datatype for sample") + " : " + str(self.sample.bottle.bottle_id)})
 
@@ -640,6 +640,7 @@ class PlanktonSample(models.Model):
             return 'TOO MUCH JELLY TO WEIGH'
 
         return None
+
 
 # These are some of the common errors that occur when processing data and allow us to sort various errors depending
 # on what problems we're using the errors to solve.

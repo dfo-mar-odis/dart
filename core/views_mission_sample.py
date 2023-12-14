@@ -1,4 +1,6 @@
+import csv
 import io
+from pathlib import Path
 
 import numpy as np
 import os
@@ -13,9 +15,11 @@ import pandas as pd
 from bs4 import BeautifulSoup
 
 from crispy_forms.utils import render_crispy_form
+from django.conf import settings
+from django.core.files.base import ContentFile
 
 from django.db import DatabaseError, close_old_connections
-from django.db.models import Max
+from django.db.models import Max, QuerySet, Q
 from django.http import HttpResponse, Http404
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
@@ -26,6 +30,8 @@ from django.core.cache import caches
 
 from render_block import render_block_to_string
 
+import biochem.upload
+from biochem import models as biochem_models
 from bio_tables import models as bio_models
 
 from core import forms, form_biochem_database, validation
@@ -105,30 +111,42 @@ def get_error_list(soup, card_id, errors):
 
 def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
     sampletype = models.SampleType.objects.get(pk=sampletype_id)
-    upload_status = sampletype.samples.filter(
-        bottle__event__mission_id=mission_id
-    ).values_list(
-        'discrete_values__bio_upload_date',
-        'type__mission_sample_types__datatype'
-    ).distinct().first()
+
+    sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.filter(mission_id=mission_id)
+
+    dc_samples = models.DiscreteSampleValue.objects.filter(
+        sample__bottle__event__mission_id=mission_id, sample__type_id=sampletype_id)
+
+    row_datatype = dc_samples.values_list("sample_datatype", flat=True).distinct().first()
+    datatype = sampletype.datatype if sampletype.datatype else None
+    mission_datatype = None
+    if sampletype.mission_sample_types.filter(mission_id=mission_id).exists():
+        datatype = sampletype.mission_sample_types.get(mission_id=mission_id).datatype
+
+    # if no datatype is applied
+    button_colour = 'btn-danger'
 
     title = sampletype.long_name if sampletype.long_name else sampletype.short_name
-    # if the sensor/sample is fine, but not uploaded make it grey to indicate it hasn't been uploaded
-    button_colour = 'btn-secondary'
-    if upload_status[1]:
-        datatype = bio_models.BCDataType.objects.get(pk=upload_status[1])
-        title += f': {str(datatype)}'
-    elif sampletype.datatype:
-        # if the sensor/sample uses the general datatype make it yellow
-        title += f': {str(sampletype.datatype)}'
+    if datatype:
+        # if the datatype is applied at the 'standard' or 'mission' level
+        button_colour = 'btn-secondary'
+        title += f': {datatype}'
+    elif row_datatype:
+        # if the datatype is applied at the mission level or row level
         button_colour = 'btn-warning'
     else:
-        button_colour = 'btn-danger'
         title += f': ' + _('Missing Biochem datatype')
 
-    if upload_status[0]:
-        # if the sensor/sample has an upload date set it to primary
-        button_colour = 'btn-primary'
+    if sensor.exists():
+        uploaded = sensor.first().upload_date
+        modified = sensor.first().modified_date
+
+        if uploaded:
+            if modified < uploaded:
+                # if the sensor was uploaded
+                button_colour = 'btn-success'
+            else:
+                button_colour = 'btn-primary'
 
     button = soup.new_tag("button")
     button.string = f'{sampletype.short_name}'
@@ -144,15 +162,31 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
 
 
 def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
+
+    enabled = False
+    sample_type = models.SampleType.objects.get(pk=sampletype_id)
+    if sample_type.datatype or sample_type.mission_sample_types.filter(mission_id=mission_id).exists():
+        # a sample must have either a Standard level or Mision level data type to be uploadable.
+        enabled = True
+
     check = soup.new_tag('input')
     check.attrs['id'] = f'input_id_sample_type_{sampletype_id}'
     check.attrs['type'] = 'checkbox'
-    check.attrs['name'] = 'add_sensor'
     check.attrs['value'] = sampletype_id
     check.attrs['hx-swap'] = 'outerHTML'
     check.attrs['hx-target'] = f"#{check.attrs['id']}"
     check.attrs['hx-post'] = reverse_lazy('core:mission_samples_add_sensor_to_upload',
                                           args=(mission_id, sampletype_id,))
+
+    if enabled:
+        if models.BioChemUpload.objects.filter(mission_id=mission_id, type_id=sampletype_id).exists():
+            check.attrs['name'] = 'remove_sensor'
+            check.attrs['checked'] = 'checked'
+        else:
+            check.attrs['name'] = 'add_sensor'
+    else:
+        check.attrs['disabled'] = 'true'
+        check.attrs['title'] = _("Requires a Standard or Mission level Biochem Datatype")
 
     return check
 
@@ -810,6 +844,8 @@ def list_samples(request, **kwargs):
     page_limit = 50
     page_start = page_limit * page
 
+    soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
+
     mission = models.Mission.objects.get(pk=mission_id)
     if sensor_id:
         # unfortunately if a page doesn't contain columns for 1 or 2 replicates when there's more the
@@ -885,7 +921,6 @@ def list_samples(request, **kwargs):
             logger.exception(ex)
 
     if not queryset.exists():
-        soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
         response = HttpResponse(soup)
         return response
 
@@ -1118,7 +1153,9 @@ def update_sample_type_row(request, **kwargs):
         start_sample = request.POST['start_sample']
         end_sample = request.POST['end_sample']
 
-        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
+        data_type = None
+        if data_type_code:
+            data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
         discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission_id=mission_id,
                                                                     sample__bottle__bottle_id__gte=start_sample,
@@ -1221,23 +1258,19 @@ def add_sensor_to_upload(request, **kwargs):
     sensor_id = kwargs['sensor_id']
     soup = BeautifulSoup('', 'html.parser')
     if request.method == 'POST':
-        check = get_sensor_table_upload_checkbox(soup, mission_id, sensor_id)
         button = get_sensor_table_button(soup, mission_id, sensor_id)
         button.attrs['hx-swap-oob'] = 'true'
 
-        sensors: list = caches['biochem_keys'].get('sensor_upload', [])
+        upload_sensors: QuerySet[models.BioChemUpload] = models.BioChemUpload.objects.filter(mission_id=mission_id)
 
         if 'add_sensor' in request.POST:
-            sensors.append(sensor_id)
-            check.attrs['name'] = 'remove_sensor'
-            check.attrs['checked'] = 'checked'
+            if not upload_sensors.filter(type_id=sensor_id).exists():
+                add_sensor = models.BioChemUpload(mission_id=mission_id, type_id=sensor_id)
+                add_sensor.save()
         else:
-            if sensor_id in sensors:
-                sensors.remove(sensor_id)
-            check.attrs['name'] = 'add_sensor'
+            upload_sensors.filter(type_id=sensor_id).delete()
 
-        caches['biochem_keys'].set('sensor_upload', sensors, 3600)
-
+        check = get_sensor_table_upload_checkbox(soup, mission_id, sensor_id)
         soup.append(check)
         soup.append(button)
 
@@ -1254,61 +1287,248 @@ def add_sensor_to_upload(request, **kwargs):
 
 def get_all_discrete_upload_db_card(request, **kwargs):
     mission_id = kwargs['mission_id']
-    url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(mission_id,))
+    upload_url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(mission_id,))
+    download_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(mission_id,))
 
-    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, url)
+    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, upload_url,
+                                                                   download_url=download_url)
 
     return HttpResponse(form_soup)
 
 
+def sample_data_upload(mission: models.Mission, uploader: str):
+    sample_type_ids = models.BioChemUpload.objects.filter(mission=mission).values_list("type", flat=True).distinct()
+
+    # clear previous errors if there were any from the last upload attempt
+    models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
+
+    # validate that the checked off sensors/samples have a biochem datatypes
+    sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
+
+    # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
+    user_logger.info(_("Validating Sensor/Sample Datatypes"))
+    errors = validation.validate_samples_for_biochem(mission=mission, sample_types=sample_types)
+
+    if errors:
+        # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
+        user_logger.info(_("Datatypes missing see errors"))
+        models.Error.objects.bulk_create(errors)
+
+    # create and upload the BCS data if it doesn't already exist
+    form_biochem_database.upload_bcs_d_data(mission, uploader)
+    form_biochem_database.upload_bcd_d_data(mission, uploader)
+
+
 def upload_samples(request, **kwargs):
-    def sample_data_upload(mission: models.Mission, database: models.BcDatabaseConnection):
-        sentinel = object()
-        if (sample_type_ids := caches['biochem_keys'].get('sensor_upload', sentinel)) is sentinel:
-            raise KeyError(_("No sensors/samples were selected for upload"))
-
-        uploader = database.uploader if database.uploader else database.account_name
-
-        # clear previous errors if there were any from the last upload attempt
-        models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
-
-        # validate that the checked off sensors/samples have a biochem datatypes
-        sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
-
-        # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
-        user_logger.info(_("Validating Sensor/Sample Datatypes"))
-        errors = validation.validate_samples_for_biochem(mission=mission, sample_types=sample_types)
-
-        if errors:
-            # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
-            user_logger.info(_("Datatypes missing see errors"))
-            models.Error.objects.bulk_create(errors)
-
-        # create and upload the BCS data if it doesn't already exist
-        form_biochem_database.upload_bcs_d_data(mission, uploader)
-
-        # upload the BCD, the Sample data
-        # I'm going to break up reading/writing samples by sample type. I selected oxy, salts, chl and
-        # phae as a test and ended up creating 3,200 rows. I feel like this would completely fail if someone
-        # check all the sensors/samples they wanted to upload and ended up writing tens of thousands of rows
-        # all in one shot.
-        for sample_type in sample_types:
-            form_biochem_database.upload_bcd_d_data(mission, uploader, sample_type)
-
-            soup = BeautifulSoup("<div></div>", 'html.parser')
-            div = soup.find('div')
-            div.attrs['hx-post'] = reverse_lazy('core:mission_samples_add_sensor_to_upload',
-                                                args=(mission.id, sample_type.id,))
-            div.attrs['hx-trigger'] = 'load'
-            div.attrs['hx-target'] = f'#input_id_sample_type_{sample_type.id}'
-            div.attrs['hx-swap'] = 'outerHTML'
-
-            send_user_notification_html_update('biochem', div)
-
-            # pause and give the browser a second to catch up
-            time.sleep(1)
-
     return form_biochem_database.upload_bio_chem(request, sample_data_upload, **kwargs)
+
+
+def download_samples(request, **kwargs):
+    mission_id = kwargs['mission_id']
+
+    soup = BeautifulSoup('', 'html.parser')
+    div = soup.new_tag('div')
+    div.attrs = {
+        'id': "div_id_biochem_alert_biochem_db_details",
+        'hx-swap-oob': 'true'
+    }
+    soup.append(div)
+
+    def get_progress_alert():
+        url = reverse_lazy("core:mission_samples_download_bio_chem", args=(mission_id, ))
+        message_component_id = 'div_id_upload_biochem'
+        attrs = {
+            'component_id': message_component_id,
+            'alert_type': 'info',
+            'message': _("Saving to file"),
+            'hx-post': url,
+            'hx-swap': 'none',
+            'hx-trigger': 'load',
+            'hx-target': "#div_id_biochem_alert_biochem_db_details",
+            'hx-ext': "ws",
+            'ws-connect': f"/ws/biochem/notifications/{message_component_id}/"
+        }
+
+        alert_soup = forms.save_load_component(**attrs)
+
+        # add a message area for websockets
+        msg_div = alert_soup.find(id="div_id_upload_biochem_message")
+        msg_div.string = ""
+
+        msg_div_status = soup.new_tag('div')
+        msg_div_status['id'] = 'status'
+        msg_div_status.string = _("Loading")
+        msg_div.append(msg_div_status)
+
+        return alert_soup
+
+    if request.method == "GET":
+
+        alert_soup = get_progress_alert()
+
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
+    has_uploader = 'uploader' in request.POST and request.POST['uploader']
+    if 'uploader2' not in request.POST and not has_uploader:
+        url = reverse_lazy("core:mission_samples_download_bio_chem", args=(mission_id, ))
+        message_component_id = 'div_id_upload_biochem'
+        attrs = {
+            'component_id': message_component_id,
+            'alert_type': 'warning',
+            'message': _("Require Uploader")
+        }
+        alert_soup = forms.blank_alert(**attrs)
+
+        input_div = soup.new_tag('div')
+        input_div['class'] = 'form-control input-group'
+
+        input = soup.new_tag('input')
+        input.attrs['id'] = 'input_id_uploader'
+        input.attrs['type'] = "text"
+        input.attrs['name'] = "uploader2"
+        input.attrs['class'] = 'textinput form-control'
+        input.attrs['maxlength'] = '20'
+        input.attrs['placeholder'] = _("Uploader")
+
+        icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
+
+        submit = soup.new_tag('button')
+        submit.attrs['class'] = 'btn btn-primary'
+        submit.attrs['hx-post'] = url
+        submit.attrs['id'] = 'input_id_uploader_btn_submit'
+        submit.attrs['name'] = 'submit'
+        submit.append(icon)
+
+        icon = BeautifulSoup(load_svg('x-square'), 'html.parser').svg
+        cancel = soup.new_tag('button')
+        cancel.attrs['class'] = 'btn btn-danger'
+        cancel.attrs['hx-post'] = url
+        cancel.attrs['id'] = 'input_id_uploader_btn_cancel'
+        cancel.attrs['name'] = 'cancel'
+        cancel.append(icon)
+
+        input_div.append(input)
+        input_div.append(submit)
+        input_div.append(cancel)
+
+        msg = alert_soup.find(id='div_id_upload_biochem_message')
+        msg.string = msg.string + " "
+        msg.append(input_div)
+
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+    elif request.htmx.trigger == 'input_id_uploader_btn_submit':
+        alert_soup = get_progress_alert()
+        # div_id_upload_biochem_message is the ID given to the component in the get_progress_alert() function
+        message = alert_soup.find(id="div_id_upload_biochem")
+        hidden = soup.new_tag("input")
+        hidden.attrs['type'] = 'hidden'
+        hidden.attrs['name'] = 'uploader2'
+        hidden.attrs['value'] = request.POST['uploader2']
+        message.append(hidden)
+
+        div.append(alert_soup)
+        return HttpResponse(soup)
+    elif request.htmx.trigger == 'input_id_uploader_btn_cancel':
+        return HttpResponse(soup)
+
+    uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
+        request.POST['uploader'] if 'uploader' in request.POST else "N/A"
+
+    mission = models.Mission.objects.get(pk=mission_id)
+    events = models.Event.objects.filter(mission=mission, instrument__type=models.InstrumentType.ctd)
+    bottles = models.Bottle.objects.filter(event__in=events)
+
+    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
+
+    headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
+
+    file_name = f'{mission.name}_BCS_D.csv'
+    path = os.path.join(settings.BASE_DIR, "reports")
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+
+            writer = csv.writer(f)
+            writer.writerow(headers)
+
+            for bcs_row in create:
+                row = []
+                for header in headers:
+                    val = getattr(bcs_row, header) if hasattr(bcs_row, header) else ''
+                    row.append(val)
+
+                writer.writerow(row)
+    except PermissionError:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Could not save report, the file may be opened and/or locked"),
+        }
+        alert_soup = forms.blank_alert(**attrs)
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
+    # because we're not passing in a link to a database for the bcd_d_model there will be now updated rows or fields
+    # only the objects being created will be returned.
+    datatypes = models.BioChemUpload.objects.filter(mission=mission).values_list('type', flat=True).distinct()
+
+    discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
+    discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
+
+    create, update, fields = biochem.upload.get_bcd_d_rows(uploader=uploader, mission=mission,
+                                                           samples=discreate_samples)
+
+    headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
+
+    file_name = f'{mission.name}_BCD_D.csv'
+    path = os.path.join(settings.BASE_DIR, "reports")
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+
+            writer = csv.writer(f)
+            writer.writerow(headers)
+
+            for row_number, bcs_row in enumerate(create):
+                row = []
+                for header in headers:
+                    if header == 'dis_data_num':
+                        val = str(row_number+1)
+                    else:
+                        val = getattr(bcs_row, header) if hasattr(bcs_row, header) else ''
+                    row.append(val)
+
+                writer.writerow(row)
+    except PermissionError:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Could not save report, the file may be opened and/or locked"),
+        }
+        alert_soup = forms.blank_alert(**attrs)
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
+    attrs = {
+        'component_id': 'div_id_upload_biochem',
+        'alert_type': 'success',
+        'message': _("Success - Reports saved at : ") + f'{path}',
+    }
+    alert_soup = forms.blank_alert(**attrs)
+
+    div.append(alert_soup)
+
+    return HttpResponse(soup)
 
 
 # ###### Mission Sample ###### #
@@ -1355,4 +1575,6 @@ mission_sample_urls = [
     path('mission/sample/hx/upload/sensor/<int:mission_id>/', get_all_discrete_upload_db_card,
          name="mission_samples_get_all_discrete_upload_db_card"),
     path('mission/sample/hx/upload/biochem/<int:mission_id>/', upload_samples, name="mission_samples_upload_bio_chem"),
+    path('mission/sample/hx/download/biochem/<int:mission_id>/', download_samples,
+         name="mission_samples_download_bio_chem"),
 ]
