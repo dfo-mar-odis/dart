@@ -218,7 +218,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
     core_models.FileError.objects.filter(mission=mission, file_name=filename).delete()
 
     create_plankton = {}
-    create_bottles = []
+    create_bottles = {}
     update_plankton = {'objects': [], 'fields': set()}
     errors = []
     for line, row in dataframe.iterrows():
@@ -254,11 +254,11 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
 
         taxa = bio_models.BCNatnlTaxonCode.objects.get(pk=taxa_id)
 
-        event = events.filter(sample_id=bottle_id)
-
         # if the ringnet bottle doesn't exist it needs to be created
         if (bottle := ringnet_bottles.filter(bottle_id=bottle_id)).exists():
             bottle = bottle.first()
+        elif bottle_id in create_bottles.keys():
+            bottle = create_bottles[bottle_id]
         else:
             try:
                 event = events.get(event_id=row[row_mapping['EVENT']])
@@ -291,7 +291,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
                 continue
 
             bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=pressure, date_time=event.end_date)
-            create_bottles.append(bottle)
+            create_bottles[bottle_id] = bottle
 
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
 
@@ -358,7 +358,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
 
     if len(create_bottles) > 0:
         logger.info(_("Creating Net Bottles"))
-        core_models.Bottle.objects.bulk_create(create_bottles)
+        core_models.Bottle.objects.bulk_create(create_bottles.values())
 
     if len(create_plankton) > 0:
         logger.info(_("Creating Zooplankton Samples"))

@@ -6,11 +6,13 @@
 <div class="card-header">
     <div class="card-title row">
         <button type="button" class="btn btn-light btn-sm col-auto collapsed" data-bs-toggle="collapse"
+                title="{% trans "Add new file configuration" %}"
             href="#div_id_sample_config_card_body_{{ sample_config.pk }}" aria-expanded="true">{% custom_icon 'caret-down' %}</button>
 
         <h6 class="col align-self-end">{% trans 'File Configuration' %} : {{ sample_config }}</h6>
         <div class="col-auto">
             <button type="button" class="btn btn-danger btn-sm" name='delete'
+                    title="{% trans "Delete configuration" %}"
                     hx-post="{% url 'core:mission_samples_delete_sample_config' sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}"
                     hx-swap="delete"
@@ -19,6 +21,7 @@
         </div>
         <div class="col-auto">
             <button type="button" class="btn btn-secondary btn-sm me-1" name='edit'
+                    title="{% trans "Edit file configuration" %}"
                     hx-post="{% url 'core:mission_samples_new_sample_config' sample_config.pk %}"
                     hx-target="#div_id_sample_type_holder"
                     {# just a little javascript to scroll back to the new sample type form #}
@@ -26,6 +29,7 @@
             >{% custom_icon 'pencil-square' %}</button>
             <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-primary{% endif %} btn-sm" name='load'
                     id="div_id_sample_config_card_{{ sample_config.pk }}_load_button"
+                    title="{% trans "Load sample" %}"
                     hx-get="{% url 'core:mission_samples_load_samples' sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-select="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"

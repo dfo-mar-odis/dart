@@ -6,7 +6,6 @@ import numpy as np
 import os
 import threading
 import easygui
-import time
 
 from threading import Thread
 
@@ -16,9 +15,7 @@ from bs4 import BeautifulSoup
 
 from crispy_forms.utils import render_crispy_form
 from django.conf import settings
-from django.core.files.base import ContentFile
 
-from django.db import DatabaseError, close_old_connections
 from django.db.models import Max, QuerySet, Q
 from django.http import HttpResponse, Http404
 from django.template.context_processors import csrf
@@ -26,7 +23,6 @@ from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
-from django.core.cache import caches
 
 from render_block import render_block_to_string
 
@@ -1476,15 +1472,14 @@ def download_samples(request, **kwargs):
 
         return HttpResponse(soup)
 
-    # because we're not passing in a link to a database for the bcd_d_model there will be now updated rows or fields
-    # only the objects being created will be returned.
     datatypes = models.BioChemUpload.objects.filter(mission=mission).values_list('type', flat=True).distinct()
 
     discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
     discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
 
-    create, update, fields = biochem.upload.get_bcd_d_rows(uploader=uploader, mission=mission,
-                                                           samples=discreate_samples)
+    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create, update, fields = biochem.upload.get_bcd_d_rows(uploader=uploader, samples=discreate_samples)
 
     headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
