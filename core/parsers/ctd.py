@@ -42,7 +42,7 @@ def get_event_number_bio(data_frame: pandas.DataFrame):
 
     # for the Atlantic Region the last three digits of the bottle file name contains the elog event number,
     # but if there's a 'event_number' in the header use that instead.
-    event_number = re.search('event_number: (\d+)\n', metadata['header'], re.IGNORECASE)
+    event_number = re.search('event_number: *(\d+)\n', metadata['header'], re.IGNORECASE)
     if event_number and (event_number := event_number[1]).isnumeric():
         event_number = int(str(event_number)[-3:])
         return int(event_number)
@@ -391,6 +391,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         logger.info("Updating sample values" + f" : {file_name}")
         core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
+
 # BIO and the NFL region track events within bottle files differently
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
     events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
@@ -412,16 +413,24 @@ def read_btl(mission: core_models.Mission, btl_file: str):
 
     file_name = data_frame._metadata['name']
     core_models.FileError.objects.filter(file_name=file_name).delete()
+    core_models.FileError.objects.filter(file_name=btl_file).delete()
     if file_name not in btl_file:
         message = _("Name of bottle file does not match name in the bottle file. Check the .hdr file and reprocess.")
         message += f" {btl_file} =/= {file_name}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
-                                    file_name=file_name)
+                                    file_name=btl_file)
         err.save()
         return
 
     event_number = get_event_number_bio(data_frame=data_frame)
     event = get_elog_event_bio(mission=mission, event_number=event_number)
+
+    if event.instrument.type != core_models.InstrumentType.ctd:
+        message = "Event_Number" + f" : {event_number} - " + _("not a CTD event, check the event number in the BTL file is correct.")
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+                                    file_name=btl_file)
+        err.save()
+        raise ValueError("Bad Event number")
 
     # These are columns we either have no use for or we will specifically call and use later
     # The Bottle column is the rosette number of the bottle
@@ -438,3 +447,14 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     process_sensors(btl_file=btl_file, column_headers=col_headers)
     process_data(event=event, data_frame=data_frame, column_headers=col_headers)
 
+    # make all 'standard' level data types 'mission' level
+    sample_types = [core.models.SampleType.objects.get(short_name__iexact=column) for column in col_headers]
+    create_mission_sample_types = []
+    for sample_type in sample_types:
+        if not mission.mission_sample_types.filter(sample_type=sample_type).exists():
+            mission_sample_type = core_models.MissionSampleType(mission=mission, sample_type=sample_type,
+                                                                datatype=sample_type.datatype)
+            create_mission_sample_types.append(mission_sample_type)
+
+    if len(create_mission_sample_types) > 0:
+        core_models.MissionSampleType.objects.bulk_create(create_mission_sample_types)

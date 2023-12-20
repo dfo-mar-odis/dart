@@ -27,6 +27,7 @@ from django_pandas.io import read_frame
 from render_block import render_block_to_string
 
 import biochem.upload
+import core.form_btl_load
 from biochem import models as biochem_models
 from bio_tables import models as bio_models
 
@@ -117,15 +118,19 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
     datatype = sampletype.datatype if sampletype.datatype else None
     mission_datatype = None
     if sampletype.mission_sample_types.filter(mission_id=mission_id).exists():
-        datatype = sampletype.mission_sample_types.get(mission_id=mission_id).datatype
+        mission_datatype = sampletype.mission_sample_types.get(mission_id=mission_id).datatype
 
     # if no datatype is applied
     button_colour = 'btn-danger'
 
     title = sampletype.long_name if sampletype.long_name else sampletype.short_name
-    if datatype:
-        # if the datatype is applied at the 'standard' or 'mission' level
+    if mission_datatype:
+        # if the datatype is applied at the 'mission' level
         button_colour = 'btn-secondary'
+        title += f': {mission_datatype}'
+    elif datatype:
+        # if the datatype is applied at the 'standard'
+        button_colour = 'btn-info'
         title += f': {datatype}'
     elif row_datatype:
         # if the datatype is applied at the mission level or row level
@@ -220,6 +225,9 @@ class SampleDetails(views.MissionMixin, GenericDetailView, ):
                 initial['data_type_code'] = data_type_seq.data_type_seq
 
             context['biochem_form'] = forms.BioChemDataType(initial=initial)
+        else:
+            context['bottle_form'] = core.form_btl_load.BottleLoadForm(mission_id=self.object.pk,
+                                                                       initial={'hide_loaded': "true"})
 
         return context
 
@@ -641,14 +649,12 @@ def load_samples(request, **kwargs):
         sample_config = models.SampleTypeConfig.objects.get(pk=config_id)
         mission = models.Mission.objects.get(pk=mission_id)
 
-        # Eventually I'd like this to be a deep copy of the sample_type
-        # where it can be edited for one mission without affecting settings for other missions
-        mission_sample_type = models.MissionSampleConfig.objects.filter(mission=mission, config=sample_config)
-        if mission_sample_type.exists():
-            mission_sample_type = mission_sample_type[0]
+        mission_sample_config = models.MissionSampleConfig.objects.filter(mission=mission, config=sample_config)
+        if mission_sample_config.exists():
+            mission_sample_config = mission_sample_config[0]
         else:
-            mission_sample_type = models.MissionSampleConfig(mission=mission, config=sample_config)
-            mission_sample_type.save()
+            mission_sample_config = models.MissionSampleConfig(mission=mission, config=sample_config)
+            mission_sample_config.save()
 
         if file_type == 'csv' or file_type == 'dat':
             io_stream = io.BytesIO(data)
@@ -667,7 +673,19 @@ def load_samples(request, **kwargs):
             # Remove any row that is *all* nan values
             dataframe.dropna(axis=0, how='all', inplace=True)
 
-            SampleParser.parse_data_frame(settings=mission_sample_type, file_name=file_name, dataframe=dataframe)
+            SampleParser.parse_data_frame(settings=mission_sample_config, file_name=file_name, dataframe=dataframe)
+
+            # if the datatypes are valid, then before we upload we should copy any 'standard' level biochem data types
+            # to the mission level
+            user_logger.info(_("Copying Mission Datatypes"))
+
+            # once loaded apply the default sample type as a mission sample type so that if the default type is ever
+            # changed it won't affect the data type for this mission
+            sample_type = mission_sample_config.config.sample_type
+            if sample_type.datatype and not mission.mission_sample_types.filter(sample_type=sample_type).exists():
+                mst = models.MissionSampleType(mission=mission, sample_type=sample_type,
+                                               datatype=sample_type.datatype)
+                mst.save()
 
             if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name=file_name)).exists():
                 button_class = "btn btn-warning btn-sm"

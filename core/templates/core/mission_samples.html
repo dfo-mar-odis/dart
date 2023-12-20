@@ -24,9 +24,13 @@
     {% if sample_type %}
         {% include 'core/partials/card_sample_upload_header.html' %}
     {% else %}
-        <div class="row mt-2">
-        {% include 'core/partials/card_bottle_load_header.html' %}
-        </div>
+        {% if bottle_form %}
+            <div class="mt-2" hx-swap="none" hx-trigger="load" hx-get="{% url 'core:form_btl_reload_files' mission.pk %}?hide_loaded=true">
+                <form>
+                {% crispy bottle_form %}
+                </form>
+            </div>
+        {% endif %}
         <div class="row mt-2">
         {% include 'core/partials/card_sample_load_header.html' %}
         </div>

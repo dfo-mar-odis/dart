@@ -29,6 +29,11 @@ class CardForm(forms.Form):
     card_title = None
     card_title_class = None
     card_header_class = None
+    card_name = None
+
+    # the card name is frequently used in uniquely naming elements for a card
+    def get_card_name(self):
+        return self.card_name
 
     def get_card_title_id(self):
         return f'div_id_card_title_{self.card_name}'
@@ -46,13 +51,13 @@ class CardForm(forms.Form):
     def get_card_header_class(self):
         return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
 
-    def get_card_header(self):
+    def get_card_header(self) -> Div:
         return Div(self.get_card_title(), css_class=self.get_card_header_class(), id=self.get_card_header_id())
 
     def get_card_body_id(self):
         return f'div_id_card_body_{self.card_name}'
 
-    def get_card_body(self):
+    def get_card_body(self) -> Div:
         return Div(css_class='card-body', id=self.get_card_body_id())
 
     def get_card_id(self):
@@ -96,7 +101,7 @@ class CollapsableCardForm(CardForm):
     def get_card_header(self):
 
         header_row = Row()
-        header = Div(header_row, css_class=self.get_card_header_class())
+        header = Div(header_row, id=f'div_id_{self.card_name}_header', css_class=self.get_card_header_class())
 
         button_id = f'button_id_collapse_{self.card_name}'
         button_attrs = {
@@ -108,7 +113,7 @@ class CollapsableCardForm(CardForm):
         icon = load_svg('caret-down')
         button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed col-auto", **button_attrs)
 
-        title_column = Div(self.get_card_title(), css_class="col align-self-end")
+        title_column = Div(self.get_card_title(), css_class="col-auto align-self-end")
 
         header_row.append(button)
         header_row.append(title_column)
