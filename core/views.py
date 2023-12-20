@@ -1,6 +1,5 @@
 import concurrent.futures
 import os
-import queue
 import time
 
 from bs4 import BeautifulSoup
@@ -10,7 +9,6 @@ from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 
 import core.htmx
-import dart2.utils
 from biochem import models
 from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
 from dart2 import utils
@@ -21,9 +19,6 @@ from core.parsers import ctd
 import logging
 
 logger = logging.getLogger('dart')
-
-# This queue is used for processing sample files in the sample_upload_ctd function
-sample_file_queue = queue.Queue()
 
 reports = {
     "Chlorophyll Summary": "core:hx_report_chl",
@@ -72,81 +67,6 @@ class MissionUpdateView(MissionCreateView, GenericUpdateView):
 
         models.ValidationError.objects.bulk_create(errors)
         return super().form_valid(form)
-
-
-def load_ctd_files(mission):
-
-    time.sleep(2)  # brief pause and wait for the websocket to initialize
-
-    logger.level = logging.DEBUG
-    group_name = 'mission_events'
-
-    jobs = {}
-    completed = []
-    total_jobs = 0
-    max_jobs = 2
-
-    def load_ctd_file(ctd_mission: models.Mission, ctd_file):
-        bottle_dir = ctd_mission.bottle_directory
-        status = 'Success'
-        # group_name = 'mission_events'
-
-        logger.debug(f"Loading file {ctd_file}")
-
-        ctd_file_path = os.path.join(bottle_dir, ctd_file)
-        try:
-            ctd.read_btl(ctd_mission, ctd_file_path)
-        except Exception as ctd_ex:
-            logger.exception(ctd_ex)
-            status = "Fail"
-
-        completed.append(ctd_file)
-
-        processed = 0
-        if total_jobs > 0:
-            processed = (len(completed) / total_jobs) * 100.0
-            processed = str(round(processed, 2))
-
-        core.htmx.send_user_notification_queue(group_name, f"Loaded {len(completed)}/{total_jobs}", processed)
-
-        # update the user on our progress
-        return status
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_jobs) as executor:
-        while True:
-            while not sample_file_queue.empty():
-                args = sample_file_queue.get()
-                jobs[executor.submit(load_ctd_file, *args)] = args[1]  # args[1] is the file name to be processed
-                total_jobs += 1
-
-            done, not_done = concurrent.futures.wait(jobs, timeout=1)
-
-            # remove jobs from the job queue if they've been completed
-            for future in done:
-
-                file = jobs[future]
-                try:
-                    results = future.result()
-                except Exception as ex:
-                    logger.exception(ex)
-
-                del jobs[future]
-
-            if len(jobs) <= 0 and sample_file_queue.empty() and len(not_done) <= 0:
-                break
-
-    # time.sleep(2)
-    # The mission_samples.html page has a websocket notifications element on it. We can send messages
-    # to the notifications element to display progress to the user, but we can also use it to
-    # send an update request to the page when loading is complete.
-    url = reverse_lazy("core:mission_samples_sample_upload_ctd", args=(mission.pk,))
-    hx = {
-        'hx-get': url,
-        'hx-trigger': 'load',
-        'hx-target': '#div_id_upload_ctd_load',
-        'hx-swap': 'outerHTML'
-    }
-    core.htmx.send_user_notification_close(group_name, **hx)
 
 
 class ElogDetails(GenericDetailView):

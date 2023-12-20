@@ -197,18 +197,18 @@ class TestSampleFileConfiguration(DartTestCase):
 
     def test_input_file_no_config(self):
         # provided a file, if no configs are available the div_id_sample_type_holder
-        # tag should contain a message that no configs were found
+        # tag should contain a message that no configs were found and an empty div_id_loaded_samples_list
 
         url = reverse("core:mission_samples_load_sample_config")
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
-            response = self.client.post(url, {'sample_file': fp})
+            response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
 
         soup = BeautifulSoup(response.content, 'html.parser')
-        samples_list = soup.find(id='div_id_sample_type_holder')
+        samples_list = soup.find(id='div_id_loaded_samples_alert')
         msg_div = samples_list.findChild('div')
 
         self.assertIsNotNone(msg_div)
-        self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-warning', 'mt-2'])
+        self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-info', 'mt-2'])
         self.assertEquals(msg_div.string, "No File Configurations Found")
 
     def test_new_blank_loading_msg(self):
@@ -370,17 +370,20 @@ class TestSampleFileConfiguration(DartTestCase):
 
         url = reverse("core:mission_samples_load_sample_config")
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
-            response = self.client.post(url, {'sample_file': fp})
+            response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
 
         soup = BeautifulSoup(response.content, 'html.parser')
         samples_type = soup.find(id='div_id_sample_type_holder')
         self.assertIsNotNone(samples_type)
         self.assertIsNone(samples_type.string)
 
-        list_div = soup.find(id=f'div_id_loaded_samples_list').find('div')
+        # the first div will be the file errors, so there should be 2 elements in this list
+        list_div = soup.find(id=f'div_id_loaded_samples_list')
         self.assertIsNotNone(list_div)
 
-        self.assertEquals(len(list_div.find_next_siblings()), 0)
+        self.assertEquals(len(list_div.find_all('div', recursive=False)), 2)
+        self.assertIsNotNone(list_div.find(id="div_id_error_list"))
+        self.assertIsNotNone(list_div.find(id="div_id_sample_config_card_1"))
 
     def test_edit_sample_type(self):
         # if the new_sample_config url contains an argument with a 'sample_type' id the form should load with the

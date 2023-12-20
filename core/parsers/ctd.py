@@ -2,6 +2,7 @@ import ctd
 import re
 import os
 
+import django.db.utils
 import numpy as np
 import pandas
 import pytz
@@ -41,8 +42,8 @@ def get_event_number_bio(data_frame: pandas.DataFrame):
 
     # for the Atlantic Region the last three digits of the bottle file name contains the elog event number,
     # but if there's a 'event_number' in the header use that instead.
-    event_number = re.search('event_number: (\d+)\n', metadata['header'], re.IGNORECASE)[1]
-    if event_number.isnumeric():
+    event_number = re.search('event_number: *(\d+)\n', metadata['header'], re.IGNORECASE)
+    if event_number and (event_number := event_number[1]).isnumeric():
         event_number = int(str(event_number)[-3:])
         return int(event_number)
 
@@ -52,14 +53,6 @@ def get_event_number_bio(data_frame: pandas.DataFrame):
         return int(event_number)
 
     raise ValueError("Could not acquire event number from bottle file")
-
-
-def get_sensor_names(data_frame: pandas.DataFrame, exclude=None) -> list:
-    """given a dataframe and a list of columns to exclude, return the remaining column that represent sensors"""
-
-    if exclude is None:
-        exclude = []
-    return [instrument for instrument in data_frame.columns if instrument not in exclude]
 
 
 def get_ros_file(btl_file: str) -> str:
@@ -103,20 +96,21 @@ def parse_sensor(sensor: str) -> [str, int, str, str]:
     return sensor_type, priority, units, remainder
 
 
-def process_ros_sensors(exclude_sensors: [str], ros_file: str):
+def process_ros_sensors(sensors: [str], ros_file: str):
     """given a ROS file create sensors objects from the config portion of the file"""
 
     summary = ctd.rosette_summary(ros_file)
-    sensors = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
+    sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
-    excluding_sensors = [exclude.lower() for exclude in exclude_sensors]
+    existing_sensors = core_models.SampleType.objects.filter(is_sensor=True).values_list('short_name',
+                                                                                         flat=True).distinct()
     new_sensors: [core_models.SampleType] = []
-    for sensor in sensors:
+    for sensor in sensor_headings:
         # [column_name]: [sensor_details]
         sensor_mapping = re.split(": ", sensor)
 
-        # if this sensor is in the list of excluded sensors, skip it.
-        if sensor_mapping[0].lower() in excluding_sensors:
+        # if this sensor is not in the list of sensors we're looking for, skip it.
+        if sensor_mapping[0].lower() not in sensors:
             continue
 
         # if the sensor already exists, skip it
@@ -130,6 +124,9 @@ def process_ros_sensors(exclude_sensors: [str], ros_file: str):
 
         if units:
             long_name += f" [{units}]"
+
+        if sensor_mapping[0] in existing_sensors:
+            continue
 
         sensor_type = core_models.SampleType(short_name=sensor_mapping[0], long_name=long_name, is_sensor=True)
         sensor_type.name = sensor_type_string
@@ -164,16 +161,11 @@ def parse_sensor_name(sensor: str) -> [str, int, str]:
     return [sensor_name, priority, units]
 
 
-def process_common_sensors(sensors: list[str], exclude_sensors: [str]):
+def process_common_sensors(sensors: list[str]):
     """Given a list of sensor names, or 'column headings', create a list of mission sensors that don't already exist"""
     create_sensors: [core_models.SampleType] = []
-    excluding_sensors = [sensor.lower() for sensor in exclude_sensors]
 
     for sensor in sensors:
-
-        # if this sensor is in the list of excluded sensors, skip it.
-        if sensor.lower() in excluding_sensors:
-            continue
 
         # if the sensor exists, skip it
         if core_models.SampleType.objects.filter(short_name__iexact=sensor).exists():
@@ -191,17 +183,17 @@ def process_common_sensors(sensors: list[str], exclude_sensors: [str]):
         core_models.SampleType.objects.bulk_create(create_sensors)
 
 
-def process_sensors(btl_file: str, column_headers: list[str], exclude_sensors: list[str]):
+def process_sensors(btl_file: str, column_headers: list[str]):
     """Given a Data File and a list of column, 'SampleType' objects will be created if they do not already exist
     or aren't part of a set of excluded sensors"""
     ros_file = get_ros_file(btl_file=btl_file)
-    process_ros_sensors(exclude_sensors=exclude_sensors, ros_file=ros_file)
+    process_ros_sensors(sensors=column_headers, ros_file=ros_file)
 
     # The ROS file gives us all kinds of information about special sensors that are commonly added and removed from the
-    # CTD, but it does not cover sensors that are normally on the CTD by default.
+    # CTD, but it does not cover sensors that are normally on the CTD by default. i.e Sal00, Potemp090C, Sigma-é00
     existing_sensors = [sensor.short_name.lower() for sensor in core_models.SampleType.objects.all()]
     columns = [column_header for column_header in column_headers if column_header.lower() not in existing_sensors]
-    process_common_sensors(exclude_sensors=exclude_sensors, sensors=columns)
+    process_common_sensors(sensors=columns)
 
 
 def update_field(obj, field_name: str, value) -> bool:
@@ -232,45 +224,60 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
     data_frame_avg = data_frame[data_frame['Statistic'] == 'avg']
     data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
-    dataframe_columns = ["bottle", "date", "prdm"]
+    dataframe_dict = {
+        'bottle_number': "bottle",
+        'date': "date",
+    }
+
+    if "prdm" in data_frame_avg.columns:
+        dataframe_dict['pressure'] = "prdm"
+    elif "prsm" in data_frame_avg.columns:
+        dataframe_dict['pressure'] = "prsm"
 
     if "latitude" in data_frame_avg.columns:
-        dataframe_columns.append("latitude")
+        dataframe_dict['latitude'] = "latitude"
 
     if "longitude" in data_frame_avg.columns:
-        dataframe_columns.append("longitude")
+        dataframe_dict['longitude'] = "longitude"
 
     if "bottle_" in data_frame_avg.columns:
         # if present this is the Bottle ID to use instead of the event.sample_id + Bottle number
-        dataframe_columns.append("bottle_")
+        dataframe_dict['bottle_id'] = "bottle_"
 
     b_create = []
     b_update = {"data": [], "fields": set()}
-    bottle_data = data_frame_avg[dataframe_columns]
+    bottle_data = data_frame_avg[dataframe_dict.values()]
     errors: [core_models.ValidationError] = []
 
     # clear out the bottle validation errors
     event.validation_errors.filter(type=core_models.ErrorType.bottle).delete()
     # end_sample_id-sample_id is includes so it's one less that the bottles in the file
-    if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)['bottle'] - 1:
+    if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)[dataframe_dict['bottle_number']] - 1:
         message = _("Mismatch bottle count for event")
         validation_err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(validation_err)
 
     for row in bottle_data.iterrows():
         line = skipped_rows + row[0] + 1
-        bottle_number = row[1]["bottle"]
+        bottle_number = row[1][dataframe_dict['bottle_number']]
 
         bottle_id = bottle_number + event.sample_id - 1
 
         # if the Bottle S/N column is present then use that values as the bottle ID
-        if 'bottle_' in row[1] and not np.isnan(row[1]['bottle_']):
-            bottle_id = int(row[1]['bottle_'])
+        if 'bottle_id' in dataframe_dict.keys() and \
+                dataframe_dict['bottle_id'] in row[1] and not np.isnan(row[1][dataframe_dict['bottle_id']]):
+            bottle_id = int(row[1][dataframe_dict['bottle_id']])
 
-        date = row[1]["date"]
-        pressure = row[1]["prdm"]
-        latitude = row[1]["latitude"] if "latitude" in dataframe_columns else event.actions.first().latitude
-        longitude = row[1]["longitude"] if "longitude" in dataframe_columns else event.actions.first().longitude
+        date = row[1][dataframe_dict['date']]
+        pressure = row[1][dataframe_dict['pressure']]
+
+        latitude = event.actions.first().latitude
+        if "latitude" in dataframe_dict.keys():
+            latitude = row[1][dataframe_dict["latitude"]]
+
+        longitude = event.actions.first().longitude
+        if "longitude" in dataframe_dict.keys():
+            longitude = row[1][dataframe_dict["longitude"]]
 
         # assume UTC time if a timezone isn't set
         if not hasattr(date, 'timezone'):
@@ -384,6 +391,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         logger.info("Updating sample values" + f" : {file_name}")
         core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
+
 # BIO and the NFL region track events within bottle files differently
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
     events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
@@ -393,8 +401,10 @@ def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_
 
 
 def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_models.Event:
-    event = mission.events.get(event_id=event_number)
-
+    try:
+        event = mission.events.get(event_id=event_number)
+    except core_models.Event.DoesNotExist as ex:
+        raise core_models.Event.DoesNotExist(event_number) from ex
     return event
 
 
@@ -403,32 +413,48 @@ def read_btl(mission: core_models.Mission, btl_file: str):
 
     file_name = data_frame._metadata['name']
     core_models.FileError.objects.filter(file_name=file_name).delete()
+    core_models.FileError.objects.filter(file_name=btl_file).delete()
     if file_name not in btl_file:
         message = _("Name of bottle file does not match name in the bottle file. Check the .hdr file and reprocess.")
         message += f" {btl_file} =/= {file_name}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
-                                    file_name=file_name)
+                                    file_name=btl_file)
         err.save()
         return
 
     event_number = get_event_number_bio(data_frame=data_frame)
     event = get_elog_event_bio(mission=mission, event_number=event_number)
 
+    if event.instrument.type != core_models.InstrumentType.ctd:
+        message = "Event_Number" + f" : {event_number} - " + _("not a CTD event, check the event number in the BTL file is correct.")
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+                                    file_name=btl_file)
+        err.save()
+        raise ValueError("Bad Event number")
+
     # These are columns we either have no use for or we will specifically call and use later
     # The Bottle column is the rosette number of the bottle
     # the Bottle_ column, if present, is the bottle.bottle_id for a bottle.
-    pop = ['Bottle', 'Bottle_', 'Date', 'Scan', 'TimeS', 'Statistic', "Longitude", "Latitude"]
-    col_headers = get_sensor_names(data_frame=data_frame, exclude=pop)
+    exclude = ['bottle', 'bottle_', 'date', 'scan', 'times', 'statistic',
+               'longitude', 'latitude', 'nbf', 'flag']
+    col_headers = [instrument.lower() for instrument in data_frame.columns if instrument.lower() not in exclude]
 
     process_bottles(event=event, data_frame=data_frame)
-
-    # this will exclude common columns in either a ROS or BTL file
-    exclude_sensors = ['scan', 'timeS', 'latitude', 'longitude', 'nbf', 'flag', 'prdm']
-    columns = [col_header for col_header in col_headers if col_header.lower() not in exclude_sensors]
 
     # If you think about it a 'sensor' and a 'sample' are really the same thing.
     # They have a column (sample) name, a BioChem DataType and a value.
     # Create any sensor from the bottle file that doesn't already exist.
-    process_sensors(btl_file=btl_file, column_headers=columns, exclude_sensors=exclude_sensors)
-    process_data(event=event, data_frame=data_frame, column_headers=columns)
+    process_sensors(btl_file=btl_file, column_headers=col_headers)
+    process_data(event=event, data_frame=data_frame, column_headers=col_headers)
 
+    # make all 'standard' level data types 'mission' level
+    sample_types = [core.models.SampleType.objects.get(short_name__iexact=column) for column in col_headers]
+    create_mission_sample_types = []
+    for sample_type in sample_types:
+        if not mission.mission_sample_types.filter(sample_type=sample_type).exists():
+            mission_sample_type = core_models.MissionSampleType(mission=mission, sample_type=sample_type,
+                                                                datatype=sample_type.datatype)
+            create_mission_sample_types.append(mission_sample_type)
+
+    if len(create_mission_sample_types) > 0:
+        core_models.MissionSampleType.objects.bulk_create(create_mission_sample_types)

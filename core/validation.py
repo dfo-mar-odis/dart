@@ -168,8 +168,9 @@ def validate_samples_for_biochem(mission: core_models.Mission,
         samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
         sample_types = core_models.SampleType.objects.filter(samples__in=samples).distinct()
 
+    # all samples for upload must have either a Standard level datatype or a Mission level datatype
     for sample_type in sample_types:
-        if not sample_type.datatype:
+        if not sample_type.datatype and not sample_type.mission_sample_types.filter(mission=mission).exists():
             message = str(sample_type) + " : " + _("Sensor/Sample is missing a Biochem Datatype")
             err = core_models.Error(mission=mission, message=message, type=core_models.ErrorType.biochem)
             errors.append(err)

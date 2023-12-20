@@ -11,8 +11,9 @@
         </div>
     </div>
     <div class="collapse col" id="div_id_error_card_body">
-        <div class="card-body vertical-scrollbar" hx-trigger="load, event_updated from:body" hx-target="#errors"
-              hx-swap="outerHTML" hx-select="#errors"
+        <div class="card-body vertical-scrollbar"
+             hx-trigger="load, event_updated from:body, file_errors_updated from:body" hx-target="#errors"
+             hx-swap="outerHTML" hx-select="#errors"
              hx-get="{% url 'core:hx_get_file_errors' mission.pk %}">
             <div id="errors">
                 {% for event, error_list in validation_errors.items %}

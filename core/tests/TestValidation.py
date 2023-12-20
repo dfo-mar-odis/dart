@@ -28,6 +28,9 @@ class TestGeneralEventValidation(DartTestCase):
         # unless the action type is 'other'
 
         event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        # events from the CTDEventFactory come with their own actions because a CTD event isn't valid without actions
+        event.actions.all().delete()
+
         expected_file = 'test.log'
         core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
                                    date_time=self.start_date)
@@ -45,6 +48,9 @@ class TestGeneralEventValidation(DartTestCase):
         # unless the action type is 'other'
 
         event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        # events from the CTDEventFactory come with their own actions because a CTD event isn't valid without actions
+        event.actions.all().delete()
+
         expected_file = 'test.log'
         core_factory.ActionFactory(event=event, mid=1, type=action_types.other, file=expected_file,
                                    date_time=self.start_date)

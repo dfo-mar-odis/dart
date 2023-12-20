@@ -29,6 +29,11 @@ class CardForm(forms.Form):
     card_title = None
     card_title_class = None
     card_header_class = None
+    card_name = None
+
+    # the card name is frequently used in uniquely naming elements for a card
+    def get_card_name(self):
+        return self.card_name
 
     def get_card_title_id(self):
         return f'div_id_card_title_{self.card_name}'
@@ -46,13 +51,13 @@ class CardForm(forms.Form):
     def get_card_header_class(self):
         return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
 
-    def get_card_header(self):
+    def get_card_header(self) -> Div:
         return Div(self.get_card_title(), css_class=self.get_card_header_class(), id=self.get_card_header_id())
 
     def get_card_body_id(self):
         return f'div_id_card_body_{self.card_name}'
 
-    def get_card_body(self):
+    def get_card_body(self) -> Div:
         return Div(css_class='card-body', id=self.get_card_body_id())
 
     def get_card_id(self):
@@ -96,7 +101,7 @@ class CollapsableCardForm(CardForm):
     def get_card_header(self):
 
         header_row = Row()
-        header = Div(header_row, css_class=self.get_card_header_class())
+        header = Div(header_row, id=f'div_id_{self.card_name}_header', css_class=self.get_card_header_class())
 
         button_id = f'button_id_collapse_{self.card_name}'
         button_attrs = {
@@ -108,7 +113,7 @@ class CollapsableCardForm(CardForm):
         icon = load_svg('caret-down')
         button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed col-auto", **button_attrs)
 
-        title_column = Div(self.get_card_title(), css_class="col align-self-end")
+        title_column = Div(self.get_card_title(), css_class="col-auto align-self-end")
 
         header_row.append(button)
         header_row.append(title_column)
@@ -773,6 +778,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         attrs = {
             'css_class': "btn btn-primary btn-sm ms-2",
             'name': "add_sample_type",
+            'title': _("Add as new configuration"),
             'hx_get': reverse_lazy("core:mission_samples_save_sample_config"),
             'hx_target': "#button_row",
             'hx_select': "#div_id_loaded_sample_type_message",
@@ -784,10 +790,17 @@ class SampleTypeConfigForm(forms.ModelForm):
         if self.instance.pk:
             attrs['hx_get'] = reverse_lazy("core:mission_samples_save_sample_config", args=(self.instance.pk,))
             attrs['name'] = "update_sample_type"
-
+            attrs['title'] = _("Update existing configuration")
             attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
             button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
             button_row.fields[0].insert(0, button_update)
+
+        attrs['hx_get'] = reverse_lazy("core:mission_samples_load_sample_config")
+        attrs['name'] = "reload"
+        attrs['title'] = _("Cancel")
+        attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
+        button_cancel = StrictButton(load_svg('arrow-left-square'), **attrs)
+        button_row.fields[0].insert(0, button_cancel)
 
         self.helper[0].layout.fields.append(button_row)
 

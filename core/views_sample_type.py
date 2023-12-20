@@ -18,7 +18,7 @@ logger = logging.getLogger('dart')
 
 class SampleTypeList(GenericViewMixin, TemplateView):
     model = core_models.SampleType
-    page_title = _("Sample Types")
+    page_title = _("Standard Sample Types")
     template_name = 'core/sample_settings.html'
 
     def get_context_data(self, **kwargs):

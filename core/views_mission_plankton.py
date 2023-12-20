@@ -1,19 +1,27 @@
+import csv
+import os
+from pathlib import Path
 import logging
 
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
-from django.core.cache import caches
+from django.conf import settings
+
 from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 
-import core.models
 from core.parsers.PlanktonParser import parse_phytoplankton, parse_zooplankton
 from core.parsers.SampleParser import get_excel_dataframe
 from core.views import MissionMixin
 from core import forms, form_biochem_database
-from core.form_biochem_database import BiochemUploadForm
+from core import models
+
+import biochem.upload
+from biochem import models as biochem_models
+
+from dart2.utils import load_svg
 
 from dart2.views import GenericDetailView
 
@@ -220,7 +228,7 @@ def import_plankton(request, **kwargs):
             else:
                 parse_phytoplankton(mission_id, file.name, dataframe)
 
-            if (errs := core.models.FileError.objects.filter(mission_id=mission_id,
+            if (errs := models.FileError.objects.filter(mission_id=mission_id,
                                                              file_name__iexact=file.name)).exists():
                 # might as well add the list of issues while loading the file to the response so the
                 # user knows what went wrong.
@@ -288,7 +296,7 @@ def list_plankton(request, **kwargs):
     page_limit = 50
     page_start = page_limit * page
 
-    samples = core.models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id).order_by(
+    samples = models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id).order_by(
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():
@@ -339,31 +347,235 @@ def list_plankton(request, **kwargs):
 
 def get_plankton_db_card(request, **kwargs):
     mission_id = kwargs['mission_id']
-    url = reverse_lazy("core:mission_plankton_biochem_upload_plankton", args=(mission_id,))
+    upload_url = reverse_lazy("core:mission_plankton_biochem_upload_plankton", args=(mission_id,))
+    download_url = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id,))
 
-    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, url)
+    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, upload_url, download_url)
 
     return HttpResponse(form_soup)
 
 
 def upload_plankton(request, **kwargs):
 
-    def upload_samples(mission, database):
-        uploader = database.uploader if database.uploader else database.account_name
-
+    def upload_samples(mission: models.Mission, uploader: str):
         form_biochem_database.upload_bcs_p_data(mission, uploader)
         form_biochem_database.upload_bcd_p_data(mission, uploader)
 
     return form_biochem_database.upload_bio_chem(request, upload_samples, **kwargs)
 
 
+def download_plankton(request, **kwargs):
+    mission_id = kwargs['mission_id']
+
+    soup = BeautifulSoup('', 'html.parser')
+    div = soup.new_tag('div')
+    div.attrs = {
+        'id': "div_id_biochem_alert_biochem_db_details",
+        'hx-swap-oob': 'true'
+    }
+    soup.append(div)
+
+    def get_progress_alert():
+        url = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id, ))
+        message_component_id = 'div_id_upload_biochem'
+        attrs = {
+            'component_id': message_component_id,
+            'alert_type': 'info',
+            'message': _("Saving to file"),
+            'hx-post': url,
+            'hx-swap': 'none',
+            'hx-trigger': 'load',
+            'hx-target': "#div_id_biochem_alert_biochem_db_details",
+            'hx-ext': "ws",
+            'ws-connect': f"/ws/biochem/notifications/{message_component_id}/"
+        }
+
+        alert_soup = forms.save_load_component(**attrs)
+
+        # add a message area for websockets
+        msg_div = alert_soup.find(id="div_id_upload_biochem_message")
+        msg_div.string = ""
+
+        msg_div_status = soup.new_tag('div')
+        msg_div_status['id'] = 'status'
+        msg_div_status.string = _("Loading")
+        msg_div.append(msg_div_status)
+
+        return alert_soup
+
+    if request.method == "GET":
+
+        alert_soup = get_progress_alert()
+
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
+    has_uploader = 'uploader' in request.POST and request.POST['uploader']
+    if 'uploader2' not in request.POST and not has_uploader:
+        url = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id, ))
+        message_component_id = 'div_id_upload_biochem'
+        attrs = {
+            'component_id': message_component_id,
+            'alert_type': 'warning',
+            'message': _("Require Uploader")
+        }
+        alert_soup = forms.blank_alert(**attrs)
+
+        input_div = soup.new_tag('div')
+        input_div['class'] = 'form-control input-group'
+
+        input = soup.new_tag('input')
+        input.attrs['id'] = 'input_id_uploader'
+        input.attrs['type'] = "text"
+        input.attrs['name'] = "uploader2"
+        input.attrs['class'] = 'textinput form-control'
+        input.attrs['maxlength'] = '20'
+        input.attrs['placeholder'] = _("Uploader")
+
+        icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
+
+        submit = soup.new_tag('button')
+        submit.attrs['class'] = 'btn btn-primary'
+        submit.attrs['hx-post'] = url
+        submit.attrs['id'] = 'input_id_uploader_btn_submit'
+        submit.attrs['name'] = 'submit'
+        submit.append(icon)
+
+        icon = BeautifulSoup(load_svg('x-square'), 'html.parser').svg
+        cancel = soup.new_tag('button')
+        cancel.attrs['class'] = 'btn btn-danger'
+        cancel.attrs['hx-post'] = url
+        cancel.attrs['id'] = 'input_id_uploader_btn_cancel'
+        cancel.attrs['name'] = 'cancel'
+        cancel.append(icon)
+
+        input_div.append(input)
+        input_div.append(submit)
+        input_div.append(cancel)
+
+        msg = alert_soup.find(id='div_id_upload_biochem_message')
+        msg.string = msg.string + " "
+        msg.append(input_div)
+
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+    elif request.htmx.trigger == 'input_id_uploader_btn_submit':
+        alert_soup = get_progress_alert()
+        # div_id_upload_biochem_message is the ID given to the component in the get_progress_alert() function
+        message = alert_soup.find(id="div_id_upload_biochem")
+        hidden = soup.new_tag("input")
+        hidden.attrs['type'] = 'hidden'
+        hidden.attrs['name'] = 'uploader2'
+        hidden.attrs['value'] = request.POST['uploader2']
+        message.append(hidden)
+
+        div.append(alert_soup)
+        return HttpResponse(soup)
+    elif request.htmx.trigger == 'input_id_uploader_btn_cancel':
+        return HttpResponse(soup)
+
+    uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
+        request.POST['uploader'] if 'uploader' in request.POST else "N/A"
+
+    mission = models.Mission.objects.get(pk=mission_id)
+    plankton_samples = models.PlanktonSample.objects.filter(
+        bottle__event__mission=mission).values_list('pk', flat=True).distinct()
+    bottles = models.Bottle.objects.filter(plankton_data__id__in=plankton_samples).distinct()
+
+    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create, update, fields = biochem.upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+
+    headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
+
+    file_name = f'{mission.name}_BCS_P.csv'
+    path = os.path.join(settings.BASE_DIR, "reports")
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+
+            writer = csv.writer(f)
+            writer.writerow(headers)
+
+            for bcs_row in create:
+                row = []
+                for header in headers:
+                    val = getattr(bcs_row, header) if hasattr(bcs_row, header) else ''
+                    row.append(val)
+
+                writer.writerow(row)
+    except PermissionError:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Could not save report, the file may be opened and/or locked"),
+        }
+        alert_soup = forms.blank_alert(**attrs)
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
+    plankton_samples = models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+
+    # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create, update, fields = biochem.upload.get_bcd_p_rows(uploader=uploader, samples=plankton_samples)
+
+    headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
+
+    file_name = f'{mission.name}_BCD_P.csv'
+    path = os.path.join(settings.BASE_DIR, "reports")
+    Path(path).mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+
+            writer = csv.writer(f)
+            writer.writerow(headers)
+
+            for row_number, bcs_row in enumerate(create):
+                row = []
+                for header in headers:
+                    if header == 'dis_data_num':
+                        val = str(row_number+1)
+                    else:
+                        val = getattr(bcs_row, header) if hasattr(bcs_row, header) else ''
+                    row.append(val)
+
+                writer.writerow(row)
+    except PermissionError:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Could not save report, the file may be opened and/or locked"),
+        }
+        alert_soup = forms.blank_alert(**attrs)
+        div.append(alert_soup)
+
+        return HttpResponse(soup)
+
+    attrs = {
+        'component_id': 'div_id_upload_biochem',
+        'alert_type': 'success',
+        'message': _("Success - Reports saved at : ") + f'{path}',
+    }
+    alert_soup = forms.blank_alert(**attrs)
+
+    div.append(alert_soup)
+
+    return HttpResponse(soup)
+
+
 def clear_plankton(request, **kwargs):
     mission_id = kwargs['mission_id']
 
     if request.htmx:
-        samples = core.models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id)
+        samples = models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id)
         files = samples.values_list('file', flat=True).distinct()
-        errors = core.models.FileError.objects.filter(mission_id=mission_id, file_name__in=files)
+        errors = models.FileError.objects.filter(mission_id=mission_id, file_name__in=files)
         errors.delete()
         samples.delete()
 
@@ -380,6 +592,7 @@ plankton_urls = [
     path('plankton/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
     path('plankton/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
     path('plankton/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
-    path('plankton/biochem/<int:mission_id>/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
+    path('plankton/biochem/upload/<int:mission_id>/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
+    path('plankton/biochem/download/<int:mission_id>/', download_plankton, name="mission_plankton_download_plankton"),
     path('plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 ]

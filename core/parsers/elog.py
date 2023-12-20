@@ -361,6 +361,22 @@ def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [
 
     return errors
 
+# Some labels for actions in Elog are free text, so a user could use 'Deploy' instead of 'Deployed'
+# this function will map common variations of actions to expected values
+def map_action_text(text: str) -> str:
+
+    if text is None:
+        return text
+
+    lower_text = text.lower()
+    if lower_text == 'deploy':
+        return "Deployed"
+
+    if lower_text == 'recovery':
+        return "Recovered"
+
+    return text
+
 
 def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.Mission, file_name: str) -> [tuple]:
     errors = []
@@ -386,7 +402,7 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
             sounding_field = get_field(elog_configuration, 'sounding', buffer)
 
             event_id = buffer[event_field]
-            action_type_text = buffer[action_field]
+            action_type_text: str = map_action_text(buffer[action_field])
             action_type = core_models.ActionType.get(action_type_text)
 
             if not existing_events.filter(event_id=event_id).exists():
@@ -523,6 +539,10 @@ def process_variables(mid_dictionary_buffer: {}, mission: core_models.Mission) -
 
     elog_configuration = core_models.ElogConfig.get_default_config(mission)
 
+    update_mission = False
+    if mission.lead_scientist == 'N/A' or mission.platform == 'N/A' or mission.protocol == 'N/A':
+        update_mission = True
+
     for mid, buffer in mid_dictionary_buffer.items():
         try:
             lead_scientists_field = get_field(elog_configuration, 'lead_scientist', buffer)
@@ -530,26 +550,42 @@ def process_variables(mid_dictionary_buffer: {}, mission: core_models.Mission) -
             cruise_field = get_field(elog_configuration, 'cruise', buffer)
             platform_field = get_field(elog_configuration, 'platform', buffer)
 
-            lead_scientists = buffer.pop(lead_scientists_field)
-            protocol = buffer.pop(protocol_field)
-            cruise = buffer.pop(cruise_field)
-            platform = buffer.pop(platform_field)
+            lead_scientists: str = buffer.pop(lead_scientists_field)
+            protocol: str = buffer.pop(protocol_field)
+            cruise: str = buffer.pop(cruise_field)
+            platform: str = buffer.pop(platform_field)
 
-            if mission.lead_scientist == 'N/A':
-                # This is all stuff that should be optionally added to the create mission form
-                mission.lead_scientist = lead_scientists
-                mission.protocol = protocol
-                mission.cruise = cruise
-                mission.platform = platform
-                mission.mission_descriptor = f'18{cruise}'
-                mission.data_center = local_biochem_models.BCDataCenter.objects.get(pk=20)  # 20 is BIO
+            if update_mission:
+                if (lead_scientists and lead_scientists.strip() != '') and mission.lead_scientist == 'N/A':
+                    mission.lead_scientist = lead_scientists
+
+                if (protocol and protocol.strip() != '') and mission.protocol == 'N/A':
+                    # make sure the protocal isn't more than 50 characters if it's not 'AZMP' or 'AZOMP'
+                    mission.protocol = protocol[:50]
+
+                    proto = re.search('azmp', protocol, re.IGNORECASE)
+                    if proto:
+                        mission.protocol = 'AZMP'
+
+                    proto = re.search('azomp', protocol, re.IGNORECASE)
+                    if proto:
+                        mission.protocol = 'AZOMP'
+
+                if (platform and platform.strip() != '') and mission.platform == 'N/A':
+                    mission.platform = platform
+
+                mission.mission_descriptor = mission.mission_descriptor if mission.mission_descriptor else f'18{cruise}'
                 mission.save()
 
-                action = existing_actions.get(mid=mid)
-                # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-                variables_arrays = get_create_and_update_variables(action, buffer)
-                fields_create += variables_arrays[0]
-                fields_update += variables_arrays[1]
+                update_mission = False
+                if mission.lead_scientist == 'N/A' or mission.platform == 'N/A' or mission.protocol == 'N/A':
+                    update_mission = True
+
+            action = existing_actions.get(mid=mid)
+            # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
+            variables_arrays = get_create_and_update_variables(action, buffer)
+            fields_create += variables_arrays[0]
+            fields_update += variables_arrays[1]
         except KeyError as ex:
             logger.error(ex)
             errors.append((mid, ex.args[0]["message"], ex,))

@@ -1,6 +1,6 @@
 from django.urls import path
 
-from . import views, views_mission_sample, views_sample_type, htmx, reports
+from . import views, views_mission_sample, views_sample_type, htmx, reports, form_btl_load
 from . import form_biochem_database, views_mission_event, views_mission_plankton
 
 app_name = 'core'
@@ -24,6 +24,7 @@ urlpatterns.extend(views_mission_event.mission_event_urls)
 urlpatterns.extend(views_sample_type.sample_type_urls)
 urlpatterns.extend(views_mission_sample.mission_sample_urls)
 urlpatterns.extend(views_mission_plankton.plankton_urls)
+urlpatterns.extend(form_btl_load.bottle_load_urls)
 urlpatterns.extend(form_biochem_database.database_urls)
 urlpatterns.extend(htmx.htmx_urls)
 urlpatterns.extend(reports.report_urls)
