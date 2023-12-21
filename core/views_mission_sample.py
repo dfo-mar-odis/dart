@@ -1085,8 +1085,8 @@ def format_sensor_table(request, df, mission_id, sensor_id):
     column = sensor_column.findNext('th')  # 'Value' column
 
     # if the sensor_id is present then we want to show the specific details for this sensor/sample
-    sampletype = models.GlobalSampleType.objects.get(pk=sensor_id)
-    column.string = f'{sampletype.short_name}'
+    sampletype = models.MissionSampleType.objects.get(pk=sensor_id)
+    column.string = f'{sampletype.name}'
 
     root = soup.findChildren()[0]
 
