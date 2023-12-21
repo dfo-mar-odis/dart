@@ -129,7 +129,7 @@ class AttachmentFactory(DjangoModelFactory):
 class SampleTypeFactory(DjangoModelFactory):
 
     class Meta:
-        model = models.SampleType
+        model = models.GlobalSampleType
 
     short_name = factory.lazy_attribute(lambda o: faker.word())
     long_name = factory.lazy_attribute(lambda o: faker.name())

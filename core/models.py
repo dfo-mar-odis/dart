@@ -392,15 +392,13 @@ class Bottle(models.Model):
 # Sample types help us track sensors and samples that have been previously loaded for any mission, when we see a
 # sensor or sample with the same short name in the future we'll know what biochem data types to use as well as what
 # file configurations to use when loading that data.
-class SampleType(models.Model):
+class GlobalSampleType(models.Model):
     short_name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20,
                                   help_text=_("The column name of a sensor or a short name commonly "
                                               "used for the sample"), unique=True)
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
                                  help_text=_("Short descriptive name for this type of sample/sensor"))
     priority = models.IntegerField(verbose_name=_("Priority"), default=1)
-
-    comments = models.CharField(verbose_name=_("Comments"), max_length=255, null=True, blank=True)
 
     # Datatype may not be known by the user at the time they need to create this sensor, but it will
     # have to be specified before BioChem tables can be created
@@ -424,15 +422,30 @@ class SampleType(models.Model):
 class MissionSampleType(models.Model):
     mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
                                 on_delete=models.CASCADE)
-    sample_type = models.ForeignKey(SampleType, verbose_name=_("Sample Type"), related_name="mission_sample_types",
-                                    on_delete=models.CASCADE)
+
+    name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20, null=True,
+                            help_text=_("The column name of a sensor or a short name commonly used for the sample"))
+
+    long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
+                                 help_text=_("Short descriptive name for this type of sample/sensor"))
+
+    priority = models.IntegerField(verbose_name=_("Priority"), default=1)
+
+    is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
+                                    help_text=_("Identify this sample type as a type of sensor"))
+
     datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
 
+    def __str__(self):
+        label = self.name + (f" - {self.long_name}" if self.long_name else "")
+        label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
+
+        return label
+
 
 class SampleTypeConfig(models.Model):
-
-    sample_type = models.ForeignKey(SampleType, verbose_name=_("Sample Type"),
+    sample_type = models.ForeignKey(GlobalSampleType, verbose_name=_("Sample Type"),
                                     related_name="configs", on_delete=models.DO_NOTHING,
                                     help_text=_("The sample type this config is intended for"))
     file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
@@ -453,9 +466,6 @@ class SampleTypeConfig(models.Model):
 
     flag_field = models.CharField(verbose_name=_("Flag Column"), max_length=50, blank=True, null=True,
                                   help_text=_("Lowercase name of the column that contains flags, if it exists"))
-
-    replicate_field = models.CharField(verbose_name=_("Replicate Column"), max_length=50, blank=True, null=True,
-                                       help_text=_("Lowercase name of the column indicating a replicate, if it exists"))
 
     comment_field = models.CharField(verbose_name=_("Comment Column"), max_length=50, blank=True, null=True,
                                      help_text=_("Lowercase name of the column containing comments, if it exists"))
@@ -482,8 +492,7 @@ class MissionSampleConfig(models.Model):
 # track the data per-mission and let the user know if a sample has been uploaded, was modified and needs
 # to be re-uploaded, or hasn't been loaded yet.
 class BioChemUpload(models.Model):
-    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), on_delete=models.CASCADE, related_name='uploads')
-    type = models.ForeignKey(SampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='uploads')
+    type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='uploads')
 
     upload_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
                                        help_text=_("The last time this sensor/sample was uploaded to biochem"))
@@ -493,11 +502,12 @@ class BioChemUpload(models.Model):
     # Todo: add an action flag on this model that can be used to delete rows from BCS/BCD tables if
     #       a sensor is removed from the list of sensors to upload to Biochem and it's already been uploaded.
 
+
 # The Sample model tracks sample/sensor types that can or have been uploaded for a specific bottle. It can also
 # track the file data for the sensor was loaded from
 class Sample(models.Model):
     bottle = models.ForeignKey(Bottle, verbose_name=_("Bottle"), on_delete=models.CASCADE, related_name='samples')
-    type = models.ForeignKey(SampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='samples')
+    type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='samples')
 
     file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
 
@@ -561,7 +571,6 @@ class DiscreteSampleValue(models.Model):
 
 
 class PlanktonSample(models.Model):
-
     file = models.FileField(verbose_name=_("File"))
 
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
@@ -581,7 +590,7 @@ class PlanktonSample(models.Model):
 
     # default unassigned BCLIFEHISTORIES 90000000
     stage = models.ForeignKey(bio_tables.models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
-                             on_delete=models.DO_NOTHING)
+                              on_delete=models.DO_NOTHING)
 
     # default unassigned BCSEXES 90000000
     sex = models.ForeignKey(bio_tables.models.BCSex, verbose_name=_("Sex"), default=90000000,
@@ -619,6 +628,7 @@ class PlanktonSample(models.Model):
 
     plank_data_num = models.IntegerField(verbose_name=_("Plankton data number"), blank=True, null=True,
                                          help_text=_("key linking this plankton sample to a biochem staging table"))
+
     @property
     def plank_sample_key_value(self):
         event = self.bottle.event
@@ -826,8 +836,6 @@ class BcDatabaseConnection(models.Model):
 
         return biochem_db
 
-
-
 # Proc Codes
 # 20 = Gear / 1000 for min Sieve and 10 for Max Sieve
 # 21 = 10 for min Sieve and Null for Max Sieve
@@ -860,72 +868,72 @@ class BcDatabaseConnection(models.Model):
 #
 #     proc_code = models.IntegerField(verbose_name=_("Procedure Code"))
 
-    # @property
-    # def min_sieve(self):
-    #     if self.proc_code in [21]:
-    #         return 10
-    #
-    #     if self.proc_code in [20, 22, 23, 50, 99]:
-    #         return self.gear_size/1000
-    #
-    #     raise ValueError(f"Unexpected proc_code {self.proc_code}")
-    #
-    # @property
-    # def max_sieve(self):
-    #     if self.proc_code in [20, 22, 50, 99]:
-    #         return 10
-    #
-    #     if self.proc_code in [21, 23]:
-    #         return None
-    #
-    #     raise ValueError(f"Unexpected proc_code {self.proc_code}")
-    #
-    # @property
-    # def collector_comment(self):
-    #     if self.raw_wet_weight == -1 or self.raw_dry_weight == -1:
-    #         return 'TOO MUCH PHYTOPLANKTON TO WEIGH'
-    #
-    #     if self.raw_wet_weight == -2 or self.raw_dry_weight == -2:
-    #         return 'TOO MUCH SEDIMENT TO WEIGH'
-    #
-    #     if self.raw_wet_weight == -3 or self.raw_dry_weight == -3:
-    #         return 'NO FORMALIN - COULD NOT WEIGH'
-    #
-    #     if self.raw_wet_weight == -4 or self.raw_dry_weight == -4:
-    #         return 'TOO MUCH JELLY TO WEIGH'
-    #
-    #     return None
-    #
-    # @property
-    # def wet_weight(self):
-    #     if self.raw_wet_weight is None or self.raw_wet_weight < 0:
-    #         return None
-    #
-    #     return self.raw_wet_weight
-    #
-    # @property
-    # def dry_weight(self):
-    #     if self.raw_dry_weight is None or self.raw_dry_weight < 0:
-    #         return None
-    #
-    #     return self.raw_dry_weight
+# @property
+# def min_sieve(self):
+#     if self.proc_code in [21]:
+#         return 10
+#
+#     if self.proc_code in [20, 22, 23, 50, 99]:
+#         return self.gear_size/1000
+#
+#     raise ValueError(f"Unexpected proc_code {self.proc_code}")
+#
+# @property
+# def max_sieve(self):
+#     if self.proc_code in [20, 22, 50, 99]:
+#         return 10
+#
+#     if self.proc_code in [21, 23]:
+#         return None
+#
+#     raise ValueError(f"Unexpected proc_code {self.proc_code}")
+#
+# @property
+# def collector_comment(self):
+#     if self.raw_wet_weight == -1 or self.raw_dry_weight == -1:
+#         return 'TOO MUCH PHYTOPLANKTON TO WEIGH'
+#
+#     if self.raw_wet_weight == -2 or self.raw_dry_weight == -2:
+#         return 'TOO MUCH SEDIMENT TO WEIGH'
+#
+#     if self.raw_wet_weight == -3 or self.raw_dry_weight == -3:
+#         return 'NO FORMALIN - COULD NOT WEIGH'
+#
+#     if self.raw_wet_weight == -4 or self.raw_dry_weight == -4:
+#         return 'TOO MUCH JELLY TO WEIGH'
+#
+#     return None
+#
+# @property
+# def wet_weight(self):
+#     if self.raw_wet_weight is None or self.raw_wet_weight < 0:
+#         return None
+#
+#     return self.raw_wet_weight
+#
+# @property
+# def dry_weight(self):
+#     if self.raw_dry_weight is None or self.raw_dry_weight < 0:
+#         return None
+#
+#     return self.raw_dry_weight
 
-    # split_fraction derived from AZMP Template code (see https://github.com/upsonp/dart/issues/100)
-    # @property
-    # def split_fraction(self):
-    #     if self.proc_code == 20:
-    #         return round(self.raw_split_fraction, 4)
-    #
-    #     if self.proc_code in [21, 22, 23]:
-    #         return 1
-    #
-    #     if self.proc_code == 50:
-    #         return 0.5
-    #
-    #     if self.proc_code == 99:
-    #         return self.raw_split_fraction
-    #
-    #     return 9999
+# split_fraction derived from AZMP Template code (see https://github.com/upsonp/dart/issues/100)
+# @property
+# def split_fraction(self):
+#     if self.proc_code == 20:
+#         return round(self.raw_split_fraction, 4)
+#
+#     if self.proc_code in [21, 22, 23]:
+#         return 1
+#
+#     if self.proc_code == 50:
+#         return 0.5
+#
+#     if self.proc_code == 99:
+#         return self.raw_split_fraction
+#
+#     return 9999
 
 
 # class Phytoplankton(models.Model):

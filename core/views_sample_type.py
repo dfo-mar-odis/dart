@@ -17,7 +17,7 @@ logger = logging.getLogger('dart')
 
 
 class SampleTypeList(GenericViewMixin, TemplateView):
-    model = core_models.SampleType
+    model = core_models.GlobalSampleType
     page_title = _("Standard Sample Types")
     template_name = 'core/sample_settings.html'
 
@@ -25,7 +25,7 @@ class SampleTypeList(GenericViewMixin, TemplateView):
         context = super().get_context_data(**kwargs)
 
         context['sample_type_form'] = forms.SampleTypeForm()
-        context['sample_types'] = core_models.SampleType.objects.all()
+        context['sample_types'] = core_models.GlobalSampleType.objects.all()
 
         return context
 
@@ -51,7 +51,7 @@ def load_sample_type(request, **kwargs):
         if 'sample_type_id' not in kwargs or not kwargs['sample_type_id']:
             raise Http404("Sample Type does not exist")
 
-        context = {'sample_type': core_models.SampleType.objects.get(pk=kwargs['sample_type_id'])}
+        context = {'sample_type': core_models.GlobalSampleType.objects.get(pk=kwargs['sample_type_id'])}
         html = render_to_string(template_name='core/partials/card_sample_type.html', context=context)
 
         return HttpResponse(html)
@@ -67,7 +67,7 @@ def edit_sample_type(request, **kwargs):
             response = HttpResponse(html)
             return response
 
-        sample_type = core_models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+        sample_type = core_models.GlobalSampleType.objects.get(pk=kwargs['sample_type_id'])
         sample_type_form = forms.SampleTypeForm(instance=sample_type)
 
         html = render_to_string('core/partials/form_sample_type.html', context={'sample_type_form': sample_type_form,
@@ -86,7 +86,7 @@ def delete_sample_type(request, **kwargs):
         sample_type_id = int(kwargs['sample_type_id'])
         soup = BeautifulSoup(f'<div id="div_id_message_{sample_type_id}"></div>', 'html.parser')
         try:
-            sample_type = core_models.SampleType.objects.get(pk=sample_type_id)
+            sample_type = core_models.GlobalSampleType.objects.get(pk=sample_type_id)
 
             if not sample_type.samples.all().exists():
                 sample_type.delete()
@@ -130,7 +130,7 @@ def save_sample_type(request, **kwargs):
 
     if request.method == "POST":
         if 'sample_type_id' in kwargs:
-            sample_type = core_models.SampleType.objects.get(pk=kwargs['sample_type_id'])
+            sample_type = core_models.GlobalSampleType.objects.get(pk=kwargs['sample_type_id'])
             sample_type_form = forms.SampleTypeForm(request.POST, instance=sample_type)
         else:
             sample_type_form = forms.SampleTypeForm(request.POST)

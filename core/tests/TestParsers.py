@@ -330,7 +330,7 @@ class TestCTDParser(DartTestCase):
         event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
         ctd_parser.read_btl(mission=event.mission, btl_file=os.path.join(self.test_file_location, self.test_file_001))
 
-        sample_types = core_models.SampleType.objects.all()
+        sample_types = core_models.GlobalSampleType.objects.all()
         samples = core_models.Sample.objects.all()
 
         self.assertTrue(sample_types.exists())
@@ -352,8 +352,8 @@ class TestSampleCSVParser(DartTestCase):
         self.file_name = "sample_oxy.csv"
         self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)
 
-        self.oxy_sample_type = core_models.SampleType = core_factory.SampleTypeFactory(short_name='oxy',
-                                                                                       long_name="Oxygen")
+        self.oxy_sample_type = core_models.GlobalSampleType = core_factory.SampleTypeFactory(short_name='oxy',
+                                                                                             long_name="Oxygen")
 
         self.oxy_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
             sample_type=self.oxy_sample_type, file_type='csv', skip=9, tab=0,
@@ -363,8 +363,8 @@ class TestSampleCSVParser(DartTestCase):
         self.mission_oxy_file_settings = core_models.MissionSampleConfig = core_factory.MissionSampleConfig(
             mission=self.mission, config=self.oxy_file_settings
         )
-        self.salt_sample_type = core_models.SampleType = core_factory.SampleTypeFactory(short_name='salts',
-                                                                                        long_name="Salinity")
+        self.salt_sample_type = core_models.GlobalSampleType = core_factory.SampleTypeFactory(short_name='salts',
+                                                                                              long_name="Salinity")
 
         self.salt_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
             sample_type=self.salt_sample_type, file_type='xlsx', skip=1, tab=0,

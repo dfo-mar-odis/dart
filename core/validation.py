@@ -161,12 +161,12 @@ def validate_bottle_sample_range(event: core_models.Event, bottle_id: int) -> \
 
 
 def validate_samples_for_biochem(mission: core_models.Mission,
-                                 sample_types: list[core_models.SampleType] = None) -> list[core_models.Error]:
+                                 sample_types: list[core_models.GlobalSampleType] = None) -> list[core_models.Error]:
     errors = []
 
     if not sample_types:
         samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
-        sample_types = core_models.SampleType.objects.filter(samples__in=samples).distinct()
+        sample_types = core_models.GlobalSampleType.objects.filter(samples__in=samples).distinct()
 
     # all samples for upload must have either a Standard level datatype or a Mission level datatype
     for sample_type in sample_types:

@@ -107,30 +107,23 @@ def get_error_list(soup, card_id, errors):
 
 
 def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
-    sampletype = models.SampleType.objects.get(pk=sampletype_id)
+    sampletype = models.MissionSampleType.objects.get(pk=sampletype_id)
 
-    sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.filter(mission_id=mission_id)
+    sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
     dc_samples = models.DiscreteSampleValue.objects.filter(
         sample__bottle__event__mission_id=mission_id, sample__type_id=sampletype_id)
 
     row_datatype = dc_samples.values_list("sample_datatype", flat=True).distinct().first()
     datatype = sampletype.datatype if sampletype.datatype else None
-    mission_datatype = None
-    if sampletype.mission_sample_types.filter(mission_id=mission_id).exists():
-        mission_datatype = sampletype.mission_sample_types.get(mission_id=mission_id).datatype
 
     # if no datatype is applied
     button_colour = 'btn-danger'
 
-    title = sampletype.long_name if sampletype.long_name else sampletype.short_name
-    if mission_datatype:
-        # if the datatype is applied at the 'mission' level
-        button_colour = 'btn-secondary'
-        title += f': {mission_datatype}'
-    elif datatype:
+    title = sampletype.long_name if sampletype.long_name else sampletype.name
+    if datatype:
         # if the datatype is applied at the 'standard'
-        button_colour = 'btn-info'
+        button_colour = 'btn-secondary'
         title += f': {datatype}'
     elif row_datatype:
         # if the datatype is applied at the mission level or row level
@@ -150,7 +143,7 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
                 button_colour = 'btn-primary'
 
     button = soup.new_tag("button")
-    button.string = f'{sampletype.short_name}'
+    button.string = f'{sampletype.name}'
     button.attrs['id'] = f'button_id_sample_type_details_{sampletype.pk}'
     button.attrs['class'] = 'btn btn-sm ' + button_colour
     button.attrs['style'] = 'width: 100%'
@@ -165,8 +158,8 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
 def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
 
     enabled = False
-    sample_type = models.SampleType.objects.get(pk=sampletype_id)
-    if sample_type.datatype or sample_type.mission_sample_types.filter(mission_id=mission_id).exists():
+    sample_type = models.MissionSampleType.objects.get(pk=sampletype_id)
+    if sample_type.datatype:
         # a sample must have either a Standard level or Mision level data type to be uploadable.
         enabled = True
 
@@ -180,7 +173,7 @@ def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampl
                                           args=(mission_id, sampletype_id,))
 
     if enabled:
-        if models.BioChemUpload.objects.filter(mission_id=mission_id, type_id=sampletype_id).exists():
+        if models.BioChemUpload.objects.filter(type_id=sampletype_id).exists():
             check.attrs['name'] = 'remove_sensor'
             check.attrs['checked'] = 'checked'
         else:
@@ -209,14 +202,9 @@ class SampleDetails(views.MissionMixin, GenericDetailView, ):
 
         context['mission'] = self.object
         if 'sample_type_id' in self.kwargs:
-            sample_type = models.SampleType.objects.get(pk=self.kwargs['sample_type_id'])
+            sample_type = models.MissionSampleType.objects.get(pk=self.kwargs['sample_type_id'])
             context['sample_type'] = sample_type
             data_type_seq = sample_type.datatype
-
-            # if a mission specific biochem data type exists use that instead of the general sample type
-            mission_sample_type = self.object.mission_sample_types.filter(sample_type=sample_type)
-            if mission_sample_type.exists():
-                data_type_seq = mission_sample_type.first().datatype
 
             initial = {}
             initial['sample_type_id'] = sample_type.id
@@ -867,13 +855,10 @@ def list_samples(request, **kwargs):
         # out of alignment. We'll get the replicate columns here and use that value to insert blank
         # columns into the dataframe if a replicate column is missing from the query set.
         replicates = models.DiscreteSampleValue.objects.filter(
-            sample__bottle__event__mission_id=mission_id,
             sample__type__id=sensor_id).aggregate(Max('replicate'))['replicate__max']
 
-        queryset = models.Sample.objects.filter(
-            bottle__event__mission=mission,
-            type_id=sensor_id).order_by('bottle__bottle_id')[
-                   page_start:(page_start + page_limit)]
+        queryset = models.Sample.objects.filter(type_id=sensor_id)
+        queryset = queryset.order_by('bottle__bottle_id')[page_start:(page_start + page_limit)]
         queryset = queryset.values(
             'bottle__bottle_id',
             'bottle__pressure',
@@ -914,7 +899,7 @@ def list_samples(request, **kwargs):
         df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
 
         try:
-            sensors = models.SampleType.objects.filter(samples__bottle__event__mission=mission).distinct()
+            sensors = mission.mission_sample_types.all()
             df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
             # we want a column for every sensor and then a column for every replicate for every sensor
             # for all sensors in the mission
@@ -1100,7 +1085,7 @@ def format_sensor_table(request, df, mission_id, sensor_id):
     column = sensor_column.findNext('th')  # 'Value' column
 
     # if the sensor_id is present then we want to show the specific details for this sensor/sample
-    sampletype = models.SampleType.objects.get(pk=sensor_id)
+    sampletype = models.GlobalSampleType.objects.get(pk=sensor_id)
     column.string = f'{sampletype.short_name}'
 
     root = soup.findChildren()[0]
@@ -1194,16 +1179,9 @@ def update_sample_type_mission(request, **kwargs):
 
         data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
-        mission = models.Mission.objects.get(pk=mission_id)
-        sample_type = models.SampleType.objects.get(pk=sample_type_id)
-
-        mission_sample_type = None
-        if mission.mission_sample_types.filter(sample_type=sample_type).exists():
-            mission_sample_type = mission.mission_sample_types.get(sample_type=sample_type)
-            mission_sample_type.datatype = data_type
-        else:
-            mission_sample_type = models.MissionSampleType(mission=mission, sample_type=sample_type, datatype=data_type)
-        mission_sample_type.save()
+        sample_type = models.MissionSampleType.objects.get(pk=sample_type_id)
+        sample_type.datatype = data_type
+        sample_type.save()
 
         response = list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
         return response
@@ -1317,7 +1295,7 @@ def sample_data_upload(mission: models.Mission, uploader: str):
     models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
 
     # validate that the checked off sensors/samples have a biochem datatypes
-    sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
+    sample_types = models.GlobalSampleType.objects.filter(id__in=sample_type_ids)
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))

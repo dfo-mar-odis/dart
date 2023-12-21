@@ -102,9 +102,9 @@ def process_ros_sensors(sensors: [str], ros_file: str):
     summary = ctd.rosette_summary(ros_file)
     sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
-    existing_sensors = core_models.SampleType.objects.filter(is_sensor=True).values_list('short_name',
-                                                                                         flat=True).distinct()
-    new_sensors: [core_models.SampleType] = []
+    existing_sensors = core_models.GlobalSampleType.objects.filter(is_sensor=True).values_list('short_name',
+                                                                                               flat=True).distinct()
+    new_sensors: [core_models.GlobalSampleType] = []
     for sensor in sensor_headings:
         # [column_name]: [sensor_details]
         sensor_mapping = re.split(": ", sensor)
@@ -114,7 +114,7 @@ def process_ros_sensors(sensors: [str], ros_file: str):
             continue
 
         # if the sensor already exists, skip it
-        if core_models.SampleType.objects.filter(short_name__iexact=sensor_mapping[0]).exists():
+        if core_models.GlobalSampleType.objects.filter(short_name__iexact=sensor_mapping[0]).exists():
             continue
 
         sensor_type_string, priority, units, other = parse_sensor(sensor_mapping[1])
@@ -128,7 +128,7 @@ def process_ros_sensors(sensors: [str], ros_file: str):
         if sensor_mapping[0] in existing_sensors:
             continue
 
-        sensor_type = core_models.SampleType(short_name=sensor_mapping[0], long_name=long_name, is_sensor=True)
+        sensor_type = core_models.GlobalSampleType(short_name=sensor_mapping[0], long_name=long_name, is_sensor=True)
         sensor_type.name = sensor_type_string
         sensor_type.priority = priority if priority else 1
         sensor_type.units = units if units else None
@@ -137,7 +137,7 @@ def process_ros_sensors(sensors: [str], ros_file: str):
         new_sensors.append(sensor_type)
 
     if new_sensors:
-        core_models.SampleType.objects.bulk_create(new_sensors)
+        core_models.GlobalSampleType.objects.bulk_create(new_sensors)
 
 
 def parse_sensor_name(sensor: str) -> [str, int, str]:
@@ -163,24 +163,24 @@ def parse_sensor_name(sensor: str) -> [str, int, str]:
 
 def process_common_sensors(sensors: list[str]):
     """Given a list of sensor names, or 'column headings', create a list of mission sensors that don't already exist"""
-    create_sensors: [core_models.SampleType] = []
+    create_sensors: [core_models.GlobalSampleType] = []
 
     for sensor in sensors:
 
         # if the sensor exists, skip it
-        if core_models.SampleType.objects.filter(short_name__iexact=sensor).exists():
+        if core_models.GlobalSampleType.objects.filter(short_name__iexact=sensor).exists():
             continue
 
         details = parse_sensor_name(sensor)
         long_name = details[2]  # basically all we have at the moment is the units of measure
-        sensor_details = core_models.SampleType(short_name=details[0], long_name=long_name, is_sensor=True)
+        sensor_details = core_models.GlobalSampleType(short_name=details[0], long_name=long_name, is_sensor=True)
         sensor_details.priority = details[1]
         sensor_details.units = details[2]
 
         create_sensors.append(sensor_details)
 
     if create_sensors:
-        core_models.SampleType.objects.bulk_create(create_sensors)
+        core_models.GlobalSampleType.objects.bulk_create(create_sensors)
 
 
 def process_sensors(btl_file: str, column_headers: list[str]):
@@ -191,7 +191,7 @@ def process_sensors(btl_file: str, column_headers: list[str]):
 
     # The ROS file gives us all kinds of information about special sensors that are commonly added and removed from the
     # CTD, but it does not cover sensors that are normally on the CTD by default. i.e Sal00, Potemp090C, Sigma-é00
-    existing_sensors = [sensor.short_name.lower() for sensor in core_models.SampleType.objects.all()]
+    existing_sensors = [sensor.short_name.lower() for sensor in core_models.GlobalSampleType.objects.all()]
     columns = [column_header for column_header in column_headers if column_header.lower() not in existing_sensors]
     process_common_sensors(sensors=columns)
 
@@ -340,7 +340,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
     bottles = core_models.Bottle.objects.filter(event=event)
     sample_types = {
-        column: core.models.SampleType.objects.get(short_name__iexact=column) for column in column_headers
+        column: core.models.GlobalSampleType.objects.get(short_name__iexact=column) for column in column_headers
     }
 
     for row in data_frame_avg.iterrows():
@@ -448,7 +448,7 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     process_data(event=event, data_frame=data_frame, column_headers=col_headers)
 
     # make all 'standard' level data types 'mission' level
-    sample_types = [core.models.SampleType.objects.get(short_name__iexact=column) for column in col_headers]
+    sample_types = [core.models.GlobalSampleType.objects.get(short_name__iexact=column) for column in col_headers]
     create_mission_sample_types = []
     for sample_type in sample_types:
         if not mission.mission_sample_types.filter(sample_type=sample_type).exists():
