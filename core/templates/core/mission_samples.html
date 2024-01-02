@@ -24,18 +24,11 @@
     {% if sample_type %}
         {% include 'core/partials/card_sample_upload_header.html' %}
     {% else %}
-        {% if bottle_form %}
-            <div class="mt-2" hx-swap="none" hx-trigger="load" hx-get="{% url 'core:form_btl_reload_files' mission.pk %}?hide_loaded=true">
-                <form>
-                {% crispy bottle_form %}
-                </form>
-            </div>
-        {% endif %}
-        <div class="row mt-2">
-        {% include 'core/partials/card_sample_load_header.html' %}
+        <div class="mt-2" hx-trigger="load" hx-get="{% url "core:form_btl_card" mission.pk %}?hide_loaded=true">
+            {# The Load Bottle form will be swapped in here #}
         </div>
         <div class="row mt-2">
-            {% include 'core/partials/card_event_validation.html' %}
+        {% include 'core/partials/card_sample_load_header.html' %}
         </div>
     {% endif %}
         </div>
@@ -68,11 +61,12 @@
                     {% include 'core/partials/table_sample.html' %}
                 </div>
             </div>
-        </div>
-        <div class="mt-2" hx-trigger="load" hx-get="{% url "core:mission_samples_get_all_discrete_upload_db_card" mission.pk %}">
-        </div>
-        <div class="mt-2">
-            {% include 'core/partials/card_biochem_validation.html' %}
+            <div class="mt-2" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" mission.pk %}">
+                {# The Biochem database form will be swapped in here after the page loads #}
+            </div>
+            <div class="mt-2">
+                {% include 'core/partials/card_biochem_validation.html' %}
+            </div>
         </div>
         {% endif %}
     {% endblock %}

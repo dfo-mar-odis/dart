@@ -535,8 +535,8 @@ class DiscreteSampleValue(models.Model):
 
     # Individual samples can have different datatype than the general datatype provided by the
     # sample type. If this is blank the sample.type.datatype value should be used for the sample
-    sample_datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
-                                        blank=True, on_delete=models.SET_NULL)
+    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+                                 blank=True, on_delete=models.SET_NULL)
 
     bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
                                            help_text=_("Date of last BioChem upload"))
@@ -548,23 +548,6 @@ class DiscreteSampleValue(models.Model):
     # with the BCD sample.
     dis_data_num = models.IntegerField(verbose_name=_("BioChem Data Number"), null=True, blank=True,
                                        help_text=_("The BCD unique ID provided once a sample has been uploaded"))
-
-    @property
-    def datatype(self) -> bio_models.BCDataType:
-        # datatype priority is a row specific datatype,
-        # then if there's a mission specific datatype,
-        # then the general sample type datatype
-
-        if self.sample_datatype:
-            return self.sample_datatype
-
-        mission = self.sample.bottle.event.mission
-        if (mission_type := mission.mission_sample_types.filter(sample_type=self.sample.type)).exists():
-            return mission_type[0].datatype
-        elif self.sample.type.datatype:
-            return self.sample.type.datatype
-
-        raise ValueError({'message': _("No Biochem datatype for sample") + " : " + str(self.sample.bottle.bottle_id)})
 
     def __str__(self):
         return f'{self.sample}: {self.value}'

@@ -313,6 +313,8 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
+    mission = event.mission
+
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     file_name = data_frame._metadata['name'] + ".BTL"
     skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
@@ -339,8 +341,24 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         data_frame_avg = data_frame_avg[:-drop_rows]
 
     bottles = core_models.Bottle.objects.filter(event=event)
+
+    # make global sample types local to this mission to be attached to samples when they're created
+    logger.info("Creating local sample types")
+    new_sample_types = []
+    for name in column_headers:
+        if not mission.mission_sample_types.filter(name=name).exists():
+            global_sampletype = core_models.GlobalSampleType.objects.get(short_name__iexact=name)
+            new_sampletype = core_models.MissionSampleType(mission=mission, name=name, is_sensor=True,
+                                                           long_name=global_sampletype.long_name,
+                                                           datatype=global_sampletype.datatype)
+
+            new_sample_types.append(new_sampletype)
+
+    if len(new_sample_types) > 0:
+        core_models.MissionSampleType.objects.bulk_create(new_sample_types)
+
     sample_types = {
-        column: core.models.GlobalSampleType.objects.get(short_name__iexact=column) for column in column_headers
+        sample_type.name: sample_type for sample_type in core.models.MissionSampleType.objects.filter(mission=mission)
     }
 
     for row in data_frame_avg.iterrows():
@@ -448,13 +466,13 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     process_data(event=event, data_frame=data_frame, column_headers=col_headers)
 
     # make all 'standard' level data types 'mission' level
-    sample_types = [core.models.GlobalSampleType.objects.get(short_name__iexact=column) for column in col_headers]
-    create_mission_sample_types = []
-    for sample_type in sample_types:
-        if not mission.mission_sample_types.filter(sample_type=sample_type).exists():
-            mission_sample_type = core_models.MissionSampleType(mission=mission, sample_type=sample_type,
-                                                                datatype=sample_type.datatype)
-            create_mission_sample_types.append(mission_sample_type)
-
-    if len(create_mission_sample_types) > 0:
-        core_models.MissionSampleType.objects.bulk_create(create_mission_sample_types)
+    # sample_types = [core.models.GlobalSampleType.objects.get(short_name__iexact=column) for column in col_headers]
+    # create_mission_sample_types = []
+    # for sample_type in sample_types:
+    #     if not mission.mission_sample_types.filter(sample_type=sample_type).exists():
+    #         mission_sample_type = core_models.MissionSampleType(mission=mission, sample_type=sample_type,
+    #                                                             datatype=sample_type.datatype)
+    #         create_mission_sample_types.append(mission_sample_type)
+    #
+    # if len(create_mission_sample_types) > 0:
+    #     core_models.MissionSampleType.objects.bulk_create(create_mission_sample_types)
