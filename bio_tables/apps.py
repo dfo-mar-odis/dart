@@ -1,4 +1,5 @@
 import os.path
+import sys
 from datetime import datetime
 import pytz
 
@@ -17,9 +18,14 @@ class BioTablesAppConf(AppConfig):
     name = 'bio_tables'
 
     def ready(self):
+        if 'runserver' not in sys.argv:
+            # if runserver is not in the system args then we don't want to load fixtures
+            return
+
         from . import models
 
         try:
+            # call_command('migrate')
             if 'bio_tables_bcupdate' in connection.introspection.table_names():
                 # check the bio_chem fixture file. If it's been modified then automatically reload the fixtures.
                 fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/biochem_fixtures.json')
