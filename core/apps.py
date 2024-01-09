@@ -1,3 +1,5 @@
+import sys
+
 from django.apps import AppConfig
 from django.conf import settings
 from django.core.management import call_command
@@ -12,6 +14,10 @@ class CoreAppConf(AppConfig):
     name = 'core'
 
     def ready(self):
+        if 'runserver' not in sys.argv:
+            # if runserver is not in the system args then we don't want to load fixtures
+            return
+
         from . import models
 
         try:
