@@ -14,7 +14,7 @@ class CoreAppConf(AppConfig):
     name = 'core'
 
     def ready(self):
-        if 'runserver' not in sys.argv and 'daphne' not in sys.argv:
+        if 'migrate' in sys.argv or 'collectstatic' in sys.argv:
             # if runserver is not in the system args then we don't want to load fixtures
             return
 
