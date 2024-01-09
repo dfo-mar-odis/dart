@@ -27,14 +27,12 @@ from django_pandas.io import read_frame
 from render_block import render_block_to_string
 
 import biochem.upload
-import core.form_btl_load
 from biochem import models as biochem_models
 from bio_tables import models as bio_models
 
 from core import forms, form_biochem_database, validation
 from core import models
 from core import views
-from core.htmx import send_user_notification_html_update
 from core.parsers import SampleParser
 
 from dart2.utils import load_svg
@@ -107,30 +105,23 @@ def get_error_list(soup, card_id, errors):
 
 
 def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
-    sampletype = models.SampleType.objects.get(pk=sampletype_id)
+    sampletype = models.MissionSampleType.objects.get(pk=sampletype_id)
 
-    sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.filter(mission_id=mission_id)
+    sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
     dc_samples = models.DiscreteSampleValue.objects.filter(
         sample__bottle__event__mission_id=mission_id, sample__type_id=sampletype_id)
 
-    row_datatype = dc_samples.values_list("sample_datatype", flat=True).distinct().first()
+    row_datatype = dc_samples.values_list("datatype", flat=True).distinct().first()
     datatype = sampletype.datatype if sampletype.datatype else None
-    mission_datatype = None
-    if sampletype.mission_sample_types.filter(mission_id=mission_id).exists():
-        mission_datatype = sampletype.mission_sample_types.get(mission_id=mission_id).datatype
 
     # if no datatype is applied
     button_colour = 'btn-danger'
 
-    title = sampletype.long_name if sampletype.long_name else sampletype.short_name
-    if mission_datatype:
-        # if the datatype is applied at the 'mission' level
-        button_colour = 'btn-secondary'
-        title += f': {mission_datatype}'
-    elif datatype:
+    title = sampletype.long_name if sampletype.long_name else sampletype.name
+    if datatype:
         # if the datatype is applied at the 'standard'
-        button_colour = 'btn-info'
+        button_colour = 'btn-secondary'
         title += f': {datatype}'
     elif row_datatype:
         # if the datatype is applied at the mission level or row level
@@ -150,11 +141,11 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
                 button_colour = 'btn-primary'
 
     button = soup.new_tag("button")
-    button.string = f'{sampletype.short_name}'
+    button.string = f'{sampletype.name}'
     button.attrs['id'] = f'button_id_sample_type_details_{sampletype.pk}'
     button.attrs['class'] = 'btn btn-sm ' + button_colour
     button.attrs['style'] = 'width: 100%'
-    button.attrs['hx-get'] = reverse_lazy('core:mission_samples_sample_details', args=(mission_id, sampletype.pk,))
+    button.attrs['hx-get'] = reverse_lazy('core:sample_type_details', args=(sampletype.pk,))
     button.attrs['hx-target'] = "#sample_table"
     button.attrs['hx-push-url'] = 'true'
     button.attrs['title'] = title
@@ -165,8 +156,8 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
 def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
 
     enabled = False
-    sample_type = models.SampleType.objects.get(pk=sampletype_id)
-    if sample_type.datatype or sample_type.mission_sample_types.filter(mission_id=mission_id).exists():
+    sample_type = models.MissionSampleType.objects.get(pk=sampletype_id)
+    if sample_type.datatype:
         # a sample must have either a Standard level or Mision level data type to be uploadable.
         enabled = True
 
@@ -180,7 +171,7 @@ def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampl
                                           args=(mission_id, sampletype_id,))
 
     if enabled:
-        if models.BioChemUpload.objects.filter(mission_id=mission_id, type_id=sampletype_id).exists():
+        if models.BioChemUpload.objects.filter(type_id=sampletype_id).exists():
             check.attrs['name'] = 'remove_sensor'
             check.attrs['checked'] = 'checked'
         else:
@@ -192,7 +183,8 @@ def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampl
     return check
 
 
-class SampleDetails(views.MissionMixin, GenericDetailView, ):
+class SampleDetails(GenericDetailView):
+    model = models.Mission
     page_title = _("Mission Samples")
     template_name = "core/mission_samples.html"
 
@@ -209,14 +201,9 @@ class SampleDetails(views.MissionMixin, GenericDetailView, ):
 
         context['mission'] = self.object
         if 'sample_type_id' in self.kwargs:
-            sample_type = models.SampleType.objects.get(pk=self.kwargs['sample_type_id'])
+            sample_type = models.MissionSampleType.objects.get(pk=self.kwargs['sample_type_id'])
             context['sample_type'] = sample_type
             data_type_seq = sample_type.datatype
-
-            # if a mission specific biochem data type exists use that instead of the general sample type
-            mission_sample_type = self.object.mission_sample_types.filter(sample_type=sample_type)
-            if mission_sample_type.exists():
-                data_type_seq = mission_sample_type.first().datatype
 
             initial = {}
             initial['sample_type_id'] = sample_type.id
@@ -225,9 +212,6 @@ class SampleDetails(views.MissionMixin, GenericDetailView, ):
                 initial['data_type_code'] = data_type_seq.data_type_seq
 
             context['biochem_form'] = forms.BioChemDataType(initial=initial)
-        else:
-            context['bottle_form'] = core.form_btl_load.BottleLoadForm(mission_id=self.object.pk,
-                                                                       initial={'hide_loaded': "true"})
 
         return context
 
@@ -734,102 +718,6 @@ def delete_sample_config(request, **kwargs):
     return HttpResponse()
 
 
-def sample_upload_ctd(request, mission_id):
-    context = {}
-    context.update(csrf(request))
-
-    thread_name = "load_ctd_files"
-
-    if request.method == "GET":
-        if 'show_all' not in request.GET and 'file_name' in request.GET:
-            # We're going to throw up a loading alert to call the hx-post and clear the selection form off the page,
-            # then we'll swap in the Websocket connected dialog from the POST method to give feedback to the user
-            url = reverse_lazy('core:mission_samples_sample_upload_ctd', args=(mission_id,))
-            attrs = {
-                'component_id': "div_id_upload_ctd_load",
-                'alert_type': 'info',
-                'message': _("Loading"),
-                'hx-post': url,
-                'hx-trigger': 'load',
-                'hx-target': "#form_id_ctd_bottle_upload",
-                'hx-swap': 'innerHTML'
-            }
-            soup = forms.save_load_component(**attrs)
-            response = HttpResponse(soup)
-            return response
-
-        mission = models.Mission.objects.get(pk=mission_id)
-        bottle_dir = mission.bottle_directory
-        if 'bottle_dir' in request.GET:
-            bottle_dir = request.GET['bottle_dir']
-
-        initial_args = {'mission': mission_id, 'bottle_dir': bottle_dir}
-        if bottle_dir:
-            files = [f for f in os.listdir(bottle_dir) if f.upper().endswith('.BTL')]
-            if 'show_all' not in request.GET:
-                initial_args['show_some'] = True
-                loaded_files = [f.upper() for f in models.Sample.objects.filter(
-                    type__is_sensor=True,
-                    bottle__event__mission_id=mission_id).values_list('file', flat=True).distinct()]
-                files = [f for f in files if f.upper() not in loaded_files]
-                initial_args['show_some'] = True
-
-            files.sort(key=lambda fn: os.path.getmtime(os.path.join(bottle_dir, fn)))
-
-            initial_args['file_name'] = files
-
-        context['file_form'] = forms.BottleSelection(initial=initial_args)
-        html = render_block_to_string('core/partials/card_bottle_load_header.html', 'ctd_list', context=context)
-        response = HttpResponse(html)
-        response['HX-Trigger'] = 'update_samples, event_updated'
-
-        mission.bottle_directory = bottle_dir
-        mission.save()
-
-        return response
-    elif request.method == "POST":
-        bottle_dir = request.POST['bottle_dir']
-        files = request.POST.getlist('file_name')
-        mission = models.Mission.objects.get(pk=mission_id)
-
-        logger.info(views.sample_file_queue.empty())
-        for file in files:
-            views.sample_file_queue.put((mission, file,))
-
-        start = True
-        for thread in threading.enumerate():
-            if thread.name == thread_name:
-                start = False
-
-        if start:
-            Thread(target=views.load_ctd_files, name=thread_name, daemon=True, args=(mission,)).start()
-
-        context['object'] = mission
-
-        attrs = {
-            'component_id': "div_id_upload_ctd_load",
-            'alert_type': 'info',
-            'message': _("Loading"),
-            'hx-target': "#form_id_ctd_bottle_upload",
-            'hx-ext': "ws",
-            'ws-connect': "/ws/notifications/"
-        }
-        soup = forms.save_load_component(**attrs)
-        # add a message area for websockets
-        msg_div = soup.find(id="div_id_upload_ctd_load_message")
-        msg_div.string = ""
-
-        # The core.consumer.processing_elog_message() function is going to write output to a div
-        # with the 'status' id, we'll stick that in the loading alerts message area and bam! Instant notifications!
-        msg_div_status = soup.new_tag('div')
-        msg_div_status['id'] = 'status'
-        msg_div_status.string = _("Loading")
-        msg_div.append(msg_div_status)
-
-        response = HttpResponse(soup)
-        return response
-
-
 def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
     # if the th colspan is > 1 it's because there are replicates, the column should be split up
     # return the last column
@@ -852,7 +740,6 @@ def list_samples(request, **kwargs):
     context = {}
 
     mission_id = kwargs['mission_id']
-    sensor_id = kwargs['sensor_id'] if 'sensor_id' in kwargs else None
 
     page = int(request.GET['page'] if 'page' in request.GET else 0)
     page_limit = 50
@@ -861,82 +748,45 @@ def list_samples(request, **kwargs):
     soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
 
     mission = models.Mission.objects.get(pk=mission_id)
-    if sensor_id:
-        # unfortunately if a page doesn't contain columns for 1 or 2 replicates when there's more the
-        # HTML table that gets returned to the interface will be missing columns and it throws everything
-        # out of alignment. We'll get the replicate columns here and use that value to insert blank
-        # columns into the dataframe if a replicate column is missing from the query set.
-        replicates = models.DiscreteSampleValue.objects.filter(
-            sample__bottle__event__mission_id=mission_id,
-            sample__type__id=sensor_id).aggregate(Max('replicate'))['replicate__max']
-
-        queryset = models.Sample.objects.filter(
-            bottle__event__mission=mission,
-            type_id=sensor_id).order_by('bottle__bottle_id')[
+    bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
                    page_start:(page_start + page_limit)]
-        queryset = queryset.values(
-            'bottle__bottle_id',
-            'bottle__pressure',
-            'discrete_values__replicate',
-            'discrete_values__value',
-            'discrete_values__flag',
-            'discrete_values__sample_datatype',
-            'discrete_values__comment',
-        )
-        headings = ['Value', 'Flag', 'Datatype', 'Comments']
-        df = read_frame(queryset)
-        df.columns = ["Sample", "Pressure", "Replicate", ] + headings
-        df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
 
-        for j, column in enumerate(headings):
-            for i in range(1, replicates + 1):
-                col_index = (column, i,)
-                if col_index not in df.columns:
-                    index = j * replicates + i - 1
-                    if index < df.shape[1]:
-                        df.insert(index, col_index, np.nan)
-                    else:
-                        df[col_index] = np.nan
-        soup = format_sensor_table(request, df, mission_id, sensor_id)
-    else:
-        bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
-                       page_start:(page_start + page_limit)]
-        queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
-        queryset = queryset.order_by('bottle__bottle_id')
-        queryset = queryset.values(
-            'bottle__bottle_id',
-            'bottle__pressure',
-            'type__id',
-            'discrete_values__replicate',
-            'discrete_values__value',
-        )
-        df = read_frame(queryset)
-        df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
+    if not bottle_limit.exists():
+        # if there are no more bottles then we stop loading, otherwise weird things happen
+        return HttpResponse()
 
-        try:
-            sensors = models.SampleType.objects.filter(samples__bottle__event__mission=mission).distinct()
-            df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
-            # we want a column for every sensor and then a column for every replicate for every sensor
-            # for all sensors in the mission
-            for sensor in sensors:
-                # compute the maximum number of columns this sensor will require by figuring out th maximum number
-                # of replicate the sensor/sample has
-                replicate_count = sensor.samples.aggregate(replicates=Max('discrete_values__replicate'))
-                if replicate_count['replicates']:
-                    for i in range(0, replicate_count['replicates']):
-                        replicate = i + 1
-                        if not df.columns.isin([(sensor.pk, replicate)]).any():
-                            # if the replicate column doesn't currently have any values, insert a nan as a placeholder
-                            df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
+    queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
+    queryset = queryset.order_by('bottle__bottle_id')
+    queryset = queryset.values(
+        'bottle__bottle_id',
+        'bottle__pressure',
+        'type__id',
+        'discrete_values__replicate',
+        'discrete_values__value',
+    )
+    df = read_frame(queryset)
+    df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
 
-            df = df.reindex(sorted(df.columns), axis=1)
-            soup = format_all_sensor_table(df, mission_id)
-        except Exception as ex:
-            logger.exception(ex)
+    try:
+        sensors = mission.mission_sample_types.all()
+        df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+        # we want a column for every sensor and then a column for every replicate for every sensor
+        # for all sensors in the mission
+        for sensor in sensors:
+            # compute the maximum number of columns this sensor will require by figuring out th maximum number
+            # of replicate the sensor/sample has
+            replicate_count = sensor.samples.aggregate(replicates=Max('discrete_values__replicate'))
+            if replicate_count['replicates']:
+                for i in range(0, replicate_count['replicates']):
+                    replicate = i + 1
+                    if not df.columns.isin([(sensor.pk, replicate)]).any():
+                        # if the replicate column doesn't currently have any values, insert a nan as a placeholder
+                        df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
-    if not queryset.exists():
-        response = HttpResponse(soup)
-        return response
+        df = df.reindex(sorted(df.columns), axis=1)
+        soup = format_all_sensor_table(df, mission)
+    except Exception as ex:
+        logger.exception(ex)
 
     # add styles to the table so it's consistent with the rest of the application
     table = soup.find('table')
@@ -945,16 +795,16 @@ def list_samples(request, **kwargs):
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
-    args = (mission_id, sensor_id,) if sensor_id else (mission_id,)
     table_head = table.find('thead')
 
     table_body = table.find('tbody')
+    table_body.attrs['id'] = "tbody_id_sample_table"
 
-    last_tr = table_body.find_all('tr')[-1]
-    last_tr.attrs['hx-target'] = 'this'
+    last_tr = table_body.find_all('tr')[0]
+    last_tr.attrs['hx-target'] = '#tbody_id_sample_table'
     last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = reverse_lazy('core:mission_samples_sample_list', args=args) + f"?page={page + 1}"
-    last_tr.attrs['hx-swap'] = "afterend"
+    last_tr.attrs['hx-get'] = reverse_lazy('core:mission_samples_sample_list', args=(mission.pk,)) + f"?page={page + 1}"
+    last_tr.attrs['hx-swap'] = "beforeend"
 
     # finally, align all text in each column to the center of the cell
     tds = soup.find('table').find_all('td')
@@ -969,7 +819,7 @@ def list_samples(request, **kwargs):
     return response
 
 
-def format_all_sensor_table(df, mission_id):
+def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> BeautifulSoup:
     # start by replacing nan values with '---'
     df.fillna('---', inplace=True)
 
@@ -1033,7 +883,7 @@ def format_all_sensor_table(df, mission_id):
 
         sampletype_id = column.string
 
-        button = get_sensor_table_button(soup, mission_id, sampletype_id)
+        button = get_sensor_table_button(soup, mission.pk, sampletype_id)
 
         # clear the column string and add the button instead
         column.string = ''
@@ -1043,7 +893,7 @@ def format_all_sensor_table(df, mission_id):
         upload = soup.new_tag('th')
         upload.attrs = column.attrs
 
-        check = get_sensor_table_upload_checkbox(soup, mission_id, sampletype_id)
+        check = get_sensor_table_upload_checkbox(soup, mission.pk, sampletype_id)
         upload.append(check)
         upload_row.append(upload)
 
@@ -1051,111 +901,6 @@ def format_all_sensor_table(df, mission_id):
         column = column.find_next_sibling('th')
 
     return soup
-
-
-def format_sensor_table(request, df, mission_id, sensor_id):
-    # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
-
-    # start by replacing nan values with '---'
-    df.fillna('---', inplace=True)
-
-    # reformat the Datatype columns, which will be represented as floats, but we want them as integers
-    for i in range(1, df['Datatype'].shape[1] + 1):
-        df[('Datatype', i,)] = df[('Datatype', i)].astype('string')
-        df[('Datatype', i,)] = df[('Datatype', i,)].map(lambda x: int(float(x)) if x != '---' else x)
-
-    # convert the dataframe to an HTML table
-    html = '<div id="sample_table">' + df.to_html() + "</div>"
-
-    # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
-    soup = BeautifulSoup(html, 'html.parser')
-
-    # this will be a big table add scrolling
-    sample_table = soup.find(id="sample_table")
-    sample_table.attrs['class'] = "vertical-scrollbar"
-
-    # add a message area that will hold saving, loading, error alerts
-    msg_div = soup.new_tag("div")
-    msg_div.attrs['id'] = "div_id_sample_table_msg"
-    sample_table.insert(0, msg_div)
-
-    # delete the row with the 'replicates' labels
-    # soup.find("thead").find('tr').findNext('tr').decompose()
-
-    # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
-    # followed by the 'replicate' row that describes if this is a single, double, triple sample.
-
-    # We're going to flatten the headers down to one row then remove the others.
-
-    sensor_headers = soup.find("thead").find("tr")
-
-    # we now have two header rows. The first contains all the sensor/sample names. The second contains the "Sample"
-    # and "Pressure" labels. I want to copy the first two columns from the second header to the first two columns
-    # of the first header (because the labels might be translated) then delete the second row
-    replicate_header = soup.find('tr').findNext('tr')
-    if replicate_header:
-        replicate_header.decompose()
-
-    sensor_column = sensor_headers.find('th')
-    column = sensor_column.findNext('th')  # 'Value' column
-
-    # if the sensor_id is present then we want to show the specific details for this sensor/sample
-    sampletype = models.SampleType.objects.get(pk=sensor_id)
-    column.string = f'{sampletype.short_name}'
-
-    root = soup.findChildren()[0]
-
-    # create a button so the user can go back to viewing all loaded sensors/samples
-
-    upload_button = soup.new_tag('button')
-    if 'biochem_session' in request.session:
-        upload_button.attrs['class'] = 'btn btn-primary btn-sm'
-    else:
-        upload_button.attrs['class'] = 'btn btn-disabled btn-sm'
-
-    # The response to this should do a hx-swap-oob="#div_id_sample_table_msg"
-    # upload_button.attrs['hx-get'] = reverse_lazy('core:mission_samples_upload_bio_chem', args=(mission_id, sensor_id,))
-    # upload_button.attrs['hx-swap'] = 'none'
-    #
-    # upload_button_icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
-    # upload_button.append(upload_button_icon)
-
-    table = soup.find('table')
-    table.attrs['id'] = 'table_id_sample_table'
-    th = table.find('tr').find('th')
-    th.attrs['class'] = 'text-center'
-    th.append(upload_button)
-
-    # center all of the header text
-    while (th := th.findNext('th')):
-        th.attrs['class'] = 'text-center'
-        if th.string == 'Comments':
-            th.attrs['class'] += ' w-100'
-
-    root.append(table)
-
-    return soup
-
-
-def sample_delete(request, **kwargs):
-    mission = kwargs['mission_id']
-    sample_type = kwargs['sample_type_id']
-    if request.method == "POST":
-        models.Sample.objects.filter(type=sample_type).delete()
-
-        # return a loading dialog that will send the user back to the Mission Sample page
-        attrs = {
-            'component_id': "div_id_delete_samples",
-            'alert_type': 'info',
-            'message': _("Loading"),
-            'hx-get': reverse_lazy('core:mission_samples_sample_details', args=(mission,)),
-            'hx-trigger': 'load',
-            'hx-push-url': 'true'
-        }
-        soup = forms.save_load_component(**attrs)
-        return HttpResponse(soup)
-
-    return list_samples(request, mission_id=mission)
 
 
 def update_sample_type_row(request, **kwargs):
@@ -1176,8 +921,8 @@ def update_sample_type_row(request, **kwargs):
                                                                     sample__bottle__bottle_id__lte=end_sample,
                                                                     sample__type__id=sample_type_id, )
         for value in discrete_update:
-            value.sample_datatype = data_type
-        models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['sample_datatype'])
+            value.datatype = data_type
+        models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['datatype'])
 
         response = list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
         return response
@@ -1194,16 +939,9 @@ def update_sample_type_mission(request, **kwargs):
 
         data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
-        mission = models.Mission.objects.get(pk=mission_id)
-        sample_type = models.SampleType.objects.get(pk=sample_type_id)
-
-        mission_sample_type = None
-        if mission.mission_sample_types.filter(sample_type=sample_type).exists():
-            mission_sample_type = mission.mission_sample_types.get(sample_type=sample_type)
-            mission_sample_type.datatype = data_type
-        else:
-            mission_sample_type = models.MissionSampleType(mission=mission, sample_type=sample_type, datatype=data_type)
-        mission_sample_type.save()
+        sample_type = models.MissionSampleType.objects.get(pk=sample_type_id)
+        sample_type.datatype = data_type
+        sample_type.save()
 
         response = list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
         return response
@@ -1243,30 +981,6 @@ def update_sample_type(request, **kwargs):
         return HttpResponse(html)
 
 
-def choose_bottle_dir(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    mission = models.Mission.objects.get(pk=mission_id)
-
-    result = easygui.diropenbox(title="Choose BTL directory")
-    logger.info(result)
-    if result:
-        mission.bottle_directory = result
-        mission.save()
-
-    soup = BeautifulSoup("", 'html.parser')
-    input = soup.new_tag('input')
-    input.attrs['id'] = "input_id_bottle_dir"
-    input.attrs['class'] = "input-group-sm form-control form-control-sm"
-    input.attrs['type'] = "text"
-    input.attrs['name'] = "bottle_dir"
-    input.attrs['value'] = mission.bottle_directory
-    input.attrs['placeholder'] = _("Location of the.BTL /.ROS fiels to be loaded.")
-    input.attrs['hx-swap-oob'] = 'true'
-    soup.append(input)
-
-    return HttpResponse(soup)
-
-
 def add_sensor_to_upload(request, **kwargs):
     mission_id = kwargs['mission_id']
     sensor_id = kwargs['sensor_id']
@@ -1275,11 +989,11 @@ def add_sensor_to_upload(request, **kwargs):
         button = get_sensor_table_button(soup, mission_id, sensor_id)
         button.attrs['hx-swap-oob'] = 'true'
 
-        upload_sensors: QuerySet[models.BioChemUpload] = models.BioChemUpload.objects.filter(mission_id=mission_id)
+        upload_sensors: QuerySet[models.BioChemUpload] = models.BioChemUpload.objects.filter(type_id=sensor_id)
 
         if 'add_sensor' in request.POST:
             if not upload_sensors.filter(type_id=sensor_id).exists():
-                add_sensor = models.BioChemUpload(mission_id=mission_id, type_id=sensor_id)
+                add_sensor = models.BioChemUpload(type_id=sensor_id)
                 add_sensor.save()
         else:
             upload_sensors.filter(type_id=sensor_id).delete()
@@ -1299,7 +1013,7 @@ def add_sensor_to_upload(request, **kwargs):
     return Http404("You shouldn't be here")
 
 
-def get_all_discrete_upload_db_card(request, **kwargs):
+def biochem_upload_card(request, **kwargs):
     mission_id = kwargs['mission_id']
     upload_url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(mission_id,))
     download_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(mission_id,))
@@ -1311,17 +1025,13 @@ def get_all_discrete_upload_db_card(request, **kwargs):
 
 
 def sample_data_upload(mission: models.Mission, uploader: str):
-    sample_type_ids = models.BioChemUpload.objects.filter(mission=mission).values_list("type", flat=True).distinct()
-
     # clear previous errors if there were any from the last upload attempt
     models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
 
-    # validate that the checked off sensors/samples have a biochem datatypes
-    sample_types = models.SampleType.objects.filter(id__in=sample_type_ids)
-
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
-    errors = validation.validate_samples_for_biochem(mission=mission, sample_types=sample_types)
+    samples_types_for_upload = models.BioChemUpload.objects.filter(type__mission=mission)
+    errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
 
     if errors:
         # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
@@ -1490,7 +1200,7 @@ def download_samples(request, **kwargs):
 
         return HttpResponse(soup)
 
-    datatypes = models.BioChemUpload.objects.filter(mission=mission).values_list('type', flat=True).distinct()
+    datatypes = models.BioChemUpload.objects.filter(type__mission=mission).values_list('type', flat=True).distinct()
 
     discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
     discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
@@ -1546,8 +1256,7 @@ def download_samples(request, **kwargs):
 
 # ###### Mission Sample ###### #
 mission_sample_urls = [
-    # for testing the sample config form
-    path('mission/sample/test/<int:pk>/', SampleDetails.as_view()),
+    path('mission/sample/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
 
     # used to reload elements on the sample form if a GET htmx request
     path('sample_config/hx/', load_sample_config, name="mission_samples_load_sample_config"),
@@ -1568,16 +1277,7 @@ mission_sample_urls = [
 
     # ###### sample details ###### #
 
-    path('mission/sample/bottledir/<int:mission_id>/', choose_bottle_dir, name="mission_samples_choose_bottle_dir"),
-    path('mission/sample/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
-    path('mission/sample/<int:pk>/<int:sample_type_id>/', SampleDetails.as_view(),
-         name="mission_samples_sample_details"),
-    path('mission/sample/hx/ctd/<int:mission_id>/', sample_upload_ctd, name="mission_samples_sample_upload_ctd"),
-    path('mission/sample/hx/delete/<int:mission_id>/<int:sample_type_id>/', sample_delete,
-         name="mission_samples_sample_sample_delete"),
     path('mission/sample/hx/list/<int:mission_id>', list_samples, name="mission_samples_sample_list"),
-    path('mission/sample/hx/list/<int:mission_id>/<int:sensor_id>', list_samples,
-         name="mission_samples_sample_list"),
 
     path('mission/sample/hx/datatype/', update_sample_type, name="mission_samples_update_sample_type"),
     path('mission/sample/hx/datatype/row/', update_sample_type_row, name="mission_samples_update_sample_type_row"),
@@ -1585,8 +1285,8 @@ mission_sample_urls = [
          name="mission_samples_update_sample_type_mission"),
     path('mission/sample/hx/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload,
          name="mission_samples_add_sensor_to_upload"),
-    path('mission/sample/hx/upload/sensor/<int:mission_id>/', get_all_discrete_upload_db_card,
-         name="mission_samples_get_all_discrete_upload_db_card"),
+    path('mission/sample/hx/upload/sensor/<int:mission_id>/', biochem_upload_card,
+         name="mission_samples_biochem_upload_card"),
     path('mission/sample/hx/upload/biochem/<int:mission_id>/', upload_samples, name="mission_samples_upload_bio_chem"),
     path('mission/sample/hx/download/biochem/<int:mission_id>/', download_samples,
          name="mission_samples_download_bio_chem"),

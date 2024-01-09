@@ -18,6 +18,7 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.conf import settings
 from django.http import HttpResponse
+from django.template.context_processors import csrf
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
@@ -180,6 +181,27 @@ class BottleLoadForm(CollapsableCardForm):
 
             self.fields['files'].choices = [(file, file) for file in files]
             self.initial['files'] = [file for file in files]
+
+
+def bottle_load_card(request, **kwargs):
+    mission_id = kwargs['mission_id']
+
+    context = {}
+    context.update(csrf(request))
+
+    initial = {'hide_loaded': "true"}
+    if 'hide_loaded' in request.GET:
+        initial['hide_loaded'] = request.GET['hide_loaded']
+
+    bottle_load_form = BottleLoadForm(mission_id=mission_id, initial={'hide_loaded': "true"})
+    bottle_load_html = render_crispy_form(bottle_load_form, context=context)
+    bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
+
+    form_soup = BeautifulSoup(f'<form id="form_id_{bottle_load_form.get_card_name()}"></form>', 'html.parser')
+    form = form_soup.find('form')
+    form.append(bottle_load_soup)
+
+    return HttpResponse(form_soup)
 
 
 def load_ctd_files(mission):
@@ -387,7 +409,9 @@ def upload_btl_files(request, **kwargs):
 
 # ###### Mission Sample ###### #
 bottle_load_urls = [
-    path('mission/sample/bottleload/<int:mission_id>/', reload_files, name="form_btl_reload_files"),
-    path('mission/sample/bottleload/dir/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
-    path('mission/sample/bottleload/load/<int:mission_id>/', upload_btl_files, name="form_btl_upload_bottles"),
+    path('bottleload/card/<int:mission_id>/', bottle_load_card, name="form_btl_card"),
+
+    path('bottleload/<int:mission_id>/', reload_files, name="form_btl_reload_files"),
+    path('bottleload/dir/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
+    path('bottleload/load/<int:mission_id>/', upload_btl_files, name="form_btl_upload_bottles"),
 ]

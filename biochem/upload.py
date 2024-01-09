@@ -301,14 +301,8 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         event = bottle.event
         mission = event.mission
 
-        try:
-            bc_data_type = ds_sample.datatype
-        except ValueError as e:
-            msg = e.args[0]['message'] if 'message' in e.args[0] else _("Unknown Error")
-
-            err = core_models.Error(mission=mission, message=msg, type=core_models.ErrorType.biochem)
-            errors.append(err)
-            continue
+        # Use the row level datatype if provided other wise use the mission level datatype
+        bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
 
         existing_sample = False
         # some of the fields below may be the same as the current value if updating. When that happens

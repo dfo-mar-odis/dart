@@ -64,18 +64,10 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
             'hx-get': url,
             'hx-swap': 'none'
         }
-        html_css_class = "col-auto col-form-label me-2"
         db_select = Column(
-            Row(
-                Column(
-                    HTML(f'<label class="{html_css_class}" for="' + title_id + '">' + _("Biochem Database") + '</label>'),
-                    css_class="col-auto"
-                ),
-                Field('selected_database', template=self.field_template, **db_select_attributes,
-                      wrapper_class="col-auto"),
-                css_class='',
-                id=f"div_id_db_select_{self.card_name}",
-            ),
+            Field('selected_database', template=self.field_template, **db_select_attributes,
+                  wrapper_class="col-auto"),
+            id=f"div_id_db_select_{self.card_name}",
             css_class="col-auto"
         )
 
@@ -181,13 +173,13 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
     def get_card_header(self):
         header = super().get_card_header()
 
-        # fields[0] is the card-header, fields[1] is the second column
-        title_row = Row(self.get_db_select(), self.get_db_password(), self.get_upload(),
-                        css_class="mt-1")
-        if self.get_download_url():
-            title_row.fields.append(self.get_download())
+        header.fields[0].fields.append(self.get_db_select())
+        header.fields[0].fields.append(self.get_db_password())
+        header.fields[0].fields.append(self.get_upload())
 
-        header.fields[0].fields[1].fields[0].fields.append(title_row)
+        if self.get_download_url():
+            header.fields[0].fields.append(self.get_download())
+
         header.fields.append(self.get_alert_area())
         return header
 
@@ -251,7 +243,7 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
         if 'download_url' in kwargs:
             self.download_url = kwargs.pop('download_url')
 
-        super().__init__(*args, **kwargs, card_name="biochem_db_details")
+        super().__init__(*args, **kwargs, card_name="biochem_db_details", card_title=_("Biochem Database"))
 
         self.fields['selected_database'].label = False
         self.fields['db_password'].label = False

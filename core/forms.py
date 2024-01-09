@@ -465,7 +465,7 @@ class SampleTypeForm(forms.ModelForm):
                                       help_text=_("Filter the Datatype dropdown based on key terms"))
 
     class Meta:
-        model = models.SampleType
+        model = models.GlobalSampleType
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
@@ -700,7 +700,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout()
 
-        sample_type_choices = [(st.pk, st) for st in models.SampleType.objects.all()]
+        sample_type_choices = [(st.pk, st) for st in models.GlobalSampleType.objects.all()]
         sample_type_choices.insert(0, (None, ""))
         sample_type_choices.insert(0, (-1, "New Sample Type"))
         sample_type_choices.insert(0, (None, '---------'))

@@ -656,7 +656,7 @@ class TestSampleFileConfiguration(DartTestCase):
                                               'short_name': 'oxy', 'priority': 1, 'long_name': 'Oxygen'})
 
         # a new sample type should have been created
-        oxy_sample_type = core.models.SampleType.objects.get(short_name='oxy')
+        oxy_sample_type = core.models.GlobalSampleType.objects.get(short_name='oxy')
 
         soup = BeautifulSoup(response.content, 'html.parser')
         logger.debug(soup)
@@ -737,7 +737,7 @@ class TestSampleTypeCard(DartTestCase):
         url = reverse('core:sample_type_save')
         response = self.client.post(url, kwargs)
 
-        sample_type = core.models.SampleType.objects.filter(short_name='oxy')
+        sample_type = core.models.GlobalSampleType.objects.filter(short_name='oxy')
         self.assertTrue(sample_type.exists())
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -777,7 +777,7 @@ class TestSampleTypeCard(DartTestCase):
                                           'priority': sample_type.priority,
                                           'long_name': 'Oxygen2'})
 
-        sample_type_updated = core.models.SampleType.objects.filter(short_name='oxy')
+        sample_type_updated = core.models.GlobalSampleType.objects.filter(short_name='oxy')
         self.assertTrue(sample_type_updated.exists())
         self.assertEquals(sample_type_updated[0].long_name, 'Oxygen2')
 

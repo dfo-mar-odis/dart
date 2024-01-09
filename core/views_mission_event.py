@@ -388,19 +388,19 @@ def upload_elog(request, mission_id):
                         message_objects[elog.ParserType.MID].pop(mid)
 
             send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
-            elog.process_stations(message_objects[elog.ParserType.STATIONS])
+            elog.process_stations(mission, message_objects[elog.ParserType.STATIONS])
 
             send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
-            elog.process_instruments(message_objects[elog.ParserType.INSTRUMENTS])
+            elog.process_instruments(mission, message_objects[elog.ParserType.INSTRUMENTS])
 
             send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
-            errors += elog.process_events(message_objects[elog.ParserType.MID], mission)
+            errors += elog.process_events(mission, message_objects[elog.ParserType.MID])
 
             send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
-            errors += elog.process_attachments_actions(message_objects[elog.ParserType.MID], mission, file_name)
+            errors += elog.process_attachments_actions(mission, message_objects[elog.ParserType.MID], file_name)
 
             send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
-            errors += elog.process_variables(message_objects[elog.ParserType.MID], mission)
+            errors += elog.process_variables(mission, message_objects[elog.ParserType.MID])
 
             for error in errors:
                 file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
