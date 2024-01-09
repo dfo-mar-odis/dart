@@ -117,6 +117,8 @@ class InstrumentType(models.IntegerChoices):
 
 
 class Instrument(models.Model):
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='instruments',
+                                verbose_name=_("Mission"))
     name = models.CharField(max_length=50, verbose_name=_("Instrument"))
     type = models.IntegerField(verbose_name=_("Instrument Type"), default=999, choices=InstrumentType.choices)
 
@@ -124,16 +126,19 @@ class Instrument(models.Model):
         return f"{self.get_type_display()} - {self.name}"
 
     class Meta:
+        unique_together = ('mission', 'name',)
         ordering = ('type', 'name',)
 
 
 class Station(models.Model):
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='stations', verbose_name=_("Mission"))
     name = models.CharField(max_length=20, verbose_name=_("Station"))
 
     def __str__(self):
         return self.name
 
     class Meta:
+        unique_together = ('mission', 'name',)
         ordering = ('name',)
 
 
@@ -347,7 +352,10 @@ class InstrumentSensor(models.Model):
 # 50 times in the VariableField. Integers take up less space than strings. SimpleLookupName can also be used
 # later on to add bilingual support
 class VariableName(SimpleLookupName):
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='variables', verbose_name=_("Mission"))
+
     class Meta:
+        unique_together = ('mission', 'name')
         ordering = (Lower('name'),)
 
 

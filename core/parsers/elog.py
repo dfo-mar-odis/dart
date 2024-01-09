@@ -154,19 +154,19 @@ def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> di
     return message_objects
 
 
-def process_stations(station_queue: [str]) -> None:
+def process_stations(mission: core_models.Mission, station_queue: [str]) -> None:
     # create any stations on the stations queue that don't exist in the DB
     stations = []
 
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.all()
+    existing_stations = core_models.Station.objects.filter(mission=mission)
     for station in station_queue:
         stn = station.upper()
         if stn not in added_stations and not existing_stations.filter(name__iexact=stn).exists():
             added_stations.add(stn)
-            stations.append(core_models.Station(name=stn))
+            stations.append(core_models.Station(mission=mission, name=stn))
 
     core_models.Station.objects.bulk_create(stations)
 
@@ -211,24 +211,24 @@ def valid_sample_id(sample_id):
     return True
 
 
-def process_instruments(instrument_queue: [str]) -> None:
+def process_instruments(mission: core_models.Mission, instrument_queue: [str]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.all()
+    existing_instruments = core_models.Instrument.objects.filter(mission=mission)
     for instrument in instrument_queue:
         if instrument.upper() not in added_instruments and \
                 not existing_instruments.filter(name__iexact=instrument).exists():
             instrument_type = get_instrument_type(instrument_name=instrument)
-            instruments.append(core_models.Instrument(name=instrument, type=instrument_type))
+            instruments.append(core_models.Instrument(mission=mission, name=instrument, type=instrument_type))
             added_instruments.add(instrument.upper())
 
     core_models.Instrument.objects.bulk_create(instruments)
 
 
-def process_events(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [tuple]:
+def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
     errors = []
 
     elog_configuration = core_models.ElogConfig.get_default_config(mission)
@@ -378,7 +378,7 @@ def map_action_text(text: str) -> str:
     return text
 
 
-def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.Mission, file_name: str) -> [tuple]:
+def process_attachments_actions(mission: core_models.Mission, mid_dictionary_buffer: {}, file_name: str) -> [tuple]:
     errors = []
 
     existing_events = mission.events.all()
@@ -509,11 +509,11 @@ def process_attachments_actions(mid_dictionary_buffer: {}, mission: core_models.
     return errors
 
 
-def get_create_and_update_variables(action, buffer) -> [[], []]:
+def get_create_and_update_variables(mission: core_models.Mission, action: core_models.Action, buffer) -> [[], []]:
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.get_or_create(name=key)[0]
+        variable = core_models.VariableName.objects.get_or_create(mission=mission, name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)
@@ -529,7 +529,7 @@ def get_create_and_update_variables(action, buffer) -> [[], []]:
 # Anything that wasn't consumed by the other process methods will be considered a variable and attached to
 # the action it falls under. This way users can still query an action for a variable even if DART doesn't do
 # anything with it.
-def process_variables(mid_dictionary_buffer: {}, mission: core_models.Mission) -> [tuple]:
+def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
     errors = []
 
     fields_create = []
@@ -583,7 +583,7 @@ def process_variables(mid_dictionary_buffer: {}, mission: core_models.Mission) -
 
             action = existing_actions.get(mid=mid)
             # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-            variables_arrays = get_create_and_update_variables(action, buffer)
+            variables_arrays = get_create_and_update_variables(mission, action, buffer)
             fields_create += variables_arrays[0]
             fields_update += variables_arrays[1]
         except KeyError as ex:

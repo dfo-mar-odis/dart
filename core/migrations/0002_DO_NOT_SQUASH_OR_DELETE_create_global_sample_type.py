@@ -49,6 +49,23 @@ def reverse_mission_sampletype_delete(apps, schema_editor):
     write_bulk_update(MissionSampleType, bulk_update_list, fields)
 
 
+def reverse_biochemupload_mission_delete(apps, schema_editor):
+    MissionSampleType = apps.get_model('core', 'MissionSampleType')
+    BioChemUpload = apps.get_model('core', 'BioChemUpload')
+    sample_types = {st.name: st.mission for st in MissionSampleType.objects.all()}
+
+    fields = ["mission"]
+    bulk_update_list = []
+    for upload in BioChemUpload.objects.all().iterator():
+        upload.mission = sample_types[upload.type.short_name]
+        bulk_update_list.append(upload)
+
+        if write_bulk_update(BioChemUpload, bulk_update_list, fields):
+            bulk_update_list = []
+
+    write_bulk_update(BioChemUpload, bulk_update_list, fields)
+
+
 def update_missionsampletype(model, apps, get_mission):
     MissionSampleType = apps.get_model('core', 'MissionSampleType')
     sample_types = {st.name: st for st in MissionSampleType.objects.all()}
@@ -99,18 +116,22 @@ def reverse_sampletype_delete(model, apps):
 
     fields = ["type"]
     bulk_update_list = []
+    new_gst = {}
     for obj in model.objects.all().iterator():
-        if obj.missionsampletype.name not in sample_types.keys():
-            mission_type = obj.missionsampletype
+        mission_type = obj.missionsampletype
+        if mission_type.name in sample_types.keys():
+            obj.type = sample_types[mission_type.name]
+        elif mission_type.name in new_gst.keys():
+            obj.type = new_gst[mission_type.name]
+        else:
             gst = GlobalSampleType(short_name=mission_type.name, long_name=mission_type.long_name,
                                    priority=mission_type.priority, is_sensor=mission_type.is_sensor,
                                    datatype=mission_type.datatype)
             with transaction.atomic():
                 gst.save()
 
+            new_gst[mission_type.name] = gst
             obj.type = gst
-        else:
-            obj.type = sample_types[obj.missionsampletype.name]
 
         bulk_update_list.append(obj)
 
@@ -186,6 +207,15 @@ class Migration(migrations.Migration):
             model_name='missionsampletype',
             name='sample_type',
         ),
+
+        migrations.AlterField(
+            model_name='biochemupload',
+            name='mission',
+            field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE,
+                                    related_name='uploads', to='core.mission',
+                                    verbose_name='Mission'),
+        ),
+        migrations.RunPython(empty_method, reverse_biochemupload_mission_delete),
         migrations.RemoveField(
             model_name='biochemupload',
             name='mission',
