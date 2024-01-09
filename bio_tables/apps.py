@@ -18,7 +18,7 @@ class BioTablesAppConf(AppConfig):
     name = 'bio_tables'
 
     def ready(self):
-        if 'runserver' not in sys.argv:
+        if 'runserver' not in sys.argv and 'daphne' not in sys.argv:
             # if runserver is not in the system args then we don't want to load fixtures
             return
 
