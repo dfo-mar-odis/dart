@@ -32,11 +32,11 @@ if (%dart_version%==%update_version%) goto start_server
 echo "Updating Python Libraries, this may take several minutes"
 python -m pip install -r .\requirements.txt >> logs/start_dart.log
 
-echo "Collecting static files, this may take a moment"
-python .\manage.py collectstatic --noinput
-
 :start_server
 echo "Creating/Updating local database"
 python .\manage.py migrate >> logs/start_dart.log
+
+echo "Collecting static files, this may take a moment"
+python .\manage.py collectstatic --noinput
 
 call server.bat
