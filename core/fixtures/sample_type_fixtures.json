@@ -461,7 +461,6 @@
         "value_field": "o2_concentration(ml/l)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "comments",
         "allow_blank": false,
         "allow_replicate": true
@@ -478,7 +477,6 @@
         "value_field": "calculated salinity",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "comments",
         "allow_blank": false,
         "allow_replicate": true
@@ -495,7 +493,6 @@
         "value_field": "mean c",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": false
@@ -512,7 +509,6 @@
         "value_field": "mean p",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": false
@@ -529,7 +525,6 @@
         "value_field": "nitrate",
         "tab": 0,
         "flag_field": "nitrate_qc",
-        "replicate_field": "",
         "comment_field": "comment",
         "allow_blank": false,
         "allow_replicate": true
@@ -546,7 +541,6 @@
         "value_field": "nitrite",
         "tab": 0,
         "flag_field": "nitrite_qc",
-        "replicate_field": "",
         "comment_field": "comment",
         "allow_blank": false,
         "allow_replicate": true
@@ -563,7 +557,6 @@
         "value_field": "phosphate",
         "tab": 0,
         "flag_field": "phosphate_qc",
-        "replicate_field": "",
         "comment_field": "comment",
         "allow_blank": false,
         "allow_replicate": true
@@ -580,7 +573,6 @@
         "value_field": "silicate",
         "tab": 0,
         "flag_field": "silicate_qc",
-        "replicate_field": "",
         "comment_field": "comment",
         "allow_blank": false,
         "allow_replicate": true
@@ -597,7 +589,6 @@
         "value_field": "ammonium",
         "tab": 0,
         "flag_field": "ammonium_qc",
-        "replicate_field": "",
         "comment_field": "comment",
         "allow_blank": false,
         "allow_replicate": true
@@ -614,7 +605,6 @@
         "value_field": "carbon(micrograms)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -631,7 +621,6 @@
         "value_field": "nitrogen(micrograms)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -648,7 +637,6 @@
         "value_field": "c/l(micrograms/litre)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -665,7 +653,6 @@
         "value_field": "n/l(micrograms/litre)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -682,7 +669,6 @@
         "value_field": "acarot",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -699,7 +685,6 @@
         "value_field": "allox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -716,7 +701,6 @@
         "value_field": "astax",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -733,7 +717,6 @@
         "value_field": "bcarot",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -750,7 +733,6 @@
         "value_field": "but19",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -767,7 +749,6 @@
         "value_field": "butlike",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -784,7 +765,6 @@
         "value_field": "hplchla",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -801,7 +781,6 @@
         "value_field": "chlb",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -818,7 +797,6 @@
         "value_field": "chlc12",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -835,7 +813,6 @@
         "value_field": "chlc3",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -852,7 +829,6 @@
         "value_field": "chlidea",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -869,7 +845,6 @@
         "value_field": "diadinox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -886,7 +861,6 @@
         "value_field": "diatox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -903,7 +877,6 @@
         "value_field": "fucox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -920,7 +893,6 @@
         "value_field": "hex19",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -937,7 +909,6 @@
         "value_field": "hexlike",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -954,7 +925,6 @@
         "value_field": "hexlike2",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -971,7 +941,6 @@
         "value_field": "perid",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -988,7 +957,6 @@
         "value_field": "hplcphae",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1005,7 +973,6 @@
         "value_field": "prasinox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1022,7 +989,6 @@
         "value_field": "violax",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1039,7 +1005,6 @@
         "value_field": "zea",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1056,7 +1021,6 @@
         "value_field": "o2_concentration(ml/l)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "comments",
         "allow_blank": false,
         "allow_replicate": true
@@ -1073,7 +1037,6 @@
         "value_field": "calculated salinity",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "comments",
         "allow_blank": false,
         "allow_replicate": true
@@ -1090,7 +1053,6 @@
         "value_field": "mean c",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": false
@@ -1107,7 +1069,6 @@
         "value_field": "mean p",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": false
@@ -1124,7 +1085,6 @@
         "value_field": "nitrate",
         "tab": 0,
         "flag_field": "nitrate_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1141,7 +1101,6 @@
         "value_field": "nitrite",
         "tab": 0,
         "flag_field": "nitrite_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1158,7 +1117,6 @@
         "value_field": "phosphate",
         "tab": 0,
         "flag_field": "phosphate_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1175,7 +1133,6 @@
         "value_field": "silicate",
         "tab": 0,
         "flag_field": "silicste_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1192,7 +1149,6 @@
         "value_field": "ammonium",
         "tab": 0,
         "flag_field": "ammonium_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1209,7 +1165,6 @@
         "value_field": "carbon(micrograms)",
         "tab": 0,
         "flag_field": "poc_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1226,7 +1181,6 @@
         "value_field": "nitrogen(micrograms)",
         "tab": 0,
         "flag_field": "pon_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1243,7 +1197,6 @@
         "value_field": "c/l(micrograms/litre)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1260,7 +1213,6 @@
         "value_field": "n/l(micrograms/litre)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1277,7 +1229,6 @@
         "value_field": "o2_concentration(ml/l)",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "comments",
         "allow_blank": false,
         "allow_replicate": true
@@ -1294,7 +1245,6 @@
         "value_field": "chl.",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1311,7 +1261,6 @@
         "value_field": "phae.",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1328,7 +1277,6 @@
         "value_field": "carbon(micrograms)",
         "tab": 0,
         "flag_field": "poc_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1345,7 +1293,6 @@
         "value_field": "nitrogen(micrograms)",
         "tab": 0,
         "flag_field": "pon_qc",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1362,7 +1309,6 @@
         "value_field": "c/l(micrograms/litre)",
         "tab": 0,
         "flag_field": "poc_qc.1",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1379,7 +1325,6 @@
         "value_field": "n/l(micrograms/litre)",
         "tab": 0,
         "flag_field": "pon_qc.1",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": true,
         "allow_replicate": true
@@ -1396,7 +1341,6 @@
         "value_field": "acarot",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1413,7 +1357,6 @@
         "value_field": "allox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1430,7 +1373,6 @@
         "value_field": "astax",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1447,7 +1389,6 @@
         "value_field": "bcarot",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1464,7 +1405,6 @@
         "value_field": "but19",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1481,7 +1421,6 @@
         "value_field": "butlike",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1498,7 +1437,6 @@
         "value_field": "hplchla",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1515,7 +1453,6 @@
         "value_field": "chlb",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1532,7 +1469,6 @@
         "value_field": "chlc12",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1549,7 +1485,6 @@
         "value_field": "chlc3",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1566,7 +1501,6 @@
         "value_field": "chlidea",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1583,7 +1517,6 @@
         "value_field": "diadinox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1600,7 +1533,6 @@
         "value_field": "diatox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1617,7 +1549,6 @@
         "value_field": "fucox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1634,7 +1565,6 @@
         "value_field": "hex19",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1651,7 +1581,6 @@
         "value_field": "hexlike",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1668,7 +1597,6 @@
         "value_field": "hexlike2",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1685,7 +1613,6 @@
         "value_field": "perid",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1702,7 +1629,6 @@
         "value_field": "hplcphae",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1719,7 +1645,6 @@
         "value_field": "prasinox",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1736,7 +1661,6 @@
         "value_field": "violax",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1753,7 +1677,6 @@
         "value_field": "zea",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1770,7 +1693,6 @@
         "value_field": "f12_pmol_L",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
@@ -1787,7 +1709,6 @@
         "value_field": "sf6_fmol_L",
         "tab": 0,
         "flag_field": "",
-        "replicate_field": "",
         "comment_field": "",
         "allow_blank": false,
         "allow_replicate": true
