@@ -190,17 +190,6 @@ def get_instrument_type(instrument_name: str) -> core_models.InstrumentType:
     return core_models.InstrumentType.other
 
 
-def get_instrument(instrument_name: str) -> core_models.Instrument:
-    # this will be faster if instruments were pre-processed and created in bulk, otherwise they'll have to be added
-    # one at a time and it will be very slow
-    instruments = core_models.Instrument.objects.filter(name__iexact=instrument_name)
-    if instruments.exists():
-        return instruments[0]
-
-    process_instruments([instrument_name])
-    return core_models.Instrument.objects.get(name=instrument_name)
-
-
 # sample id is valid if it's None or a number.
 def valid_sample_id(sample_id):
     id = sample_id.strip() if sample_id else None

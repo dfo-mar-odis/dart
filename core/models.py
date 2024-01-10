@@ -419,6 +419,21 @@ class GlobalSampleType(models.Model):
     class Meta:
         ordering = ('is_sensor', 'short_name')
 
+    def get_mission_sample_type(self, mission: Mission):
+        mission_sample_type = mission.mission_sample_types.filter(name=self.short_name)
+        if not mission_sample_type.exists():
+            mission_sample_type = MissionSampleType(mission=mission,
+                                                    name=self.short_name,
+                                                    long_name=self.long_name,
+                                                    priority=self.priority,
+                                                    is_sensor=self.is_sensor,
+                                                    datatype=self.datatype)
+            mission_sample_type.save()
+        else:
+            mission_sample_type = mission_sample_type.first()
+
+        return mission_sample_type
+
     def __str__(self):
         label = self.short_name + (f" - {self.long_name}" if self.long_name else "")
         label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
@@ -500,7 +515,8 @@ class MissionSampleConfig(models.Model):
 # track the data per-mission and let the user know if a sample has been uploaded, was modified and needs
 # to be re-uploaded, or hasn't been loaded yet.
 class BioChemUpload(models.Model):
-    type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='uploads')
+    type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE,
+                             related_name='uploads')
 
     upload_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
                                        help_text=_("The last time this sensor/sample was uploaded to biochem"))
@@ -515,7 +531,8 @@ class BioChemUpload(models.Model):
 # track the file data for the sensor was loaded from
 class Sample(models.Model):
     bottle = models.ForeignKey(Bottle, verbose_name=_("Bottle"), on_delete=models.CASCADE, related_name='samples')
-    type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE, related_name='samples')
+    type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE,
+                             related_name='samples')
 
     file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
 

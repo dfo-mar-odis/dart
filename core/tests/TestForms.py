@@ -55,32 +55,20 @@ class TestMissionSamplesForm(DartTestCase):
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        upload_form = soup.find(id="form_id_bottle_load")
+        upload_form = soup.find(id="id_form_load_samples")
         self.assertIsNotNone(upload_form)
-
-    def test_get_btl_list(self):
-        # provided a directory a get request to sample_upload_ctd should return a form
-        # with a list of files that can be uploaded when selected.
-        url = reverse('core:mission_samples_sample_upload_ctd', args=(self.mission.id,))
-        dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
-
-        response = self.client.get(url, {"bottle_dir": dir})
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        file_selection = soup.find(id="id_file_name")
-        self.assertIsNotNone(file_selection)
 
     def test_event_upload_selected(self):
         # Upon selecting files and clicking the submit button a get request should be made to
         # sample_upload_ctd that will return a loading dialog that will make a post request
         # to sample_upload_ctd with a websocket on it.
-        url = reverse('core:mission_samples_sample_upload_ctd', args=(self.mission.id,))
+        url = reverse('core:form_btl_upload_bottles', args=(self.mission.id,))
 
         dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
 
         response = self.client.get(url, {"bottle_dir": dir, "file_name": ['JC243a001.btl', 'JC243a006.btl']})
         soup = BeautifulSoup(response.content, 'html.parser')
-        div_load_alert = soup.find(id='div_id_upload_ctd_load')
+        div_load_alert = soup.find(id='load_ctd_bottle')
 
         self.assertIsNotNone(div_load_alert)
         self.assertIn('hx-post', div_load_alert.attrs)
@@ -314,7 +302,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # with the 'core/partials/card_sample_config.html' html to be swapped into the
         # #div_id_loaded_samples_list section of the 'core/partials/form_sample_config.html' template
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name='oxy',
             long_name='Oxygen'
         )
@@ -350,7 +338,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # return an empty 'div_id_sample_type_holder' element to clear the 'loading' alert and the
         # 'div_id_loaded_samples_list' to swap in the list of SampleTypeLoadForms
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -389,7 +377,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # if the new_sample_config url contains an argument with a 'sample_type' id the form should load with the
         # existing config.
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -421,7 +409,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # if the new_sample_config url contains an argument with a 'config_id' the form should load with the
         # existing config and pass back a saving message pointing to the "sample_type/hx/update/<int:config_id>/" url
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -455,7 +443,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # if the new_sample_config url contains an argument with a 'config_id' the form should load with the
         # existing config and pass back a saving message pointing to the "sample_type/hx/save/" url
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -489,7 +477,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # if the new_sample_config url contains an argument with a 'sample_type' id the form should load with the
         # existing config.
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -522,7 +510,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # clicking the load button should add a loading alert to the SampleTypeLoadForm message area
         # to indicate that the file is being loaded.
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -557,7 +545,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # that should be posted in the SampleTypeLoadForm's message area, and the folder icon should
         # appear with the btn-warning class on it
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name="oxy",
             long_name="Oxygen",
         )
@@ -626,7 +614,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # with the initial sample_type set is returned and the div_id_sample_type dropdown
         # is then swapped back in
 
-        oxy_sample_type = core_factory.SampleTypeFactory(
+        oxy_sample_type = core_factory.GlobalSampleTypeFactory(
             short_name='oxy',
             long_name='Oxygen'
         )
@@ -677,7 +665,7 @@ class TestSampleTypeCard(DartTestCase):
         # given a sample type id of an existing sample type the 'core:sample_type_load' url
         # should return a 'core/partials/card_sample_type.html' template
 
-        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
+        sample_type = core_factory.GlobalSampleTypeFactory(short_name='oxy', long_name="Oxygen")
 
         url = reverse('core:sample_type_load', args=(sample_type.pk,))
 
@@ -694,7 +682,8 @@ class TestSampleTypeCard(DartTestCase):
     # on failure a message will be swapped in describing why the sample type can't be deleted
     def test_delete_sample_type_success(self):
 
-        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
+        mission = core_factory.MissionFactory()
+        sample_type = core_factory.MissionSampleTypeFactory(mission=mission, name='oxy', long_name="Oxygen")
 
         url = reverse('core:sample_type_delete', args=(sample_type.pk,))
 
@@ -706,7 +695,7 @@ class TestSampleTypeCard(DartTestCase):
     def test_delete_sample_type_fail(self):
         # if there are missions that have samples that are using this sample type, it should not be deleted
         # and the user should get back a message saying why.
-        oxy_sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name="Oxygen")
+        oxy_sample_type = core_factory.MissionSampleTypeFactory(name='oxy', long_name="Oxygen")
 
         core_factory.SampleFactory(type=oxy_sample_type)
 
@@ -752,7 +741,7 @@ class TestSampleTypeCard(DartTestCase):
         # provided a sample_type.pk to the 'core:sample_type_edit' url a SampleTypeForm should be returned
         # populated with the sample_type details
 
-        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name='Oxygen')
+        sample_type = core_factory.GlobalSampleTypeFactory(short_name='oxy', long_name='Oxygen')
 
         url = reverse('core:sample_type_edit', args=(sample_type.pk,))
 
@@ -769,7 +758,7 @@ class TestSampleTypeCard(DartTestCase):
 
     def test_save_update_sample_type(self):
         # provided an existing sample type with updated post arguments the sample_type should be updated
-        sample_type = core_factory.SampleTypeFactory(short_name='oxy', long_name='Oxygen')
+        sample_type = core_factory.GlobalSampleTypeFactory(short_name='oxy', long_name='Oxygen')
 
         url = reverse('core:sample_type_save', args=(sample_type.pk,))
 
