@@ -274,7 +274,7 @@ class TestCTDParser(DartTestCase):
         self.assertEquals(len(errors), 0)
 
         bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
-        self.assertEquals(bottle.pressure, updated_pressure)
+        self.assertEquals(float(bottle.pressure), updated_pressure)
 
     def test_process_bottles_validation(self):
         # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
@@ -352,8 +352,8 @@ class TestSampleCSVParser(DartTestCase):
         self.file_name = "sample_oxy.csv"
         self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)
 
-        self.oxy_sample_type = core_models.GlobalSampleType = core_factory.SampleTypeFactory(short_name='oxy',
-                                                                                             long_name="Oxygen")
+        self.oxy_sample_type: core_models.GlobalSampleType = core_factory.GlobalSampleTypeFactory(
+            short_name='oxy', long_name="Oxygen")
 
         self.oxy_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
             sample_type=self.oxy_sample_type, file_type='csv', skip=9, tab=0,
@@ -363,8 +363,8 @@ class TestSampleCSVParser(DartTestCase):
         self.mission_oxy_file_settings = core_models.MissionSampleConfig = core_factory.MissionSampleConfig(
             mission=self.mission, config=self.oxy_file_settings
         )
-        self.salt_sample_type = core_models.GlobalSampleType = core_factory.SampleTypeFactory(short_name='salts',
-                                                                                              long_name="Salinity")
+        self.salt_sample_type: core_models.GlobalSampleType = core_factory.GlobalSampleTypeFactory(
+            short_name='salts', long_name="Salinity")
 
         self.salt_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
             sample_type=self.salt_sample_type, file_type='xlsx', skip=1, tab=0,
@@ -377,7 +377,7 @@ class TestSampleCSVParser(DartTestCase):
         bottle = core_factory.BottleFactory(event__mission=self.mission, bottle_id=495271)
         self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
 
-        sample_type = self.oxy_file_settings.sample_type
+        sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
 
         core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
 
@@ -404,7 +404,7 @@ class TestSampleCSVParser(DartTestCase):
         bottle = core_factory.BottleFactory(event=self.ctd_event, bottle_id=495271)
         self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
 
-        sample_type = self.oxy_sample_type
+        sample_type = self.oxy_sample_type.get_mission_sample_type(self.mission)
 
         sample = core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
         core_factory.DiscreteValueFactory(sample=sample, replicate=1, value=0.001, comment="some comment")
@@ -439,7 +439,8 @@ class TestSampleCSVParser(DartTestCase):
 
         bottle_id = 495600
         bottle = core_factory.BottleFactory(bottle_id=bottle_id)
-        sample = core_factory.SampleFactory(bottle=bottle, type=self.oxy_file_settings.sample_type)
+        sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
+        sample = core_factory.SampleFactory(bottle=bottle, type=sample_type)
         core_factory.DiscreteValueFactory(sample=sample)
 
         data = {
@@ -594,7 +595,9 @@ class TestSampleCSVParser(DartTestCase):
         bottle_with_replicate = bottles.get(bottle_id=495271)
         self.assertIsNotNone(bottle_with_replicate)
 
-        sample = bottle_with_replicate.samples.get(type=self.oxy_file_settings.sample_type)
+        sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
+
+        sample = bottle_with_replicate.samples.get(type=sample_type)
         self.assertIsNotNone(sample)
 
         dv_value = sample.discrete_values.get(replicate=1).value
@@ -607,7 +610,7 @@ class TestSampleCSVParser(DartTestCase):
         bottle_with_comment = bottles.get(bottle_id=495600)
         self.assertIsNotNone(bottle_with_comment)
 
-        sample = bottle_with_comment.samples.get(type=self.oxy_file_settings.sample_type)
+        sample = bottle_with_comment.samples.get(type=sample_type)
         self.assertIsNotNone(sample)
 
         dv_value = sample.discrete_values.get(replicate=1).value
@@ -747,7 +750,7 @@ class TestElogParser(DartTestCase):
         for station in stations:
             self.assertFalse(core_models.Station.objects.filter(name__iexact=station).exists())
 
-        elog.process_stations(stations)
+        elog.process_stations(self.mission, stations)
 
         for station in stations:
             self.assertTrue(core_models.Station.objects.filter(name__iexact=station).exists())
@@ -766,27 +769,6 @@ class TestElogParser(DartTestCase):
             instrument_type = elog.get_instrument_type(instrument[0])
             self.assertEquals(instrument_type, instrument[1], f'{instrument[0]} should be of type {instrument[1].name}')
 
-    def test_get_instrument(self):
-        instruments = [
-            ('ctd', core_models.InstrumentType.ctd),
-            ('RingNet', core_models.InstrumentType.net),
-            ('Viking Buoy', core_models.InstrumentType.buoy),
-        ]
-
-        for instrument in instruments:
-            # instrument shouldn't exist
-            self.assertFalse(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
-
-            db_instrument = elog.get_instrument(instrument[0])
-            self.assertEquals(db_instrument.name, instrument[0])
-            self.assertEquals(db_instrument.type, instrument[1])
-
-            # instrument should exist
-            self.assertTrue(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
-
-            # and it should be of type xxx
-            self.assertEquals(core_models.Instrument.objects.get(name__iexact=instrument[0]).type, instrument[1])
-
     def test_process_instruments(self):
         instruments = [
             ('ctd', core_models.InstrumentType.ctd),
@@ -799,7 +781,7 @@ class TestElogParser(DartTestCase):
         for instrument in instruments:
             self.assertFalse(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
 
-        elog.process_instruments([instrument[0] for instrument in instruments])
+        elog.process_instruments(self.mission, [instrument[0] for instrument in instruments])
 
         for instrument in instruments:
             self.assertTrue(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
@@ -828,7 +810,7 @@ class TestElogParser(DartTestCase):
 
         events = core_models.Event.objects.filter(mission=self.mission)
         self.assertFalse(events.exists())
-        errors = elog.process_events(buffer, self.mission)
+        errors = elog.process_events(self.mission, buffer)
 
         self.assertEquals(len(errors), 0)
 
@@ -854,7 +836,7 @@ class TestElogParser(DartTestCase):
             }
         }
 
-        errors = elog.process_events(buffer, self.mission)
+        errors = elog.process_events(self.mission, buffer)
         self.assertEquals(len(errors), 1)
 
         error = errors[0]
@@ -886,7 +868,7 @@ class TestElogParser(DartTestCase):
 
         core_factory.StationFactory(name=expected_station)
 
-        errors = elog.process_events(buffer, self.mission)
+        errors = elog.process_events(self.mission, buffer)
         self.assertEquals(len(errors), 1)
 
         error = errors[0]
@@ -957,7 +939,7 @@ class TestElogParser(DartTestCase):
         station = core_factory.StationFactory(name=expected_station)
         core_factory.CTDEventFactory(mission=self.mission, event_id=expected_event_id, station=station)
 
-        errors = elog.process_attachments_actions(buffer, self.mission, expected_file_name)
+        errors = elog.process_attachments_actions(self.mission, buffer, expected_file_name)
         self.assertEquals(len(errors), 0)
 
         event = core_models.Event.objects.get(event_id=expected_event_id)

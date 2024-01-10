@@ -231,9 +231,10 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
         value_field = sample_config.value_field
         flag_field = sample_config.flag_field
         comment_field = sample_config.comment_field
-        replicate_field = sample_config.replicate_field
 
         sample_type = sample_config.sample_type
+        mission_sample_type = sample_type.get_mission_sample_type(mission)
+
         current_sample = None
         for row in dataframe.iterrows():
             replicate = 1  # All samples will have at least one 'replicate'
@@ -250,8 +251,8 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
 
             bottle = bottles[0]
 
-            db_sample = core_models.Sample(bottle=bottle, type=sample_type, file=file_name)
-            if (existing_sample := existing_samples.filter(bottle=bottle, type=sample_type)).exists():
+            db_sample = core_models.Sample(bottle=bottle, type=mission_sample_type, file=file_name)
+            if (existing_sample := existing_samples.filter(bottle=bottle, type=mission_sample_type)).exists():
                 # if the sample exists then we want to update it. Not create a new one
                 db_sample = existing_sample[0]
                 update_samples['fields'].add(updated_value(db_sample, 'file', file_name))
@@ -266,10 +267,7 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
             else:
                 create_samples[bottle.bottle_id] = db_sample
 
-            if replicate_field:
-                replicate = row[1][replicate_field]
-            elif replicate_id_field:
-                replicate = row[1][replicate_id_field]
+            replicate = row[1][replicate_id_field]
 
             # if replicates aren't allowed on this datatype then there should be an error here if the
             # replicate values is greater than 1

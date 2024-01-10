@@ -666,8 +666,12 @@ def load_samples(request, **kwargs):
             # once loaded apply the default sample type as a mission sample type so that if the default type is ever
             # changed it won't affect the data type for this mission
             sample_type = mission_sample_config.config.sample_type
-            if sample_type.datatype and not mission.mission_sample_types.filter(sample_type=sample_type).exists():
-                mst = models.MissionSampleType(mission=mission, sample_type=sample_type,
+            if sample_type.datatype and not mission.mission_sample_types.filter(name=sample_type.short_name).exists():
+                mst = models.MissionSampleType(mission=mission,
+                                               name=sample_type.short_name,
+                                               long_name=sample_type.long_name,
+                                               priority=sample_type.priority,
+                                               is_sensor=sample_type.is_sensor,
                                                datatype=sample_type.datatype)
                 mst.save()
 

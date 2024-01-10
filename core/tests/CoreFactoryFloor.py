@@ -1,4 +1,5 @@
 import datetime
+from decimal import Decimal
 
 import factory
 import random
@@ -35,6 +36,7 @@ class StationFactory(DjangoModelFactory):
     class Meta:
         model = models.Station
 
+    mission = factory.SubFactory(MissionFactory)
     name = factory.lazy_attribute(lambda o: faker.bothify(text='??_##'))
 
 
@@ -42,6 +44,7 @@ class InstrumentFactory(DjangoModelFactory):
     class Meta:
         model = models.Instrument
 
+    mission = factory.SubFactory(MissionFactory)
     name = factory.lazy_attribute(lambda o: faker.name())
     type = factory.lazy_attribute(lambda o: faker.random.choice(models.InstrumentType.choices)[0])
 
@@ -62,8 +65,9 @@ class EventFactory(DjangoModelFactory):
 
     event_id = factory.lazy_attribute(lambda o: faker.random_number(digits=3))
     mission = factory.SubFactory(MissionFactory)
-    station = factory.SubFactory(StationFactory)
-    instrument = factory.SubFactory(InstrumentFactory, name="other", instrument_type=models.InstrumentType.other)
+    station = factory.SubFactory(StationFactory, mission=mission)
+    instrument = factory.SubFactory(InstrumentFactory, name="other", instrument_type=models.InstrumentType.other,
+                                    mission=mission)
 
 
 class CTDEventFactory(EventFactory):
@@ -126,7 +130,19 @@ class AttachmentFactory(DjangoModelFactory):
     name = factory.lazy_attribute(lambda o: faker.name())
 
 
-class SampleTypeFactory(DjangoModelFactory):
+class MissionSampleTypeFactory(DjangoModelFactory):
+
+    class Meta:
+        model = models.MissionSampleType
+
+    mission = factory.SubFactory(MissionFactory)
+    name = factory.lazy_attribute(lambda o: faker.word())
+    long_name = factory.lazy_attribute(lambda o: faker.name())
+
+    datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
+
+
+class GlobalSampleTypeFactory(DjangoModelFactory):
 
     class Meta:
         model = models.GlobalSampleType
@@ -144,7 +160,7 @@ class SampleTypeConfigFactory(DjangoModelFactory):
         model = models.SampleTypeConfig
         exclude = ('FILE_TYPE_CHOICES',)
 
-    sample_type = factory.SubFactory(SampleTypeFactory)
+    sample_type = factory.SubFactory(MissionSampleTypeFactory)
     file_type = factory.lazy_attribute(lambda o: faker.random.choice(o.FILE_TYPE_CHOICES))
     skip = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
     sample_field = factory.lazy_attribute(lambda o: faker.word())
@@ -158,7 +174,7 @@ class BottleFactory(DjangoModelFactory):
     event = factory.SubFactory(CTDEventFactory)
     date_time = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
     bottle_id = factory.sequence(lambda n: n)
-    pressure = factory.lazy_attribute(lambda o: faker.pyfloat())
+    pressure = factory.lazy_attribute(lambda o: faker.pyfloat(left_digits=4, right_digits=3))
 
     @classmethod
     def _setup_next_sequence(cls):
@@ -171,7 +187,7 @@ class SampleFactory(DjangoModelFactory):
         model = models.Sample
 
     bottle = factory.SubFactory(BottleFactory)
-    type = factory.SubFactory(SampleTypeFactory, **{'file_type': 'csv'})
+    type = factory.SubFactory(MissionSampleTypeFactory, **{'file_type': 'csv'})
     file = factory.lazy_attribute(lambda o: faker.word() + ".csv")
 
 
