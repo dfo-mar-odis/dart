@@ -315,7 +315,7 @@ class ActionForm(forms.ModelForm):
 
 class AttachmentForm(forms.ModelForm):
     class Meta:
-        model = models.Attachments
+        model = models.Attachment
         fields = ['id', 'event', 'name']
         widgets = {
             'event': forms.HiddenInput()

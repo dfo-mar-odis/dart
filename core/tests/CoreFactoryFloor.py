@@ -124,7 +124,7 @@ class ActionFactory(DjangoModelFactory):
 
 class AttachmentFactory(DjangoModelFactory):
     class Meta:
-        model = models.Attachments
+        model = models.Attachment
 
     event = factory.SubFactory(CTDEventFactory)
     name = factory.lazy_attribute(lambda o: faker.name())
