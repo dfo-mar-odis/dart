@@ -426,7 +426,7 @@ def process_attachments_actions(mission: core_models.Mission, mid_dictionary_buf
                 for a in attached:
                     if a.strip() != '':
                         if not event.attachments.filter(name=a).exists():
-                            create_attachments.append(core_models.InstrumentSensor(event=event, name=a))
+                            create_attachments.append(core_models.Attachments(event=event, name=a))
                 cur_event = event_id
 
             # this is a 'naive' date time with no time zone. But it should always be in UTC
@@ -490,7 +490,7 @@ def process_attachments_actions(mission: core_models.Mission, mid_dictionary_buf
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
-    core_models.InstrumentSensor.objects.bulk_create(create_attachments)
+    core_models.Attachments.objects.bulk_create(create_attachments)
     core_models.Action.objects.bulk_create(create_actions)
     if update_actions['fields']:
         core_models.Action.objects.bulk_update(objs=update_actions['objects'], fields=update_actions['fields'])
