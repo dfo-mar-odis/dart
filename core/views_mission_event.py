@@ -208,7 +208,7 @@ def hx_update_attachment(request, action_id):
             render_block_to_string('core/partials/event_edit_form.html', 'attachments_form', context=context))
         return response
     else:
-        attachment = models.InstrumentSensor.objects.get(pk=action_id)
+        attachment = models.Attachments.objects.get(pk=action_id)
         event = attachment.event
     context['event'] = event
 
@@ -240,7 +240,7 @@ def hx_new_attachment(request):
     elif request.method == "POST":
         attachment = None
         if 'id' in request.POST:
-            attachment = models.InstrumentSensor.objects.get(pk=request.POST['id'])
+            attachment = models.Attachments.objects.get(pk=request.POST['id'])
             event_id = attachment.event.pk
             form = forms.AttachmentForm(request.POST, instance=attachment)
             event = attachment.event
