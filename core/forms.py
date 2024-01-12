@@ -139,6 +139,82 @@ class CollapsableCardForm(CardForm):
         return card
 
 
+class TripForm(forms.ModelForm):
+    start_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+    end_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+
+    class Meta:
+        model = models.Trip
+        fields = ['start_date', 'end_date', 'lead_scientist', 'protocol', 'platform', 'collector_comments',
+                  'more_comments', 'data_manager_comments']
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.helper = FormHelper()
+        self.helper.form_show_labels = True
+
+        self.fields['protocol'].required = False
+        self.fields['lead_scientist'].required = False
+        self.fields['collector_comments'].required = False
+        self.fields['data_manager_comments'].required = False
+        self.fields['more_comments'].required = False
+        self.fields['platform'].required = False
+
+        submit = Submit('submit', 'Submit')
+        if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
+            submit = Submit('submit', 'Submit', hx_on="click: notify_of_event_validation()")
+
+        self.helper.layout = Layout(
+            Row(
+                Column(Field('start_date')),
+                Column(Field('end_date'))
+            ),
+            Div(
+                Div(
+                    Div(
+                        HTML(f"<h4>{_('Optional')}</h4>"),
+                        css_class="card-title"
+                    ),
+                    css_class="card-header"
+                ),
+                Div(
+                    Row(
+                        HTML(f"{_('The following can be automatically acquired from elog files or entered later')}"),
+                        css_class="alert alert-info ms-1 me-1"
+                    ),
+                    Row(
+                        Column(Field('platform')),
+                        Column(Field('protocol')),
+                    ),
+                    Row(
+                        Column(Field('lead_scientist')),
+                        Column(Field('mission_descriptor')),
+                    ),
+                    Row(
+                        Column(Field('collector_comments')),
+                    ),
+                    Row(
+                        Column(Field('data_manager_comments')),
+                    ),
+                    Row(
+                        Column(Field('more_comments')),
+                    ),
+                    css_class="card-body"
+                ),
+                css_class="card"
+            ),
+            Row(
+                Column(
+                    submit,
+                    css_class='col-auto mt-2'
+                ),
+                css_class='justify-content-end'
+            )
+        )
+
+
 class MissionSettingsForm(forms.ModelForm):
     name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
     # elog_dir = forms.CharField(max_length=255, label="Elog Directory", required=False,
@@ -147,16 +223,9 @@ class MissionSettingsForm(forms.ModelForm):
     #                              help_text="Folder location of Elog *.BTL files")
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
 
-    start_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
-    end_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
-
     class Meta:
         model = models.Mission
-        fields = ['name', 'start_date', 'end_date', 'lead_scientist',
-                  'protocol', 'platform', 'geographic_region', 'mission_descriptor', 'collector_comments',
-                  'more_comments', 'data_manager_comments', 'biochem_table', 'data_center']
+        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -172,15 +241,10 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['geographic_region'].choices += [(gr.id, gr) for gr in models.GeographicRegion.objects.all()]
         self.fields['geographic_region'].initial = None
         self.fields['protocol'].required = False
-        self.fields['lead_scientist'].required = False
         self.fields['mission_descriptor'].required = False
         self.fields['biochem_table'].required = False
         self.fields['data_center'].required = False
         self.fields['geographic_region'].required = False
-        self.fields['collector_comments'].required = False
-        self.fields['data_manager_comments'].required = False
-        self.fields['more_comments'].required = False
-        self.fields['platform'].required = False
 
         submit = Submit('submit', 'Submit')
         if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
@@ -189,10 +253,6 @@ class MissionSettingsForm(forms.ModelForm):
         self.helper.layout = Layout(
             Row(
                 Column(Field('name', autocomplete='true')),
-            ),
-            Row(
-                Column(Field('start_date')),
-                Column(Field('end_date'))
             ),
             Row(
                 Column(
@@ -219,25 +279,9 @@ class MissionSettingsForm(forms.ModelForm):
                         css_class="alert alert-info ms-1 me-1"
                     ),
                     Row(
-                        Column(Field('platform')),
-                        Column(Field('protocol')),
-                    ),
-                    Row(
-                        Column(Field('lead_scientist')),
                         Column(Field('mission_descriptor')),
-                    ),
-                    Row(
                         Column(Field('data_center')),
                         Column(Field('biochem_table')),
-                    ),
-                    Row(
-                        Column(Field('collector_comments')),
-                    ),
-                    Row(
-                        Column(Field('data_manager_comments')),
-                    ),
-                    Row(
-                        Column(Field('more_comments')),
                     ),
                     css_class="card-body"
                 ),
