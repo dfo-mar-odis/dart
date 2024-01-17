@@ -17,11 +17,11 @@
         <td class="col">{{ atta.name }}</td>
         {% if editable %}
         <td class="d-sm-table-cell col-1" >
-            <button class="btn" hx-swap="outerHTML" hx-target="#attachments_form_id" hx-get="{% url 'core:mission_events_attachment_update' atta.pk %}">
+            <button class="btn" hx-swap="outerHTML" hx-target="#attachments_form_id" hx-get="{% url 'core:form_event_edit_attachment' atta.pk %}">
                 {% custom_icon 'pencil' %}</button>
         </td>
         <td class="d-sm-table-cell col-1">
-            <button class="btn" hx-confirm="{% trans 'Are you sure you want to delete' %} {{ atta }}?" hx-swap="outerHTML" hx-target="#attachment_table_id" hx-post="{% url 'core:mission_events_attachment_delete' atta.pk %}">x</button>
+            <button class="btn" hx-confirm="{% trans 'Are you sure?' %}" hx-swap="none" hx-post="{% url 'core:form_event_delete_attachment' atta.pk %}">x</button>
         </td>
         {% endif %}
     </tr>

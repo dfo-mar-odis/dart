@@ -1,0 +1,22 @@
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load i18n %}
+{% load humanize %}
+
+<tr id="action_{{ action.pk }}">
+    <td>{{ action.get_type_display }}</td>
+    <td>{{ action.date_time|date:"Y-m-d H:i:s" }}</td>
+    <td>{{ action.drift_time }}</td>
+    <td>{{ action.latitude|floatformat:4 }}</td>
+    <td>{{ action.longitude|floatformat:4 }}</td>
+    <td>{{ action.drift_distance|floatformat:2 }}</td>
+    {% if editable %}
+    <td>
+        <button class="btn" hx-swap="outerHTML" hx-target="#actions_form_id" hx-get="{% url 'core:form_event_edit_action' action.pk %}">
+            {% custom_icon 'pencil' %}</button>
+    </td>
+    <td>
+        <button class="btn" hx-confirm="{% trans 'Are you sure?' %}" hx-swap="none" hx-post="{% url 'core:form_event_delete_action' action.pk %}">{% custom_icon 'dash-square' %}</button>
+    </td>
+    {% endif %}
+</tr>

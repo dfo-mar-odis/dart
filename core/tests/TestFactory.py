@@ -23,7 +23,7 @@ class TestCTDEvent(DartTestCase):
     def test_create_mission(self):
         event = core_factory.CTDEventFactory()
 
-        self.assertIsNotNone(event.mission)
+        self.assertIsNotNone(event.trip.mission)
         self.assertIsNotNone(event.station)
         self.assertEquals(event.instrument.type, models.InstrumentType.ctd)
         self.assertIsNotNone(event.sample_id)

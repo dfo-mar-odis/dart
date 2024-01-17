@@ -5,7 +5,6 @@
 {% load humanize %}
 
 <div id="div_event_content_id">
-{#    hx-swap="outerHTML" hx-trigger="load" hx-get="{% url 'core:mission_events_update' event.pk %}">#}
 {% block event_content %}
     {% block event_block %}
         {% if event %}
@@ -53,7 +52,7 @@
         {% if event %}
         <div class="row">
             <div class="col">
-                <div class="table table-striped" hx-trigger="update_actions from:body" hx-get="{% url 'core:mission_events_action_list' event.pk 'True' %}">
+                <div class="table table-striped" hx-trigger="update_actions from:body" hx-get="{% url 'core:form_event_list_action' event.pk 'True' %}">
                     {% include 'core/partials/table_action.html' with editable=True %}
                 </div>
             </div>
@@ -82,7 +81,7 @@
         {% if event %}
         <div class="row">
             <div class="col">
-                <div class="table table-striped" hx-trigger="update_attachments from:body" hx-get="{% url 'core:mission_events_attachment_list' event.pk 'True' %}">
+                <div class="table table-striped" hx-trigger="update_attachments from:body" hx-get="{% url 'core:form_event_list_attachment' event.pk 'True' %}">
                     {% include 'core/partials/table_attachment.html' with editable=True %}
                 </div>
             </div>

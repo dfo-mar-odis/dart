@@ -44,7 +44,7 @@ class MissionFilterView(MissionMixin, GenericFlilterMixin):
     filterset_class = filters.MissionFilter
     new_url = reverse_lazy("core:mission_new")
     home_url = ""
-    fields = ["id", "name", "start_date", "end_date", "biochem_table"]
+    fields = ["id", "name", "biochem_table"]
 
 
 class MissionCreateView(MissionMixin, GenericCreateView):
@@ -57,16 +57,7 @@ class MissionCreateView(MissionMixin, GenericCreateView):
 
 
 class MissionUpdateView(MissionCreateView, GenericUpdateView):
-
-    def form_valid(self, form):
-        events = self.object.events.all()
-        errors = []
-        for event in events:
-            event.validation_errors.all().delete()
-            errors += validation.validate_event(event)
-
-        models.ValidationError.objects.bulk_create(errors)
-        return super().form_valid(form)
+    pass
 
 
 class ElogDetails(GenericDetailView):

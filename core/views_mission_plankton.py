@@ -296,7 +296,7 @@ def list_plankton(request, **kwargs):
     page_limit = 50
     page_start = page_limit * page
 
-    samples = models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id).order_by(
+    samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission_id=mission_id).order_by(
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():
@@ -481,7 +481,7 @@ def download_plankton(request, **kwargs):
 
     mission = models.Mission.objects.get(pk=mission_id)
     plankton_samples = models.PlanktonSample.objects.filter(
-        bottle__event__mission=mission).values_list('pk', flat=True).distinct()
+        bottle__event__trip__mission=mission).values_list('pk', flat=True).distinct()
     bottles = models.Bottle.objects.filter(plankton_data__id__in=plankton_samples).distinct()
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
@@ -518,7 +518,7 @@ def download_plankton(request, **kwargs):
 
         return HttpResponse(soup)
 
-    plankton_samples = models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    plankton_samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission=mission)
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -573,7 +573,7 @@ def clear_plankton(request, **kwargs):
     mission_id = kwargs['mission_id']
 
     if request.htmx:
-        samples = models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id)
+        samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission_id=mission_id)
         files = samples.values_list('file', flat=True).distinct()
         errors = models.FileError.objects.filter(mission_id=mission_id, file_name__in=files)
         errors.delete()

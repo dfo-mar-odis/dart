@@ -15,11 +15,11 @@ from render_block import render_block_to_string
 from biochem import models
 from core import models, forms
 
-import logging
 
 from core import validation
 from dart2.utils import load_svg
 
+import logging
 logger = logging.getLogger("dart")
 
 
@@ -196,7 +196,8 @@ def htmx_validate_events(request, mission_id, file_name):
         validation_errors = []
 
         send_user_notification_elog(group_name, mission, "Validating Events")
-        file_events = mission.events.filter(actions__file=file_name).exclude(
+        events = models.Event.objects.filter(trip__mission=mission)
+        file_events = events.filter(actions__file=file_name).exclude(
             actions__type=models.ActionType.aborted).distinct()
 
         models.ValidationError.objects.filter(event__in=file_events).delete()
@@ -235,7 +236,7 @@ def get_mission_elog_errors(mission):
 
 
 def get_mission_validation_errors(mission):
-    errors = models.ValidationError.objects.filter(event__mission=mission).order_by('event')
+    errors = models.ValidationError.objects.filter(event__trip__mission=mission).order_by('event')
 
     error_dict = {}
     events = [error.event for error in errors]

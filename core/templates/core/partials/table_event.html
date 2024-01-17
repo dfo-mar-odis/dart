@@ -7,19 +7,8 @@
             <th>Instrument</th>
         </tr>
     </thead>
-    <tbody>
-    {% for event in events %}
-        <tr id="event-{{ event.pk }}"
-            {% if event.validation_errors.all %}class="eventErr"{% endif %}
-            hx-get="{% url 'core:mission_events_select' event.pk %}"
-            hx-target="#div_event_details_id"
-            hx-on="click: update_selected({{ event.pk }})"
-        >
-            <th>{{ event.event_id }}</th>
-            <td>{{ event.station.name }}</td>
-            <td>{{ event.instrument }}</td>
-        </tr>
-    {% endfor %}
+    <tbody id="event_table_body" hx-trigger="load, event_updated from:body" hx-get="{% url 'core:form_trip_get_events' trip_id %}">
+
     </tbody>
 </table>
 {% endblock %}

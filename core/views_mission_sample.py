@@ -110,7 +110,7 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
     sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
     dc_samples = models.DiscreteSampleValue.objects.filter(
-        sample__bottle__event__mission_id=mission_id, sample__type_id=sampletype_id)
+        sample__bottle__event__trip__mission_id=mission_id, sample__type_id=sampletype_id)
 
     row_datatype = dc_samples.values_list("datatype", flat=True).distinct().first()
     datatype = sampletype.datatype if sampletype.datatype else None
@@ -752,7 +752,7 @@ def list_samples(request, **kwargs):
     soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
 
     mission = models.Mission.objects.get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
+    bottle_limit = models.Bottle.objects.filter(event__trip__mission=mission).order_by('bottle_id')[
                    page_start:(page_start + page_limit)]
 
     if not bottle_limit.exists():
@@ -920,7 +920,7 @@ def update_sample_type_row(request, **kwargs):
         if data_type_code:
             data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
-        discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission_id=mission_id,
+        discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__trip__mission_id=mission_id,
                                                                     sample__bottle__bottle_id__gte=start_sample,
                                                                     sample__bottle__bottle_id__lte=end_sample,
                                                                     sample__type__id=sample_type_id, )
@@ -1034,7 +1034,8 @@ def sample_data_upload(mission: models.Mission, uploader: str):
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
-    samples_types_for_upload = models.BioChemUpload.objects.filter(type__mission=mission)
+    samples_types_for_upload = [bcupload.type for bcupload in
+                                models.BioChemUpload.objects.filter(type__mission=mission)]
     errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
 
     if errors:
@@ -1167,7 +1168,7 @@ def download_samples(request, **kwargs):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     mission = models.Mission.objects.get(pk=mission_id)
-    events = models.Event.objects.filter(mission=mission, instrument__type=models.InstrumentType.ctd)
+    events = models.Event.objects.filter(trip__mission=mission, instrument__type=models.InstrumentType.ctd)
     bottles = models.Bottle.objects.filter(event__in=events)
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
@@ -1206,7 +1207,7 @@ def download_samples(request, **kwargs):
 
     datatypes = models.BioChemUpload.objects.filter(type__mission=mission).values_list('type', flat=True).distinct()
 
-    discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
+    discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__trip__mission=mission)
     discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields

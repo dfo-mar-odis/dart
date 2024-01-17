@@ -1,4 +1,3 @@
-import datetime
 import os.path
 import time
 
@@ -6,6 +5,7 @@ from bs4 import BeautifulSoup, Tag
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Row, Field, HTML, Div
 from crispy_forms.utils import render_crispy_form
+
 from django import forms
 from django.conf import settings
 from django.core.cache import caches
@@ -17,22 +17,15 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 import biochem.upload
-import dart2.settings
 from core import models
 from core import forms as core_forms
-from core.htmx import send_user_notification_queue, send_user_notification_html_update
+from core.forms import get_crispy_element_attributes
 from dart2.utils import load_svg
 
 import logging
 
 user_logger = logging.getLogger('dart.user')
 logger = logging.getLogger('dart')
-
-
-# convenience method to convert html attributes from a string into a dictionary
-def get_crispy_element_attributes(element):
-    attr_dict = {k: v.replace("\"", "") for k, v in [attr.split('=') for attr in element.flat_attrs.strip().split(" ")]}
-    return attr_dict
 
 
 class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
@@ -42,7 +35,7 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
     # I had to override the default Bootstrap template for fields, because someone thought putting 'mb-3'
     # as a default for field wrappers was a good idea and it creates a massive gap under the inputs when
     # used in a card title
-    field_template = os.path.join(dart2.settings.TEMPLATE_DIR, "field.html")
+    field_template = os.path.join(settings.TEMPLATE_DIR, "field.html")
 
     # the download url can be set when constructing the card if it's desired to have a button to create/download
     # database table rows instead of writing the rows to the database
@@ -463,9 +456,9 @@ def validate_database(request, **kwargs):
 
             if 'selected_database' in request.POST and request.POST['selected_database']:
                 database = models.BcDatabaseConnection.objects.get(pk=request.POST['selected_database'])
-                db_form = BiochemUploadForm(mission_id, url, request.POST, instance=database)
+                db_form = BiochemUploadForm(mission_id, url, data=request.POST, instance=database)
             else:
-                db_form = BiochemUploadForm(mission_id, url, request.POST)
+                db_form = BiochemUploadForm(mission_id, url, data=request.POST)
 
             if db_form.is_valid():
                 # if the form is valid we'll render it then send back the elements of the form that have to change
@@ -476,10 +469,8 @@ def validate_database(request, **kwargs):
                 new_db_form = BiochemUploadForm(mission_id, url, initial={'selected_database': db_details.pk})
                 selected_db_block = render_crispy_form(new_db_form)
 
-                title_attributes = get_crispy_element_attributes(new_db_form.get_card_title())
-
                 selected_db_soup = BeautifulSoup(selected_db_block, 'html.parser')
-                selected_db_soup.find(id=title_attributes['id']).attrs['hx-swap-oob'] = 'true'
+                selected_db_soup.find(id=new_db_form.get_card_header_id()).attrs['hx-swap-oob'] = 'true'
                 soup.append(selected_db_soup)
             else:
                 form_errors = render_crispy_form(db_form)
@@ -497,9 +488,9 @@ def upload_bcs_d_data(mission: models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcs_d)
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
-    ctd_events = models.Event.objects.filter(mission=mission, instrument__type=models.InstrumentType.ctd)
+    ctd_events = models.Event.objects.filter(trip__mission=mission, instrument__type=models.InstrumentType.ctd)
     bottles = models.Bottle.objects.filter(event__in=ctd_events)
-    # bottles = models.Bottle.objects.filter(event__mission=mission)
+    # bottles = models.Bottle.objects.filter(event__trip__mission=mission)
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
         last_uploaded = bcs_d.objects.all().values_list('created_date', flat=True).distinct().last()
@@ -530,9 +521,9 @@ def upload_bcd_d_data(mission: models.Mission, uploader: str):  #sample_types: l
         # 3) else filter the samples down to rows based on:
         # 3a) samples in this mission
         # 3b) samples of the current sample_type
-        datatypes = models.BioChemUpload.objects.filter(mission=mission).values_list('type', flat=True).distinct()
+        datatypes = models.BioChemUpload.objects.filter(type__mission=mission).values_list('type', flat=True).distinct()
 
-        discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission)
+        discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__trip__mission=mission)
         discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
 
         if discreate_samples.exists():
@@ -553,11 +544,11 @@ def upload_bcs_p_data(mission: models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcs_p)
 
     # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
-    samples = models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission=mission)
     bottle_ids = samples.values_list('bottle_id').distinct()
     bottles = models.Bottle.objects.filter(pk__in=bottle_ids)
 
-    # bottles = models.Bottle.objects.filter(event__mission=mission)
+    # bottles = models.Bottle.objects.filter(event__trip__mission=mission)
     # if exists:
     #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
     #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
@@ -581,9 +572,9 @@ def upload_bcd_p_data(mission: models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcd_p)
 
     # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
-    samples = models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission=mission)
 
-    # bottles = models.Bottle.objects.filter(event__mission=mission)
+    # bottles = models.Bottle.objects.filter(event__trip__mission=mission)
     # if exists:
     #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
     #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()

@@ -313,7 +313,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
-    mission = event.mission
+    mission = event.trip.mission
 
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     file_name = data_frame._metadata['name'] + ".BTL"
@@ -412,7 +412,8 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
 # BIO and the NFL region track events within bottle files differently
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
-    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
+
+    events = core_models.Event.objects.filter(trip__mission=mission,instrument__type=core_models.InstrumentType.ctd)
     event = events[event_number-1]
 
     return event
@@ -420,7 +421,7 @@ def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_
 
 def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_models.Event:
     try:
-        event = mission.events.get(event_id=event_number)
+        event = core_models.Event.objects.get(trip__mission=mission, event_id=event_number)
     except core_models.Event.DoesNotExist as ex:
         raise core_models.Event.DoesNotExist(event_number) from ex
     return event

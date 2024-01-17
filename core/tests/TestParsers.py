@@ -328,7 +328,8 @@ class TestCTDParser(DartTestCase):
     def test_read_btl(self):
         # this tests the overall result
         event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
-        ctd_parser.read_btl(mission=event.mission, btl_file=os.path.join(self.test_file_location, self.test_file_001))
+        ctd_parser.read_btl(mission=event.trip.mission,
+                            btl_file=os.path.join(self.test_file_location, self.test_file_001))
 
         sample_types = core_models.GlobalSampleType.objects.all()
         samples = core_models.Sample.objects.all()
@@ -374,7 +375,7 @@ class TestSampleCSVParser(DartTestCase):
 
     def test_no_duplicate_samples(self):
         # if a sample already exists the parser should update the discrete value, but not create a new sample
-        bottle = core_factory.BottleFactory(event__mission=self.mission, bottle_id=495271)
+        bottle = core_factory.BottleFactory(event__trip__mission=self.mission, bottle_id=495271)
         self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
 
         sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)

@@ -174,7 +174,7 @@ class BottleLoadForm(CollapsableCardForm):
             if 'hide_loaded' in self.initial:
                 loaded_files = [f.upper() for f in models.Sample.objects.filter(
                     type__is_sensor=True,
-                    bottle__event__mission_id=mission_id).values_list('file', flat=True).distinct()]
+                    bottle__event__trip__mission_id=mission_id).values_list('file', flat=True).distinct()]
                 files = [f for f in files if f.upper() not in loaded_files]
 
             files.sort(key=lambda fn: os.path.getmtime(os.path.join(mission.bottle_directory, fn)))
@@ -305,7 +305,7 @@ def reload_files(request, **kwargs):
     bottle_soup = BeautifulSoup(html, "html.parser")
     soup = BeautifulSoup("", "html.parser")
 
-    dir_input = bottle_soup.find(id="div_id_bottle_load_header")
+    dir_input = bottle_soup.find(id=form.get_card_header_id())
     dir_input.attrs['hx-swap-oob'] = "true"
 
     file_list = bottle_soup.find(id="div_id_files")

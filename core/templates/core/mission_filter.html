@@ -52,8 +52,8 @@
         {% for mission in missions %}
             <tr class="table-row">
                 <td>{{ mission.name }}</td>
-                <td>{{ mission.start_date }}</td>
-                <td>{{ mission.end_date }}</td>
+                <td>{% if mission.start_date %}{{ mission.start_date }}{% endif %}</td>
+                <td>{% if mission.end_date %}{{ mission.end_date }}{% endif %}</td>
                 <td>{{ mission.biochem_table }}</td>
                 <td>
                     <a class="btn btn-primary" href="{% url 'core:mission_edit' mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
