@@ -18,7 +18,6 @@ from render_block import render_block_to_string
 
 from core import forms as core_forms, validation
 from core import models
-from core.form_event_details import make_event_row
 from core.htmx import send_user_notification_elog, send_update_errors
 from core.parsers import elog
 from dart2.utils import load_svg
@@ -192,8 +191,7 @@ def mission_trip_card(request, **kwargs):
     args = (mission_id,)
     if trip:
         event_html = render_to_string('core/partials/card_event_row.html', context={
-            'mission_id': trip.mission.pk,
-            'trip_id': trip.pk
+            'trip': trip
         })
         event_table_soup = BeautifulSoup(event_html, 'html.parser')
 
@@ -424,37 +422,9 @@ def list_events(request, **kwargs):
     trip_id = kwargs['trip_id']
     trip = models.Trip.objects.get(pk=trip_id)
 
-    event_id = kwargs['event_id'] if 'event_id' in kwargs else None
+    tr_html = render_to_string('core/partials/table_event.html', context={'trip': trip})
 
-    soup = BeautifulSoup('', 'html.parser')
-
-    if event_id:
-        if (old_event := caches['default'].get("selected_event", -1)) != -1:
-            if trip.events.filter(pk=old_event).exists():
-                tr = make_event_row(soup, trip.events.get(pk=old_event), False)
-                tr.attrs['hx-swap-oob'] = 'true'
-                soup.append(tr)
-
-        event = trip.events.get(pk=event_id)
-        tr = make_event_row(soup, event, True)
-        tr.attrs.pop('hx-get')
-        tr.attrs.pop('hx-trigger')
-        tr.attrs['hx-swap-oob'] = "true"
-        soup.append(tr)
-
-        caches['default'].set("selected_event", event_id, 3600)
-
-        response = HttpResponse(soup)
-        response['HX-Trigger'] = "update_selected"
-        return response
-
-    for event in trip.events.all():
-        selected = (caches['default'].get("selected_event", -1) == event.pk)
-        tr = make_event_row(soup, event, selected)
-
-        soup.append(tr)
-
-    return HttpResponse(soup)
+    return HttpResponse(tr_html)
 
 
 trip_load_urls = [
@@ -466,5 +436,4 @@ trip_load_urls = [
 
     path('trip/event/import/<int:trip_id>/', import_elog_events, name="form_trip_import_events_elog"),
     path('trip/event/list/<int:trip_id>/', list_events, name="form_trip_get_events"),
-    path('trip/event/list/<int:trip_id>/<int:event_id>/', list_events, name="form_trip_get_events"),
 ]

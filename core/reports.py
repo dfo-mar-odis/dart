@@ -181,12 +181,18 @@ def std_sample_report(request, **kwargs):
     for bottle in bottles:
         row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]
         for sensor in kwargs['sensors']:
-            row += bottle.samples.filter(type__short_name__iexact=sensor).values_list('discrete_values__value',
-                                                                                      flat=True)
+            sensor = bottle.samples.filter(type__name__iexact=sensor)
+            if sensor.exists():
+                row += sensor.values_list('discrete_values__value', flat=True)
+            else:
+                row.append('')
 
         for sample in kwargs['samples']:
-            row += bottle.samples.filter(type__short_name__iexact=sample).values_list('discrete_values__value',
-                                                                                             flat=True)
+            sample = bottle.samples.filter(type__name__iexact=sample)
+            if sample.exists():
+                row += sample.values_list('discrete_values__value', flat=True)
+            else:
+                row.append('')
         data += ",".join([str(val) for val in row]) + '\n'
 
     file_to_send = ContentFile(data)
@@ -224,8 +230,13 @@ def salt_report(request, **kwargs):
 # The problem with this report is it depends on there being a SampleType with a short name 'chl'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def chl_report(request, **kwargs):
-    sensors = ['flECO-AFL', 'wetCDOM']
-    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'flECO-AFL', 'wetCDOM', 'Chl_Rep1', 'Chl_Rep2']
+    mission_id = kwargs['mission_id']
+    sensors = [s.name for s in core_models.MissionSampleType.objects.filter(mission_id=mission_id,
+                                                                            long_name__icontains='fluorescence')]
+
+    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID"]
+    header += sensors
+    header += ['Chl_Rep1', 'Chl_Rep2']
     samples = ['chl']
 
     return std_sample_report(request, report_name='Chl_Summary', headers=header,

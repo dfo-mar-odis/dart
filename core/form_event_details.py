@@ -100,8 +100,6 @@ class EventDetails(core_forms.CardForm):
         body = super().get_card_body()
         div_content = Div(
             id=self.get_card_content_id(),
-            hx_get=reverse_lazy("core:form_event_selected_event"),
-            hx_trigger="update_selected from:body"
         )
         content_frame = Div(div_content, css_class="vertical-scrollbar")
 
@@ -122,10 +120,9 @@ class EventForm(forms.ModelForm):
         model = models.Event
         fields = ['trip', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
 
-    def __init__(self, trip_id, *args, **kwargs):
+    def __init__(self, trip, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        trip = models.Trip.objects.get(pk=trip_id)
         event = trip.events.order_by('event_id').last()
 
         self.fields['event_id'].initial = event.event_id + 1 if event else 1
@@ -140,7 +137,7 @@ class EventForm(forms.ModelForm):
         if self.instance.pk:
             submit_url = reverse_lazy('core:form_event_edit_event', args=(self.instance.pk,))
         else:
-            submit_url = reverse_lazy('core:form_event_add_event', args=(trip_id,))
+            submit_url = reverse_lazy('core:form_event_add_event', args=(trip.pk,))
 
         event_element = Column(Field('event_id', css_class='form-control-sm'))
         if self.instance.pk:
@@ -156,7 +153,7 @@ class EventForm(forms.ModelForm):
                                      **apply_attrs)
 
         self.helper.layout = Layout(
-            Hidden('trip', trip_id),
+            Hidden('trip', trip.pk),
             Row(
                 event_element,
                 Column(Field('station', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md-6'),
@@ -199,8 +196,9 @@ class ActionForm(forms.ModelForm):
             'name': 'add_action',
             'title': _('Submit'),
             'hx-post': url,
-            'hx-target': "#actions_form_id",
-            'hx-swap': "outerHTML"
+            'hx-swap': 'none'
+            # 'hx-target': "#actions_form_id",
+            # 'hx-swap': "outerHTML"
         }
         submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm",
                                      **apply_attrs)
@@ -265,8 +263,9 @@ class AttachmentForm(forms.ModelForm):
             'name': 'add_attachment',
             'title': _('Submit'),
             'hx-post': url,
-            'hx-target': "#attachments_form_id",
-            'hx-swap': "outerHTML"
+            'hx-swap': 'none'
+            # 'hx-target': "#attachments_form_id",
+            # 'hx-swap': "outerHTML"
         }
         submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm",
                                      **apply_attrs)
@@ -296,70 +295,41 @@ class AttachmentForm(forms.ModelForm):
         self.helper.form_show_labels = False
 
 
-def make_event_row(soup, event: models.Event, selected=False):
-    tr = soup.new_tag('tr')
-    tr.attrs['id'] = f"event-{event.pk}"
-    tr.attrs['hx-trigger'] = 'click'
-    tr.attrs['hx-get'] = reverse_lazy("core:form_trip_get_events", args=(event.trip.pk, event.pk))
-    tr.attrs['class'] = ""
+# When appending a row to a table using an hx-swap-oob request the table has to have a body with an ID
+# and the root element has to be the "table" tag.
+#
+# The response to update a table must look like:
+# <table>
+#   <tbody id="some_tbody_id" hx-swap-oob="beforeend">
+#    <tr><td>something</td><td>to</td><td>insert</td></tr>
+#   </tbody>
+# </table>
+def create_append_table(soup, table_body_id, tr_html):
+    table = soup.new_tag("table")
+    table.append(tbody := soup.new_tag("tbody", attrs={'id': table_body_id, 'hx-swap-oob': 'beforeend'}))
+    tbody.append(BeautifulSoup(tr_html, 'html.parser'))
 
-    if selected:
-        tr.attrs['class'] = tr.attrs['class'] + " selectedBg"
-
-    if event.validation_errors.exists():
-        tr.attrs['class'] = tr.attrs['class'] + " eventErr"
-
-    td_event = soup.new_tag('td')
-    td_event.string = f"{event.event_id:2d}"
-    tr.append(td_event)
-
-    td_station = soup.new_tag('td')
-    td_station.string = event.station.name
-    tr.append(td_station)
-
-    td_instrument = soup.new_tag('td')
-    td_instrument.string = event.instrument.name
-    tr.append(td_instrument)
-
-    return tr
+    return table
 
 
-def edit_event(request, **kwargs):
-    event_id = kwargs['event_id']
-    event = models.Event.objects.get(pk=event_id)
+def create_replace_table(soup, tr_html):
+    # wrap the row to be replaced in <table><tbody></tbody></table> tags
+    table = soup.new_tag('table')
+    table.append(tbody := soup.new_tag('tbody'))
+    tbody.append(tr := BeautifulSoup(tr_html, 'html.parser').find('tr'))
+    tr.attrs['hx-swap-oob'] = "true"
 
-    soup = BeautifulSoup("", "html.parser")
+    return table
 
-    card_form = EventDetails(event=event)
-    card_html = render_crispy_form(card_form)
-    card_soup = BeautifulSoup(card_html, 'html.parser')
 
-    content = card_soup.find(id=card_form.get_card_content_id())
-    content.attrs['hx-swap-oob'] = 'true'
-
-    if request.method == "GET":
-        form = EventForm(trip_id=event.trip.pk, instance=event)
-    if request.method == "POST":
-        form = EventForm(trip_id=event.trip.pk, instance=event, data=request.POST)
-        if form.is_valid():
-            form.save()
-
-    action_form = ActionForm(event_id=event.pk)
-    attachments_form = AttachmentForm(event_id=event.pk)
-
-    form_html = render_block_to_string('core/partials/event_edit_form.html', 'event_content',
-                                       context={"form": form,
-                                                "event": event,
-                                                "actionform": action_form,
-                                                "attachmentform": attachments_form})
-    form_soup = BeautifulSoup(form_html, 'html.parser')
-
-    content.append(form_soup)
-    soup.append(content)
-
-    response = HttpResponse(soup)
-    response['HX-Trigger'] = "event_updated"
-    return response
+def deselect_event(soup):
+    if caches['default'].touch("selected_event"):
+        old_event_id = caches['default'].get('selected_event')
+        old_event = models.Event.objects.get(pk=old_event_id)
+        tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
+                                         context={"event": old_event})
+        table = create_replace_table(soup, tr_html)
+        soup.append(table)
 
 
 def add_event(request, **kwargs):
@@ -375,61 +345,89 @@ def add_event(request, **kwargs):
     content = card_soup.find(id=card_form.get_card_content_id())
     content.attrs['hx-swap-oob'] = 'true'
 
-    if request.method == "GET":
-
-        # called with no event id to create a blank instance of the event_edit_form
-        form = EventForm(trip_id=trip_id)
-        form_html = render_block_to_string('core/partials/event_edit_form.html', 'event_content', context={"form": form})
-        form_soup = BeautifulSoup(form_html, 'html.parser')
-
-        content.append(form_soup)
-        soup.append(content)
-
-        response = HttpResponse(soup)
-        return response
-    elif request.method == "POST":
-        form = EventForm(trip_id=trip_id, data=request.POST)
+    context = {}
+    if request.method == "POST":
+        form = EventForm(trip=trip, data=request.POST)
 
         if form.is_valid():
             event = form.save()
+            action_form = ActionForm(event_id=event.pk)
+            attachments_form = AttachmentForm(event_id=event.pk)
+
+            context = {"event": event, "actionform": action_form, "attachmentform": attachments_form}
+            deselect_event(soup)
 
             caches['default'].set("selected_event", event.pk, 3600)
+            tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
+                                             context={'event': event, 'selected': 'true'})
+            table = create_append_table(soup, 'event_table_body', tr_html)
 
-            tr = make_event_row(soup, event, True)
-            tbody = soup.new_tag("tbody")
-            tbody.attrs['hx-swap-oob'] = "beforeend:#event_table_body"
-            tbody.append(tr)
+            form = EventForm(trip=trip, instance=event)
 
-            tr.attrs['hx-trigger'] = 'load'
-            tr.attrs['hx-get'] = reverse_lazy("core:form_event_edit_event", args=(event.pk,))
-            tr.attrs['hx-swap'] = "none"
+            soup.append(table)
+    else:
+        # called with no event id to create a blank instance of the event_edit_form
+        form = EventForm(trip=trip)
 
-            soup.append(tbody)
+    context['form'] = form
+    form_html = render_block_to_string('core/partials/event_edit_form.html', 'event_content',
+                                       context=context)
+    form_soup = BeautifulSoup(form_html, 'html.parser')
+    content.append(form_soup)
+    soup.append(content)
 
-            response = HttpResponse(soup)
-            return response
+    return HttpResponse(soup)
 
-        form_html = render_block_to_string('core/partials/event_edit_form.html', 'event_content', context={"form": form})
-        form_soup = BeautifulSoup(form_html, 'html.parser')
-        content.append(form_soup)
-        soup.append(content)
 
-        response = HttpResponse(soup)
-        return response
+def edit_event(request, **kwargs):
+    event_id = kwargs['event_id']
+    event = models.Event.objects.get(pk=event_id)
 
-    return HttpResponse()
+    soup = BeautifulSoup("", "html.parser")
+
+    card_form = EventDetails(event=event)
+    card_html = render_crispy_form(card_form)
+    card_soup = BeautifulSoup(card_html, 'html.parser')
+
+    content = card_soup.find(id=card_form.get_card_content_id())
+    content.attrs['hx-swap-oob'] = 'true'
+
+    form = None
+    if request.method == "GET":
+        form = EventForm(trip=event.trip, instance=event)
+    elif request.method == "POST":
+        form = EventForm(trip=event.trip, instance=event, data=request.POST)
+        if form.is_valid():
+            form.save()
+
+    action_form = ActionForm(event_id=event.pk)
+    attachments_form = AttachmentForm(event_id=event.pk)
+
+    form_html = render_block_to_string('core/partials/event_edit_form.html', 'event_content',
+                                       context={"form": form, "event": event, "actionform": action_form,
+                                                "attachmentform": attachments_form})
+
+    form_soup = BeautifulSoup(form_html, 'html.parser')
+
+    content.append(form_soup)
+    soup.append(content)
+
+    return HttpResponse(soup)
 
 
 def selected_details(request, **kwargs):
+    event_id = kwargs['event_id']
     soup = BeautifulSoup('', 'html.parser')
 
-    if not caches['default'].touch("selected_event"):
-        html = render_crispy_form(EventDetails())
+    deselect_event(soup)
 
-        return HttpResponse(html)
+    caches['default'].set('selected_event', event_id, 3600)
 
-    event_id = caches['default'].get("selected_event")
     event = models.Event.objects.get(pk=event_id)
+    tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
+                                     context={"event": event, 'selected': 'true'})
+    # table = create_replace_table(soup, tr_html)
+    soup.append(BeautifulSoup("<table><tbody>" + tr_html + "</tbody></table>", 'html.parser'))
 
     details_html = render_to_string("core/partials/event_details.html", context={"event": event})
     details_soup = BeautifulSoup(details_html, 'html.parser')
@@ -437,15 +435,12 @@ def selected_details(request, **kwargs):
     card_details = EventDetails(event=event)
     card_details_html = render_crispy_form(card_details)
     card_details_soup = BeautifulSoup(card_details_html, 'html.parser')
+    card = card_details_soup.find(id=card_details.get_card_id())
 
-    button_row = card_details_soup.find(id=card_details.get_card_header_id())
-    button_row.attrs['hx-swap-oob'] = 'true'
+    card.find(id=card_details.get_card_content_id()).append(details_soup.find(id='div_event_content_id'))
+    card.attrs['hx-swap-oob'] = 'true'
 
-    div_content = card_details_soup.find(id=card_details.get_card_content_id())
-    div_content.append(details_soup.find(id='div_event_content_id'))
-
-    soup.append(button_row)
-    soup.append(div_content)
+    soup.append(card)
 
     return HttpResponse(soup)
 
@@ -504,150 +499,141 @@ def list_action(request, event_id, editable=False):
     return response
 
 
-def render_action_form(action_form, update_actions):
-
-    soup = BeautifulSoup('', 'html.parser')
+def render_action_form(soup, action_form):
 
     # the action form isn't wrapped in a form tag so it has to have that added
     action_form_html = render_crispy_form(action_form)
     action_form_soup = BeautifulSoup(action_form_html, 'html.parser')
 
-    form = soup.new_tag('form')
-    form.attrs['id'] = 'actions_form_id'
+    form = soup.new_tag('form', attrs={'id': 'actions_form_id', 'hx-swap-oob': 'true'})
     form.append(action_form_soup)
     soup.append(form)
 
-    response = HttpResponse(soup)
-    if update_actions:
-        response['HX-Trigger'] = "update_actions"
-    return response
+    return HttpResponse(soup)
 
 
 def add_action(request, **kwargs):
     event_id = kwargs['event_id']
 
-    update_actions = False
+    soup = BeautifulSoup('', 'html.parser')
     if request.method == "POST":
         action_form = ActionForm(event_id=event_id, data=request.POST)
 
         if action_form.is_valid():
             action = action_form.save()
+            tr_html = render_block_to_string('core/partials/table_action.html', 'action_row_block',
+                                             context={'action': action, "editable": "true"})
+            soup.append(create_append_table(soup, "tbody_id_action_table", tr_html))
 
             action_form = ActionForm(event_id=event_id)
-            update_actions = True
     else:
         # if this is a get request we'll just send back a blank form
         action_form = ActionForm(event_id=event_id)
 
-    return render_action_form(action_form, update_actions)
+    return render_action_form(soup, action_form)
 
 
 def edit_action(request, **kwargs):
     action_id = kwargs['action_id']
     action = models.Action.objects.get(pk=action_id)
 
-    update_actions = False
+    soup = BeautifulSoup('', 'html.parser')
     if request.method == "POST":
         action_form = ActionForm(event_id=action.event.pk, instance=action, data=request.POST)
 
         if action_form.is_valid():
             action = action_form.save()
 
+            tr_html = render_block_to_string('core/partials/table_action.html', 'action_row_block',
+                                             context={'action': action, "editable": "true"})
+            soup.append(create_replace_table(soup, tr_html))
+
             action_form = ActionForm(event_id=action.event.pk)
-            update_actions = True
     else:
         # if this is a get request we'll just send back form populated with the object
         action_form = ActionForm(event_id=action.event.pk, instance=action)
 
-    return render_action_form(action_form, update_actions)
+    return render_action_form(soup, action_form)
 
 
 def delete_action(request, **kwargs):
     action_id = kwargs['action_id']
     models.Action.objects.get(pk=action_id).delete()
-
-    response = HttpResponse()
-    response['HX-Trigger'] = "update_actions"
-    return response
+    return HttpResponse()
 
 
 def list_attachment(request, event_id, editable=False, **kwargs):
     event = models.Event.objects.get(pk=event_id)
     context = {'event': event, 'editable': editable}
-    response = HttpResponse(render_block_to_string('core/partials/table_attachment.html', 'attachments_table',
-                                                   context=context))
-    return response
+    return HttpResponse(render_to_string('core/partials/table_attachment.html', context=context))
 
 
-def render_attachment_form(attachment_form, update_attachments):
-    soup = BeautifulSoup('', 'html.parser')
-
+def render_attachment_form(soup, attachment_form):
     # the attachment form isn't wrapped in a form tag so it has to have that added
     attachment_form_html = render_crispy_form(attachment_form)
     attachment_form_soup = BeautifulSoup(attachment_form_html, 'html.parser')
 
-    form = soup.new_tag('form')
-    form.attrs['id'] = 'attachments_form_id'
+    form = soup.new_tag('form', attrs={'id': 'attachments_form_id', 'hx-swap-oob': 'true'})
     form.append(attachment_form_soup)
     soup.append(form)
 
-    response = HttpResponse(soup)
-    if update_attachments:
-        response['HX-Trigger'] = "update_attachments"
-    return response
+    return HttpResponse(soup)
 
 
 def add_attachment(request, **kwargs):
     event_id = kwargs['event_id']
+    soup = BeautifulSoup('', 'html.parser')
 
-    update_attachments = False
     if request.method == "POST":
         attachment_form = AttachmentForm(event_id=event_id, data=request.POST)
 
         if attachment_form.is_valid():
             attachment = attachment_form.save()
 
+            tr_html = render_block_to_string('core/partials/table_attachment.html', 'attachments_row_block',
+                                             context={"atta": attachment, "editable": "true"})
+            soup.append(create_append_table(soup, "tbody_attachment_table_id", tr_html))
+
             attachment_form = AttachmentForm(event_id=event_id)
-            update_attachments = True
     else:
         # if this is a get request we'll just send back a blank form
         attachment_form = AttachmentForm(event_id=event_id)
 
-    return render_attachment_form(attachment_form, update_attachments)
+    return render_attachment_form(soup, attachment_form)
 
 
 def edit_attachment(request, **kwargs):
     attachment_id = kwargs['attachment_id']
     attachment = models.Attachment.objects.get(pk=attachment_id)
+    soup = BeautifulSoup('', 'html.parser')
 
-    update_attachments = False
     if request.method == "POST":
         attachment_form = AttachmentForm(event_id=attachment.event.pk, instance=attachment, data=request.POST)
 
         if attachment_form.is_valid():
             attachment = attachment_form.save()
 
+            tr_html = render_block_to_string('core/partials/table_attachment.html', 'attachments_row_block',
+                                             context={"atta": attachment, "editable": "true"})
+            soup.append(create_replace_table(soup, tr_html))
+
             attachment_form = AttachmentForm(event_id=attachment.event.pk)
-            update_attachments = True
     else:
-        # if this is a get request we'll just send back form populated with the object
+        # if this is a get request we'll just send back a blank form
         attachment_form = AttachmentForm(event_id=attachment.event.pk, instance=attachment)
 
-    return render_attachment_form(attachment_form, update_attachments)
+    return render_attachment_form(soup, attachment_form)
 
 
 def delete_attachment(request, **kwargs):
     attachment_id = kwargs['attachment_id']
     models.Attachment.objects.get(pk=attachment_id).delete()
-
-    response = HttpResponse()
-    response['HX-Trigger'] = "update_attachments"
-    return response
+    return HttpResponse()
 
 
 event_detail_urls = [
     path('event/details/<int:trip_id>/', event_details, name="form_event_get_details_card"),
-    path('event/details/selected/', selected_details, name="form_event_selected_event"),
+    path('event/details/selected/<int:event_id>/', selected_details, name="form_event_selected_event"),
 
     path('event/details/new/<int:trip_id>/', add_event, name="form_event_add_event"),
     path('event/details/edit/<int:event_id>/', edit_event, name="form_event_edit_event"),
