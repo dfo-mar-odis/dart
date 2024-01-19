@@ -10,15 +10,14 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.conf import settings
 from django.http import HttpResponse
-from django.core.cache import caches
 from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
 from render_block import render_block_to_string
 
-from core import forms as core_forms, validation
+from core import forms as core_forms, validation, form_event_details
 from core import models
-from core.htmx import send_user_notification_elog, send_update_errors
+from core.htmx import send_user_notification_elog
 from core.parsers import elog
 from dart2.utils import load_svg
 
@@ -186,13 +185,14 @@ def mission_trip_card(request, **kwargs):
     div = soup.new_tag('div')
     div.attrs['id'] = 'div_id_trip_events'
     div.attrs['hx-swap-oob'] = 'true'
+    div.attrs['class'] = "mb-2"
     soup.append(div)
 
     args = (mission_id,)
     if trip:
-        event_html = render_to_string('core/partials/card_event_row.html', context={
-            'trip': trip
-        })
+        details_form = form_event_details.EventDetails(trip=trip)
+        event_html = render_to_string('core/partials/card_event_row.html',
+                                      context={'trip': trip, 'details_form': details_form})
         event_table_soup = BeautifulSoup(event_html, 'html.parser')
 
         div.append(event_table_soup)
@@ -236,8 +236,16 @@ def save_trip(request, **kwargs):
 
         if form.is_valid():
             trip = form.save()
-            validation.validate_trip(trip)
-            return select_trip(request, select_trip=trip.pk, **kwargs)
+            http_response: HttpResponse = select_trip(request, select_trip=trip.pk, **kwargs)
+            soup = BeautifulSoup(http_response.content, 'html.parser')
+
+            url = reverse_lazy("core:mission_events_revalidate", args=(trip.mission.pk,))
+            soup.append(alert_div := soup.new_tag("div", id="div_id_card_alert_mission_trips"))
+            alert_div.attrs['hx-get'] = url
+            alert_div.attrs['hx-trigger'] = 'load'
+            alert_div.attrs['hx-swap-oob'] = 'true'
+
+            return HttpResponse(soup)
         else:
             form_html = render_crispy_form(form)
             form_soup = BeautifulSoup(form_html, 'html.parser')
@@ -300,50 +308,26 @@ def import_elog_events(request, **kwargs):
 
     if request.method == 'GET':
         attrs = {
-            'component_id': 'div_id_load_elog_alert',
-            'message': _("Loading"),
+            'alert_area_id': "div_id_event_alert",
+            'message': _("Processing Elog"),
+            'logger': elog.logger_notifications.name,
             'hx-post': reverse_lazy("core:form_trip_import_events_elog", args=(trip_id,)),
-            'hx-trigger': 'load',
-            'hx-swap': 'outerHTML',
-            'hx-ext': "ws",
-            'ws-connect': "/ws/notifications/"
+            'hx-trigger': 'load'
         }
-        alert = core_forms.save_load_component(**attrs)
-
-        soup = BeautifulSoup('', 'html.parser')
-
-        div = soup.new_tag('div')
-        div.attrs['id'] = "div_id_event_alert"
-        div.attrs['hx-swap-oob'] = 'true'
-        div.append(alert.find('div'))
-
-        # add a message area for websockets
-        msg_div = div.find(id="div_id_load_elog_alert_message")
-        msg_div.string = ""
-
-        # The core.consumer.processing_elog_message() function is going to write output to a div
-        # with the 'status' id, we'll stick that in the loading alerts message area and bam! Instant notifications!
-        msg_div_status = soup.new_tag('div')
-        msg_div_status['id'] = 'status'
-        msg_div_status.string = _("Loading")
-        msg_div.append(msg_div_status)
-
-        soup.append(div)
-
-        return HttpResponse(soup)
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
     files = request.FILES.getlist('event')
     group_name = 'mission_events'
 
+    file_count = len(files)
     for index, file in enumerate(files):
         file_name = file.name
-        process_message = f'{index}/{len(files)}: {file_name}'
         # let the user know that we're about to start processing a file
-        send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
+        # send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
+        elog.logger_notifications.info(_("Processing File") + " : %d/%d", (index+1), file_count)
 
         # remove any existing errors for a log file of this name and update the interface
         mission.file_errors.filter(file_name=file_name).delete()
-        send_update_errors(group_name, mission)
 
         try:
             data = file.read()
@@ -365,22 +349,24 @@ def import_elog_events(request, **kwargs):
                     if mid in message_objects[elog.ParserType.MID]:
                         message_objects[elog.ParserType.MID].pop(mid)
 
-            send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
+            # send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
             elog.process_stations(trip, message_objects[elog.ParserType.STATIONS])
 
-            send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
+            # send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
             elog.process_instruments(trip, message_objects[elog.ParserType.INSTRUMENTS])
 
-            send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
+            # send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
             errors += elog.process_events(trip, message_objects[elog.ParserType.MID])
 
-            send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
+            # send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
             errors += elog.process_attachments_actions(trip, message_objects[elog.ParserType.MID], file_name)
 
-            send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
+            # send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
             errors += elog.process_variables(trip, message_objects[elog.ParserType.MID])
 
-            for error in errors:
+            error_count = len(errors)
+            for err, error in enumerate(errors):
+                elog.logger_notifications.info(_("Recording Errors") + f" {file_name} : %d/%d", (err+1), error_count)
                 file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
                 if isinstance(error[2], KeyError):
                     file_error.type = models.ErrorType.missing_id
@@ -403,17 +389,27 @@ def import_elog_events(request, **kwargs):
                 err = models.FileError(mission=mission, type=models.ErrorType.unknown, file_name=file_name,
                                        message=_("Unknown error :") + f"{str(ex)}, " + _("see error.log for details"))
             err.save()
-            send_update_errors(group_name, mission)
             send_user_notification_elog(group_name, mission, "File Error")
 
             continue
 
         validation.validate_trip(trip)
 
-    response = HttpResponse(render_block_to_string('core/partials/card_event_row.html', 'event_import_form', context={
-            'mission_id': trip.mission.pk,
-            'trip_id': trip.pk
-        }))
+    # When a file is first loaded it triggers a 'selection changed' event for the forms "input" element.
+    # If we don't clear the input element here and the user tries to reload the same file, nothing will happen
+    # and the user will be left clicking the button endlessly wondering why it won't load the file
+    event_form = render_block_to_string('core/partials/card_event_row.html', 'event_import_form',
+                                        context={'trip': trip})
+    event_form_soup = BeautifulSoup(event_form, 'html.parser')
+
+    # Now that events are reloaded we should trigger a validation of the events
+    msg_div = event_form_soup.find(id="div_id_event_message_area")
+    alert_area = msg_div.find(id="div_id_event_alert")
+    alert_area.attrs['hx-get'] = reverse_lazy("core:mission_events_revalidate", args=(mission.pk,))
+    alert_area.attrs['hx-trigger'] = 'load'
+    msg_div.attrs['hx-swap-oob'] = 'true'
+
+    response = HttpResponse(event_form_soup)
     response['HX-Trigger'] = 'event_updated'
     return response
 

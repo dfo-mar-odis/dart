@@ -7,7 +7,21 @@ from django.db.models import Q
 
 import logging
 
-logger = logging.getLogger('dart')
+logger_notifications = logging.getLogger('dart.validation')
+
+
+def validate_mission(mission: core_models.Mission):
+    events = core_models.Event.objects.filter(trip__mission=mission)
+
+    core_models.ValidationError.objects.filter(event__trip__mission=mission,
+                                               type=core_models.ErrorType.validation).delete()
+    errors = []
+    events_count = len(events)
+    for index, event in enumerate(events):
+        logger_notifications.info(_("Validating Event") + " : %d/%d", (index+1), events_count)
+        errors += validate_event(event)
+
+    core_models.ValidationError.objects.bulk_create(errors)
 
 
 def validate_trip(trip: core_models.Trip):

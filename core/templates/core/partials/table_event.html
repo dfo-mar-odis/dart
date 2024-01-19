@@ -1,5 +1,5 @@
 {% block event_table %}
-<table id="event_table" class="table table-striped" hx-swap="outerHTML" hx-trigger="event_updated from:body" hx-get="{% url 'core:form_trip_get_events' trip.pk %}">
+<table id="event_table" class="col table table-striped" hx-swap="outerHTML" hx-trigger="event_updated from:body" hx-get="{% url 'core:form_trip_get_events' trip.pk %}">
     <thead>
         <tr>
             <th>Event</th>

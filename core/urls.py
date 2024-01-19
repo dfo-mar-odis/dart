@@ -2,7 +2,6 @@ from django.urls import path
 
 from . import views, views_mission_sample, views_sample_type, htmx, reports, form_btl_load
 from . import form_biochem_database, views_mission_event, views_mission_plankton, views_mission_sample_type
-from . import form_mission_trip, form_event_details
 
 app_name = 'core'
 

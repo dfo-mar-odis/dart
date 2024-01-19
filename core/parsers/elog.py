@@ -15,6 +15,7 @@ import logging
 from dart2.utils import convertDMS_degs
 
 logger = logging.getLogger('dart')
+logger_notifications = logging.getLogger('dart.elog')
 
 
 class ParserType(Enum):
@@ -162,7 +163,9 @@ def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
     # in case there are duplicate stations in the station_queue
     added_stations = set()
     existing_stations = core_models.Station.objects.filter(mission=trip.mission)
-    for station in station_queue:
+    station_count = len(station_queue)
+    for index, station in enumerate(station_queue):
+        logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
         stn = station.upper()
         if stn not in added_stations and not existing_stations.filter(name__iexact=stn).exists():
             added_stations.add(stn)
@@ -207,7 +210,9 @@ def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
     existing_instruments = core_models.Instrument.objects.filter(mission=trip.mission)
-    for instrument in instrument_queue:
+    instrument_count = len(instrument_queue)
+    for index, instrument in enumerate(instrument_queue):
+        logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
         if instrument.upper() not in added_instruments and \
                 not existing_instruments.filter(name__iexact=instrument).exists():
             instrument_type = get_instrument_type(instrument_name=instrument)
@@ -236,7 +241,11 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
     update_events = []
     update_fields = set()
 
+    mid_list = list(mid_dictionary_buffer.keys())
+    mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
+        index = mid_list.index(mid) + 1
+        logger_notifications.info(_("Processing Event for Elog Message") + f" : %d/%d", index, mid_count)
         update_fields.add("")
         try:
             event_field = get_field(elog_configuration, 'event', buffer)
@@ -250,8 +259,8 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
 
             event_id = int(buffer[event_field])
 
-            station = stations.get(name__iexact=buffer.pop(station_field))
-            instrument = instruments.get(name__iexact=buffer.pop(instrument_field))
+            station = stations.get(name__iexact=buffer.pop(station_field), mission=trip.mission)
+            instrument = instruments.get(name__iexact=buffer.pop(instrument_field), mission=trip.mission)
             sample_id: str = buffer.pop(sample_id_field)
             end_sample_id: str = buffer.pop(end_sample_id_field)
 
@@ -276,18 +285,18 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
             # we have to test that wire_out, flow_start and flow_end are numbers because someone might enter
             # a unit on the value i.e '137.4m' which will then crash the function when bulk creating/updating the
             # events. If the numbers aren't valid numbers then set the field blank and report the error.
-            if wire_out is not None and \
+            if wire_out is not None and wire_out != '' and \
                     ((stripped := wire_out.strip()) == '' or not stripped.replace('.', '', 1).isdigit()):
                 message = _("Invalid wire out value")
                 errors.append((mid, message, ValueError({"message": message}),))
                 wire_out = None
 
-            if flow_start is not None and ((stripped := flow_start.strip()) == '' or not stripped.isdigit()):
+            if flow_start is not None and flow_start != '' and ((stripped := flow_start.strip()) == '' or not stripped.isdigit()):
                 message = _("Invalid flow meter start")
                 errors.append((mid, message, ValueError({"message": message}),))
                 flow_start = None
 
-            if flow_end is not None and ((stripped := flow_end.strip()) == '' or not stripped.isdigit()):
+            if flow_end is not None and flow_end != '' and ((stripped := flow_end.strip()) == '' or not stripped.isdigit()):
                 message = _("Invalid flow meter end")
                 errors.append((mid, message, ValueError({"message": message}),))
                 flow_end = None
@@ -380,7 +389,11 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
 
     elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
 
+    mid_list = list(mid_dictionary_buffer.keys())
+    mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
+        index = mid_list.index(mid) + 1
+        logger_notifications.info(_("Processing Attachments/Actions for Elog Message") + f" : %d/%d", index, mid_count)
         try:
             event_field = get_field(elog_configuration, 'event', buffer)
             attached_field = get_field(elog_configuration, 'attached', buffer)
@@ -532,7 +545,11 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
     if trip.mission.lead_scientist == 'N/A' or trip.platform == 'N/A' or trip.protocol == 'N/A':
         update_mission = True
 
+    mid_list = list(mid_dictionary_buffer.keys())
+    mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
+        index = mid_list.index(mid) + 1
+        logger_notifications.info(_("Processing Additional Variables for Elog Message") + f" : %d/%d", index, mid_count)
         try:
             lead_scientists_field = get_field(elog_configuration, 'lead_scientist', buffer)
             protocol_field = get_field(elog_configuration, 'protocol', buffer)

@@ -804,6 +804,31 @@ def save_load_component(component_id, message, **kwargs):
     return soup
 
 
+def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
+    component_id = f"{alert_area_id}_alert"
+    soup = BeautifulSoup("", 'html.parser')
+    soup.append(div := soup.new_tag('div', id=alert_area_id, attrs={"hx-swap-oob": 'true'}))
+
+    ext_args = {
+        'hx-ext': 'ws',
+        'ws-connect': f"/ws/notifications/{logger}/{component_id}_status/"
+    }
+    alert_soup = save_load_component(component_id, message, **ext_args, **kwargs)
+
+    # add a message area for websockets
+    msg_div = alert_soup.find(id=f"{component_id}_message")
+    msg_div.string = ""
+
+    msg_div_status = soup.new_tag('div')
+    msg_div_status['id'] = f'{component_id}_status'
+    msg_div_status.string = message
+    msg_div.append(msg_div_status)
+
+    div.append(alert_soup)
+
+    return soup
+
+
 # convenience method to convert html attributes from a string into a dictionary
 def get_crispy_element_attributes(element):
     attr_dict = {k: v.replace("\"", "") for k, v in [attr.split('=') for attr in element.flat_attrs.strip().split(" ")]}

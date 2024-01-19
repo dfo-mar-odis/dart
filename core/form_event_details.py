@@ -98,10 +98,12 @@ class EventDetails(core_forms.CardForm):
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
+        body.css_class += " vertical-scrollbar"
         div_content = Div(
             id=self.get_card_content_id(),
         )
-        content_frame = Div(div_content, css_class="vertical-scrollbar")
+        # content_frame = Div(div_content, css_class="vertical-scrollbar")
+        content_frame = Div(div_content)
 
         body.fields.append(content_frame)
         return body
