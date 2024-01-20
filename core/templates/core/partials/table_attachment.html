@@ -1,9 +1,6 @@
 {% load i18n %}
 {% load bootstrap_icons %}
 
-
-{% block attachments_table %}
-{% if event.attachments.all %}
 <table id="attachment_table_id" class="table table-striped table-sm">
     <thead>
     <tr class="bg-light">
@@ -11,22 +8,22 @@
         {% if editable %}<th>{# space for the edit button #}</th><th>{# space for the delete button #}</th>{% endif %}
     </tr>
     </thead>
-    <tbody>
+    <tbody id="tbody_attachment_table_id" hx-target="closest tr" hx-swap="outerHTML">
     {% for atta in event.attachments.all %}
-    <tr>
-        <td class="col">{{ atta.name }}</td>
-        {% if editable %}
-        <td class="d-sm-table-cell col-1" >
-            <button class="btn" hx-swap="outerHTML" hx-target="#attachments_form_id" hx-get="{% url 'core:mission_events_attachment_update' atta.pk %}">
-                {% custom_icon 'pencil' %}</button>
-        </td>
-        <td class="d-sm-table-cell col-1">
-            <button class="btn" hx-confirm="{% trans 'Are you sure you want to delete' %} {{ atta }}?" hx-swap="outerHTML" hx-target="#attachment_table_id" hx-post="{% url 'core:mission_events_attachment_delete' atta.pk %}">x</button>
-        </td>
-        {% endif %}
-    </tr>
+        {% block attachments_row_block %}
+        <tr id="row-{{ atta.pk }}">
+            <td class="col">{{ atta.name }}</td>
+            {% if editable %}
+            <td class="d-sm-table-cell col-1" >
+                <button class="btn" hx-swap="none" hx-get="{% url 'core:form_event_edit_attachment' atta.pk %}">
+                    {% custom_icon 'pencil' %}</button>
+            </td>
+            <td class="d-sm-table-cell col-1">
+                <button class="btn" hx-confirm="{% trans 'Are you sure?' %}" hx-delete="{% url 'core:form_event_delete_attachment' atta.pk %}">{% custom_icon 'dash-square' %}</button>
+            </td>
+            {% endif %}
+        </tr>
+        {% endblock %}
     {% endfor %}
     </tbody>
 </table>
-{% endif %}
-{% endblock %}

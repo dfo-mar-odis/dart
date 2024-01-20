@@ -7,11 +7,40 @@ from django.db.models import Q
 
 import logging
 
-logger = logging.getLogger('dart')
+logger_notifications = logging.getLogger('dart.validation')
+
+
+def validate_mission(mission: core_models.Mission):
+    events = core_models.Event.objects.filter(trip__mission=mission)
+
+    core_models.ValidationError.objects.filter(event__trip__mission=mission,
+                                               type=core_models.ErrorType.validation).delete()
+    errors = []
+    events_count = len(events)
+    for index, event in enumerate(events):
+        logger_notifications.info(_("Validating Event") + " : %d/%d", (index+1), events_count)
+        errors += validate_event(event)
+
+    core_models.ValidationError.objects.bulk_create(errors)
+
+
+def validate_trip(trip: core_models.Trip):
+    create_validation_errors = []
+    for event in trip.events.all():
+        event.validation_errors.all().delete()
+        create_validation_errors += validate_event(event)
+
+        if len(create_validation_errors) > 1000:
+            core_models.ValidationError.objects.bulk_create(create_validation_errors)
+            create_validation_errors = []
+
+    core_models.ValidationError.objects.bulk_create(create_validation_errors)
 
 
 def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
 
+    # I return the errors rather than just saving them so events can be validated and saved in bulk
+    # it's up to the calling function to delete ValidationError objects on an event before validating it
     validation_errors = []
 
     actions = event.actions.all()
@@ -37,16 +66,28 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
             validation_errors.append(err)
 
     # Validate event does not have duplicate action types
-    mission = event.mission
+    trip = event.trip
     if event.start_date is None or event.end_date is None:
         message = _("Event is missing start and/or end date")
 
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
-    elif event.start_date.date() < mission.start_date or event.start_date.date() > mission.end_date or \
-            event.end_date.date() < mission.start_date or event.end_date.date() > mission.end_date:
+    elif event.start_date.date() < trip.start_date or event.start_date.date() > trip.end_date or \
+            event.end_date.date() < trip.start_date or event.end_date.date() > trip.end_date:
         message = _("Action occurred outside of mission dates")
-        message += " " + mission.start_date.strftime("%Y-%m-%d") + " - " + mission.end_date.strftime("%Y-%m-%d")
+        message += " " + trip.start_date.strftime("%Y-%m-%d") + " - " + trip.end_date.strftime("%Y-%m-%d")
+
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    dup_events = core_models.Event.objects.filter(
+        event_id=event.event_id,
+        station=event.station,
+        instrument=event.instrument
+    ).exclude(pk=event.pk)
+
+    if dup_events.exists():
+        message = _("Event with the same ID, Station and Instrument already exists for other trips")
 
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
@@ -91,7 +132,7 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
             validation_errors.append(err)
 
     # CTD events should not have overlapping IDs
-    ctd_events = event.mission.events.filter(instrument__type=core_models.InstrumentType.ctd).exclude(
+    ctd_events = event.trip.events.filter(instrument__type=core_models.InstrumentType.ctd).exclude(
         pk=event.id).exclude(actions__type=core_models.ActionType.aborted)
     if (evt := ctd_events.filter(
             sample_id__range=(event.sample_id, event.end_sample_id))).exists():

@@ -1,15 +1,17 @@
-import io
+import time
 
+from bs4 import BeautifulSoup
+from crispy_forms.bootstrap import StrictButton
+from crispy_forms.layout import Div, HTML, Row, Column
+from crispy_forms.utils import render_crispy_form
+from django.core.cache import caches
 from django.http import HttpResponse
-from django.template.context_processors import csrf
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
-from render_block import render_block_to_string
 
-from core import forms, models
-from core.htmx import send_user_notification_elog, send_update_errors, logger, htmx_validate_events
-from core.parsers import elog
+from core import models, forms, validation, form_event_details, form_mission_trip
 from core.views import MissionMixin, reports
+from dart2.utils import load_svg
 from dart2.views import GenericDetailView
 
 
@@ -26,446 +28,202 @@ class EventDetails(MissionMixin, GenericDetailView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        if caches['default'].touch('selected_event'):
+            caches['default'].delete('selected_event')
+
         context['search_form'] = forms.MissionSearchForm(initial={'mission': self.object.pk})
-        context['events'] = self.object.events.all()
+
+        if 'trip_id' in self.kwargs:
+            context['trip_id'] = self.kwargs['trip_id']
+        elif self.object.trips.last():
+            context['trip_id'] = self.object.trips.last().pk
 
         context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,)) for key in reports.keys()}
 
         return context
 
 
-def hx_event_select(request, event_id):
-    event = models.Event.objects.get(pk=event_id)
+class ValidationEventCard(forms.CardForm):
 
-    context = {}
-    context['object'] = event.mission
-    context['selected_event'] = event
-    if not event.files:
-        context['form'] = forms.EventForm(instance=event)
-        context['actionform'] = forms.ActionForm(initial={'event': event.pk})
-        context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
+    event = None
 
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'selected_event_details', context))
-    response['HX-Trigger'] = 'selected_event_updated'
-    return response
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+        validation_errors = models.ValidationError.objects.filter(event=self.event)
 
+        html = ""
+        for error in validation_errors:
+            html += f"<li>{error.message}</li>"
 
-def hx_event_new_delete(request, mission_id, event_id):
-    context = {}
-    context.update(csrf(request))
+        html = f"<ul>{html}</ul>"
+        body.fields.append(HTML(html))
+        return body
 
-    if request.method == "GET":
-        # called with no event id to create a blank instance of the event_edit_form
-        context['form'] = forms.EventForm(initial={'mission': mission_id})
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
-        return response
-    elif request.method == "POST":
-        if event_id:
-            event = models.Event.objects.get(pk=event_id)
-            context['object'] = event.mission
-            event.delete()
-            response = HttpResponse(render_block_to_string('core/mission_events.html', 'content_details_block',
-                                                           context=context))
-            response['HX-Trigger-After-Swap'] = 'event_updated'
-            return response
+    def __init__(self, event, *args, **kwargs):
+        self.event = event
+        title = _("Event") + f" {event.event_id} : {event.trip.start_date} - {event.trip.end_date}"
+        super().__init__(card_name=f"event_validation_{event.pk}", card_title=title, *args, **kwargs)
 
 
-def hx_event_update(request, event_id):
-    context = {}
-    context.update(csrf(request))
+class ValidateEventsCard(forms.CollapsableCardForm):
 
-    if request.method == "GET":
-        event = models.Event.objects.get(pk=event_id)
-        context['event'] = event
-        context['form'] = forms.EventForm(instance=event)
-        context['actionform'] = forms.ActionForm(initial={'event': event.pk})
-        context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
-        return response
-    if request.method == "POST":
-        mission_id = request.POST['mission']
-        event_id = request.POST['event_id']
-        update = models.Event.objects.filter(mission_id=mission_id, event_id=event_id).exists()
+    mission = None
 
-        if update:
-            event = models.Event.objects.get(mission_id=mission_id, event_id=event_id)
-            form = forms.EventForm(request.POST, instance=event)
-        else:
-            form = forms.EventForm(request.POST, initial={'mission': mission_id})
+    def get_card_header(self):
+        header = super().get_card_header()
 
-        if form.is_valid():
-            event = form.save()
-            form = forms.EventForm(instance=event)
-            context['form'] = form
-            context['event'] = event
-            context['actionform'] = forms.ActionForm(initial={'event': event.pk})
-            context['attachmentform'] = forms.AttachmentForm(initial={'event': event.pk})
-            context['page_title'] = _("Event : ") + str(event.event_id)
-            if update:
-                # if updating an event, everything is already on the page, just update the event form area
-                response = HttpResponse(
-                    render_block_to_string('core/partials/event_edit_form.html', 'event_form', context=context))
-                response['HX-Trigger'] = 'update_actions, update_attachments'
-            else:
-                # if creating a new event, update the entire event block to add other blocks to the page
-                response = HttpResponse(
-                    render_block_to_string('core/partials/event_edit_form.html', 'event_content', context=context))
-                response['HX-Trigger-After-Swap'] = "event_updated"
-                # response['HX-Push-Url'] = reverse_lazy('core:event_edit', args=(event.pk,))
-            return response
+        spacer_col = Column(css_class="col")
+        header.fields[0].fields.append(spacer_col)
 
-        context['form'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'event_form', context=context))
-        return response
+        buttons = Column(css_class="col-auto align-self-end")
+        header.fields[0].fields.append(buttons)
 
-
-def hx_update_action(request, action_id):
-    context = {}
-    context.update(csrf(request))
-
-    if 'reset' in request.GET:
-        # I'm passing the event id to initialize the form through the 'action_id' variable
-        # it's not stright forward, but the action form needs to maintain an event or the
-        # next action won't know what event it should be attached to.
-        form = forms.ActionForm(initial={'event': action_id})
-        context['actionform'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'action_form', context=context))
-        return response
-    else:
-        action = models.Action.objects.get(pk=action_id)
-        event = action.event
-    context['event'] = event
-
-    if request.method == "GET":
-        form = forms.ActionForm(instance=action, initial={'event': event.pk})
-        context['actionform'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'action_form', context=context))
-        return response
-    elif request.method == "POST":
-        action.delete()
-        response = HttpResponse(render_block_to_string('core/partials/table_action.html', 'action_table',
-                                                       context=context))
-        return response
-
-
-def hx_new_action(request, event_id):
-    context = {}
-    context.update(csrf(request))
-
-    if request.method == "GET":
-        # if the get method is used with this function the form will be cleared.
-        event_id = request.GET['event']
-        context['event'] = models.Event.objects.get(pk=event_id)
-        context['actionform'] = forms.ActionForm(initial={'event': event_id})
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'action_form', context=context))
-        return response
-    elif request.method == "POST":
-        action = None
-        if 'id' in request.POST:
-            action = models.Action.objects.get(pk=request.POST['id'])
-            event_id = action.event.pk
-            form = forms.ActionForm(request.POST, instance=action)
-            event = action.event
-        else:
-            event_id = request.POST['event']
-            event = models.Event.objects.get(pk=event_id)
-            form = forms.ActionForm(request.POST, initial={'event': event_id})
-
-        context['event'] = event
-
-        if form.is_valid():
-            action = form.save()
-            # context['actionforms'] = [forms.ActionForm(instance=action) for action in event.actions.all()]
-            context['actionform'] = forms.ActionForm(initial={'event': event_id})
-            response = HttpResponse(
-                render_block_to_string('core/partials/event_edit_form.html', 'action_form', context=context))
-            response['HX-Trigger'] = 'update_actions'
-            return response
-
-        context['actionform'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'action_form', context=context))
-        return response
-
-
-def hx_update_attachment(request, action_id):
-    context = {}
-    context.update(csrf(request))
-
-    if 'reset' in request.GET:
-        # I'm passing the event id to initialize the form through the 'action_id' variable
-        # it's not stright forward, but the action form needs to maintain an event or the
-        # next action won't know what event it should be attached to.
-        form = forms.AttachmentForm(initial={'event': action_id})
-        context['attachmentform'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'attachments_form', context=context))
-        return response
-    else:
-        attachment = models.Attachment.objects.get(pk=action_id)
-        event = attachment.event
-    context['event'] = event
-
-    if request.method == "GET":
-        form = forms.AttachmentForm(instance=attachment, initial={'event': event.pk})
-        context['attachmentform'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'attachments_form', context=context))
-        return response
-    elif request.method == "POST":
-        attachment.delete()
-        response = HttpResponse(render_block_to_string('core/partials/table_attachment.html', 'attachments_table',
-                                                       context=context))
-        return response
-
-
-def hx_new_attachment(request):
-    context = {}
-    context.update(csrf(request))
-
-    if request.method == "GET":
-        # if the get method is used with this function the form will be cleared.
-        event_id = request.GET['event']
-        context['event'] = models.Event.objects.get(pk=event_id)
-        context['attachmentform'] = forms.AttachmentForm(initial={'event': event_id})
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'attachments_form', context=context))
-        return response
-    elif request.method == "POST":
-        attachment = None
-        if 'id' in request.POST:
-            attachment = models.Attachment.objects.get(pk=request.POST['id'])
-            event_id = attachment.event.pk
-            form = forms.AttachmentForm(request.POST, instance=attachment)
-            event = attachment.event
-        else:
-            event_id = request.POST['event']
-            event = models.Event.objects.get(pk=event_id)
-            form = forms.AttachmentForm(request.POST, initial={'event': event_id})
-
-        context['event'] = event
-
-        if form.is_valid():
-            attachment = form.save()
-            # context['actionforms'] = [forms.ActionForm(instance=action) for action in event.actions.all()]
-            context['attachmentform'] = forms.AttachmentForm(initial={'event': event_id})
-            response = HttpResponse(
-                render_block_to_string('core/partials/event_edit_form.html', 'attachments_form', context=context))
-            response['HX-Trigger'] = 'update_attachments'
-            return response
-
-        context['attachmentform'] = form
-        response = HttpResponse(
-            render_block_to_string('core/partials/event_edit_form.html', 'attachments_form', context=context))
-        return response
-
-
-def hx_list_action(request, event_id, editable=False):
-    event = models.Event.objects.get(pk=event_id)
-    context = {'event': event, 'editable': editable}
-    response = HttpResponse(render_block_to_string('core/partials/table_action.html', 'action_table', context=context))
-    return response
-
-
-def hx_list_attachment(request, event_id, editable=False):
-    event = models.Event.objects.get(pk=event_id)
-    context = {'event': event, 'editable': editable}
-    response = HttpResponse(render_block_to_string('core/partials/table_attachment.html', 'attachments_table',
-                                                   context=context))
-    return response
-
-
-def hx_list_event(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
-    events = mission.events.all()
-    if request.method == 'GET':
-        if 'station' in request.GET and request.GET['station']:
-            events = events.filter(station=request.GET['station'])
-
-        if 'instrument' in request.GET and request.GET['instrument']:
-            events = events.filter(instrument=request.GET['instrument'])
-
-        if 'action_type' in request.GET and request.GET['action_type']:
-            events = events.filter(actions__type=request.GET['action_type'])
-
-        if 'event_start' in request.GET and request.GET['event_start']:
-            start_id = request.GET['event_start']
-
-            if 'event_end' in request.GET and request.GET['event_end']:
-                end_id = request.GET['event_end']
-                events = events.filter(event_id__lte=end_id, event_id__gte=start_id)
-            else:
-                events = events.filter(event_id=start_id)
-        elif 'event_end' in request.GET and request.GET['event_end']:
-            end_id = request.GET['event_end']
-            events = events.filter(event_id=end_id)
-
-        if 'sample_start' in request.GET and request.GET['sample_start']:
-            start_id = request.GET['sample_start']
-            if 'sample_end' in request.GET and request.GET['sample_end']:
-                end_id = request.GET['sample_end']
-                events = events.filter(sample_id__lte=end_id, end_sample_id__gte=start_id)
-            else:
-                events = events.filter(sample_id__lte=start_id, end_sample_id__gte=start_id)
-        elif 'sample_end' in request.GET and request.GET['sample_end']:
-            end_id = request.GET['sample_end']
-            events = events.filter(sample_id__lte=end_id, end_sample_id__gte=end_id)
-
-    context = {'mission': mission, 'events': events}
-    response = HttpResponse(render_block_to_string('core/partials/table_event.html', 'event_table',
-                                                   context=context))
-    return response
-
-
-def upload_elog(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
-    elog_configuration = models.ElogConfig.get_default_config(mission)
-
-    if request.method == "GET":
-        url = reverse_lazy('core:mission_events_upload_elog', args=(mission_id,))
-        attrs = {
-            'component_id': "div_id_upload_elog_load",
-            'message': '',
-            'alert_type': "info",
-            'hx-post': url,
-            'hx-trigger': "load",
-            'hx-target': "#elog_upload_file_form_id",
-            'hx-swap': 'outerHTML',
-            'hx-ext': "ws",
-            'ws-connect': "/ws/notifications/"
+        btn_attrs = {
+            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.mission.pk,)),
+            'hx-swap': 'none',
         }
-        soup = forms.save_load_component(**attrs)
-        # add a message area for websockets
-        msg_div = soup.find(id="div_id_upload_elog_load_message")
-        msg_div.string = ""
+        icon = load_svg('arrow-clockwise')
+        revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
+        spacer_col.fields.append(revalidate)
 
-        # The core.consumer.processing_elog_message() function is going to write output to a div
-        # with the 'status' id, we'll stick that in the loading alerts message area and bam! Instant notifications!
-        msg_div_status = soup.new_tag('div')
-        msg_div_status['id'] = 'status'
-        msg_div_status.string = _("Loading")
-        msg_div.append(msg_div_status)
+        issue_count = models.ValidationError.objects.filter(event__trip__mission=self.mission).count()
+        issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
+        buttons.fields.append(issue_count_col)
 
-        response = HttpResponse(soup)
-        return response
+        header.fields.append(super().get_alert_area())
 
-    files = request.FILES.getlist('event')
-    group_name = 'mission_events'
+        return header
+    
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+        body.css_class += " vertical-scrollbar"
 
-    for index, file in enumerate(files):
-        file_name = file.name
-        process_message = f'{index}/{len(files)}: {file_name}'
-        # let the user know that we're about to start processing a file
-        send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
+        events_ids = models.ValidationError.objects.filter(
+            event__trip__mission=self.mission
+        ).values_list('event', flat=True)
+        events = models.Event.objects.filter(pk__in=events_ids)
+        for event in events:
+            event_card = ValidationEventCard(event=event)
+            div = Div(event_card.helper.layout, css_class="mb-2")
+            body.fields.append(div)
 
-        # remove any existing errors for a log file of this name and update the interface
-        mission.file_errors.filter(file_name=file_name).delete()
-        send_update_errors(group_name, mission)
+        return body
 
-        try:
-            data = file.read()
-            message_objects = elog.parse(io.StringIO(data.decode('utf-8')), elog_configuration)
+    def __init__(self, mission, *args, **kwargs):
+        self.mission = mission
+        super().__init__(card_name="event_validation", card_title=_("Event Validation"), *args, **kwargs)
 
-            file_errors: [models.FileError] = []
-            errors: [tuple] = []
-            # make note of missing required field errors in this file
-            for mid, error_buffer in message_objects[elog.ParserType.ERRORS].items():
-                # Report errors to the user if there are any, otherwise process the message objects you can
-                for error in error_buffer:
-                    err = models.FileError(mission=mission, file_name=file_name, line=int(mid),
-                                           type=models.ErrorType.missing_value,
-                                           message=f'Elog message object ($@MID@$: {mid}) missing required '
-                                                   f'field [{error.args[0]["expected"]}]')
-                    file_errors.append(err)
 
-                    if mid in message_objects[elog.ParserType.MID]:
-                        message_objects[elog.ParserType.MID].pop(mid)
+class ValidationFileCard(forms.CardForm):
 
-            send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
-            elog.process_stations(mission, message_objects[elog.ParserType.STATIONS])
+    mission = None
+    file_name = None
 
-            send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
-            elog.process_instruments(mission, message_objects[elog.ParserType.INSTRUMENTS])
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
 
-            send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
-            errors += elog.process_events(mission, message_objects[elog.ParserType.MID])
+        errors = self.mission.file_errors.filter(file_name=self.file_name)
+        html = ""
+        for error in errors:
+            html += f"<li>MID: {error.line} - {error.message}</li>"
 
-            send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
-            errors += elog.process_attachments_actions(mission, message_objects[elog.ParserType.MID], file_name)
+        html = f"<ul>{html}</ul>"
+        body.fields.append(HTML(html))
+        return body
 
-            send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
-            errors += elog.process_variables(mission, message_objects[elog.ParserType.MID])
+    def __init__(self, mission, file_name, uuid, *args, **kwargs):
+        self.mission = mission
+        self.file_name = file_name
+        title = _("File") + f" : {file_name}"
+        super().__init__(card_name=f"file_validation_{uuid}", card_title=title, *args, **kwargs)
 
-            for error in errors:
-                file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
-                if isinstance(error[2], KeyError):
-                    file_error.type = models.ErrorType.missing_id
-                elif isinstance(error[2], ValueError):
-                    file_error.type = models.ErrorType.missing_value
-                else:
-                    file_error.type = models.ErrorType.unknown
-                file_errors.append(file_error)
 
-            models.FileError.objects.bulk_create(file_errors)
+class ValidateFileCard(forms.CollapsableCardForm):
+    mission = None
 
-        except Exception as ex:
-            if type(ex) is LookupError:
-                logger.error(ex)
-                err = models.FileError(mission=mission, type=models.ErrorType.missing_id, file_name=file_name,
-                                       message=ex.args[0]['message'] + ", " + _("see error.log for details"))
-            else:
-                # Something is really wrong with this file
-                logger.exception(ex)
-                err = models.FileError(mission=mission, type=models.ErrorType.unknown, file_name=file_name,
-                                       message=_("Unknown error :") + f"{str(ex)}, " + _("see error.log for details"))
-            err.save()
-            send_update_errors(group_name, mission)
-            send_user_notification_elog(group_name, mission, "File Error")
+    def get_card_header(self):
+        header = super().get_card_header()
 
-            continue
+        spacer_col = Column(css_class="col")
+        header.fields[0].fields.append(spacer_col)
 
-        htmx_validate_events(request, mission.pk, file_name)
+        buttons = Column(css_class="col-auto align-self-end")
+        header.fields[0].fields.append(buttons)
 
-    context = {'object': mission}
-    response = HttpResponse(render_block_to_string('core/mission_events.html', 'event_import_form', context))
+        issue_count = models.FileError.objects.filter(mission=self.mission).count()
+        if issue_count > 0:
+            issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
+            buttons.fields.append(issue_count_col)
+
+        return header
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+        body.css_class += " vertical-scrollbar"
+
+        files = self.mission.file_errors.all().values_list('file_name', flat=True).distinct()
+        for index, file in enumerate(files):
+            event_card = ValidationFileCard(self.mission, file, index)
+            div = Div(event_card.helper.layout, css_class="mb-2")
+            body.fields.append(div)
+
+        return body
+
+    def __init__(self, mission, *args, **kwargs):
+        self.mission = mission
+        super().__init__(card_name="file_validation", card_title=_("File Issues"), *args, **kwargs)
+
+
+def get_validation_card(request, mission_id, **kwargs):
+    mission = models.Mission.objects.get(pk=mission_id)
+    validation_card = ValidateEventsCard(mission=mission, collapsed=('collapsed' not in kwargs))
+    validation_card_html = render_crispy_form(validation_card)
+    validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
+
+    if 'swap' in kwargs:
+        validation_card_soup.find(id=validation_card.get_card_id()).attrs['hx-swap-oob'] = 'true'
+
+    return HttpResponse(validation_card_soup)
+
+
+def get_file_validation_card(request, mission_id, **kwargs):
+    mission = models.Mission.objects.get(pk=mission_id)
+    validation_card = ValidateFileCard(mission=mission, collapsed=('collapsed' not in kwargs))
+    validation_card_html = render_crispy_form(validation_card)
+    validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
+
+    if 'swap' in kwargs:
+        validation_card_soup.find(id=validation_card.get_card_id()).attrs['hx-swap-oob'] = 'true'
+
+    return HttpResponse(validation_card_soup)
+
+
+def revalidate_events(request, mission_id):
+    mission = models.Mission.objects.get(pk=mission_id)
+
+    if request.method == "GET":
+
+        attrs = {
+            'alert_area_id': "div_id_card_alert_event_validation",
+            'logger': validation.logger_notifications.name,
+            'message': _("Revalidating"),
+            'hx-trigger': 'load',
+            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(mission_id,)),
+        }
+        return HttpResponse(forms.websocket_post_request_alert(**attrs))
+
+    validation.validate_mission(mission)
+    response = get_validation_card(request, mission_id, swap=True, collapsed=False)
     response['HX-Trigger'] = 'event_updated'
     return response
 
 
 mission_event_urls = [
     path('mission/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
-
-    path('mission/upload/elog/<int:mission_id>/', upload_elog, name="mission_events_upload_elog"),
-
-    path('mission/event/hx/new/', hx_event_update, name="mission_events_update"),
-    path('mission/event/hx/new/<int:mission_id>/', hx_event_new_delete, kwargs={'event_id': 0},
-         name="mission_events_update"),
-    path('mission/event/hx/delete/<int:event_id>', hx_event_new_delete, kwargs={'mission_id': 0},
-         name="mission_events_delete"),
-    path('mission/event/hx/select/<int:event_id>/', hx_event_select, name="mission_events_select"),
-    path('mission/event/hx/update/', hx_event_update, kwargs={'event_id': 0}, name="mission_events_update"),
-    path('mission/event/hx/update/<int:event_id>/', hx_event_update, name="mission_events_update"),
-    path('mission/event/hx/list/<int:mission_id>/', hx_list_event, name="mission_events_list"),
-
-    path('mission/event/action/hx/new/', hx_new_action, kwargs={'event_id': 0}, name="mission_events_action_new"),
-    path('mission/event/action/hx/update/<int:action_id>/', hx_update_action, name="mission_events_action_update"),
-    path('mission/event/action/hx/delete/<int:action_id>/', hx_update_action, name="mission_events_action_delete"),
-    path('mission/event/action/hx/list/<int:event_id>/', hx_list_action, name="mission_events_action_list"),
-    path('mission/event/action/hx/list/<int:event_id>/<str:editable>/', hx_list_action,
-         name="mission_events_action_list"),
-
-    path('mission/event/attachment/hx/new/', hx_new_attachment, name="mission_events_attachment_new"),
-    path('mission/event/attachment/hx/update/<int:action_id>/', hx_update_attachment,
-         name="mission_events_attachment_update"),
-    path('mission/event/attachment/hx/delete/<int:action_id>/', hx_update_attachment,
-         name="mission_events_attachment_delete"),
-    path('mission/event/attachment/hx/list/<int:event_id>/', hx_list_attachment, name="mission_events_attachment_list"),
-    path('mission/event/attachment/hx/list/<int:event_id>/<str:editable>/', hx_list_attachment,
-         name="mission_events_attachment_list"),
+    path('mission/event/<int:pk>/<int:trip_id>/', EventDetails.as_view(), name="mission_events_details"),
+    path('mission/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
+    path('mission/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
+    path('mission/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
 ]
+
+mission_event_urls += form_mission_trip.trip_load_urls + form_event_details.event_detail_urls

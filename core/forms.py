@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
+
 from django import forms
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Min, Max
@@ -45,6 +46,13 @@ class CardForm(forms.Form):
         title = HTML(f'<h6>{self.card_title}</h6>') if self.card_title else None
         return Div(title, css_class=self.get_card_title_class(), id=self.get_card_title_id())
 
+    def get_alert_area_id(self):
+        return f"div_id_card_alert_{self.card_name}"
+
+    def get_alert_area(self):
+        msg_row = Row(id=self.get_alert_area_id())
+        return msg_row
+
     def get_card_header_id(self):
         return f'div_id_card_header_{self.card_name}'
 
@@ -52,7 +60,13 @@ class CardForm(forms.Form):
         return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
 
     def get_card_header(self) -> Div:
-        return Div(self.get_card_title(), css_class=self.get_card_header_class(), id=self.get_card_header_id())
+        header_row = Row()
+
+        header = Div(header_row, id=self.get_card_header_id(), css_class=self.get_card_header_class())
+        title_column = Div(self.get_card_title(), css_class="col-auto align-self-end")
+        header_row.append(title_column)
+
+        return header
 
     def get_card_body_id(self):
         return f'div_id_card_body_{self.card_name}'
@@ -98,25 +112,23 @@ class CardForm(forms.Form):
 
 class CollapsableCardForm(CardForm):
 
+    collapsed = False
+
     def get_card_header(self):
 
-        header_row = Row()
-        header = Div(header_row, id=f'div_id_{self.card_name}_header', css_class=self.get_card_header_class())
+        header = super().get_card_header()
 
         button_id = f'button_id_collapse_{self.card_name}'
         button_attrs = {
             'id': button_id,
             'data_bs_toggle': "collapse",
             'href': f"#div_id_card_collapse_{self.card_name}",
-            'aria_expanded': 'false'
+            'aria_expanded': 'false' if self.collapsed else 'true'
         }
         icon = load_svg('caret-down')
         button = StrictButton(icon, css_class="btn btn-light btn-sm collapsed col-auto", **button_attrs)
 
-        title_column = Div(self.get_card_title(), css_class="col-auto align-self-end")
-
-        header_row.append(button)
-        header_row.append(title_column)
+        header.fields[0].fields.insert(0, button)
 
         return header
 
@@ -125,7 +137,8 @@ class CollapsableCardForm(CardForm):
 
     def get_collapsable_card_body(self):
         inner_body = self.get_card_body()
-        body = Div(inner_body, css_class="collapsed collapse", id=self.get_collapsable_card_body_id())
+        css = "collapse" + ("" if self.collapsed else " show")
+        body = Div(inner_body, css_class=css, id=self.get_collapsable_card_body_id())
         return body
 
     def get_card(self):
@@ -138,6 +151,11 @@ class CollapsableCardForm(CardForm):
 
         return card
 
+    def __init__(self, collapsed=True, *args, **kwargs):
+        self.collapsed = collapsed
+
+        super().__init__(*args, **kwargs)
+
 
 class MissionSettingsForm(forms.ModelForm):
     name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
@@ -147,16 +165,9 @@ class MissionSettingsForm(forms.ModelForm):
     #                              help_text="Folder location of Elog *.BTL files")
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
 
-    start_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
-    end_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
-
     class Meta:
         model = models.Mission
-        fields = ['name', 'start_date', 'end_date', 'lead_scientist',
-                  'protocol', 'platform', 'geographic_region', 'mission_descriptor', 'collector_comments',
-                  'more_comments', 'data_manager_comments', 'biochem_table', 'data_center']
+        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center', 'lead_scientist']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -171,28 +182,16 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['geographic_region'].choices = [(None, '------'), (-1, _('New Region')), (-2, _(''))]
         self.fields['geographic_region'].choices += [(gr.id, gr) for gr in models.GeographicRegion.objects.all()]
         self.fields['geographic_region'].initial = None
-        self.fields['protocol'].required = False
-        self.fields['lead_scientist'].required = False
         self.fields['mission_descriptor'].required = False
         self.fields['biochem_table'].required = False
+        self.fields['lead_scientist'].required = False
         self.fields['data_center'].required = False
         self.fields['geographic_region'].required = False
-        self.fields['collector_comments'].required = False
-        self.fields['data_manager_comments'].required = False
-        self.fields['more_comments'].required = False
-        self.fields['platform'].required = False
 
         submit = Submit('submit', 'Submit')
-        if hasattr(self, 'instance') and self.instance.pk and len(self.instance.events.all()):
-            submit = Submit('submit', 'Submit', hx_on="click: notify_of_event_validation()")
-
         self.helper.layout = Layout(
             Row(
                 Column(Field('name', autocomplete='true')),
-            ),
-            Row(
-                Column(Field('start_date')),
-                Column(Field('end_date'))
             ),
             Row(
                 Column(
@@ -219,25 +218,10 @@ class MissionSettingsForm(forms.ModelForm):
                         css_class="alert alert-info ms-1 me-1"
                     ),
                     Row(
-                        Column(Field('platform')),
-                        Column(Field('protocol')),
-                    ),
-                    Row(
-                        Column(Field('lead_scientist')),
                         Column(Field('mission_descriptor')),
-                    ),
-                    Row(
+                        Column(Field('lead_scientist')),
                         Column(Field('data_center')),
                         Column(Field('biochem_table')),
-                    ),
-                    Row(
-                        Column(Field('collector_comments')),
-                    ),
-                    Row(
-                        Column(Field('data_manager_comments')),
-                    ),
-                    Row(
-                        Column(Field('more_comments')),
                     ),
                     css_class="card-body"
                 ),
@@ -263,141 +247,6 @@ class MissionSettingsForm(forms.ModelForm):
             raise forms.ValidationError("The end date must occur after the start date")
 
         return end_date
-
-
-class ActionForm(forms.ModelForm):
-    date_time = forms.DateTimeField(widget=forms.DateTimeInput(
-        attrs={'type': 'datetime-local', 'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
-
-    class Meta:
-        model = models.Action
-        fields = ['id', 'event', 'type', 'date_time', 'latitude', 'longitude', 'comment']
-        widgets = {
-            'event': forms.HiddenInput()
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper(self)
-
-        # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
-        # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
-        # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
-        self.helper.form_tag = False
-
-        event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
-        submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#actions_form_id",
-                               hx_post=reverse_lazy('core:mission_events_action_new'),
-                               )
-        clear_button = Submit('reset', '0', css_class='btn btn-sm btn-secondary', hx_target='#actions_form_id',
-                              hx_get=reverse_lazy('core:mission_events_action_update', args=(event_pk,)))
-        action_id_element = None
-        if self.instance.pk:
-            action_id_element = Hidden('id', self.instance.pk)
-
-        self.helper.layout = Layout(
-            action_id_element,
-            Hidden('event', event_pk),
-            Row(
-                Column(Field('type', css_class='form-control-sm'), css_class='col-sm'),
-                Column(Field('date_time', css_class='form-control-sm'), css_class='col-sm'),
-                Column(Field('latitude', css_class='form-control-sm', placeholder=_('Latitude')), css_class='col-sm'),
-                Column(Field('longitude', css_class='form-control-sm', placeholder=_('Longitude')), css_class='col-sm'),
-                Column(submit_button, clear_button, css_class='col-sm'),
-                css_class="input-group"
-            ),
-            Row(Column(Field('comment', css_class='form-control-sm', placeholder=_('Comment'))),
-                css_class='input-group')
-        )
-        self.helper.form_show_labels = False
-
-
-class AttachmentForm(forms.ModelForm):
-    class Meta:
-        model = models.Attachment
-        fields = ['id', 'event', 'name']
-        widgets = {
-            'event': forms.HiddenInput()
-        }
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper(self)
-
-        # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
-        # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
-        # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
-        self.helper.form_tag = False
-
-        event_pk = self.initial['event'] if 'event' in self.initial else args[0]['event']
-        submit_button = Submit('submit', '+', css_class='btn-sm', hx_target="#attachments_form_id",
-                               hx_post=reverse_lazy('core:mission_events_attachment_new'),
-                               )
-        clear_button = Submit('reset', '0', css_class='btn btn-sm btn-secondary', hx_target='#attachments_form_id',
-                              hx_get=reverse_lazy('core:mission_events_attachment_update', args=(event_pk,)))
-        attachment_id_element = None
-        if self.instance.pk:
-            attachment_id_element = Hidden('id', self.instance.pk)
-
-        self.helper.layout = Layout(
-            attachment_id_element,
-            Hidden('event', event_pk),
-            Row(
-                Column(Field('name', css_class='form-control-sm'), css_class='col-sm'),
-                Column(submit_button, clear_button, css_class='col-sm'),
-                css_class="input-group"
-            ),
-        )
-        self.helper.form_show_labels = False
-
-
-class EventForm(forms.ModelForm):
-    class Meta:
-        model = models.Event
-        fields = ['mission', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        if 'initial' in kwargs and 'mission' in kwargs['initial']:
-            mission_id = kwargs['initial']['mission']
-            mission = models.Mission.objects.get(pk=mission_id)
-            event = mission.events.order_by('event_id').last()
-            self.fields['event_id'].initial = event.event_id + 1 if event else 1
-
-        self.helper = FormHelper(self)
-
-        # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
-        # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
-        # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
-        self.helper.form_tag = False
-
-        submit_label = 'Submit'
-        submit_url = reverse_lazy('core:mission_events_update')
-        target_id = "#div_event_content_id"
-
-        event_element = Column(Field('event_id', css_class='form-control-sm'))
-        if self.instance.pk:
-            event_element = Hidden('event_id', self.instance.event_id)
-            submit_label = 'Update'
-            target_id = "#event_form_id"
-
-        submit = Submit('submit', submit_label, css_id='event_form_button_id', css_class='btn-sm input-group-append',
-                        hx_post=submit_url, hx_target=target_id)
-        self.helper.layout = Layout(
-            Hidden('mission', self.initial['mission'] if 'mission' in self.initial else kwargs['initial']['mission']),
-            Row(
-                event_element,
-                Column(Field('station', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md-6'),
-                Column(Field('instrument', css_class='form-control form-select-sm'), css_class='col-sm-12 col-md-6'),
-                Column(Field('sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md-6'),
-                Column(Field('end_sample_id', css_class='form-control form-control-sm'), css_class='col-sm-6 col-md-6'),
-                Column(submit, css_class='col-sm-12 col-md align-self-center mt-3'),
-                css_class="input-group input-group-sm"
-            )
-        )
 
 
 class MissionSearchForm(forms.Form):
@@ -564,7 +413,7 @@ class BioChemDataType(forms.Form):
 
         if 'mission_id' in self.initial and 'sample_type_id' in self.initial:
             mission_id = self.initial['mission_id']
-            min_max = models.Bottle.objects.filter(event__mission_id=mission_id).aggregate(
+            min_max = models.Bottle.objects.filter(event__trip__mission_id=mission_id).aggregate(
                 Min('bottle_id'), Max('bottle_id'))
             if 'start_sample' not in kwargs['initial']:
                 self.fields['start_sample'].initial = min_max['bottle_id__min']
@@ -953,3 +802,34 @@ def save_load_component(component_id, message, **kwargs):
         root_div.attrs[attr] = val
 
     return soup
+
+
+def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
+    component_id = f"{alert_area_id}_alert"
+    soup = BeautifulSoup("", 'html.parser')
+    soup.append(div := soup.new_tag('div', id=alert_area_id, attrs={"hx-swap-oob": 'true'}))
+
+    ext_args = {
+        'hx-ext': 'ws',
+        'ws-connect': f"/ws/notifications/{logger}/{component_id}_status/"
+    }
+    alert_soup = save_load_component(component_id, message, **ext_args, **kwargs)
+
+    # add a message area for websockets
+    msg_div = alert_soup.find(id=f"{component_id}_message")
+    msg_div.string = ""
+
+    msg_div_status = soup.new_tag('div')
+    msg_div_status['id'] = f'{component_id}_status'
+    msg_div_status.string = message
+    msg_div.append(msg_div_status)
+
+    div.append(alert_soup)
+
+    return soup
+
+
+# convenience method to convert html attributes from a string into a dictionary
+def get_crispy_element_attributes(element):
+    attr_dict = {k: v.replace("\"", "") for k, v in [attr.split('=') for attr in element.flat_attrs.strip().split(" ")]}
+    return attr_dict

@@ -151,10 +151,6 @@ def reverse_biochemupload_type_delete(apps, schema_editor):
     reverse_sampletype_delete(model, apps)
 
 
-def empty_method(apps, schema_editor):
-    pass
-
-
 class Migration(migrations.Migration):
 
     dependencies = [
@@ -194,7 +190,7 @@ class Migration(migrations.Migration):
             name='priority',
             field=models.IntegerField(default=1, verbose_name='Priority'),
         ),
-        migrations.RunPython(update_mission_defaults, empty_method),
+        migrations.RunPython(update_mission_defaults, lambda apps, schema_editor:()),
         migrations.AlterField(
             model_name='missionsampletype',
             name='sample_type',
@@ -202,7 +198,7 @@ class Migration(migrations.Migration):
                                     related_name='mission_sample_types', to='core.globalsampletype',
                                     verbose_name='Sample Type'),
         ),
-        migrations.RunPython(empty_method, reverse_mission_sampletype_delete),
+        migrations.RunPython(lambda apps, schema_editor:(), reverse_mission_sampletype_delete),
         migrations.RemoveField(
             model_name='missionsampletype',
             name='sample_type',
@@ -215,7 +211,7 @@ class Migration(migrations.Migration):
                                     related_name='uploads', to='core.mission',
                                     verbose_name='Mission'),
         ),
-        migrations.RunPython(empty_method, reverse_biochemupload_mission_delete),
+        migrations.RunPython(lambda apps, schema_editor:(), reverse_biochemupload_mission_delete),
         migrations.RemoveField(
             model_name='biochemupload',
             name='mission',
@@ -228,7 +224,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, related_name='samples',
                                     to='core.missionsampletype', verbose_name='Sample Type'),
         ),
-        migrations.RunPython(update_sample_sample_type, empty_method),
+        migrations.RunPython(update_sample_sample_type, lambda apps, schema_editor:()),
         migrations.AlterField(
             model_name='sample',
             name='type',
@@ -242,7 +238,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='samples',
                                     to='core.missionsampletype', verbose_name='Sample Type'),
         ),
-        migrations.RunPython(empty_method, reverse_sample_type_delete),
+        migrations.RunPython(lambda apps, schema_editor:(), reverse_sample_type_delete),
         migrations.RemoveField(
             model_name='sample',
             name='type',
@@ -260,7 +256,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='uploads',
                                     to='core.missionsampletype', verbose_name='Sample Type'),
         ),
-        migrations.RunPython(update_biochem_sample_type, empty_method),
+        migrations.RunPython(update_biochem_sample_type, lambda apps, schema_editor:()),
         migrations.AlterField(
             model_name='biochemupload',
             name='type',
@@ -274,7 +270,7 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='uploads',
                                     to='core.missionsampletype', verbose_name='Sample Type'),
         ),
-        migrations.RunPython(empty_method, reverse_biochemupload_type_delete),
+        migrations.RunPython(lambda apps, schema_editor:(), reverse_biochemupload_type_delete),
         migrations.RemoveField(
             model_name='biochemupload',
             name='type',

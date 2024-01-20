@@ -1,0 +1,46 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<div class="row">
+    <div id="div_events_id" class="col-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="card-title col">{% trans "Events" %}</div>
+                    <div class="col-auto">
+                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' trip.mission.pk %}"
+                           title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>
+
+                        <label for="event_file_input_id" class="btn btn-primary btn-sm"
+                               title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label>
+                    </div>
+                </div>
+                    {% block event_import_form %}
+                <div id="div_id_event_message_area" class="row">
+                    <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
+                          hx-encoding="multipart/form-data"
+                          hx-get="{% url "core:form_trip_import_events_elog" trip.pk %}"
+                          hx-trigger="change"
+                          hx-swap="none"
+                    >
+                        <input id="event_file_input_id" type="file" name="event" accept=".log"
+                               multiple="true" class="invisible"/>
+                    <div id="div_id_event_alert"></div>
+                    </form>
+                </div>
+                    {% endblock %}
+            </div>
+            <div class="card-body vertical-scrollbar">
+                <div id="div_event_list_id" class="row">
+                    {% include 'core/partials/table_event.html' %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="div_event_details_id" class="col">
+        {% if details_form %}
+            {% crispy details_form %}
+        {% endif %}
+    </div>
+</div>

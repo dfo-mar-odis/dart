@@ -148,7 +148,8 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         updated_fields.add('')
 
         event = bottle.event
-        mission = event.mission
+        trip = event.trip
+        mission = trip.mission
         primary_data_center = mission.data_center
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:02d}_{bottle.bottle_id}'
@@ -161,9 +162,8 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         else:
             bcs_row = models.BcsDReportModel(dis_headr_collector_sample_id=bottle.bottle_id)
 
-
-        m_start_date = mission.events.first().start_date
-        m_end_date = mission.events.last().end_date
+        m_start_date = mission.start_date
+        m_end_date = mission.end_date
         updated_fields.add(updated_value(bcs_row, 'dis_sample_key_value', dis_sample_key_value))
         updated_fields.add(updated_value(bcs_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
         updated_fields.add(updated_value(bcs_row, 'created_by', uploader))
@@ -173,13 +173,13 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         updated_fields.add(updated_value(bcs_row, 'mission_leader', mission.lead_scientist))
         updated_fields.add(updated_value(bcs_row, 'mission_sdate', m_start_date))
         updated_fields.add(updated_value(bcs_row, 'mission_edate', m_end_date))
-        updated_fields.add(updated_value(bcs_row, 'mission_platform', mission.platform))
-        updated_fields.add(updated_value(bcs_row, 'mission_protocol', mission.protocol))
+        updated_fields.add(updated_value(bcs_row, 'mission_platform', trip.platform))
+        updated_fields.add(updated_value(bcs_row, 'mission_protocol', trip.protocol))
         updated_fields.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region.name
         if mission.geographic_region else ""))
-        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment1', mission.collector_comments))
-        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment2', mission.more_comments))
-        updated_fields.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment1', trip.collector_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment2', trip.more_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_data_manager_comment', trip.data_manager_comments))
         updated_fields.add(updated_value(bcs_row, 'mission_institute',
                                          primary_data_center.name if primary_data_center else "Not Specified"))
 
@@ -206,7 +206,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
             updated_fields.add(updated_value(bcs_row, 'dis_headr_sounding', bottom_action.sounding))
             updated_fields.add(updated_value(bcs_row, 'dis_headr_collector', bottom_action.data_collector))
 
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_responsible_group', mission.protocol))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_responsible_group', trip.protocol))
 
         updated_fields.add(updated_value(bcs_row, 'dis_headr_sdate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
         updated_fields.add(updated_value(bcs_row, 'dis_headr_edate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
@@ -299,7 +299,8 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
-        mission = event.mission
+        trip = event.trip
+        mission = trip.mission
 
         # Use the row level datatype if provided other wise use the mission level datatype
         bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
@@ -366,8 +367,6 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
             updated_fields.add(updated_value(bcd_row, 'dis_header_stime', event_date.strftime("%H%M")))
 
         # ########### Stuff that we get from the Mission object #################################################### #
-        mission = event.mission
-
         batch = batch_name if batch_name else f'{event.start_date.strftime("%Y")}{mission.pk}'
         updated_fields.add(updated_value(bcd_row, 'batch_seq', batch))
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detail_collector', mission.lead_scientist))

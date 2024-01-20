@@ -16,6 +16,7 @@
   <link rel="stylesheet" href="{% static 'bootstrap-5.3.1-dist/css/bootstrap.min.css' %}"/>
   <script type="text/javascript" src="{% static 'bootstrap-5.3.1-dist/js/bootstrap.bundle.min.js' %}"></script>
   <script type="text/javascript" src="{% static 'dart/js/htmx.min.js' %}"></script>
+  <script type="text/javascript" src="{% static 'dart/js/multi-swap.js' %}"></script>
 
   <link rel="stylesheet" href="{% static 'dart/css/dart.css' %}"/>
     {% if theme == 'dark' %}
@@ -29,7 +30,7 @@
   <title>{% block sitetitle %}DFO At-sea Reporting Template{% endblock %} {% block subtitle %}{% endblock %}</title>
   {% block header %}{% endblock header %}
 </head>
-<body>
+<body hx-ext="multi-swap">
 
 {% block nav_bar_block %}
 <nav class="navbar  justify-content-between navbar-expand {% if theme == "dark" %}navbar-dark bg-body-tertiary{% else %}navbar-light bg-light{% endif %}">

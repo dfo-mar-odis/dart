@@ -15,6 +15,7 @@ import logging
 from dart2.utils import convertDMS_degs
 
 logger = logging.getLogger('dart')
+logger_notifications = logging.getLogger('dart.elog')
 
 
 class ParserType(Enum):
@@ -154,19 +155,21 @@ def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> di
     return message_objects
 
 
-def process_stations(mission: core_models.Mission, station_queue: [str]) -> None:
+def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
     # create any stations on the stations queue that don't exist in the DB
     stations = []
 
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.filter(mission=mission)
-    for station in station_queue:
+    existing_stations = core_models.Station.objects.filter(mission=trip.mission)
+    station_count = len(station_queue)
+    for index, station in enumerate(station_queue):
+        logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
         stn = station.upper()
         if stn not in added_stations and not existing_stations.filter(name__iexact=stn).exists():
             added_stations.add(stn)
-            stations.append(core_models.Station(mission=mission, name=stn))
+            stations.append(core_models.Station(mission=trip.mission, name=stn))
 
     core_models.Station.objects.bulk_create(stations)
 
@@ -200,29 +203,31 @@ def valid_sample_id(sample_id):
     return True
 
 
-def process_instruments(mission: core_models.Mission, instrument_queue: [str]) -> None:
+def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.filter(mission=mission)
-    for instrument in instrument_queue:
+    existing_instruments = core_models.Instrument.objects.filter(mission=trip.mission)
+    instrument_count = len(instrument_queue)
+    for index, instrument in enumerate(instrument_queue):
+        logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
         if instrument.upper() not in added_instruments and \
                 not existing_instruments.filter(name__iexact=instrument).exists():
             instrument_type = get_instrument_type(instrument_name=instrument)
-            instruments.append(core_models.Instrument(mission=mission, name=instrument, type=instrument_type))
+            instruments.append(core_models.Instrument(mission=trip.mission, name=instrument, type=instrument_type))
             added_instruments.add(instrument.upper())
 
     core_models.Instrument.objects.bulk_create(instruments)
 
 
-def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
+def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]:
     errors = []
 
-    elog_configuration = core_models.ElogConfig.get_default_config(mission)
+    elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
 
-    existing_events = mission.events.all()
+    existing_events = trip.events.all()
 
     # hopefully stations and instruments were created in bulk before hand
     stations = core_models.Station.objects.all()
@@ -236,7 +241,11 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
     update_events = []
     update_fields = set()
 
+    mid_list = list(mid_dictionary_buffer.keys())
+    mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
+        index = mid_list.index(mid) + 1
+        logger_notifications.info(_("Processing Event for Elog Message") + f" : %d/%d", index, mid_count)
         update_fields.add("")
         try:
             event_field = get_field(elog_configuration, 'event', buffer)
@@ -250,8 +259,8 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
 
             event_id = int(buffer[event_field])
 
-            station = stations.get(name__iexact=buffer.pop(station_field))
-            instrument = instruments.get(name__iexact=buffer.pop(instrument_field))
+            station = stations.get(name__iexact=buffer.pop(station_field), mission=trip.mission)
+            instrument = instruments.get(name__iexact=buffer.pop(instrument_field), mission=trip.mission)
             sample_id: str = buffer.pop(sample_id_field)
             end_sample_id: str = buffer.pop(end_sample_id_field)
 
@@ -276,18 +285,18 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
             # we have to test that wire_out, flow_start and flow_end are numbers because someone might enter
             # a unit on the value i.e '137.4m' which will then crash the function when bulk creating/updating the
             # events. If the numbers aren't valid numbers then set the field blank and report the error.
-            if wire_out is not None and \
+            if wire_out is not None and wire_out != '' and \
                     ((stripped := wire_out.strip()) == '' or not stripped.replace('.', '', 1).isdigit()):
                 message = _("Invalid wire out value")
                 errors.append((mid, message, ValueError({"message": message}),))
                 wire_out = None
 
-            if flow_start is not None and ((stripped := flow_start.strip()) == '' or not stripped.isdigit()):
+            if flow_start is not None and flow_start != '' and ((stripped := flow_start.strip()) == '' or not stripped.isdigit()):
                 message = _("Invalid flow meter start")
                 errors.append((mid, message, ValueError({"message": message}),))
                 flow_start = None
 
-            if flow_end is not None and ((stripped := flow_end.strip()) == '' or not stripped.isdigit()):
+            if flow_end is not None and flow_end != '' and ((stripped := flow_end.strip()) == '' or not stripped.isdigit()):
                 message = _("Invalid flow meter end")
                 errors.append((mid, message, ValueError({"message": message}),))
                 flow_end = None
@@ -302,7 +311,7 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
             elif event_id in create_events.keys():
                 event = create_events[event_id]
             else:
-                event = core_models.Event(mission=mission, event_id=event_id)
+                event = core_models.Event(trip=trip, event_id=event_id)
                 create_events[event_id] = event
 
             # only override values if the new value is not none. If a value was set as part of a previous action
@@ -367,10 +376,10 @@ def map_action_text(text: str) -> str:
     return text
 
 
-def process_attachments_actions(mission: core_models.Mission, mid_dictionary_buffer: {}, file_name: str) -> [tuple]:
+def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {}, file_name: str) -> [tuple]:
     errors = []
 
-    existing_events = mission.events.all()
+    existing_events = trip.events.all()
 
     create_attachments = []
     create_actions = []
@@ -378,9 +387,13 @@ def process_attachments_actions(mission: core_models.Mission, mid_dictionary_buf
 
     cur_event = None
 
-    elog_configuration = core_models.ElogConfig.get_default_config(mission)
+    elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
 
+    mid_list = list(mid_dictionary_buffer.keys())
+    mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
+        index = mid_list.index(mid) + 1
+        logger_notifications.info(_("Processing Attachments/Actions for Elog Message") + f" : %d/%d", index, mid_count)
         try:
             event_field = get_field(elog_configuration, 'event', buffer)
             attached_field = get_field(elog_configuration, 'attached', buffer)
@@ -498,11 +511,11 @@ def process_attachments_actions(mission: core_models.Mission, mid_dictionary_buf
     return errors
 
 
-def get_create_and_update_variables(mission: core_models.Mission, action: core_models.Action, buffer) -> [[], []]:
+def get_create_and_update_variables(trip: core_models.Trip, action: core_models.Action, buffer) -> [[], []]:
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.get_or_create(mission=mission, name=key)[0]
+        variable = core_models.VariableName.objects.get_or_create(mission=trip.mission, name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)
@@ -518,21 +531,25 @@ def get_create_and_update_variables(mission: core_models.Mission, action: core_m
 # Anything that wasn't consumed by the other process methods will be considered a variable and attached to
 # the action it falls under. This way users can still query an action for a variable even if DART doesn't do
 # anything with it.
-def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
+def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]:
     errors = []
 
     fields_create = []
     fields_update = []
 
-    existing_actions = core_models.Action.objects.filter(event__mission=mission)
+    existing_actions = core_models.Action.objects.filter(event__trip=trip)
 
-    elog_configuration = core_models.ElogConfig.get_default_config(mission)
+    elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
 
     update_mission = False
-    if mission.lead_scientist == 'N/A' or mission.platform == 'N/A' or mission.protocol == 'N/A':
+    if trip.mission.lead_scientist == 'N/A' or trip.platform == 'N/A' or trip.protocol == 'N/A':
         update_mission = True
 
+    mid_list = list(mid_dictionary_buffer.keys())
+    mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
+        index = mid_list.index(mid) + 1
+        logger_notifications.info(_("Processing Additional Variables for Elog Message") + f" : %d/%d", index, mid_count)
         try:
             lead_scientists_field = get_field(elog_configuration, 'lead_scientist', buffer)
             protocol_field = get_field(elog_configuration, 'protocol', buffer)
@@ -545,34 +562,34 @@ def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -
             platform: str = buffer.pop(platform_field)
 
             if update_mission:
-                if (lead_scientists and lead_scientists.strip() != '') and mission.lead_scientist == 'N/A':
-                    mission.lead_scientist = lead_scientists
+                if (lead_scientists and lead_scientists.strip() != '') and trip.mission.lead_scientist == 'N/A':
+                    trip.mission.lead_scientist = lead_scientists
+                    trip.mission.save()
 
-                if (protocol and protocol.strip() != '') and mission.protocol == 'N/A':
+                if (protocol and protocol.strip() != '') and trip.protocol == 'N/A':
                     # make sure the protocal isn't more than 50 characters if it's not 'AZMP' or 'AZOMP'
-                    mission.protocol = protocol[:50]
+                    trip.protocol = protocol[:50]
 
                     proto = re.search('azmp', protocol, re.IGNORECASE)
                     if proto:
-                        mission.protocol = 'AZMP'
+                        trip.protocol = 'AZMP'
 
                     proto = re.search('azomp', protocol, re.IGNORECASE)
                     if proto:
-                        mission.protocol = 'AZOMP'
+                        trip.protocol = 'AZOMP'
 
-                if (platform and platform.strip() != '') and mission.platform == 'N/A':
-                    mission.platform = platform
+                if (platform and platform.strip() != '') and trip.platform == 'N/A':
+                    trip.platform = platform
 
-                mission.mission_descriptor = mission.mission_descriptor if mission.mission_descriptor else f'18{cruise}'
-                mission.save()
+                trip.save()
 
                 update_mission = False
-                if mission.lead_scientist == 'N/A' or mission.platform == 'N/A' or mission.protocol == 'N/A':
+                if trip.platform == 'N/A' or trip.protocol == 'N/A':
                     update_mission = True
 
             action = existing_actions.get(mid=mid)
             # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-            variables_arrays = get_create_and_update_variables(mission, action, buffer)
+            variables_arrays = get_create_and_update_variables(trip, action, buffer)
             fields_create += variables_arrays[0]
             fields_update += variables_arrays[1]
         except KeyError as ex:

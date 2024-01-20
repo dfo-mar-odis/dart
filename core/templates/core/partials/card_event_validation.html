@@ -1,25 +1,48 @@
 {% load i18n %}
 {% load bootstrap_icons %}
 
-<div>
-<div class="card">
-    <div class="card-header">
+<div class="card"
+     hx-trigger="load, event_validation_updated from:body, file_errors_updated from:body" hx-target="#errors"
+     hx-swap="outerHTML" hx-select="#errors"
+     hx-get="{% url 'core:hx_get_file_errors' mission.pk %}">
+    <div class="card-header" id="div_id_card_header_event_details">
         <div class="row">
-            <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+            <div class="col-auto align-self-end">
+                <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
                     href="#div_id_error_card_body">{% custom_icon 'caret-down' %}</button>
-            <span class="card-title col-auto align-self-end h6">{% trans "Validation Warnings" %}</span>
+            </div>
+            <div class="col-auto align-self-end">
+                <div class="card-title" id="div_id_card_title_event_details">
+                    <h6>{% trans "Validation Warnings" %}</h6>
+                </div>
+            </div>
+            <div class="col-md">
+                <div class="row align-self-end">
+                    <div class="col-md">
+                        {# elements here will align right after the cards title #}
+                    </div>
+                </div>
+            </div>
+            <div class="col-auto">
+                <div class="row align-self-end">
+                    <div class="col-md">
+                        {# elements here will align with the end of the hearder row #}
+                        {{ validation_errors.items}} - {{ validation_errors.items|length }}
+                        {{ errors|length }}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="collapse col" id="div_id_error_card_body">
-        <div class="card-body vertical-scrollbar"
-             hx-trigger="load, event_updated from:body, file_errors_updated from:body" hx-target="#errors"
-             hx-swap="outerHTML" hx-select="#errors"
-             hx-get="{% url 'core:hx_get_file_errors' mission.pk %}">
+        <div class="card-body vertical-scrollbar">
             <div id="errors">
                 {% for event, error_list in validation_errors.items %}
                 <div id="div_validation_error_id" class="card mb-3">
                     <div class="card-header">
-                        <div class="card-title">{% trans 'Event' %} {{ event }}</div>
+                        {% with error_list.0.event.trip as trip %}
+                        <div class="card-title">{% trans 'Event' %} - {{ event }} : {{ trip.start_date }} - {{ trip.end_date }}</div>
+                        {% endwith %}
                     </div>
                     <div class="card-body">
                         <ul>
@@ -48,5 +71,4 @@
             </div>
         </div>
     </div>
-</div>
 </div>

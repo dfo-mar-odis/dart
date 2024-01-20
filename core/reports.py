@@ -30,7 +30,7 @@ def elog(request, **kwargs):
     header = ['Mission', 'Event', 'Station', 'INSTRUMENT', 'AVG_SOUNDING', 'MIN_LAT', 'MIN_LON', 'MAX_LAT', 'MAX_LON',
               'SDATE', 'STIME', 'EDATE', 'ETIME', 'DURATION', 'ELAPSED_TIME', 'COMMENTS']
 
-    events = core_models.Event.objects.filter(mission_id=mission_id).annotate(
+    events = core_models.Event.objects.filter(trip__mission_id=mission_id).annotate(
         start=Min("actions__date_time")).order_by('start')
 
     data = ",".join(header) + "\n"
@@ -107,7 +107,7 @@ def error_report(request, **kwargs):
         row = [mission.name, error.file_name, error.line, error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
-    validation_errs = core_models.ValidationError.objects.filter(event__mission=mission)
+    validation_errs = core_models.ValidationError.objects.filter(event__trip__mission=mission)
     for error in validation_errs:
         row = [mission.name, "", f"Event: {error.event.event_id}", error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
@@ -131,7 +131,7 @@ def profile_summary(request, **kwargs):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     exclude = []
-    mission_included_sampletypes = core_models.GlobalSampleType.objects.filter(samples__bottle__event__mission_id=mission_id)
+    mission_included_sampletypes = core_models.MissionSampleType.objects.filter(samples__bottle__event__trip__mission_id=mission_id)
 
     # if the mean chl and/or phae sampletypes are used then there's no need to include an average of the chl and/or
     # phae sampletypes because that's what the chl_mean/phae_mean
@@ -141,17 +141,17 @@ def profile_summary(request, **kwargs):
     if 'phae_mean' in [st.short_name for st in mission_included_sampletypes]:
         exclude.append('phae')
 
-    sample_types = core_models.GlobalSampleType.objects.filter(
-        samples__bottle__event__mission=mission
-    ).exclude(short_name__in=exclude).distinct()
+    sample_types = core_models.MissionSampleType.objects.filter(
+        samples__bottle__event__trip__mission=mission
+    ).exclude(name__in=exclude).distinct()
 
     header = ['MISSION', "STATION", "EVENT", 'GEAR', 'PRESSURE', "SAMPLE"] + [st.short_name.upper() for st in sample_types]
     data = ",".join(header) + '\n'
 
-    bottles = core_models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')
+    bottles = core_models.Bottle.objects.filter(event__trip__mission=mission).order_by('bottle_id')
     for bottle in bottles:
         event = bottle.event
-        row = [event.mission, event.station, event.event_id, event.instrument.get_type_display(),
+        row = [event.trip.mission, event.station, event.event_id, event.instrument.get_type_display(),
                bottle.pressure, bottle.bottle_id]
         for st in sample_types:
             if(sample := bottle.samples.filter(type=st)).exists():
@@ -176,17 +176,23 @@ def std_sample_report(request, **kwargs):
 
     data = ",".join(kwargs['headers']) + '\n'
 
-    bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
+    bottles = core_models.Bottle.objects.filter(event__trip__mission_id=mission_id).order_by('bottle_id')
 
     for bottle in bottles:
         row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]
         for sensor in kwargs['sensors']:
-            row += bottle.samples.filter(type__short_name__iexact=sensor).values_list('discrete_values__value',
-                                                                                      flat=True)
+            sensor = bottle.samples.filter(type__name__iexact=sensor)
+            if sensor.exists():
+                row += sensor.values_list('discrete_values__value', flat=True)
+            else:
+                row.append('')
 
         for sample in kwargs['samples']:
-            row += bottle.samples.filter(type__short_name__iexact=sample).values_list('discrete_values__value',
-                                                                                             flat=True)
+            sample = bottle.samples.filter(type__name__iexact=sample)
+            if sample.exists():
+                row += sample.values_list('discrete_values__value', flat=True)
+            else:
+                row.append('')
         data += ",".join([str(val) for val in row]) + '\n'
 
     file_to_send = ContentFile(data)
@@ -224,8 +230,13 @@ def salt_report(request, **kwargs):
 # The problem with this report is it depends on there being a SampleType with a short name 'chl'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def chl_report(request, **kwargs):
-    sensors = ['flECO-AFL', 'wetCDOM']
-    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'flECO-AFL', 'wetCDOM', 'Chl_Rep1', 'Chl_Rep2']
+    mission_id = kwargs['mission_id']
+    sensors = [s.name for s in core_models.MissionSampleType.objects.filter(mission_id=mission_id,
+                                                                            long_name__icontains='fluorescence')]
+
+    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID"]
+    header += sensors
+    header += ['Chl_Rep1', 'Chl_Rep2']
     samples = ['chl']
 
     return std_sample_report(request, report_name='Chl_Summary', headers=header,

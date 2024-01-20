@@ -23,136 +23,18 @@
 {% endblock %}
 
 {% block content %}
+    <span hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="mb-2">
-        <div class="card">
-            <div class="card-header">
-                <div class="row card-title">
-                    <div class="col-auto">
-                        <button class="btn btn-info btn-sm" data-bs-toggle="collapse"
-                                title="{% trans 'Filter Events' %}"
-                                href="#div_mission_search">{% custom_icon 'search' %}</button>
-                    </div>
-                    <h6 class="col align-self-end">{% trans 'Filter Events' %}</h6>
-                </div>
-            </div>
-            <div class="collapse col" id="div_mission_search">
-                <div class="card-body">
-                    <div class="" hx-get="{% url 'core:mission_events_list' object.pk %}"
-                                      hx-target="#event_table" hx-swap="outerHTML"
-                                      hx-trigger="reset from:#mission_search_form">
-                        {% block mission_search_block %}
-                            {% if search_form %}
-                                <form id="mission_search_form" class=""
-                                      hx-get="{% url 'core:mission_events_list' object.pk %}"
-                                      hx-target="#event_table" hx-swap="outerHTML"
-                                      hx-trigger="submit, event_updated from:body">
-                                    <div >
-                                        {# see core.forms.MissionSearchForm #}
-                                        {% crispy search_form %}
-                                    </div>
-                                    <input type="submit" name="submit" value="Submit" class="btn btn-primary"/>
-                                    <input type="reset" name="reset" value="Reset" class="btn btn-warning" />
-                                </form>
-                            {% endif %}
-                        {% endblock %}
-                    </div>
-                </div>
-            </div>
-        </div>
+        {% if trip_id %}
+        <div id="div_id_trip_form" hx-trigger="load" hx-get="{% url "core:form_trip_card" object.pk trip_id %}"></div>
+        {% else %}
+        <div id="div_id_trip_form" hx-trigger="load" hx-get="{% url "core:form_trip_card" object.pk %}"></div>
+        {% endif %}
     </div>
-    {% block content_details_block %}
-        <div id="div_content_block_id" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-            <div class="row">
-                <div id="div_events_id" class="col">
-                    <div class="card">
-                        <div class="card-header">
-                            <div class="row">
-                                <div class="card-title col">{% trans "Events" %}</div>
-                                <div class="col-auto">
-                                    <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' object.pk %}"
-                                       title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>
-
-                                    <label for="event_file_input_id" class="btn btn-primary btn-sm"
-                                           title="{% trans "Upload" %}">{% custom_icon 'arrow-down-square' %}</label>
-                                </div>
-                            </div>
-                            <div id="div_id_event_message_area" class="row">
-                                {% block event_import_form %}
-                                <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
-                                      hx-encoding="multipart/form-data"
-                                      hx-get="{% url "core:mission_events_upload_elog" object.pk %}"
-                                      hx-trigger="change"
-                                      hx-swap="beforeend"
-                                >
-                                    <input id="event_file_input_id" type="file" name="event" accept=".log"
-                                           multiple="true" class="invisible"/>
-                                </form>
-                                {% endblock %}
-                            </div>
-                        </div>
-                        <div class="card-body">
-                            <div id="div_event_list_id" class="vertical-scrollbar">
-                                {% include 'core/partials/table_event.html' with mission=object %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div id="div_event_details_id" class="col">
-                    {% block selected_event_details %}
-                        <div class="card">
-                            <div class="card-header">
-                                <div class="row">
-                                    <div class="card-title col">{% trans "Event Detials" %}</div>
-                                    {% if selected_event %}
-                                        <div class="col-1">
-                                            <button class="btn btn-danger" title="{% trans "Delete" %}"
-                                                    hx-on="click: update_selected({{ 0 }})"
-                                                    hx-target="#div_content_block_id"
-                                                    hx-swap="outerHTML"
-                                                    hx-post="{% url 'core:mission_events_delete' selected_event.pk %}">{% custom_icon 'dash-square' %}</button>
-                                        </div>
-                                    {% endif %}
-                                    <div class="col-1 me-3">
-                                        <button class="btn btn-primary" title="{% trans "Add" %}"
-                                                hx-on="click: update_selected({{ 0 }})"
-                                                hx-target="#div_event_content_id"
-                                                hx-get="{% url 'core:mission_events_update' mission_id=object.pk %}">{% custom_icon 'plus-square' %}</button>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="card-body">
-                                <div class="vertical-scrollbar">
-                                    {% block event_details_block %}
-                                        <div id="div_event_content_id">
-                                            {% if selected_event %}
-                                                {% if selected_event.files %}
-                                                    {% include 'core/partials/event_details.html' with event=selected_event %}
-                                                {% else %}
-                                                    {% include 'core/partials/event_edit_form.html' with event=selected_event %}
-                                                {% endif %}
-                                            {% endif %}
-                                        </div>
-                                    {% endblock %}
-                                </div>
-                            </div>
-                        </div>
-                    {% endblock %}
-                </div>
-            </div>
-            <div class="row mt-2">
-                {% include 'core/partials/card_event_validation.html' with mission=object %}
-            </div>
-        </div>
-    {% endblock %}
-{% endblock %}
-
-{% block body_js %}
-    <script>
-        function update_selected(event) {
-            $(".selectedBg").removeClass("selectedBg");
-            if (event != 0) {
-                $("#event-" + event).addClass('selectedBg');
-            }
-        }
-    </script>
+    <div class="mb-2" id="div_id_trip_events"></div>
+    <div class="mb-2" id="div_id_mission_event_validation" hx-trigger="load" hx-get="{% url 'core:mission_events_validation' object.pk %}">
+    </div>
+    <div class="mb-2" id="div_id_mission_file_validation" hx-trigger="load, event_updated from:body" hx-get="{% url 'core:mission_file_validation' object.pk %}">
+    </div>
+    </span>
 {% endblock %}

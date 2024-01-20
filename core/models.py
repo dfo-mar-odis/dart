@@ -38,36 +38,10 @@ class Mission(models.Model):
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
     mission_descriptor = models.CharField(verbose_name=_("Mission Descriptor"), max_length=50, blank=True, null=True,
                                           help_text=_("Code assigned by OSD, ensures national coordination"))
-    start_date = models.DateField(verbose_name=_("Cruise Start Date"),
-                                  default=timezone.now)
-    end_date = models.DateField(verbose_name=_("Cruise End Date"),
-                                default=timezone.now)
-
-    lead_scientist = models.CharField(verbose_name=_("Lead Scientist"), max_length=50, default="N/A",
-                                      help_text=_("Chief scientist / principal investigator; LASTNAME,FIRSTNAME"))
-    platform = models.CharField(verbose_name=_("Platform"), max_length=50, default="N/A",
-                                help_text=_("May be vessel name, fishing boat, wharf, various small vessels, multiple "
-                                            "ships. Check that name is spelled correctly. “Unknown” is acceptable for "
-                                            "historical data"))
-    protocol = models.CharField(verbose_name=_("Protocol"), max_length=50, default="N/A",
-                                help_text=_("A citation should be given if standard protocols were used during the "
-                                            "mission. The use of non-standard protocols should be noted and further "
-                                            "details provided in the collector comments field"))
 
     geographic_region = models.ForeignKey(GeographicRegion, verbose_name=_("Geographic Region"),
                                           max_length=100, blank=True, null=True, on_delete=models.DO_NOTHING,
                                           help_text=_("Examples: Scotian Shelf, lower St. Lawrence Estuary"))
-
-    collector_comments = models.CharField(verbose_name=_("Collector Comments"), max_length=200, blank=True, null=True,
-                                          help_text=_("Comments from the collector that are pertinent to the entire "
-                                                      "mission. Generally referring to data collection, analysis, "
-                                                      "publications, joint missions (more than one institute involved)"))
-    more_comments = models.CharField(verbose_name=_("More Comments"), max_length=200, blank=True, null=True)
-    data_manager_comments = models.CharField(verbose_name=_("Data Manager Comments"), max_length=200,
-                                             help_text=_("Comments from the data manager that are pertinent to the "
-                                                         "entire mission. Generally referring to data management "
-                                                         "history (processing steps, edits, special warnings)"),
-                                             blank=True, null=True)
 
     # default=20 is BIO
     data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
@@ -83,6 +57,19 @@ class Mission(models.Model):
                                             help_text=_("Location of the .BTL/.ROS fiels to be loaded."),
                                             null=True, blank=True)
 
+    lead_scientist = models.CharField(verbose_name=_("Lead Scientist"), max_length=50, default="N/A",
+                                      help_text=_("Chief scientist / principal investigator; LASTNAME,FIRSTNAME"))
+
+    @property
+    def start_date(self):
+        start = self.trips.order_by('start_date').first()
+        return start.start_date if start else None
+
+    @property
+    def end_date(self):
+        end = self.trips.order_by('start_date').last()
+        return end.end_date if end else None
+
     @property
     def get_biochem_table_name(self):
         if not self.biochem_table:
@@ -93,6 +80,36 @@ class Mission(models.Model):
 
     def __str__(self):
         return f'{self.name}'
+
+
+class Trip(models.Model):
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, verbose_name=_("Mission"), related_name='trips')
+
+    start_date = models.DateField(verbose_name=_("Cruise Start Date"), default=timezone.now)
+    end_date = models.DateField(verbose_name=_("Cruise End Date"), default=timezone.now)
+
+    platform = models.CharField(verbose_name=_("Platform"), max_length=50, default="N/A",
+                                help_text=_("May be vessel name, fishing boat, wharf, various small vessels, multiple "
+                                            "ships. Check that name is spelled correctly. “Unknown” is acceptable for "
+                                            "historical data"))
+    protocol = models.CharField(verbose_name=_("Protocol"), max_length=50, default="N/A",
+                                help_text=_("A citation should be given if standard protocols were used during the "
+                                            "mission. The use of non-standard protocols should be noted and further "
+                                            "details provided in the collector comments field"))
+
+    collector_comments = models.CharField(verbose_name=_("Collector Comments"), max_length=200, blank=True, null=True,
+                                          help_text=_("Comments from the collector that are pertinent to the entire "
+                                                      "mission. Generally referring to data collection, analysis, "
+                                                      "publications, joint missions (more than one institute involved)"))
+    more_comments = models.CharField(verbose_name=_("More Comments"), max_length=200, blank=True, null=True)
+    data_manager_comments = models.CharField(verbose_name=_("Data Manager Comments"), max_length=200,
+                                             help_text=_("Comments from the data manager that are pertinent to the "
+                                                         "entire mission. Generally referring to data management "
+                                                         "history (processing steps, edits, special warnings)"),
+                                             blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.start_date} - {self.end_date}"
 
 
 class InstrumentType(models.IntegerChoices):
@@ -117,7 +134,7 @@ class InstrumentType(models.IntegerChoices):
 
 
 class Instrument(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='instruments',
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='instruments', blank=True, null=True,
                                 verbose_name=_("Mission"))
     name = models.CharField(max_length=50, verbose_name=_("Instrument"))
     type = models.IntegerField(verbose_name=_("Instrument Type"), default=999, choices=InstrumentType.choices)
@@ -131,7 +148,7 @@ class Instrument(models.Model):
 
 
 class Station(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='stations', verbose_name=_("Mission"))
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='stations', verbose_name=_("Mission"), blank=True, null=True,)
     name = models.CharField(max_length=20, verbose_name=_("Station"))
 
     def __str__(self):
@@ -143,7 +160,7 @@ class Station(models.Model):
 
 
 class Event(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='events', verbose_name=_("Mission"))
+    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='events', verbose_name=_("Trip"))
 
     event_id = models.IntegerField(verbose_name=_("Event ID"))
     station = models.ForeignKey(Station, on_delete=models.DO_NOTHING, verbose_name=_("Station"), related_name="events")
@@ -241,7 +258,7 @@ class Event(models.Model):
         return " ".join(comments)
 
     class Meta:
-        unique_together = ("event_id", "mission")
+        unique_together = ("event_id", "trip")
         ordering = ("event_id",)
 
     def __str__(self):
@@ -351,8 +368,9 @@ class Attachment(models.Model):
 # with the name 'Flowmeter Start' taking up DB space we have one Variable Name 'Flowmeter Start' referenced
 # 50 times in the VariableField. Integers take up less space than strings. SimpleLookupName can also be used
 # later on to add bilingual support
-class VariableName(SimpleLookupName):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='variables', verbose_name=_("Mission"))
+class VariableName(models.Model):
+    name = models.CharField(verbose_name=_("Field Name"), max_length=50)
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='variables', verbose_name=_("Mission"), blank=True, null=True,)
 
     class Meta:
         unique_together = ('mission', 'name')
@@ -640,7 +658,7 @@ class PlanktonSample(models.Model):
     @property
     def plank_sample_key_value(self):
         event = self.bottle.event
-        mission = event.mission
+        mission = event.trip.mission
         return f'{mission.mission_descriptor}_{event.event_id:03d}_{self.bottle.bottle_id}_{self.gear_type.gear_seq}'
 
     @property
@@ -771,7 +789,7 @@ class ElogConfig(FileConfiguration):
               ]
 
     @staticmethod
-    def get_default_config(mission):
+    def get_default_config(mission: Mission):
         mission_id = mission
         if type(mission) is Mission:
             mission_id = mission.pk

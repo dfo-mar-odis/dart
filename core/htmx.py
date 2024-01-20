@@ -15,11 +15,11 @@ from render_block import render_block_to_string
 from biochem import models
 from core import models, forms
 
-import logging
 
 from core import validation
 from dart2.utils import load_svg
 
+import logging
 logger = logging.getLogger("dart")
 
 
@@ -178,49 +178,6 @@ def send_user_notification_elog(group_name, mission, message):
     async_to_sync(channel_layer.group_send)(group_name, event)
 
 
-def send_update_errors(group_name, mission):
-    channel_layer = get_channel_layer()
-    event = {
-        'type': 'update_errors',
-        'mission': mission,
-    }
-    async_to_sync(channel_layer.group_send)(group_name, event)
-
-
-def htmx_validate_events(request, mission_id, file_name):
-    mission = models.Mission.objects.get(pk=mission_id)
-
-    group_name = 'mission_events'
-
-    try:
-        validation_errors = []
-
-        send_user_notification_elog(group_name, mission, "Validating Events")
-        file_events = mission.events.filter(actions__file=file_name).exclude(
-            actions__type=models.ActionType.aborted).distinct()
-
-        models.ValidationError.objects.filter(event__in=file_events).delete()
-
-        for event in file_events:
-            validation_errors += validation.validate_event(event)
-
-        models.ValidationError.objects.bulk_create(validation_errors)
-        # clear the processing message
-        send_update_errors(group_name, mission)
-        send_user_notification_elog(group_name, mission, '')
-    except Exception as ex:
-        # Something is really wrong with this file
-        logger.exception(ex)
-        err = models.Error(mission=mission, type=models.ErrorType.unknown,
-                           message=_("Unknown error during validation :") + f"{str(ex)}, " +
-                                   _("see error.log for details"))
-        err.save()
-        send_update_errors(group_name, mission)
-
-        # clear the processing message
-        send_user_notification_elog(group_name, mission, _('An unknown error occurred, see error.log'))
-
-
 def get_mission_elog_errors(mission):
     errors = mission.file_errors.all().order_by('file_name')
     files = errors.values_list('file_name').distinct()
@@ -235,7 +192,7 @@ def get_mission_elog_errors(mission):
 
 
 def get_mission_validation_errors(mission):
-    errors = models.ValidationError.objects.filter(event__mission=mission).order_by('event')
+    errors = models.ValidationError.objects.filter(event__trip__mission=mission).order_by('event')
 
     error_dict = {}
     events = [error.event for error in errors]
@@ -249,10 +206,14 @@ def get_mission_validation_errors(mission):
 
 def get_file_errors(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
+    file_errors = get_mission_elog_errors(mission)
+    validation_errors = get_mission_validation_errors(mission)
+    error_count = len(file_errors) + len(validation_errors)
     context = {
         'mission': mission,
-        'errors': get_mission_elog_errors(mission),
-        'validation_errors': get_mission_validation_errors(mission)
+        'errors': file_errors,
+        'validation_errors': validation_errors,
+        'error_count': error_count
     }
     html = render_to_string('core/partials/card_event_validation.html', context=context)
     response = HttpResponse(html)

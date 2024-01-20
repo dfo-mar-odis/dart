@@ -210,7 +210,7 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
     # clear errors for this file
     core_models.FileError.objects.filter(file_name=file_name).delete()
 
-    existing_samples = core_models.Sample.objects.filter(bottle__event__mission=mission)
+    existing_samples = core_models.Sample.objects.filter(bottle__event__trip__mission=mission)
 
     create_samples = {}
     update_samples = {'fields': set(), 'models': []}
@@ -241,7 +241,7 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
             sample_id = int(row[1][sample_id_field])
             value = row[1][value_field]
 
-            bottles = core_models.Bottle.objects.filter(event__mission=mission, bottle_id=int(sample_id))
+            bottles = core_models.Bottle.objects.filter(event__trip__mission=mission, bottle_id=int(sample_id))
             if not bottles.exists():
                 message = f"Could not find bottle matching id {sample_id} in file {file_name}"
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
