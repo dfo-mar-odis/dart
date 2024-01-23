@@ -218,7 +218,7 @@ HANDLERS = {
         "encoding": "utf-8",
         "formatter": "simple",
         "backupCount": 5,
-        "maxBytes": 1024 * 1024 * 5  # 5 MB
+        "maxBytes": 1024 * 1024 * 2  # 2 MB
     },
     "test_handler": {
         "class": "logging.FileHandler",
@@ -234,7 +234,7 @@ HANDLERS = {
         "encoding": "utf-8",
         "formatter": "verbose",
         "backupCount": 5,
-        "maxBytes": 1024 * 1024 * 5  # 5 MB
+        "maxBytes": 1024 * 1024 * 2  # 2 MB
     }
 }
 

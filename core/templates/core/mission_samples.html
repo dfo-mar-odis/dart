@@ -20,54 +20,33 @@
 {% endblock %}
 
 {% block content %}
-        <div id="div_content_block_id" class="container-fluid" hx-swap-oob="true">
-    {% if sample_type %}
-        {% include 'core/partials/card_sample_upload_header.html' %}
-    {% else %}
-        <div class="mt-2" hx-trigger="load" hx-get="{% url "core:form_btl_card" mission.pk %}?hide_loaded=true">
-            {# The Load Bottle form will be swapped in here #}
-        </div>
-        <div class="row mt-2">
-        {% include 'core/partials/card_sample_load_header.html' %}
-        </div>
-    {% endif %}
-        </div>
+    <div class="mb-2" hx-trigger="load" hx-get="{% url "core:form_btl_card" mission.pk %}?hide_loaded=true" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+        {# The Load Bottle form will be swapped in here #}
+    </div>
+    <div class="mb-2" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% include 'core/partials/card_sample_load_header.html' %}
+    </div>
 
-    {% block ctd_block %}
-        {% if sample_type %}
-        <div id="div_id_data_display" class="container-fluid mt-2" hx-swap-oob="#div_id_data_display">
-            <div class="card" id="div_ctd_id">
-                <div class="card-header">
-                    <div class="row">
-                        <div class="card-title">{{ sample_type }}</div>
-                    </div>
+    <div id="div_id_data_display" class="container-fluid mb-2" hx-swap-oob="#div_id_data_display">
+        <div class="card" id="div_ctd_id">
+            <div class="card-header">
+                <div class="row">
+                    <div class="card-title col-auto align-self-end h6">{% trans "Sensor and Sample Data" %}</div>
                 </div>
-                <div class="card-body">
-                    <div id="div_ctd_list_id">
-                        {% include 'core/partials/table_sample.html' %}
-                    </div>
+            </div>
+            <div class="card-body">
+                <div class="vertical-scrollbar" hx-swap="none" hx-trigger="load, update_samples from:body" hx-get="{% url 'core:mission_samples_sample_list' mission.pk %}">
+                    <table id="table_id_sample_table" class="table table-striped">
+
+                    </table>
                 </div>
             </div>
         </div>
-        {% else %}
-        <div id="div_id_data_display" class="container-fluid mt-2" hx-swap-oob="#div_id_data_display">
-            <div class="card" id="div_ctd_id">
-                <div class="card-header">
-                    <div class="row">
-                        <div class="card-title col-auto align-self-end h6">{% trans "Sensor and Sample Data" %}</div>
-                    </div>
-                </div>
-                <div class="card-body">
-                    {% include 'core/partials/table_sample.html' %}
-                </div>
-            </div>
-            <div class="mt-2" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" mission.pk %}">
-                {# The Biochem database form will be swapped in here after the page loads #}
-            </div>
-            <div class="mt-2">
-                {% include 'core/partials/card_biochem_validation.html' %}
-            </div>
+        <div class="mb-2" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" mission.pk %}">
+            {# The Biochem database form will be swapped in here after the page loads #}
         </div>
-        {% endif %}
-    {% endblock %}
+        <div class="mb-2">
+            {% include 'core/partials/card_biochem_validation.html' %}
+        </div>
+    </div>
 {% endblock %}

@@ -35,10 +35,11 @@ class TestPhytoplanktonParser(DartTestCase):
         # this also means that the mission, event, station and bottle id must exist
         # phytoplankton are taken from CTD events
         self.mission = core_factory.MissionFactory(name="HUD2021185")
+        self.trip = core_factory.TripFactory(mission=self.mission)
         self.station = core_factory.StationFactory(name="HL_02")
-        self.event_mission_start = core_factory.CTDEventFactory(mission=self.mission, station=self.station,
+        self.event_mission_start = core_factory.CTDEventFactory(trip=self.trip, station=self.station,
                                                                 sample_id=488275, end_sample_id=488285, event_id=7)
-        self.event_mission_end = core_factory.CTDEventFactory(mission=self.mission, station=self.station,
+        self.event_mission_end = core_factory.CTDEventFactory(trip=self.trip, station=self.station,
                                                               sample_id=488685, end_sample_id=488695, event_id=92)
         self.bottle_mission_start = core_factory.BottleFactory(event=self.event_mission_start, bottle_id=488275)
         self.bottle_mission_end = core_factory.BottleFactory(event=self.event_mission_end, bottle_id=488685)
@@ -79,11 +80,12 @@ class TestZooplanktonParser(DartTestCase):
         # zooplankton needs the mission, event, station and bottle id must exist
         # zooplankton are taken from ringnet events
         self.mission = core_factory.MissionFactory(name="HUD2021185")
+        self.trip = core_factory.TripFactory(mission=self.mission)
         self.station = core_factory.StationFactory(name="HL_02")
 
-        self.event_mission_start = core_factory.NetEventFactory(mission=self.mission, station=self.station,
+        self.event_mission_start = core_factory.NetEventFactory(trip=self.trip, station=self.station,
                                                                 sample_id=488275, event_id=2)
-        self.event_mission_end = core_factory.NetEventFactory(mission=self.mission, station=self.station,
+        self.event_mission_end = core_factory.NetEventFactory(trip=self.trip, station=self.station,
                                                                 sample_id=488685, event_id=88)
 
     def test_create_zooplankton(self):
@@ -110,7 +112,7 @@ class TestZooplanktonParser(DartTestCase):
             'WHAT_WAS_IT': [1]
         })
 
-        PlanktonParser.parse_zooplankton(mission_id=1, filename=self.file_name, dataframe=dataframe)
+        PlanktonParser.parse_zooplankton(mission_id=self.mission.pk, filename=self.file_name, dataframe=dataframe)
 
         # the taxa key is 90000000000000 plus whatever the ncode is
         taxa_key = 90000000000000 + 58
@@ -348,7 +350,8 @@ class TestSampleCSVParser(DartTestCase):
         # this is a setup for the James Cook 2022 mission JC24301,
         # all bottles are attached to one ctd event for simplicity
         self.mission = core_factory.MissionFactory(name='JC24301')
-        self.ctd_event = core_factory.CTDEventFactory(mission=self.mission)
+        self.trip = core_factory.TripFactory(mission=self.mission)
+        self.ctd_event = core_factory.CTDEventFactory(trip=self.trip)
 
         self.file_name = "sample_oxy.csv"
         self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)
@@ -646,6 +649,7 @@ class TestElogParser(DartTestCase):
 
     def setUp(self) -> None:
         self.mission = core_factory.MissionFactory(name='test')
+        self.trip = core_factory.TripFactory(mission=self.mission)
 
         logger.info("getting the elog configuration")
         self.config = core_models.ElogConfig.get_default_config(self.mission)
@@ -751,7 +755,7 @@ class TestElogParser(DartTestCase):
         for station in stations:
             self.assertFalse(core_models.Station.objects.filter(name__iexact=station).exists())
 
-        elog.process_stations(self.mission, stations)
+        elog.process_stations(self.trip, stations)
 
         for station in stations:
             self.assertTrue(core_models.Station.objects.filter(name__iexact=station).exists())
@@ -782,7 +786,7 @@ class TestElogParser(DartTestCase):
         for instrument in instruments:
             self.assertFalse(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
 
-        elog.process_instruments(self.mission, [instrument[0] for instrument in instruments])
+        elog.process_instruments(self.trip, [instrument[0] for instrument in instruments])
 
         for instrument in instruments:
             self.assertTrue(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
@@ -806,16 +810,16 @@ class TestElogParser(DartTestCase):
                 "End_Sample_ID": str(expected_end_sample_id)
             }
         }
-        core_factory.StationFactory(name=expected_station)
-        core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type)
+        core_factory.StationFactory(name=expected_station, mission=self.mission)
+        core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type, mission=self.mission)
 
-        events = core_models.Event.objects.filter(mission=self.mission)
+        events = core_models.Event.objects.filter(trip=self.trip)
         self.assertFalse(events.exists())
-        errors = elog.process_events(self.mission, buffer)
+        errors = elog.process_events(self.trip, buffer)
 
         self.assertEquals(len(errors), 0)
 
-        events = core_models.Event.objects.filter(mission=self.mission)
+        events = core_models.Event.objects.filter(trip=self.trip)
         self.assertTrue(events.exists())
         self.assertEquals(len(events), 1)
 
@@ -837,7 +841,7 @@ class TestElogParser(DartTestCase):
             }
         }
 
-        errors = elog.process_events(self.mission, buffer)
+        errors = elog.process_events(self.trip, buffer)
         self.assertEquals(len(errors), 1)
 
         error = errors[0]
@@ -867,9 +871,9 @@ class TestElogParser(DartTestCase):
             }
         }
 
-        core_factory.StationFactory(name=expected_station)
+        core_factory.StationFactory(name=expected_station, mission=self.mission)
 
-        errors = elog.process_events(self.mission, buffer)
+        errors = elog.process_events(self.trip, buffer)
         self.assertEquals(len(errors), 1)
 
         error = errors[0]
@@ -938,9 +942,9 @@ class TestElogParser(DartTestCase):
         }
 
         station = core_factory.StationFactory(name=expected_station)
-        core_factory.CTDEventFactory(mission=self.mission, event_id=expected_event_id, station=station)
+        event = core_factory.CTDEventFactory(mission=self.mission, event_id=expected_event_id, station=station)
 
-        errors = elog.process_attachments_actions(self.mission, buffer, expected_file_name)
+        errors = elog.process_attachments_actions(event.trip, buffer, expected_file_name)
         self.assertEquals(len(errors), 0)
 
         event = core_models.Event.objects.get(event_id=expected_event_id)

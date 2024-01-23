@@ -29,19 +29,7 @@
             {% include 'core/partials/card_sample_upload_header.html' with mission_sample=mission_sample_type %}
         </div>
         <div id="div_id_data_display" class="container-fluid mt-2" hx-swap-oob="#div_id_data_display"
-             hx-trigger="load" hx-get="{% url "core:sample_type_card" mission_sample_type.pk %}">
-    {#        <div class="card" id="div_ctd_id">#}
-    {#            <div class="card-header">#}
-    {#                <div class="row">#}
-    {#                    <div class="card-title">{{ mission_sample_type }}</div>#}
-    {#                </div>#}
-    {#            </div>#}
-    {#            <div class="card-body">#}
-    {#                <div id="div_ctd_list_id">#}
-    {#                    {% include 'core/partials/table_sample.html' %}#}
-    {#                </div>#}
-    {#            </div>#}
-    {#        </div>#}
+             hx-trigger="load" hx-get="{% url "core:mission_sample_type_card" mission_sample_type.pk %}">
         </div>
     </div>
 {% endblock %}

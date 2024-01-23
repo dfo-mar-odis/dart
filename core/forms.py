@@ -354,10 +354,6 @@ class SampleTypeForm(forms.ModelForm):
             Div(
                 name_row,
                 Row(
-                    Column(Field('comments', css_class='form-control form-control-sm'), css_class='col-12'),
-                    css_class=''
-                ),
-                Row(
                     Column(datatype_filter, css_class='col-12'), css_class=''
                 ),
                 Row(
@@ -497,7 +493,6 @@ class BioChemDataType(forms.Form):
 class SampleTypeConfigForm(forms.ModelForm):
     sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
     value_field = forms.CharField(help_text=_("Column that contains the value data"))
-    replicate_field = forms.CharField(required=False, help_text=_("Column indicating replicate ids, if it exists"))
     flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
     comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
 
@@ -516,7 +511,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         # header row, must be passed in to populate the dropdowns. For some reason after the
         # form has been created and populated the 'declared_fields' variable maintains the list
         # of options and can be used when passing a request.GET or request.POST in
-        choice_fields = ['sample_field', 'replicate_field', 'value_field', 'flag_field', 'comment_field']
+        choice_fields = ['sample_field', 'value_field', 'flag_field', 'comment_field']
         if 'field_choices' in kwargs:
             field_choices: list = kwargs.pop('field_choices')
 
@@ -549,7 +544,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout()
 
-        sample_type_choices = [(st.pk, st) for st in models.GlobalSampleType.objects.all()]
+        sample_type_choices = [(st.pk, st) for st in models.GlobalSampleType.objects.all().order_by('short_name')]
         sample_type_choices.insert(0, (None, ""))
         sample_type_choices.insert(0, (-1, "New Sample Type"))
         sample_type_choices.insert(0, (None, '---------'))
@@ -608,7 +603,6 @@ class SampleTypeConfigForm(forms.ModelForm):
             Row(
                 Column(Field('sample_field')),
                 Column(Field('value_field')),
-                Column(Field('replicate_field')),
                 Column(Field('flag_field', )),
                 Column(Field('comment_field')),
                 css_class="flex-fill", id="div_id_fields_row"

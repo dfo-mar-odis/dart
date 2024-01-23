@@ -581,7 +581,8 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
                 if (platform and platform.strip() != '') and trip.platform == 'N/A':
                     trip.platform = platform
 
-                trip.save()
+                if update_mission:
+                    trip.save()
 
                 update_mission = False
                 if trip.platform == 'N/A' or trip.protocol == 'N/A':

@@ -432,7 +432,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
         gears = bottle.plankton_data.values_list('gear_type', 'mesh_size').distinct()
         event = bottle.event
-        mission = event.mission
+        trip = event.trip
+        mission = trip.mission
         institute: bio_tables.models.BCDataCenter = mission.data_center
 
         sounding = None

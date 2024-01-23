@@ -58,7 +58,7 @@ def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, ro
 
     # for phytoplankton bottles are associated with a CTD bottle
     mission = core_models.Mission.objects.get(pk=mission_id)
-    events = core_models.Event.objects.filter(mission_id=mission_id,
+    events = core_models.Event.objects.filter(trip__mission_id=mission_id,
                                               instrument__type=core_models.InstrumentType.ctd)
     events = events.exclude(actions__type=core_models.ActionType.aborted)
     bottles = core_models.Bottle.objects.filter(event__in=events)
@@ -208,7 +208,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
 
     # for zooplankton bottles are associated with a RingNet bottles, which won't exist and will have to be created
     mission = core_models.Mission.objects.get(pk=mission_id)
-    events = core_models.Event.objects.filter(mission_id=mission_id,
+    events = core_models.Event.objects.filter(trip__mission_id=mission_id,
                                               instrument__type=core_models.InstrumentType.net)
 
     # don't care about aborted events
@@ -252,7 +252,14 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
         max_sieve = get_max_sieve(proc_code=proc_code)
         split_fraction = get_split_fraction(proc_code=proc_code, split=split)
 
-        taxa = bio_models.BCNatnlTaxonCode.objects.get(pk=taxa_id)
+        try:
+            taxa = bio_models.BCNatnlTaxonCode.objects.get(pk=taxa_id)
+        except bio_models.BCNatnlTaxonCode.DoesNotExist as ex:
+            message = _("Could not find Biochem Taxa with code") + f" : {taxa_id}"
+            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+                                          type=core_models.ErrorType.missing_id)
+            error.save()
+            continue
 
         # if the ringnet bottle doesn't exist it needs to be created
         if (bottle := ringnet_bottles.filter(bottle_id=bottle_id)).exists():

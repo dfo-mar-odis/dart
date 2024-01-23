@@ -51,10 +51,6 @@
             <li class="list-group-item">{% trans 'Sample' %} : {{ sample_config.sample_field }}</li>
             <li class="list-group-item">{% trans 'Value' %} : {{ sample_config.value_field }}</li>
 
-            {% if sample_config.replicate_field %}
-            <li class="list-group-item">{% trans 'Replicate' %} : {{ sample_config.replicate_field }}</li>
-            {% endif %}
-
             {% if sample_config.flag_field %}
             <li class="list-group-item">{% trans 'Quality Flag' %} : {{ sample_config.flag_field }}</li>
             {% endif %}

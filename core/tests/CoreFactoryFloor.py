@@ -23,6 +23,13 @@ class MissionFactory(DjangoModelFactory):
     name = factory.lazy_attribute(lambda o: faker.word())
 
 
+class TripFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Trip
+
+    mission = factory.SubFactory(MissionFactory)
+
+
 class GeographicRegionFactory(DjangoModelFactory):
 
     class Meta:
@@ -60,11 +67,15 @@ class EventFactory(DjangoModelFactory):
         model = models.Event
         abstract = True
 
+        exclude = ('mission',)
+
     # Instrument, sample_id and end_sample_id should be set by extending classes because they're typically dependent
     # on the type of instrument the event is recording
 
-    event_id = factory.lazy_attribute(lambda o: faker.random_number(digits=3))
     mission = factory.SubFactory(MissionFactory)
+
+    event_id = factory.lazy_attribute(lambda o: faker.random_number(digits=3))
+    trip = factory.SubFactory(TripFactory, mission=mission)
     station = factory.SubFactory(StationFactory, mission=mission)
     instrument = factory.SubFactory(InstrumentFactory, name="other", instrument_type=models.InstrumentType.other,
                                     mission=mission)

@@ -18,6 +18,7 @@ import logging
 from dart2.utils import updated_value
 
 logger = logging.getLogger("dart")
+logger_notifications = logging.getLogger('dart.ctd')
 
 
 def get_event_number(data_frame: pandas.DataFrame) -> int:
@@ -351,11 +352,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
             new_sampletype = core_models.MissionSampleType(mission=mission, name=name, is_sensor=True,
                                                            long_name=global_sampletype.long_name,
                                                            datatype=global_sampletype.datatype)
-
-            new_sample_types.append(new_sampletype)
-
-    if len(new_sample_types) > 0:
-        core_models.MissionSampleType.objects.bulk_create(new_sample_types)
+            new_sampletype.save()
 
     sample_types = {
         sample_type.name: sample_type for sample_type in core.models.MissionSampleType.objects.filter(mission=mission)
@@ -439,10 +436,17 @@ def read_btl(mission: core_models.Mission, btl_file: str):
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
                                     file_name=btl_file)
         err.save()
-        return
+        raise ValueError(message)
 
     event_number = get_event_number_bio(data_frame=data_frame)
-    event = get_elog_event_bio(mission=mission, event_number=event_number)
+    try:
+        event = get_elog_event_bio(mission=mission, event_number=event_number)
+    except core_models.Event.DoesNotExist as ex:
+        message = _("Could not find matching event for event number") + f" : {event_number}"
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+                                    file_name=btl_file)
+        err.save()
+        raise ex
 
     if event.instrument.type != core_models.InstrumentType.ctd:
         message = "Event_Number" + f" : {event_number} - " + _("not a CTD event, check the event number in the BTL file is correct.")

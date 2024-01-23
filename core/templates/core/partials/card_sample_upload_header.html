@@ -12,14 +12,13 @@
 
                 <div class="row justify-content-between">
                     <div class="col">
-                        <button type="button" class="btn btn-primary btn-sm" title="{% trans 'Back' %}"
-                                hx-get="{% url 'core:mission_samples_sample_details' mission_sample.mission.pk %}"
-                                hx-push-url="true"
-                        >{% custom_icon 'arrow-left-square' %}</button>
+                        <a type="button" class="btn btn-primary btn-sm" title="{% trans 'Back' %}"
+                                href="{% url 'core:mission_samples_sample_details' mission_sample.mission.pk %}"
+                        >{% custom_icon 'arrow-left-square' %}</a>
                     </div>
                     <div class="col-auto">
                         <button type="button" class="btn btn-danger btn-sm" name="delete" title="{% trans 'Delete' %}"
-                                hx-post="{% url 'core:sample_type_delete' mission_sample.pk %}"
+                                hx-post="{% url 'core:mission_sample_type_delete' mission_sample.pk %}"
                                 hx-target="#div_content_block_id"
                                 hx-swap="afterbegin"
                                 hx-confirm="{% trans 'Are you sure?' %}"

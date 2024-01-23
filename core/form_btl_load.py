@@ -12,7 +12,7 @@ from bs4 import BeautifulSoup
 from threading import Thread
 
 from crispy_forms.bootstrap import StrictButton
-from crispy_forms.layout import Column, Row, Div, Field
+from crispy_forms.layout import Column, Row, Div, Field, HTML
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
@@ -22,6 +22,7 @@ from django.template.context_processors import csrf
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
+import core.forms
 from core import htmx
 from core import models
 from core.parsers import ctd
@@ -183,21 +184,59 @@ class BottleLoadForm(CollapsableCardForm):
             self.initial['files'] = [file for file in files]
 
 
-def bottle_load_card(request, **kwargs):
+def get_bottle_load_card(request, **kwargs):
     mission_id = kwargs['mission_id']
 
     context = {}
-    context.update(csrf(request))
 
     initial = {'hide_loaded': "true"}
     if 'hide_loaded' in request.GET:
         initial['hide_loaded'] = request.GET['hide_loaded']
 
-    bottle_load_form = BottleLoadForm(mission_id=mission_id, initial={'hide_loaded': "true"})
+    collapsed = False if 'collapsed' in kwargs else True
+    bottle_load_form = BottleLoadForm(mission_id=mission_id, collapsed=collapsed, initial={'hide_loaded': "true"})
     bottle_load_html = render_crispy_form(bottle_load_form, context=context)
     bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
 
-    form_soup = BeautifulSoup(f'<form id="form_id_{bottle_load_form.get_card_name()}"></form>', 'html.parser')
+    if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name__icontains='BTL')).exists():
+        dir_input = bottle_load_soup.find(id=bottle_load_form.get_card_header_id())
+        dir_input.attrs['class'].append("text-bg-warning")
+
+        form_body = bottle_load_soup.find(id=bottle_load_form.get_card_body_id())
+
+        btl_error_form = CollapsableCardForm(card_name="bottle_file_errors", card_title=_("Bottle File Errors"))
+        btl_errors_html = render_crispy_form(btl_error_form)
+        btl_errors_soup = BeautifulSoup(btl_errors_html, 'html.parser')
+        btl_errors_soup.find("div").attrs['class'].append("mt-2")
+
+        body = btl_errors_soup.find(id=btl_error_form.get_card_body_id())
+
+        files = errors.values_list('file_name', flat=True).distinct()
+        error_list = bottle_load_soup.new_tag('ul')
+        for file in files:
+            file_item = bottle_load_soup.new_tag('li')
+            file_item.string = str(file)
+            ul_file = bottle_load_soup.new_tag('ul')
+            for error in errors:
+                li_error = bottle_load_soup.new_tag('li')
+                li_error.string = error.message
+                ul_file.append(li_error)
+            file_item.append(ul_file)
+            error_list.append(file_item)
+
+        body.append(error_list)
+
+        form_body.append(btl_errors_soup)
+
+    return bottle_load_soup
+
+
+def bottle_load_card(request, **kwargs):
+
+    bottle_load_soup = get_bottle_load_card(request, **kwargs)
+    first_elm = bottle_load_soup.find(recursive=False)
+    form_id = first_elm.attrs['id']
+    form_soup = BeautifulSoup(f'<form id="form_id_{form_id}"></form>', 'html.parser')
     form = form_soup.find('form')
     form.append(bottle_load_soup)
 
@@ -221,7 +260,7 @@ def load_ctd_files(mission):
         status = 'Success'
         # group_name = 'mission_events'
 
-        logger.debug(f"Loading file {ctd_file}")
+        ctd.logger_notifications.info(f"Loading file {ctd_file}")
 
         ctd_file_path = os.path.join(bottle_dir, ctd_file)
         try:
@@ -237,7 +276,7 @@ def load_ctd_files(mission):
             processed = (len(completed) / total_jobs) * 100.0
             processed = str(round(processed, 2))
 
-        htmx.send_user_notification_queue(group_name, f"Loaded {len(completed)}/{total_jobs}", processed)
+        ctd.logger_notifications.info(f"Loaded %d/%d", len(completed), total_jobs)
 
         # update the user on our progress
         return status
@@ -265,19 +304,7 @@ def load_ctd_files(mission):
             if len(jobs) <= 0 and sample_file_queue.empty() and len(not_done) <= 0:
                 break
 
-    # time.sleep(2)
-    # The mission_samples.html page has a websocket notifications element on it. We can send messages
-    # to the notifications element to display progress to the user, but we can also use it to
-    # send an update request to the page when loading is complete.
-    url = reverse_lazy("core:form_btl_reload_files", args=(mission.pk,)) + "?hide_loaded=true"
-    hx = {
-        'hx-get': url,
-        'hx-trigger': 'load',
-        'hx-target': '#div_id_upload_ctd_load',
-        'hx-swap': 'outerHTML'
-    }
-
-    htmx.send_user_notification_close(group_name, **hx)
+    ctd.logger_notifications.info(f"Complete")
 
 
 def choose_bottle_dir(request, **kwargs):
@@ -293,58 +320,14 @@ def choose_bottle_dir(request, **kwargs):
     return reload_files(request, **kwargs)
 
 
+def get_reload_files_form(request, **kwargs):
+    bottle_soup = get_bottle_load_card(request, collapsed=False, **kwargs)
+    bottle_soup.find(recursive=False).attrs['hx-swap-oob'] = "true"
+    return bottle_soup
+
+
 def reload_files(request, **kwargs):
-    mission_id = kwargs['mission_id']
-
-    initial = {}
-    if "hide_loaded" in request.GET or "hide_loaded" in request.POST:
-        initial['hide_loaded'] = "true"
-
-    form = BottleLoadForm(mission_id=mission_id, initial=initial)
-    html = render_crispy_form(form)
-    bottle_soup = BeautifulSoup(html, "html.parser")
-    soup = BeautifulSoup("", "html.parser")
-
-    dir_input = bottle_soup.find(id=form.get_card_header_id())
-    dir_input.attrs['hx-swap-oob'] = "true"
-
-    file_list = bottle_soup.find(id="div_id_files")
-    file_list.attrs['hx-swap-oob'] = "true"
-
-    if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name__icontains='BTL')).exists():
-        dir_input.attrs['class'].append("text-bg-warning")
-
-        btl_error_form = CollapsableCardForm(card_name="bottle_file_errors", card_title=_("Bottle File Errors"))
-        btl_errors_html = render_crispy_form(btl_error_form)
-        btl_errors_soup = BeautifulSoup(btl_errors_html, 'html.parser')
-        btl_errors_soup.find("div").attrs['class'].append("mt-2")
-
-        body = btl_errors_soup.find(id=btl_error_form.get_card_body_id())
-
-        files = errors.values_list('file_name', flat=True).distinct()
-        error_list = soup.new_tag('ul')
-        for file in files:
-            file_item = soup.new_tag('li')
-            file_item.string = str(file)
-            ul_file = soup.new_tag('ul')
-            for error in errors.filter(file_name__iexact=file):
-                li_error = soup.new_tag('li')
-                li_error.string = error.message
-                ul_file.append(li_error)
-            file_item.append(ul_file)
-            error_list.append(file_item)
-
-        body.append(error_list)
-
-        file_list.append(btl_errors_soup)
-
-    hide_loaded_btn = bottle_soup.find(id="bottle_load_hide_loaded")
-    hide_loaded_btn.attrs['hx-swap-oob'] = "true"
-
-    soup.append(dir_input)
-    soup.append(file_list)
-    soup.append(hide_loaded_btn)
-
+    soup = get_reload_files_form(request, **kwargs)
     response = HttpResponse(soup)
     response['HX-Trigger'] = 'update_samples, file_errors_updated'
     return response
@@ -356,17 +339,17 @@ def upload_btl_files(request, **kwargs):
 
     thread_name = "load_ctd_files"
 
-    soup = BeautifulSoup('<div id="div_id_alert_bottle_load" hx-swap-oob="true"></div>', "html.parser")
     if request.method == "GET":
         attrs = {
-            'component_id': "load_ctd_bottle",
+            'alert_area_id': "div_id_alert_bottle_load",
             'message': _("Loading Bottles"),
+            'logger': ctd.logger_notifications.name,
             'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(mission_id,)),
             'hx-trigger': 'load'
         }
-        alert = save_load_component(**attrs)
-        soup.find(id="div_id_alert_bottle_load").append(alert)
-        response = HttpResponse(soup)
+        alert = core.forms.websocket_post_request_alert(**attrs)
+        response = HttpResponse(alert)
+        return response
     else:
         files = request.POST.getlist('files')
         logger.info(sample_file_queue.empty())
@@ -378,31 +361,21 @@ def upload_btl_files(request, **kwargs):
             if thread.name == thread_name:
                 start = False
 
+        t = None
         if start:
-            Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,)).start()
+            (t := Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,))).start()
+            t.join()
 
-        attrs = {
-            'component_id': "div_id_upload_ctd_load",
-            'alert_type': 'info',
-            'message': _("Loading"),
-            'hx-target': "#form_id_ctd_bottle_upload",
-            'hx-ext': "ws",
-            'ws-connect': "/ws/notifications/"
-        }
-        alert_soup = save_load_component(**attrs)
-        # add a message area for websockets
-        msg_div = alert_soup.find(id="div_id_upload_ctd_load_message")
-        msg_div.string = ""
+        soup = get_reload_files_form(request, **kwargs)
 
-        # The core.consumer.processing_elog_message() function is going to write output to a div
-        # with the 'status' id, we'll stick that in the loading alerts message area and bam! Instant notifications!
-        msg_div_status = alert_soup.new_tag('div')
-        msg_div_status['id'] = 'status'
-        msg_div_status.string = _("Loading")
-        msg_div.append(msg_div_status)
+        alert = core.forms.blank_alert(component_id="div_id_alert_bottle_load", message="Done", alert_type="success")
+        div = soup.new_tag("div", id="div_id_alert_bottle_load", attrs={'hx-swap-oob': 'true'})
+        div.append(alert)
 
-        soup.find(id="div_id_alert_bottle_load").append(alert_soup)
+        soup.insert(0, div)
+
         response = HttpResponse(soup)
+        response['HX-Trigger'] = 'update_samples'
 
     return response
 

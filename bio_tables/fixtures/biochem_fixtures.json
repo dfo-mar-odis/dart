@@ -1,5 +1,12 @@
 [
 {
+    "model": "bio_tables.bcupdate",
+    "pk": 1,
+    "fields": {
+        "last_update": "2023-11-28T12:59:41.491Z"
+    }
+},
+{
     "model": "bio_tables.bcdatacenter",
     "pk": 10,
     "fields": {
@@ -112885,6 +112892,118 @@
         "short_name": "",
         "tsn_itis": null,
         "aphiaid": 254612
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006123,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 89818,
+        "taxonomic_name": "Gnathophausia zoea",
+        "best_nodc7": 6152010108,
+        "authority": "Willemoes-Suhm, 1873",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 119930
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006124,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 50528,
+        "taxonomic_name": "Ptychogena crocea",
+        "best_nodc7": 3704090905,
+        "authority": "Kramp & Damas, 1925",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 117727
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006125,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Xantharus formosus",
+        "best_nodc7": 0,
+        "authority": "Andronov, 1981",
+        "collectors_comment": "Razouls C., Desreumaux N., Kouwenberg J. et de Bovée F., 2005-2023. - Biodiversité des Copépodes planctoniques marins (morphologie, répartition géographique et données biologiques). Sorbonne Université, CNRS. Disponible sur http://copepodes.obs-banyuls.fr",
+        "data_managers_comment": "IML_Dec2023",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 356373
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006126,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Tharybis compacta",
+        "best_nodc7": 6118130100,
+        "authority": "Grice & Hulsemann, 1970",
+        "collectors_comment": "Razouls C., Desreumaux N., Kouwenberg J. et de Bovée F., 2005-2023. - Biodiversité des Copépodes planctoniques marins (morphologie, répartition géographique et données biologiques). Sorbonne Université, CNRS. Disponible sur http://copepodes.obs-banyuls.fr",
+        "data_managers_comment": "IML_Dec2023",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 356529
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006127,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 85714,
+        "taxonomic_name": "Tharybis",
+        "best_nodc7": 6118130100,
+        "authority": "Sars G.O., 1902",
+        "collectors_comment": "Razouls C., Desreumaux N., Kouwenberg J. et de Bovée F., 2005-2023. - Biodiversité des Copépodes planctoniques marins (morphologie, répartition géographique et données biologiques). Sorbonne Université, CNRS. Disponible sur http://copepodes.obs-banyuls.fr",
+        "data_managers_comment": "IML_Dec2023",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 104246
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006128,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Steenstrupiella steenstrupii",
+        "best_nodc7": 0,
+        "authority": "(Claparède & Lachmann, 1858)",
+        "collectors_comment": "(Claparède & Lachmann, 1858) Kofoid & Campbell, 1929                                      MARSHALL S.M. 1969. Order: Tintinnida. Conseil International Pour L'exploration de la Mer. Zooplankton Sheet 117-127.",
+        "data_managers_comment": "IML_2023_PHYTO (observée mission: IML2023049, station TDC6)",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 183546
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006129,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 9904,
+        "taxonomic_name": "Prorocentrum dentatum",
+        "best_nodc7": 1202010400,
+        "authority": "Stein, 1883",
+        "collectors_comment": "1.Dodge, J.D. 1982. Marine dinoflagellates of the British Isles. London: Her Majesty's Stationery Office. 303 p. \r\n2.Lebour, M.V. 1925. The Dinoflagellates of Northern Seas. Plymouth, England: Marine biological Association of the United Kingdom. 250 p.",
+        "data_managers_comment": "IML_2023_PHYTO (observée mission: IML2023049, stations TCEN3 et TECN5)",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 110298
     }
 },
 {

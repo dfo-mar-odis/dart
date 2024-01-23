@@ -53,7 +53,7 @@ def sample_type_card(request, **kwargs):
     sample_type_soup = BeautifulSoup(sample_type_html, 'html.parser')
 
     card_body_div = sample_type_soup.find(id=sample_type_form.get_card_body_id())
-    card_body_div.attrs['hx-get'] = reverse_lazy("core:sample_type_sample_list", args=(mission_sample_type_id,))
+    card_body_div.attrs['hx-get'] = reverse_lazy("core:mission_sample_type_sample_list", args=(mission_sample_type_id,))
     card_body_div.attrs['hx-trigger'] = 'load'
 
 
@@ -118,8 +118,7 @@ def list_samples(request, **kwargs):
 
     # add styles to the table so it's consistent with the rest of the application
     table = soup.find('table')
-    table.attrs['class'] = 'dataframe table table-striped ' \
-                           'table-sm tscroll horizontal-scrollbar'
+    table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
@@ -130,7 +129,8 @@ def list_samples(request, **kwargs):
     last_tr = table_body.find_all('tr')[-1]
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = reverse_lazy('core:sample_type_sample_list', args=(sensor_id,)) + f"?page={page + 1}"
+    last_tr.attrs['hx-get'] = reverse_lazy('core:mission_sample_type_sample_list',
+                                           args=(sensor_id,)) + f"?page={page + 1}"
     last_tr.attrs['hx-swap'] = "afterend"
 
     # finally, align all text in each column to the center of the cell
@@ -239,11 +239,11 @@ def sample_delete(request, **kwargs):
 
 # ###### Mission Sample ###### #
 mission_sample_type_urls = [
-    path('sampletype/<int:pk>/', SampleTypeDetails.as_view(), name="sample_type_details"),
+    path('sampletype/<int:pk>/', SampleTypeDetails.as_view(), name="mission_sample_type_details"),
 
-    path('sampletype/card/<int:mission_sample_type_id>/', sample_type_card, name="sample_type_card"),
-    path('sampletype/list/<int:mission_sample_type_id>/', list_samples, name="sample_type_sample_list"),
+    path('sampletype/card/<int:mission_sample_type_id>/', sample_type_card, name="mission_sample_type_card"),
+    path('sampletype/list/<int:mission_sample_type_id>/', list_samples, name="mission_sample_type_sample_list"),
 
-    path('sampletype/delete/<int:mission_sample_type_id>/', sample_delete, name="sample_type_delete"),
+    path('sampletype/delete/<int:mission_sample_type_id>/', sample_delete, name="mission_sample_type_delete"),
 
 ]

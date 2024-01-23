@@ -18,7 +18,7 @@ class TestGeneralEventValidation(DartTestCase):
     def setUp(self) -> None:
         self.start_date = datetime.datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
         self.end_date = datetime.datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
-        self.mission = core_factory.MissionFactory(
+        self.trip = core_factory.TripFactory(
             start_date=self.start_date.date(),
             end_date=self.end_date.date()
         )
@@ -27,7 +27,7 @@ class TestGeneralEventValidation(DartTestCase):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
         # unless the action type is 'other'
 
-        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        event = core_factory.CTDEventFactory(trip=self.trip, sample_id=501100, end_sample_id=501112)
         # events from the CTDEventFactory come with their own actions because a CTD event isn't valid without actions
         event.actions.all().delete()
 
@@ -47,7 +47,7 @@ class TestGeneralEventValidation(DartTestCase):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
         # unless the action type is 'other'
 
-        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        event = core_factory.CTDEventFactory(trip=self.trip, sample_id=501100, end_sample_id=501112)
         # events from the CTDEventFactory come with their own actions because a CTD event isn't valid without actions
         event.actions.all().delete()
 
@@ -70,13 +70,13 @@ class TestCTDEventValidation(DartTestCase):
     def setUp(self) -> None:
         self.start_date = datetime.datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
         self.end_date = datetime.datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
-        self.mission = core_factory.MissionFactory(
+        self.trip = core_factory.TripFactory(
             start_date=self.start_date.date(),
             end_date=self.end_date.date()
         )
 
     def test_validation_sample_ids(self):
-        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=None, end_sample_id=None)
+        event = core_factory.CTDEventFactory(trip=self.trip, sample_id=None, end_sample_id=None)
 
         # we're testing with the assumption the event was loaded from a log file so we need to create
         # the expected actions with their message object ids and files they came from
@@ -93,7 +93,7 @@ class TestCTDEventValidation(DartTestCase):
         self.assertEquals(len(errors), 2)
 
     def test_validation_end_sample_ids(self):
-        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=1000, end_sample_id=None)
+        event = core_factory.CTDEventFactory(trip=self.trip, sample_id=1000, end_sample_id=None)
 
         # we're testing with the assumption the event was loaded from a log file so we need to create
         # the expected actions with their message object ids and files they came from
@@ -130,8 +130,8 @@ class TestCTDEventValidation(DartTestCase):
     def test_validate_net_event_missing_sample_id(self):
         expected_file = 'test.log'
 
-        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=None)
+        core_factory.CTDEventFactory(trip=self.trip, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(trip=self.trip, sample_id=None)
         core_factory.AttachmentFactory(event=event, name='76um')
 
         core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
@@ -148,8 +148,8 @@ class TestCTDEventValidation(DartTestCase):
     def test_validate_net_missing_attachment(self):
         expected_file = 'test.log'
 
-        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000)
+        core_factory.CTDEventFactory(trip=self.trip, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(trip=self.trip, sample_id=30000)
 
         core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
                                    date_time=self.start_date)
@@ -165,8 +165,8 @@ class TestCTDEventValidation(DartTestCase):
     def test_validate_net_76_event_no_ctd_match(self):
         expected_file = 'test.log'
 
-        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=40011)
+        core_factory.CTDEventFactory(trip=self.trip, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(trip=self.trip, sample_id=40011)
         core_factory.AttachmentFactory(event=event, name='76um')
 
         core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
@@ -183,8 +183,8 @@ class TestCTDEventValidation(DartTestCase):
     def test_validate_net_202_event_no_ctd_match(self):
         expected_file = 'test.log'
 
-        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=40001)
+        core_factory.CTDEventFactory(trip=self.trip, sample_id=40000, end_sample_id=40012)
+        event = core_factory.NetEventFactory(trip=self.trip, sample_id=40001)
         core_factory.AttachmentFactory(event=event, name='202um')
 
         core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,

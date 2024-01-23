@@ -6,11 +6,11 @@ from crispy_forms.utils import render_crispy_form
 from django.template.loader import render_to_string
 
 from django.test import tag, Client
-from django.urls import reverse
-
-from render_block import render_block_to_string
+from django.urls import reverse, reverse_lazy
+from django.utils.translation import gettext as _
 
 import core.models
+from core.parsers import ctd
 from dart2 import settings
 from dart2.tests.DartTestCase import DartTestCase
 
@@ -62,16 +62,23 @@ class TestMissionSamplesForm(DartTestCase):
         # Upon selecting files and clicking the submit button a get request should be made to
         # sample_upload_ctd that will return a loading dialog that will make a post request
         # to sample_upload_ctd with a websocket on it.
-        url = reverse('core:form_btl_upload_bottles', args=(self.mission.id,))
+        url = reverse('core:form_btl_upload_bottles', args=(self.mission.pk,))
+
+        attrs = {
+            'alert_area_id': "div_id_alert_bottle_load",
+            'message': _("Loading Bottles"),
+            'logger': ctd.logger_notifications.name,
+            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(self.mission.pk,)),
+            'hx-trigger': 'load'
+        }
+        alert = core.forms.websocket_post_request_alert(**attrs)
 
         dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
 
         response = self.client.get(url, {"bottle_dir": dir, "file_name": ['JC243a001.btl', 'JC243a006.btl']})
         soup = BeautifulSoup(response.content, 'html.parser')
-        div_load_alert = soup.find(id='load_ctd_bottle')
 
-        self.assertIsNotNone(div_load_alert)
-        self.assertIn('hx-post', div_load_alert.attrs)
+        self.assertEquals(soup.prettify(), alert.prettify())
 
 
 @tag('forms', 'form_mission_events')
@@ -80,10 +87,11 @@ class TestMissionEventForm(DartTestCase):
     def setUp(self) -> None:
         self.client = Client()
         self.mission = core_factory.MissionFactory()
+        self.trip = core_factory.TripFactory(mission=self.mission)
 
     def test_events_card(self):
         # the mission events page should have a card on it that contains an upload button
-        url = reverse("core:mission_events_details", args=(self.mission.id,))
+        url = reverse("core:form_trip_card", args=(self.mission.pk, self.trip.pk,))
 
         response = self.client.get(url)
 
@@ -96,15 +104,15 @@ class TestMissionEventForm(DartTestCase):
         self.assertIsNotNone(form_input)
 
     def test_events_upload_response(self):
-        # the response from a get request to core:hx_elog_upload url should contain a loading alert
+        # the response from a get request to core:form_trip_import_events_elog url should contain a loading alert
         # the loading alert should have a post request to core:hx_elog_upload to start the processing
         # of uploaded files.
-        url = reverse("core:mission_events_upload_elog", args=(self.mission.id,))
+        url = reverse("core:form_trip_import_events_elog", args=(self.trip.id,))
 
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
-        div_load_alert = soup.find(id='div_id_upload_elog_load')
+        div_load_alert = soup.find(id='div_id_event_alert_alert')
 
         self.assertIsNotNone(div_load_alert)
         self.assertIn('hx-post', div_load_alert.attrs)
@@ -365,8 +373,7 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertIsNotNone(samples_type)
         self.assertIsNone(samples_type.string)
 
-        # the first div will be the file errors, so there should be 2 elements in this list
-        list_div = soup.find(id=f'div_id_loaded_samples_list')
+        list_div = soup.find(id=f'div_id_loaded_sample_type')
         self.assertIsNotNone(list_div)
 
         self.assertEquals(len(list_div.find_all('div', recursive=False)), 2)
@@ -685,7 +692,7 @@ class TestSampleTypeCard(DartTestCase):
         mission = core_factory.MissionFactory()
         sample_type = core_factory.MissionSampleTypeFactory(mission=mission, name='oxy', long_name="Oxygen")
 
-        url = reverse('core:sample_type_delete', args=(sample_type.pk,))
+        url = reverse('core:mission_sample_type_delete', args=(sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -699,7 +706,7 @@ class TestSampleTypeCard(DartTestCase):
 
         core_factory.SampleFactory(type=oxy_sample_type)
 
-        url = reverse('core:sample_type_delete', args=(oxy_sample_type.pk,))
+        url = reverse('core:mission_sample_type_delete', args=(oxy_sample_type.pk,))
 
         response = self.client.post(url)
 

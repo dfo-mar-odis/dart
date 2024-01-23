@@ -55,55 +55,6 @@ def process_file(file) -> [str, str, str]:
     return file_name, file_type, data
 
 
-def get_file_config_forms(data, file_type):
-    config_forms = []
-    file_configs = SampleParser.get_file_configs(data, file_type)
-
-    if file_configs:
-        for config in file_configs:
-            config_forms.append(
-
-            )
-
-    return config_forms
-
-
-def get_error_list(soup, card_id, errors):
-    msg_div = soup.find(id=f'{card_id}_message')
-    if not msg_div:
-        msg_div = soup.new_tag('div')
-        msg_div.attrs['class'] = ''
-        msg_div.attrs['id'] = f'{card_id}_message'
-        soup.append(msg_div)
-
-    msg_div_error_card = soup.new_tag('div')
-    msg_div_error_card.attrs['class'] = 'card mt-2'
-    msg_div.append(msg_div_error_card)
-
-    msg_div_error_card_header = soup.new_tag('div')
-    msg_div_error_card_header.attrs['class'] = 'card-header text-bg-warning'
-    msg_div_error_card.append(msg_div_error_card_header)
-
-    msg_div_error_title = soup.new_tag('div')
-    msg_div_error_title.string = _("Warnings")
-    msg_div_error_title.attrs['class'] = 'card-title'
-    msg_div_error_card_header.append(msg_div_error_title)
-
-    msg_div_error_card_body = soup.new_tag('div')
-    msg_div_error_card_body.attrs['class'] = 'card-body vertical-scrollbar-sm'
-    msg_div_error_card.append(msg_div_error_card_body)
-
-    ul_list = soup.new_tag('ul')
-    ul_list['id'] = f'{card_id}_error_list'
-    ul_list['class'] = 'list-group'
-    msg_div_error_card_body.append(ul_list)
-    for error in errors:
-        li = soup.new_tag('li')
-        li['class'] = 'list-group-item'
-        li.string = error.message
-        ul_list.append(li)
-
-
 def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
     sampletype = models.MissionSampleType.objects.get(pk=sampletype_id)
 
@@ -140,14 +91,12 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
             else:
                 button_colour = 'btn-primary'
 
-    button = soup.new_tag("button")
+    button = soup.new_tag("a")
     button.string = f'{sampletype.name}'
     button.attrs['id'] = f'button_id_sample_type_details_{sampletype.pk}'
     button.attrs['class'] = 'btn btn-sm ' + button_colour
     button.attrs['style'] = 'width: 100%'
-    button.attrs['hx-get'] = reverse_lazy('core:sample_type_details', args=(sampletype.pk,))
-    button.attrs['hx-target'] = "#sample_table"
-    button.attrs['hx-push-url'] = 'true'
+    button.attrs['href'] = reverse_lazy('core:mission_sample_type_details', args=(sampletype.pk,))
     button.attrs['title'] = title
 
     return button
@@ -277,7 +226,6 @@ def save_sample_config(request, **kwargs):
     # returns the loaded_samples_block if the forms validate and the objects are created
 
     context = {}
-    context.update(csrf(request))
 
     if request.method == "GET":
         if 'config_id' in kwargs and 'update_sample_type' in request.GET:
@@ -362,7 +310,6 @@ def save_sample_config(request, **kwargs):
 
 def new_sample_config(request, **kwargs):
     context = {}
-    context.update(csrf(request))
 
     if request.method == "GET":
 
@@ -458,7 +405,6 @@ def get_file_error_card(request, **kwargs):
 
 def load_sample_config(request, **kwargs):
     context = {}
-    context.update(csrf(request))
 
     if request.method == "GET":
         if 'reload' in request.GET:
@@ -537,20 +483,24 @@ def load_sample_config(request, **kwargs):
 
         soup.append(div_sample_type_holder)
 
+        soup.append(div_sample_type := soup.new_tag("div", id='div_id_loaded_sample_type'))
+        div_sample_type.attrs['hx-swap-oob'] = "true"
+
+        file_error_url = reverse_lazy("core:mission_samples_get_file_errors")
+        file_error_url += f"?mission_id={mission_id}&file_name={file_name}"
+        div_error_list = soup.new_tag('div')
+        div_error_list.attrs['id'] = "div_id_error_list"
+        div_error_list.attrs['hx-get'] = file_error_url
+        div_error_list.attrs['hx-trigger'] = "load, file_errors_updated from:body"
+        div_error_list.attrs['class'] = "mt-2"
+        div_sample_type.append(div_error_list)
+
         div_sample_type_list = soup.new_tag("div")
         div_sample_type_list.attrs['id'] = "div_id_loaded_samples_list"
         div_sample_type_list.attrs['class'] = "mt-2"
-        div_sample_type_holder.append(div_sample_type_list)
+        div_sample_type.append(div_sample_type_list)
 
         if file_configs:
-
-            file_error_url = reverse_lazy("core:mission_samples_get_file_errors")
-            file_error_url += f"?mission_id={mission_id}&file_name={file_name}"
-            div_error_list = soup.new_tag('div')
-            div_error_list.attrs['id'] = "div_id_error_list"
-            div_error_list.attrs['hx-get'] = file_error_url
-            div_error_list.attrs['hx-trigger'] = "load, file_errors_updated from:body"
-            div_sample_type_list.append(div_error_list)
 
             for config in file_configs:
                 html = render_to_string('core/partials/card_sample_config.html', context={'sample_config': config})
@@ -677,7 +627,6 @@ def load_samples(request, **kwargs):
 
             if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name=file_name)).exists():
                 button_class = "btn btn-warning btn-sm"
-                # get_error_list(soup, message_div_id, errors)
 
             # create an empty message div to remove the loading alert
             msg_div = soup.new_tag('div')
@@ -749,7 +698,7 @@ def list_samples(request, **kwargs):
     page_limit = 50
     page_start = page_limit * page
 
-    soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
+    table_soup = BeautifulSoup('', 'html.parser')
 
     mission = models.Mission.objects.get(pk=mission_id)
     bottle_limit = models.Bottle.objects.filter(event__trip__mission=mission).order_by('bottle_id')[
@@ -788,14 +737,14 @@ def list_samples(request, **kwargs):
                         df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
         df = df.reindex(sorted(df.columns), axis=1)
-        soup = format_all_sensor_table(df, mission)
+        table_soup = format_all_sensor_table(df, mission)
     except Exception as ex:
         logger.exception(ex)
 
     # add styles to the table so it's consistent with the rest of the application
-    table = soup.find('table')
-    table.attrs['class'] = 'dataframe table table-striped ' \
-                           'table-sm tscroll horizontal-scrollbar'
+    table = table_soup.find('table')
+    table.attrs['id'] = "table_id_sample_table"
+    table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
@@ -811,14 +760,17 @@ def list_samples(request, **kwargs):
     last_tr.attrs['hx-swap'] = "beforeend"
 
     # finally, align all text in each column to the center of the cell
-    tds = soup.find('table').find_all('td')
+    tds = table_soup.find('table').find_all('td')
     for td in tds:
         td['class'] = 'text-center text-nowrap'
 
     if page > 0:
-        response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
+        response = HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
     else:
-        response = HttpResponse(soup)
+        table = table_soup.find("table", recursive=False)
+        table.attrs['id'] = "table_id_sample_table"
+        table.attrs['hx-swap-oob'] = 'true'
+        response = HttpResponse(table_soup)
 
     return response
 
@@ -828,14 +780,8 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
     df.fillna('---', inplace=True)
 
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
-    html = '<div id="sample_table">' + df.to_html() + "</div>"
-
     # Use BeautifulSoup for html manipulation to post process the HTML table Pandas created
-    soup = BeautifulSoup(html, 'html.parser')
-
-    # this will be a big table add scrolling
-    sample_table = soup.find(id="sample_table")
-    sample_table.attrs['class'] = "vertical-scrollbar"
+    soup = BeautifulSoup(df.to_html(), 'html.parser')
 
     # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
     # followed by the 'replicate' row that describes if this is a single, double, triple, etc. column sample.

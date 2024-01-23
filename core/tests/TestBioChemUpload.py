@@ -25,8 +25,8 @@ class MockObjects:
 class MockBCSP(bio_models.BcsP):
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
         self.objects = MockObjects()
+        super().__init__(*args, **kwargs)
 
 
 @tag('biochem', 'biochem_plankton')
@@ -42,7 +42,7 @@ class TestGetBCSPRows(DartTestCase):
 
         bottles = core_models.Bottle.objects.all()
         bcs_model = MockBCSP()
-        creat_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bcs_model, bottles)
+        creat_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles, bcs_model)
 
         self.assertEquals(len(creat_rows), 1)
         self.assertEquals(len(update_rows), 0)
