@@ -19,6 +19,9 @@ class EventDetails(MissionMixin, GenericDetailView):
     page_title = _("Missions Events")
     template_name = "core/mission_events.html"
 
+    def get_object(self, queryset=None):
+        return self.model.objects.using(self.kwargs['database']).get(pk=self.kwargs['pk'])
+
     def get_page_title(self):
         return _("Mission Events") + " : " + self.object.name
 
@@ -31,6 +34,7 @@ class EventDetails(MissionMixin, GenericDetailView):
         if caches['default'].touch('selected_event'):
             caches['default'].delete('selected_event')
 
+        context['database'] = self.kwargs['database']
         context['search_form'] = forms.MissionSearchForm(initial={'mission': self.object.pk})
 
         if 'trip_id' in self.kwargs:
@@ -79,7 +83,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         header.fields[0].fields.append(buttons)
 
         btn_attrs = {
-            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.mission.pk,)),
+            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.mission.name, self.mission.pk,)),
             'hx-swap': 'none',
         }
         icon = load_svg('arrow-clockwise')
@@ -174,8 +178,8 @@ class ValidateFileCard(forms.CollapsableCardForm):
         super().__init__(card_name="file_validation", card_title=_("File Issues"), *args, **kwargs)
 
 
-def get_validation_card(request, mission_id, **kwargs):
-    mission = models.Mission.objects.get(pk=mission_id)
+def get_validation_card(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     validation_card = ValidateEventsCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
@@ -186,8 +190,8 @@ def get_validation_card(request, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
-def get_file_validation_card(request, mission_id, **kwargs):
-    mission = models.Mission.objects.get(pk=mission_id)
+def get_file_validation_card(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     validation_card = ValidateFileCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
@@ -198,8 +202,8 @@ def get_file_validation_card(request, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
-def revalidate_events(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
+def revalidate_events(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     if request.method == "GET":
 
@@ -208,22 +212,23 @@ def revalidate_events(request, mission_id):
             'logger': validation.logger_notifications.name,
             'message': _("Revalidating"),
             'hx-trigger': 'load',
-            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(mission_id,)),
+            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(database, mission_id,)),
         }
         return HttpResponse(forms.websocket_post_request_alert(**attrs))
 
     validation.validate_mission(mission)
-    response = get_validation_card(request, mission_id, swap=True, collapsed=False)
+    response = get_validation_card(request, database, mission_id, swap=True, collapsed=False)
     response['HX-Trigger'] = 'event_updated'
     return response
 
 
+path_prefix = '<str:database>/mission'
 mission_event_urls = [
-    path('mission/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
-    path('mission/event/<int:pk>/<int:trip_id>/', EventDetails.as_view(), name="mission_events_details"),
-    path('mission/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
-    path('mission/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
-    path('mission/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
+    path(f'{path_prefix}/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
+    path(f'{path_prefix}/event/<int:pk>/<int:trip_id>/', EventDetails.as_view(), name="mission_events_details"),
+    path(f'{path_prefix}/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
+    path(f'{path_prefix}/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
+    path(f'{path_prefix}/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
 ]
 
 mission_event_urls += form_mission_trip.trip_load_urls + form_event_details.event_detail_urls

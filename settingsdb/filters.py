@@ -1,6 +1,6 @@
 import django_filters
 
-from . import models
+from core import models
 
 
 class MissionFilter(django_filters.FilterSet):

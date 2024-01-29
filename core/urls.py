@@ -6,17 +6,16 @@ from . import form_biochem_database, views_mission_event, views_mission_plankton
 app_name = 'core'
 
 
+url_prefix = "<str:database>/elog"
 urlpatterns = [
     # ###### Mission details and setting ###### #
-
-    path('mission/', views.MissionFilterView.as_view(), name="mission_filter"),
     path('mission/new/', views.MissionCreateView.as_view(), name="mission_new"),
-    path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
+    path('mission/<str:database>/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     # ###### Elog configuration ###### #
-    path('mission/elog/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
-    path('mission/update/elog/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
+    path(f'{url_prefix}/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
+    path(f'{url_prefix}/update/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
 
 ]
 

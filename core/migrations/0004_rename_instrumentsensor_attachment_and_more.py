@@ -5,19 +5,19 @@ import django.db.models.deletion
 import django.utils.timezone
 
 
-def write_bulk_create(model, create_list):
+def write_bulk_create(model, database, create_list):
     if len(create_list) > 0:
         with transaction.atomic():
-            model.objects.bulk_create(create_list)
+            model.objects.using(database).bulk_create(create_list)
             return True
 
     return False
 
 
-def write_bulk_update(model, update_list, fields):
+def write_bulk_update(model, database, update_list, fields):
     if len(update_list) > 0:
         with transaction.atomic():
-            model.objects.bulk_update(update_list, fields)
+            model.objects.using(database).bulk_update(update_list, fields)
             return True
 
     return False
@@ -28,6 +28,7 @@ def undo_copy_mission_station_instrument(apps, schema_editor):
     Event = apps.get_model('core', 'Event')
     Station = apps.get_model('core', 'Station')
     Instrument = apps.get_model('core', 'Instrument')
+    database = schema_editor.connection.alias
 
     stations = Station.objects.all().order_by('name').distinct()
     create_stations = []
@@ -56,23 +57,24 @@ def undo_copy_mission_station_instrument(apps, schema_editor):
         update_events.append(event)
 
         if len(update_events) > 1000:
-            write_bulk_update(Event, update_events, fields)
+            write_bulk_update(Event, database, update_events, fields)
             update_events = []
 
-    write_bulk_update(Event, update_events, fields)
+    write_bulk_update(Event, database, update_events, fields)
 
-    Station.objects.filter(mission__isnull=False).delete()
-    Instrument.objects.filter(mission__isnull=False).delete()
+    Station.objects.using(database).filter(mission__isnull=False).delete()
+    Instrument.objects.using(database).filter(mission__isnull=False).delete()
 
 
 def copy_mission_station_instrument(apps, schema_editor):
     Event = apps.get_model('core', 'Event')
     Station = apps.get_model('core', 'Station')
     Instrument = apps.get_model('core', 'Instrument')
+    database = schema_editor.connection.alias
 
     create_stations = []
     created_stations = []
-    for event in Event.objects.all():
+    for event in Event.objects.using(database).all():
         station = event.station
 
         key = f"{event.mission_id}_{station.name}"
@@ -85,14 +87,14 @@ def copy_mission_station_instrument(apps, schema_editor):
         create_stations.append(n_station)
 
         if len(create_stations) > 100:
-            write_bulk_create(Station, create_stations)
+            write_bulk_create(Station, database, create_stations)
             create_stations = []
 
-    write_bulk_create(Station, create_stations)
+    write_bulk_create(Station, database, create_stations)
 
     create_instruments = []
     created_instruments = []
-    for event in Event.objects.all():
+    for event in Event.objects.using(database).all():
         instrument = event.instrument
 
         key = f"{event.mission_id}_{instrument.name}_{instrument.type}"
@@ -105,16 +107,16 @@ def copy_mission_station_instrument(apps, schema_editor):
         create_instruments.append(n_instrument)
 
         if len(create_stations) > 100:
-            write_bulk_create(Instrument, create_instruments)
+            write_bulk_create(Instrument, database, create_instruments)
             create_instruments = []
 
-    write_bulk_create(Instrument, create_instruments)
+    write_bulk_create(Instrument, database, create_instruments)
 
-    stations = {f"{s.mission}_{s.name}": s for s in Station.objects.filter(mission__isnull=False)}
-    instruments = {f"{i.mission}_{i.name}_{i.type}": i for i in Instrument.objects.filter(mission__isnull=False)}
+    stations = {f"{s.mission}_{s.name}": s for s in Station.objects.using(database).filter(mission__isnull=False)}
+    instruments = {f"{i.mission}_{i.name}_{i.type}": i for i in Instrument.objects.using(database).filter(mission__isnull=False)}
     update_events = []
     fields = ['station', 'instrument']
-    for event in Event.objects.all():
+    for event in Event.objects.using(database).all():
         skey = f"{event.mission}_{event.station.name}"
         ikey = f"{event.mission}_{event.instrument.name}_{event.instrument.type}"
         event.station = stations[skey]
@@ -122,38 +124,40 @@ def copy_mission_station_instrument(apps, schema_editor):
 
         update_events.append(event)
         if len(update_events) > 1000:
-            write_bulk_update(Event, update_events, fields)
+            write_bulk_update(Event, database, update_events, fields)
             update_events = []
 
-    write_bulk_update(Event, update_events, fields)
+    write_bulk_update(Event, database, update_events, fields)
 
-    Station.objects.filter(mission__isnull=True).delete()
-    Instrument.objects.filter(mission__isnull=True).delete()
+    Station.objects.using(database).filter(mission__isnull=True).delete()
+    Instrument.objects.using(database).filter(mission__isnull=True).delete()
 
 
 def undo_copy_mission_variable_name(apps, schema_editor):
     VariableName = apps.get_model('core', 'VariableName')
     VariableField = apps.get_model('core', 'VariableField')
+    database = schema_editor.connection.alias
 
-    variables = VariableName.objects.all().values_list('name', flat=True)
+    variables = VariableName.objects.using(database).all().values_list('name', flat=True)
 
     for name in variables:
-        var = VariableName.objects.filter(name=name).first()
-        fields = [var_field for var_field in VariableField.objects.filter(name__name=name)]
+        var = VariableName.objects.using(database).filter(name=name).first()
+        fields = [var_field for var_field in VariableField.objects.using(database).filter(name__name=name)]
         for field in fields:
             field.name = var
 
-        write_bulk_update(VariableField, fields, ['name'])
+        write_bulk_update(VariableField, database, fields, ['name'])
 
-        VariableName.objects.filter(name=name).exclude(pk=var.pk).delete()
+        VariableName.objects.using(database).filter(name=name).exclude(pk=var.pk).delete()
 
 
 def copy_mission_variable_name(apps, schema_editor):
     VariableName = apps.get_model('core', 'VariableName')
     VariableField = apps.get_model('core', 'VariableField')
+    database = schema_editor.connection.alias
 
     create_variable_names = {}
-    for variable in VariableField.objects.all():
+    for variable in VariableField.objects.using(database).all():
         mission = variable.action.event.mission
         key = f"{mission.pk}_{variable.name.name}"
         if key in create_variable_names.keys():
@@ -162,29 +166,30 @@ def copy_mission_variable_name(apps, schema_editor):
         var_name = VariableName(mission=mission, name=variable.name.name)
         create_variable_names[key] = var_name
 
-    write_bulk_create(VariableName, create_variable_names.values())
+    write_bulk_create(VariableName, database, create_variable_names.values())
 
-    variables = {f"{v.mission}_{v.name}": v for v in VariableName.objects.filter(mission__isnull=False)}
+    variables = {f"{v.mission}_{v.name}": v for v in VariableName.objects.using(database).filter(mission__isnull=False)}
     update_variable = []
     fields = ['name']
-    for variable in VariableField.objects.all():
+    for variable in VariableField.objects.using(database).all():
         vkey = f"{variable.action.event.mission}_{variable.name.name}"
         variable.name = variables[vkey]
         update_variable.append(variable)
 
         if len(update_variable) > 1000:
-            write_bulk_update(VariableField, update_variable, fields)
+            write_bulk_update(VariableField, database, update_variable, fields)
             update_variable = []
 
-    write_bulk_update(VariableField, update_variable, fields)
+    write_bulk_update(VariableField, database, update_variable, fields)
 
-    VariableName.objects.filter(mission__isnull=True).delete()
+    VariableName.objects.using(database).filter(mission__isnull=True).delete()
 
 
 def copy_event_mission_to_trip(apps, schema_editor):
     Mission = apps.get_model('core', 'Mission')
     Event = apps.get_model('core', 'Event')
     Trip = apps.get_model('core', 'Trip')
+    database = schema_editor.connection.alias
 
     def make_trip(mission):
         trip = Trip()
@@ -197,11 +202,11 @@ def copy_event_mission_to_trip(apps, schema_editor):
         trip.more_comments = mission.more_comments
         trip.data_manager_comments = mission.data_manager_comments
 
-        trip.save()
+        trip.save(using=database)
         return trip
 
     cur_trip = 0
-    for mission in Mission.objects.all():
+    for mission in Mission.objects.using(database).all():
         trip = make_trip(mission)
         update_events = []
         for event in mission.events.all():
@@ -215,15 +220,15 @@ def copy_event_mission_to_trip(apps, schema_editor):
 
             update_events.append(event)
 
-        write_bulk_update(Event, update_events, ['trip', 'event_id'])
+        write_bulk_update(Event, database, update_events, ['trip', 'event_id'])
 
 
 def copy_event_trip_to_mission(apps, schema_editor):
     Mission = apps.get_model('core', 'Mission')
     Event = apps.get_model('core', 'Event')
-    Trip = apps.get_model('core', 'Trip')
+    database = schema_editor.connection.alias
 
-    for mission in Mission.objects.all():
+    for mission in Mission.objects.using(database).all():
         trips = mission.trips.order_by('start_date')
         trip = trips.first()
 
@@ -247,10 +252,10 @@ def copy_event_trip_to_mission(apps, schema_editor):
                 update_events.append(event)
 
             if len(update_events) > 1000:
-                write_bulk_update(Event, update_events, ['mission', 'event_id'])
+                write_bulk_update(Event, database, update_events, ['mission', 'event_id'])
                 update_events = []
 
-        write_bulk_update(Event, update_events, ['mission', 'event_id'])
+        write_bulk_update(Event, database, update_events, ['mission', 'event_id'])
 
 
 class Migration(migrations.Migration):

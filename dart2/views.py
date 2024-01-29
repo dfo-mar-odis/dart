@@ -11,7 +11,7 @@ from biochem import models as upload_models
 
 class GenericViewMixin(ContextMixin):
     page_title = None
-    home_url = reverse_lazy('core:mission_filter')
+    home_url = reverse_lazy('settingsdb:mission_filter')
     theme = 'light'
     settings_url = None
 
@@ -38,14 +38,6 @@ class GenericViewMixin(ContextMixin):
             context["bio_chem_details_provided"] = None
 
         context["reports"] = {}
-        sample_urls = urls.get_registered_sample_api_urls()
-        sample_apis = [sample_urls[api] for api in sample_urls]
-        resolvers = [url_resolver.url_patterns[0] for url_resolver in sample_apis]
-
-        for resolver in resolvers:
-            if 'csv_report-list' in [url.name for url in resolver.url_patterns]:
-                context["reports"][resolver.namespace] = f'{resolver.app_name}:csv_report-list'
-
         context['settings_url'] = self.get_settings_url()
         context['theme'] = self.get_theme()
         return context

@@ -4,10 +4,6 @@ from pathlib import Path
 
 import numpy as np
 import os
-import threading
-import easygui
-
-from threading import Thread
 
 import bs4
 import pandas as pd
@@ -18,7 +14,6 @@ from django.conf import settings
 
 from django.db.models import Max, QuerySet, Q
 from django.http import HttpResponse, Http404
-from django.template.context_processors import csrf
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
@@ -1206,8 +1201,9 @@ def download_samples(request, **kwargs):
 
 
 # ###### Mission Sample ###### #
+url_prefix = "<str:database>/sample"
 mission_sample_urls = [
-    path('mission/sample/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
+    path(f'{url_prefix}/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
 
     # used to reload elements on the sample form if a GET htmx request
     path('sample_config/hx/', load_sample_config, name="mission_samples_load_sample_config"),

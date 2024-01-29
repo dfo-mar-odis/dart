@@ -30,11 +30,11 @@
             <td>{{ action.comment }}</td>
             {% if editable %}
             <td>
-                <button class="btn" hx-swap="none" hx-get="{% url 'core:form_event_edit_action' action.pk %}">
+                <button name="edit_action" class="btn" hx-swap="none" hx-get="{% url 'core:form_event_edit_action' database action.pk %}">
                     {% custom_icon 'pencil' %}</button>
             </td>
             <td>
-                <button class="btn" hx-confirm="{% trans 'Are you sure?' %}"  hx-delete="{% url 'core:form_event_delete_action' action.pk %}">{% custom_icon 'dash-square' %}</button>
+                <button name="delete_action" class="btn" hx-confirm="{% trans 'Are you sure?' %}"  hx-delete="{% url 'core:form_event_delete_action' database action.pk %}">{% custom_icon 'dash-square' %}</button>
             </td>
             {% endif %}
         </tr>

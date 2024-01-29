@@ -227,7 +227,7 @@ def sample_delete(request, **kwargs):
             'component_id': "div_id_delete_samples",
             'alert_type': 'info',
             'message': _("Loading"),
-            'hx-get': reverse_lazy('core:mission_samples_sample_details', args=(mission.pk,)),
+            'hx-get': reverse_lazy('core:mission_samples_sample_details', args=(mission.name, mission.pk,)),
             'hx-trigger': 'load',
             'hx-push-url': 'true'
         }

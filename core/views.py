@@ -5,10 +5,10 @@ from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 
 from biochem import models
-from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
+from dart2.views import GenericCreateView, GenericUpdateView, GenericDetailView
 from dart2 import utils
 
-from core import forms, filters, models
+from core import forms, models
 
 import logging
 
@@ -34,24 +34,30 @@ class EventMixin:
     page_title = _("Event Details")
 
 
-class MissionFilterView(MissionMixin, GenericFlilterMixin):
-    filterset_class = filters.MissionFilter
-    new_url = reverse_lazy("core:mission_new")
-    home_url = ""
-    fields = ["id", "name", "biochem_table"]
-
-
 class MissionCreateView(MissionMixin, GenericCreateView):
     form_class = forms.MissionSettingsForm
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):
-        success = reverse_lazy("core:mission_events_details", args=(self.object.pk, ))
+        success = reverse_lazy("core:mission_events_details", args=(self.object.name, self.object.pk, ))
         return success
+
+    def get_object(self, queryset=None):
+        mission = models.Mission.objects.using(self.kwargs['database']).get(pk=self.kwargs['pk'])
+        return mission
 
 
 class MissionUpdateView(MissionCreateView, GenericUpdateView):
-    pass
+
+    def get_object(self, queryset=None):
+        mission = models.Mission.objects.using(self.kwargs['database']).get(pk=self.kwargs['pk'])
+        return mission
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['database'] = self.kwargs['database']
+
+        return context
 
 
 class ElogDetails(GenericDetailView):

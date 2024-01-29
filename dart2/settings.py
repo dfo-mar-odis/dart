@@ -55,6 +55,7 @@ ASGI_APPLICATION = 'dart2.asgi.application'
 # These apps are part of the core functionality for DART
 # --- Please do not modify unless you know what you're doing ---
 REQUIRED_APPS = [
+    'settingsdb',
     'docs',
     'biochem',
     'bio_tables',
@@ -155,7 +156,7 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter",]
+DATABASE_ROUTERS = ["dart2.db_routers.BioChemRouter", ]
 # DATABASE_ROUTERS = ['dynamic_db_router.DynamicDbRouter']
 DATABASES = {
     'default': {
@@ -163,16 +164,6 @@ DATABASES = {
         'NAME': os.path.join(BASE_DIR, env('LOCAL_DATABASE')),
     },
 }
-# if env.bool("BIOCHEM_ENABLED", default=False):
-#     DATABASES['mirror_biochem'] = {
-#         'ENGINE': 'django.db.backends.oracle',
-#         'NAME': env('BIOCHEM_NAME'),
-#         'USER': env('BIOCHEM_USER'),
-#         'PASSWORD': env('BIOCHEM_PASS'),
-#         'PORT': env('BIOCHEM_PORT'),
-#         'HOST': env('BIOCHEM_HOST'),
-#     }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/3.2/ref/settings/#auth-password-validators

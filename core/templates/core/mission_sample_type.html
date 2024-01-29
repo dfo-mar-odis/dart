@@ -5,22 +5,24 @@
 {% load crispy_forms_tags %}
 
 {% block nav_button_block %}
+    {% with mission_sample_type.mission as mission %}
     <li class="nav-item me-2">
-        <a href="{% url 'core:mission_events_details' mission_sample_type.mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_events_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:mission_samples_sample_details' mission_sample_type.mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_samples_sample_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:mission_plankton_plankton_details' mission_sample_type.mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_plankton_plankton_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a class="btn btn-primary" href="{% url 'core:mission_edit' mission_sample_type.mission.pk %}"
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' database mission.pk %}"
            title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
     </li>
+    {% endwith %}
 {% endblock %}
 
 {% block content %}

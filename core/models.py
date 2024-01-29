@@ -803,7 +803,7 @@ class ElogConfig(FileConfiguration):
             required_fields = [(f.field, f.mapped_to) for f in default_config[0].mappings.filter(required=True)]
             optional_fields = [(f.field, f.mapped_to) for f in default_config[0].mappings.filter(required=False)]
 
-        elog_config = ElogConfig.objects.get_or_create(mission_id=mission_id, file_type="elog")[0]
+        elog_config = ElogConfig.objects.using(mission._state.db).get_or_create(mission=mission, file_type="elog")[0]
 
         for field in required_fields:
             if not elog_config.mappings.filter(field=field[0]).exists():

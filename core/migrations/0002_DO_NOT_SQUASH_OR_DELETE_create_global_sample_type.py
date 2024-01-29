@@ -4,10 +4,10 @@ from django.db import migrations, models, transaction
 import django.db.models.deletion
 
 
-def write_bulk_update(model, update_list, fields):
+def write_bulk_update(model, database, update_list, fields):
     if len(update_list) > 0:
         with transaction.atomic():
-            model.objects.bulk_update(update_list, fields)
+            model.objects.usign(database).bulk_update(update_list, fields)
             return True
 
     return False
@@ -15,10 +15,11 @@ def write_bulk_update(model, update_list, fields):
 
 def update_mission_defaults(apps, schema_editor):
     MissionSampleType = apps.get_model('core', 'MissionSampleType')
+    database = schema_editor.connection.alias
 
     fields = ["name", "long_name", "priority", "is_sensor", "datatype"]
     bulk_update_list = []
-    for mission_sample_type in MissionSampleType.objects.all().iterator():
+    for mission_sample_type in MissionSampleType.objects.using(database).all().iterator():
         mission_sample_type.name = mission_sample_type.sample_type.short_name
         mission_sample_type.long_name = mission_sample_type.sample_type.long_name
         mission_sample_type.priority = mission_sample_type.sample_type.priority
@@ -26,53 +27,56 @@ def update_mission_defaults(apps, schema_editor):
         mission_sample_type.datatype = mission_sample_type.sample_type.datatype
         bulk_update_list.append(mission_sample_type)
 
-        if write_bulk_update(MissionSampleType, bulk_update_list, fields):
+        if write_bulk_update(MissionSampleType, database, bulk_update_list, fields):
             bulk_update_list = []
 
-    write_bulk_update(MissionSampleType, bulk_update_list, fields)
+    write_bulk_update(MissionSampleType, database, bulk_update_list, fields)
 
 
 def reverse_mission_sampletype_delete(apps, schema_editor):
     MissionSampleType = apps.get_model('core', 'MissionSampleType')
     GlobalSampleType = apps.get_model('core', 'GlobalSampleType')
-    sample_types = {st.short_name: st for st in GlobalSampleType.objects.all()}
+    database = schema_editor.connection.alias
+    sample_types = {st.short_name: st for st in GlobalSampleType.objects.using(database).all()}
 
     fields = ["sample_type"]
     bulk_update_list = []
-    for mission_sample_type in MissionSampleType.objects.all().iterator():
+    for mission_sample_type in MissionSampleType.using(database).objects.all().iterator():
         mission_sample_type.sample_type = sample_types[mission_sample_type.name]
         bulk_update_list.append(mission_sample_type)
 
-        if write_bulk_update(MissionSampleType, bulk_update_list, fields):
+        if write_bulk_update(MissionSampleType, database, bulk_update_list, fields):
             bulk_update_list = []
 
-    write_bulk_update(MissionSampleType, bulk_update_list, fields)
+    write_bulk_update(MissionSampleType, database, bulk_update_list, fields)
 
 
 def reverse_biochemupload_mission_delete(apps, schema_editor):
     MissionSampleType = apps.get_model('core', 'MissionSampleType')
     BioChemUpload = apps.get_model('core', 'BioChemUpload')
-    sample_types = {st.name: st.mission for st in MissionSampleType.objects.all()}
+    database = schema_editor.connection.alias
+    sample_types = {st.name: st.mission for st in MissionSampleType.objects.using(database).all()}
 
     fields = ["mission"]
     bulk_update_list = []
-    for upload in BioChemUpload.objects.all().iterator():
+    for upload in BioChemUpload.objects.using(database).all().iterator():
         upload.mission = sample_types[upload.type.short_name]
         bulk_update_list.append(upload)
 
-        if write_bulk_update(BioChemUpload, bulk_update_list, fields):
+        if write_bulk_update(BioChemUpload, database, bulk_update_list, fields):
             bulk_update_list = []
 
-    write_bulk_update(BioChemUpload, bulk_update_list, fields)
+    write_bulk_update(BioChemUpload, database, bulk_update_list, fields)
 
 
-def update_missionsampletype(model, apps, get_mission):
+def update_missionsampletype(model, apps, schema_editor, get_mission):
     MissionSampleType = apps.get_model('core', 'MissionSampleType')
-    sample_types = {st.name: st for st in MissionSampleType.objects.all()}
+    database = schema_editor.connection.alias
+    sample_types = {st.name: st for st in MissionSampleType.objects.using(database).all()}
 
     fields = ["missionsampletype"]
     bulk_update_list = []
-    for obj in model.objects.all().iterator():
+    for obj in model.objects.using(database).all().iterator():
         if obj.type.short_name not in sample_types.keys():
             mission = get_mission(obj)
             mst = MissionSampleType(mission=mission, name=obj.type.short_name, long_name=obj.type.long_name,
@@ -80,16 +84,16 @@ def update_missionsampletype(model, apps, get_mission):
                                     datatype=obj.type.datatype)
             obj.missionsampletype = mst
             with transaction.atomic():
-                mst.save()
+                mst.save(using=database)
         else:
             obj.missionsampletype = sample_types[obj.type.short_name]
 
         bulk_update_list.append(obj)
 
-        if write_bulk_update(model, bulk_update_list, fields):
+        if write_bulk_update(model, database, bulk_update_list, fields):
             bulk_update_list = []
 
-    write_bulk_update(model, bulk_update_list, fields)
+    write_bulk_update(model, database, bulk_update_list, fields)
 
 
 def update_sample_sample_type(apps, schema_editor):
@@ -98,7 +102,7 @@ def update_sample_sample_type(apps, schema_editor):
     def get_mission(sample):
         return sample.bottle.event.mission
 
-    update_missionsampletype(Sample, apps, get_mission)
+    update_missionsampletype(Sample, apps, schema_editor, get_mission)
 
 
 def update_biochem_sample_type(apps, schema_editor):
@@ -107,17 +111,17 @@ def update_biochem_sample_type(apps, schema_editor):
     def get_mission(biochemupload):
         return biochemupload.mission
 
-    update_missionsampletype(BioChemUpload, apps, get_mission)
+    update_missionsampletype(BioChemUpload, apps, schema_editor, get_mission)
 
 
-def reverse_sampletype_delete(model, apps):
+def reverse_sampletype_delete(model, database, apps):
     GlobalSampleType = apps.get_model('core', 'GlobalSampleType')
-    sample_types = {st.short_name: st for st in GlobalSampleType.objects.all()}
+    sample_types = {st.short_name: st for st in GlobalSampleType.objects.using(database).all()}
 
     fields = ["type"]
     bulk_update_list = []
     new_gst = {}
-    for obj in model.objects.all().iterator():
+    for obj in model.objects.using(database).all().iterator():
         mission_type = obj.missionsampletype
         if mission_type.name in sample_types.keys():
             obj.type = sample_types[mission_type.name]
@@ -128,27 +132,27 @@ def reverse_sampletype_delete(model, apps):
                                    priority=mission_type.priority, is_sensor=mission_type.is_sensor,
                                    datatype=mission_type.datatype)
             with transaction.atomic():
-                gst.save()
+                gst.save(using=database)
 
             new_gst[mission_type.name] = gst
             obj.type = gst
 
         bulk_update_list.append(obj)
 
-        if write_bulk_update(model, bulk_update_list, fields):
+        if write_bulk_update(model, database, bulk_update_list, fields):
             bulk_update_list = []
 
-    write_bulk_update(model, bulk_update_list, fields)
+    write_bulk_update(model, database, bulk_update_list, fields)
 
 
 def reverse_sample_type_delete(apps, schema_editor):
     model = apps.get_model('core', 'Sample')
-    reverse_sampletype_delete(model, apps)
+    reverse_sampletype_delete(model, schema_editor.connection.alias, apps)
 
 
 def reverse_biochemupload_type_delete(apps, schema_editor):
     model = apps.get_model('core', 'BioChemUpload')
-    reverse_sampletype_delete(model, apps)
+    reverse_sampletype_delete(model, schema_editor.connection.alias, apps)
 
 
 class Migration(migrations.Migration):

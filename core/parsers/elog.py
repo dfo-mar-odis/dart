@@ -158,11 +158,12 @@ def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> di
 def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
     # create any stations on the stations queue that don't exist in the DB
     stations = []
+    database = trip._state.db
 
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.filter(mission=trip.mission)
+    existing_stations = core_models.Station.objects.using(database).filter(mission=trip.mission)
     station_count = len(station_queue)
     for index, station in enumerate(station_queue):
         logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
@@ -171,7 +172,7 @@ def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
             added_stations.add(stn)
             stations.append(core_models.Station(mission=trip.mission, name=stn))
 
-    core_models.Station.objects.bulk_create(stations)
+    core_models.Station.objects.using(database).bulk_create(stations)
 
 
 def get_instrument_type(instrument_name: str) -> core_models.InstrumentType:
@@ -206,10 +207,11 @@ def valid_sample_id(sample_id):
 def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
+    database = trip._state.db
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.filter(mission=trip.mission)
+    existing_instruments = core_models.Instrument.objects.using(database).filter(mission=trip.mission)
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
@@ -219,10 +221,11 @@ def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None
             instruments.append(core_models.Instrument(mission=trip.mission, name=instrument, type=instrument_type))
             added_instruments.add(instrument.upper())
 
-    core_models.Instrument.objects.bulk_create(instruments)
+    core_models.Instrument.objects.using(database).bulk_create(instruments)
 
 
 def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]:
+    database = trip._state.db
     errors = []
 
     elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
@@ -230,8 +233,8 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
     existing_events = trip.events.all()
 
     # hopefully stations and instruments were created in bulk before hand
-    stations = core_models.Station.objects.all()
-    instruments = core_models.Instrument.objects.all()
+    stations = core_models.Station.objects.using(database).all()
+    instruments = core_models.Instrument.objects.using(database).all()
 
     # messge objects are 'actions', and event can have multiple actions. Track event_ids for events we've just
     # created and only add events to the new_events queue if they haven't been previously processed
@@ -352,10 +355,10 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
             errors.append((mid, message, ex,))
 
     if len(create_events) > 0:
-        core_models.Event.objects.bulk_create(create_events.values())
+        core_models.Event.objects.using(database).bulk_create(create_events.values())
 
     if len(update_events) > 0:
-        core_models.Event.objects.bulk_update(objs=update_events, fields=update_fields)
+        core_models.Event.objects.using(database).bulk_update(objs=update_events, fields=update_fields)
 
     return errors
 
@@ -377,6 +380,7 @@ def map_action_text(text: str) -> str:
 
 
 def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {}, file_name: str) -> [tuple]:
+    database = trip._state.db
     errors = []
 
     existing_events = trip.events.all()
@@ -503,19 +507,20 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
-    core_models.Attachment.objects.bulk_create(create_attachments)
-    core_models.Action.objects.bulk_create(create_actions)
+    core_models.Attachment.objects.using(database).bulk_create(create_attachments)
+    core_models.Action.objects.using(database).bulk_create(create_actions)
     if update_actions['fields']:
-        core_models.Action.objects.bulk_update(objs=update_actions['objects'], fields=update_actions['fields'])
+        core_models.Action.objects.using(database).bulk_update(objs=update_actions['objects'], fields=update_actions['fields'])
 
     return errors
 
 
 def get_create_and_update_variables(trip: core_models.Trip, action: core_models.Action, buffer) -> [[], []]:
+    database = trip._state.db
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.get_or_create(mission=trip.mission, name=key)[0]
+        variable = core_models.VariableName.objects.using(database).get_or_create(mission=trip.mission, name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)
@@ -532,12 +537,13 @@ def get_create_and_update_variables(trip: core_models.Trip, action: core_models.
 # the action it falls under. This way users can still query an action for a variable even if DART doesn't do
 # anything with it.
 def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]:
+    database = trip._state.db
     errors = []
 
     fields_create = []
     fields_update = []
 
-    existing_actions = core_models.Action.objects.filter(event__trip=trip)
+    existing_actions = core_models.Action.objects.using(database).filter(event__trip=trip)
 
     elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
 
@@ -564,7 +570,7 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
             if update_mission:
                 if (lead_scientists and lead_scientists.strip() != '') and trip.mission.lead_scientist == 'N/A':
                     trip.mission.lead_scientist = lead_scientists
-                    trip.mission.save()
+                    trip.mission.save(using=database)
 
                 if (protocol and protocol.strip() != '') and trip.protocol == 'N/A':
                     # make sure the protocal isn't more than 50 characters if it's not 'AZMP' or 'AZOMP'
@@ -582,7 +588,7 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
                     trip.platform = platform
 
                 if update_mission:
-                    trip.save()
+                    trip.save(using=database)
 
                 update_mission = False
                 if trip.platform == 'N/A' or trip.protocol == 'N/A':
@@ -601,7 +607,7 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
-    core_models.VariableField.objects.bulk_create(fields_create)
-    core_models.VariableField.objects.bulk_update(objs=fields_update, fields=['value'])
+    core_models.VariableField.objects.using(database).bulk_create(fields_create)
+    core_models.VariableField.objects.using(database).bulk_update(objs=fields_update, fields=['value'])
 
     return errors

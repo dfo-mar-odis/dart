@@ -25,16 +25,17 @@ def validate_mission(mission: core_models.Mission):
 
 
 def validate_trip(trip: core_models.Trip):
+    database = trip._state.db
     create_validation_errors = []
     for event in trip.events.all():
         event.validation_errors.all().delete()
         create_validation_errors += validate_event(event)
 
         if len(create_validation_errors) > 1000:
-            core_models.ValidationError.objects.bulk_create(create_validation_errors)
+            core_models.ValidationError.objects.objects.using(database).bulk_create(create_validation_errors)
             create_validation_errors = []
 
-    core_models.ValidationError.objects.bulk_create(create_validation_errors)
+    core_models.ValidationError.objects.using(database).bulk_create(create_validation_errors)
 
 
 def validate_event(event: core_models.Event) -> [core_models.ValidationError]:

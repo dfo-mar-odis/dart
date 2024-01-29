@@ -30,7 +30,7 @@ class TestMissionPlanktonForm(DartTestCase):
         self.mission = core_factory.MissionFactory()
 
     def test_plankton_form(self):
-        url = reverse('core:mission_plankton_plankton_details', args=(self.mission.id,))
+        url = reverse('core:mission_plankton_plankton_details', args=(self.mission.name, self.mission.pk,))
 
         response = self.client.get(url)
 
@@ -49,7 +49,7 @@ class TestMissionSamplesForm(DartTestCase):
 
     def test_ctd_card(self):
         # The CTD card should have a form with a text input and a refresh button
-        url = reverse('core:mission_samples_sample_details', args=(self.mission.id,))
+        url = reverse('core:mission_samples_sample_details', args=(self.mission.name, self.mission.pik,))
 
         response = self.client.get(url)
 
@@ -79,43 +79,6 @@ class TestMissionSamplesForm(DartTestCase):
         soup = BeautifulSoup(response.content, 'html.parser')
 
         self.assertEquals(soup.prettify(), alert.prettify())
-
-
-@tag('forms', 'form_mission_events')
-class TestMissionEventForm(DartTestCase):
-
-    def setUp(self) -> None:
-        self.client = Client()
-        self.mission = core_factory.MissionFactory()
-        self.trip = core_factory.TripFactory(mission=self.mission)
-
-    def test_events_card(self):
-        # the mission events page should have a card on it that contains an upload button
-        url = reverse("core:form_trip_card", args=(self.mission.pk, self.trip.pk,))
-
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        upload_form = soup.find(id="elog_upload_file_form_id")
-        self.assertIsNotNone(upload_form)
-
-        form_input = soup.find(id="event_file_input_id")
-        self.assertIsNotNone(form_input)
-
-    def test_events_upload_response(self):
-        # the response from a get request to core:form_trip_import_events_elog url should contain a loading alert
-        # the loading alert should have a post request to core:hx_elog_upload to start the processing
-        # of uploaded files.
-        url = reverse("core:form_trip_import_events_elog", args=(self.trip.id,))
-
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        div_load_alert = soup.find(id='div_id_event_alert_alert')
-
-        self.assertIsNotNone(div_load_alert)
-        self.assertIn('hx-post', div_load_alert.attrs)
 
 
 @tag('forms', 'form_sample_config')

@@ -81,11 +81,13 @@ class EventFactory(DjangoModelFactory):
                                     mission=mission)
 
 
-class CTDEventFactory(EventFactory):
-
+class CTDEventFactoryBlank(EventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     end_sample_id = factory.lazy_attribute(lambda o: (o.sample_id + faker.random.randint(0, 1000)))
     instrument = factory.SubFactory(CTDInstrumentFactory)
+
+
+class CTDEventFactory(CTDEventFactoryBlank):
 
     @post_generation
     def add_actions(self, create, extracted, **kwargs):

@@ -1,4 +1,4 @@
-import datetime
+import os.path
 import re
 
 from bs4 import BeautifulSoup
@@ -7,15 +7,18 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db.models import Q, Min, Max
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
+import settingsdb.utils
 from dart2.utils import load_svg
 
 from . import models
 from bio_tables import models as bio_models
+from settingsdb import models as settings_models
 
 
 class NoWhiteSpaceCharField(forms.CharField):
@@ -188,10 +191,18 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['data_center'].required = False
         self.fields['geographic_region'].required = False
 
+        if self.instance.pk:
+            name_column = Column(
+                HTML(f"<h2>{self.instance.name}</h2>"),
+                Hidden('name', self.instance.name)
+            )
+        else:
+            name_column = Column(Field('name', autocomplete='true'))
+
         submit = Submit('submit', 'Submit')
         self.helper.layout = Layout(
             Row(
-                Column(Field('name', autocomplete='true')),
+                Column(name_column),
             ),
             Row(
                 Column(
@@ -240,13 +251,38 @@ class MissionSettingsForm(forms.ModelForm):
         regions = models.GeographicRegion.objects.all()
         return regions
 
-    def clean_end_date(self):
-        end_date = self.cleaned_data['end_date']
-        start_date = self.cleaned_data['start_date']
-        if end_date < start_date:
-            raise forms.ValidationError("The end date must occur after the start date")
+    def clean_name(self):
 
-        return end_date
+        mission_name = self.cleaned_data['name']
+        db_name = mission_name + '.sqlite3'
+        db_settings: settings_models.LocalSetting = settings_models.LocalSetting.objects.first()
+        location = db_settings.database_location
+        if location.startswith("./"):
+            location = os.path.join(settings.BASE_DIR, location.replace("./", ""))
+
+        if self.instance.pk:
+            # if there's an instance with this object we're updating an existing database
+            # allow the name within the database to be changed
+            return mission_name
+
+        # if there's no database, do not allow a name of an existing database to be used
+        database_location = os.path.join(location, db_name)
+        if os.path.exists(database_location):
+            message = _("A Mission Database with this name already exists in the mission directory")
+            message += f" : '{location}'"
+            raise forms.ValidationError(message)
+
+        return mission_name
+
+    def save(self, commit=True):
+        mission_name = self.cleaned_data['name']
+        if mission_name not in settings.DATABASES:
+            settingsdb.utils.add_database(mission_name)
+
+        instance = super().save(commit=False)
+        instance.save(using=mission_name)
+
+        return instance
 
 
 class MissionSearchForm(forms.Form):

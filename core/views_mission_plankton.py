@@ -586,13 +586,14 @@ def clear_plankton(request, **kwargs):
 
 
 # ###### Plankton loading ###### #
+url_prefix = "<str:database>/plankton"
 plankton_urls = [
-    path('plankton/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
-    path('plankton/load/<int:mission_id>/', load_plankton, name="mission_plankton_load_plankton"),
-    path('plankton/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
-    path('plankton/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
-    path('plankton/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
-    path('plankton/biochem/upload/<int:mission_id>/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
-    path('plankton/biochem/download/<int:mission_id>/', download_plankton, name="mission_plankton_download_plankton"),
-    path('plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
+    path(f'{url_prefix}/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
+    path(f'plankton/load/<int:mission_id>/', load_plankton, name="mission_plankton_load_plankton"),
+    path(f'plankton/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
+    path(f'plankton/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
+    path(f'plankton/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
+    path(f'plankton/biochem/upload/<int:mission_id>/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
+    path(f'plankton/biochem/download/<int:mission_id>/', download_plankton, name="mission_plankton_download_plankton"),
+    path(f'plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 ]

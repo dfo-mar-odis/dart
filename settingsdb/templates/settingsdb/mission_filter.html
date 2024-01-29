@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load i18n %}
+
+{% block nav_button_block %}
+    <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:sample_type_details' %}" title="{% trans "Standard Sample Types" %}">{% custom_icon 'speedometer2' %}</a>
+    </li>
+{% endblock %}
+
+{% block title %}
+    {{ block.super }}
+    {% if new_url %}
+        <span class="col-1"><a class="btn btn-primary" href="{{ new_url }}" title="{% trans 'New Mission' %}">{% custom_icon 'plus-square' %}</a></span>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div>
+    {% block filter %}
+        <form id="filter-form" class="form" hx-target="#mission_table" hx-get="{% url 'settingsdb:mission_filter_list_missions' %}">
+{# The filter will have to be rewritten as it doesn't work with external databases #}
+        </form>
+    {% endblock %}
+
+    <table class="table table-sm" hx-target="#mission_table" hx-trigger="load" hx-get="{% url 'settingsdb:mission_filter_list_missions' %}">
+        <thead>
+        <tr>
+            <th class="col">Name</th>
+            <th class="col">Start Date</th>
+            <th class="col">End Date</th>
+            <th class="col">Biochem Table</th>
+            <th class="col-2">{# mission details #}</th>
+            <th class="col-1">{# delete #}</th>
+        </tr>
+        </thead>
+
+        <tbody id="mission_table">
+        {% block mission_table_block %}
+        {% for database, mission in missions.items %}
+            <tr class="table-row" id="tr_id_mission_{{ mission.pk }}">
+                <td>{{ mission.name }}</td>
+                <td>{% if mission.start_date %}{{ mission.start_date }}{% endif %}</td>
+                <td>{% if mission.end_date %}{{ mission.end_date }}{% endif %}</td>
+                <td>{{ mission.biochem_table }}</td>
+                <td>
+                    <a id="a_id_edit_mission" class="btn btn-primary" href="{% url 'core:mission_edit' database mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+                    <a id="a_id_edit_mission_events" class="btn btn-primary" href="{% url 'core:mission_events_details' database mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
+{#                    <a class="btn btn-primary" href="{% url 'core:mission_samples_sample_details' mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>#}
+{#                    <a class="btn btn-primary" href="{% url 'core:mission_plankton_plankton_details' mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>#}
+                </td>
+                <td>
+{#                    <button type="button" class="btn btn-danger"#}
+{#                            hx-target="#mission_table" hx-post="{% url 'core:hx_mission_delete' mission.id %}"#}
+{#                            hx-confirm="{% trans 'This will permanently delete the mission and all loaded data, are you sure?' %}">X</button>#}
+                </td>
+            </tr>
+        {% endfor %}
+        {% endblock %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}
