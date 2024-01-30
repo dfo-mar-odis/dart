@@ -19,25 +19,25 @@ class SettingsdbConfig(AppConfig):
         if 'test' in sys.argv or 'migrate' in sys.argv or 'collectstatic' in sys.argv or 'makemigrations' in sys.argv:
             return
 
-        from . import models, utils
-
-        if not models.LocalSetting.objects.all().exists():
-            default = models.LocalSetting()
-            default.save()
-
-        db_settings: models.LocalSetting = models.LocalSetting.objects.first()
-        db_dir = db_settings.database_location
-
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir)
-
-        databases = [f.replace(".sqlite3", "") for f in listdir(db_dir) if
-                     os.path.isfile(os.path.join(db_dir, f)) and f.endswith('sqlite3')]
-
-        keys = [k for k in settings.DATABASES.keys() if k != 'default']
-        for key in keys:
-            if key not in databases:
-                settings.DATABASES.pop(key)
-
-        for database in databases:
-            utils.add_database(database)
+        # from . import models, utils
+        #
+        # if not models.LocalSetting.objects.all().exists():
+        #     default = models.LocalSetting()
+        #     default.save()
+        #
+        # db_settings: models.LocalSetting = models.LocalSetting.objects.first()
+        # db_dir = db_settings.database_location
+        #
+        # if not os.path.exists(db_dir):
+        #     os.makedirs(db_dir)
+        #
+        # databases = [f.replace(".sqlite3", "") for f in listdir(db_dir) if
+        #              os.path.isfile(os.path.join(db_dir, f)) and f.endswith('sqlite3')]
+        #
+        # keys = [k for k in settings.DATABASES.keys() if k != 'default']
+        # for key in keys:
+        #     if key not in databases:
+        #         settings.DATABASES.pop(key)
+        #
+        # for database in databases:
+        #     utils.add_database(database)

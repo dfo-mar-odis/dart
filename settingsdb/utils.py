@@ -55,3 +55,11 @@ def add_database(database):
 
     call_command('migrate', database=database, app_label="core")
     load_biochem_fixtures(database)
+
+
+def connect_database(database):
+    if database not in settings.DATABASES:
+        location = models.LocalSetting.objects.using('default').get(connected=True)
+        databases = settings.DATABASES
+        databases[database] = databases['default'].copy()
+        databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')

@@ -1,3 +1,4 @@
+import os
 import time
 
 from bs4 import BeautifulSoup
@@ -9,6 +10,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
+from settingsdb import utils
 from core import models, forms, validation, form_event_details, form_mission_trip
 from core.views import MissionMixin, reports
 from dart2.utils import load_svg
@@ -18,9 +20,6 @@ from dart2.views import GenericDetailView
 class EventDetails(MissionMixin, GenericDetailView):
     page_title = _("Missions Events")
     template_name = "core/mission_events.html"
-
-    def get_object(self, queryset=None):
-        return self.model.objects.using(self.kwargs['database']).get(pk=self.kwargs['pk'])
 
     def get_page_title(self):
         return _("Mission Events") + " : " + self.object.name
@@ -34,7 +33,6 @@ class EventDetails(MissionMixin, GenericDetailView):
         if caches['default'].touch('selected_event'):
             caches['default'].delete('selected_event')
 
-        context['database'] = self.kwargs['database']
         context['search_form'] = forms.MissionSearchForm(initial={'mission': self.object.pk})
 
         if 'trip_id' in self.kwargs:
@@ -53,7 +51,7 @@ class ValidationEventCard(forms.CardForm):
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
-        validation_errors = models.ValidationError.objects.filter(event=self.event)
+        validation_errors = models.ValidationError.objects.using(self.database).filter(event=self.event)
 
         html = ""
         for error in validation_errors:
@@ -63,8 +61,9 @@ class ValidationEventCard(forms.CardForm):
         body.fields.append(HTML(html))
         return body
 
-    def __init__(self, event, *args, **kwargs):
+    def __init__(self, event, database=None, *args, **kwargs):
         self.event = event
+        self.database = database if database else event._state.db
         title = _("Event") + f" {event.event_id} : {event.trip.start_date} - {event.trip.end_date}"
         super().__init__(card_name=f"event_validation_{event.pk}", card_title=title, *args, **kwargs)
 
@@ -83,14 +82,14 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         header.fields[0].fields.append(buttons)
 
         btn_attrs = {
-            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.mission.name, self.mission.pk,)),
+            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.database, self.mission.pk,)),
             'hx-swap': 'none',
         }
         icon = load_svg('arrow-clockwise')
         revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
         spacer_col.fields.append(revalidate)
 
-        issue_count = models.ValidationError.objects.filter(event__trip__mission=self.mission).count()
+        issue_count = models.ValidationError.objects.using(self.database).filter(event__trip__mission=self.mission).count()
         issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
         buttons.fields.append(issue_count_col)
 
@@ -102,10 +101,10 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        events_ids = models.ValidationError.objects.filter(
+        events_ids = models.ValidationError.objects.using(self.database).filter(
             event__trip__mission=self.mission
         ).values_list('event', flat=True)
-        events = models.Event.objects.filter(pk__in=events_ids)
+        events = models.Event.objects.using(self.database).filter(pk__in=events_ids)
         for event in events:
             event_card = ValidationEventCard(event=event)
             div = Div(event_card.helper.layout, css_class="mb-2")
@@ -113,8 +112,10 @@ class ValidateEventsCard(forms.CollapsableCardForm):
 
         return body
 
-    def __init__(self, mission, *args, **kwargs):
+    def __init__(self, mission, database=None, *args, **kwargs):
         self.mission = mission
+        self.database = database if database else mission._state.db
+
         super().__init__(card_name="event_validation", card_title=_("Event Validation"), *args, **kwargs)
 
 
@@ -154,7 +155,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         buttons = Column(css_class="col-auto align-self-end")
         header.fields[0].fields.append(buttons)
 
-        issue_count = models.FileError.objects.filter(mission=self.mission).count()
+        issue_count = self.mission.file_errors.count()
         if issue_count > 0:
             issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
             buttons.fields.append(issue_count_col)

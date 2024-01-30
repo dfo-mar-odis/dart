@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load crispy_forms_tags %}
 {% load bootstrap_icons %}
 {% load bootstrap5 %}
 {% load i18n %}
@@ -23,8 +24,12 @@
 {# The filter will have to be rewritten as it doesn't work with external databases #}
         </form>
     {% endblock %}
-
-    <table class="table table-sm" hx-target="#mission_table" hx-trigger="load" hx-get="{% url 'settingsdb:mission_filter_list_missions' %}">
+    {% if dir_select_form %}
+        <form id="form_id_mission_directory" class="form-control" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+        {% crispy dir_select_form %}
+        </form>
+    {% endif %}
+    <table class="table table-sm" hx-target="#mission_table" hx-trigger="load, db_dir_changed from:body" hx-get="{% url 'settingsdb:mission_filter_list_missions' %}">
         <thead>
         <tr>
             <th class="col">Name</th>

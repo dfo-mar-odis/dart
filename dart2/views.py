@@ -3,6 +3,7 @@ from django.views.generic import CreateView, UpdateView, DetailView, TemplateVie
 from django.views.generic.base import ContextMixin
 from django_filters.views import FilterView
 
+from settingsdb import utils
 from . import urls
 from . import settings
 
@@ -40,12 +41,25 @@ class GenericViewMixin(ContextMixin):
         context["reports"] = {}
         context['settings_url'] = self.get_settings_url()
         context['theme'] = self.get_theme()
+
+        if hasattr(self, 'kwargs') and 'database' in getattr(self, 'kwargs'):
+            context['database'] = self.kwargs['database']
+
         return context
 
 
 class GenericFlilterMixin(GenericViewMixin, FilterView):
     new_url = None
     fields = None
+
+    def get_queryset(self):
+        if 'database' in self.kwargs:
+            database = self.kwargs['database']
+            utils.connect_database(database)
+
+            return self.model.objects.using(database).all()
+
+        return super().get_queryset()
 
     def get_new_url(self):
         return self.new_url
@@ -61,6 +75,15 @@ class GenericFlilterMixin(GenericViewMixin, FilterView):
 class GenericCreateView(GenericViewMixin, CreateView):
     success_url = None
 
+    def get_queryset(self):
+        if 'database' in self.kwargs:
+            database = self.kwargs['database']
+            utils.connect_database(database)
+
+            return self.model.objects.using(database).all()
+
+        return super().get_queryset()
+
     def get_success_url(self):
         return self.success_url
 
@@ -68,12 +91,29 @@ class GenericCreateView(GenericViewMixin, CreateView):
 class GenericUpdateView(GenericViewMixin, UpdateView):
     success_url = None
 
+    def get_queryset(self):
+        if 'database' in self.kwargs:
+            database = self.kwargs['database']
+            utils.connect_database(database)
+
+            return self.model.objects.using(database).all()
+
+        return super().get_queryset()
+
     def get_success_url(self):
         return self.success_url
 
 
 class GenericDetailView(GenericViewMixin, DetailView):
-    pass
+
+    def get_queryset(self):
+        if 'database' in self.kwargs:
+            database = self.kwargs['database']
+            utils.connect_database(database)
+
+            return self.model.objects.using(database).all()
+
+        return super().get_queryset()
 
 
 class GenericTemplateView(GenericViewMixin, TemplateView):

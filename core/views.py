@@ -42,16 +42,8 @@ class MissionCreateView(MissionMixin, GenericCreateView):
         success = reverse_lazy("core:mission_events_details", args=(self.object.name, self.object.pk, ))
         return success
 
-    def get_object(self, queryset=None):
-        mission = models.Mission.objects.using(self.kwargs['database']).get(pk=self.kwargs['pk'])
-        return mission
-
 
 class MissionUpdateView(MissionCreateView, GenericUpdateView):
-
-    def get_object(self, queryset=None):
-        mission = models.Mission.objects.using(self.kwargs['database']).get(pk=self.kwargs['pk'])
-        return mission
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

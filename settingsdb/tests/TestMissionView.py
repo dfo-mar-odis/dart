@@ -78,3 +78,64 @@ class TestMissionView(DartTestCase):
         edit_events_link = mission_row.find('a', id="a_id_edit_mission_events")
         self.assertEquals(edit_events_link.attrs['href'], edit_events_url)
 
+
+@tag("mission_view", "mission_view_ui")
+class TestMissionViewUI(DartTestCase):
+
+    def setUp(self) -> None:
+        self.client = Client()
+
+    @tag("mission_view_ui_test_missions_directory")
+    def test_missions_directory(self):
+        # the mission view page should have a drop down showing the user the directory the application is
+        # pointing to to view the mission databases.
+
+        url = reverse("settingsdb:mission_filter")
+        response = self.client.get(url)
+
+        soup = BeautifulSoup(response.content)
+        mission_select = soup.find(id="select_id_mission_directory")
+        self.assertIsNotNone(mission_select)
+
+        # the selection element needs to have an hx-trigger="changed" on it
+        self.assertIn('hx-trigger', mission_select.attrs)
+        self.assertEquals(mission_select.attrs['hx-trigger'], 'change')
+
+        self.assertIn('hx-get', mission_select.attrs)
+        self.assertEquals(mission_select.attrs['hx-get'], reverse('settingsdb:update_mission_directory'))
+
+        self.assertIn('hx-swap', mission_select.attrs)
+        self.assertEquals(mission_select.attrs['hx-swap'], 'outerHTML')
+
+    @tag("mission_view_ui_test_missions_directory_update_get")
+    def test_missions_directory_update_get(self):
+        # if the user selects the (-1, ---- New ----) option the update mission directory url should be called
+        # with a get request that returns a text field and a submit button the user can then paste a location
+        # into
+
+        url = reverse("settingsdb:update_mission_directory")
+        response = self.client.get(url, {'directory': -1})
+
+        soup = BeautifulSoup(response.content)
+        self.assertIsNotNone(soup)
+
+        self.assertIsNotNone(soup)
+        self.assertIsNotNone(soup.find(id="id_directory_field"))
+
+        # The button should point to the same url used for the get request, but should use 'hx-post' instead
+        button = soup.find("button", attrs={'name': "update_mission_directory"})
+        self.assertIsNotNone(button)
+        self.assertIn('hx-post', button.attrs)
+
+    @tag("mission_view_ui_test_missions_directory_update_post")
+    def test_missions_directory_update_post(self):
+        # upon submission the update mission directory url should return the new selection UI with the newly
+        # added directory selected
+        url = reverse("settingsdb:update_mission_directory")
+        new_directory = r"C:\new_location\\"
+        response = self.client.post(url, {'directory': new_directory})
+
+        options = settings_models.LocalSetting.objects.using('default').filter(database_location__iexact=new_directory)
+        self.assertTrue(options.exists())
+        pass
+

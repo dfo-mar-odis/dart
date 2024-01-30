@@ -1,26 +1,92 @@
+import os
+from os import listdir
+
+from bs4 import BeautifulSoup
+from crispy_forms.helper import FormHelper
+from crispy_forms.layout import Layout, Div, Field
+from crispy_forms.utils import render_crispy_form
+
+from django import forms
+from django.db import connections
 from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
+from django.core.cache import caches
+
 from render_block import render_block_to_string
 
+from dart2.utils import load_svg
+from settingsdb import models as setting_models
 from core import models
 from settingsdb import filters
 
 from dart2.views import GenericTemplateView
 
 
-def get_mission_dictionary():
-    # this method presumes the databases were loaded by the settingsdb app.py ready function, but we may want to just
-    # list available databases and then not load, run migrations and update fixtures until a user actually opens the
-    # database. By using the app.py ready function we'll be running migrations and installing fixtures on possibly
-    # dozens of databases every time the dart application starts.
+def get_mission_dictionary(db_dir):
+    databases = [f.replace(".sqlite3", "") for f in listdir(db_dir) if
+                 os.path.isfile(os.path.join(db_dir, f)) and f.endswith('sqlite3')]
+
     missions = {}
-    keys = [key for key in settings.DATABASES.keys() if key != 'default']
-    for key in keys:
-        missions[key] = models.Mission.objects.using(key).first()
+    for database in databases:
+        databases = settings.DATABASES
+        databases[database] = databases['default'].copy()
+        databases[database]['NAME'] = os.path.join(db_dir, f'{database}.sqlite3')
+        if models.Mission.objects.using(database).exists():
+            missions[database] = models.Mission.objects.using(database).first()
+
+    for connection in connections.all():
+        if connection.alias != 'default':
+            connection.close()
+            settings.DATABASES.pop(connection.alias)
 
     return missions
+
+
+class MissionDirForm(forms.Form):
+    directory = forms.ChoiceField(label="Mission Databases Directory")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['directory'].choices = [(db.pk, db.database_location) for db in
+                                            setting_models.LocalSetting.objects.using('default').all()]
+        self.fields['directory'].choices.append((-1, '--- New ---'))
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        selection_attrs = {
+            'hx-trigger': 'change',
+            'hx-get': reverse_lazy("settingsdb:update_mission_directory"),
+            'hx-swap': "outerHTML"
+        }
+        self.helper.layout = Layout(
+            Div(Field('directory', css_class="form-select-sm", id="select_id_mission_directory", **selection_attrs))
+        )
+
+
+def init_connection():
+    connected = setting_models.LocalSetting.objects.using('default').filter(connected=True)
+    if connected.count() > 1:
+        for connection in connected:
+            connection.connected = False
+            connection.save()
+        initial = connected.first()
+        initial.connected = True
+        initial.save()
+    elif connected.exists():
+        initial = connected.first()
+    else:
+        if not setting_models.LocalSetting.objects.using('default').filter(pk=1).exists():
+            initial = setting_models.LocalSetting(pk=1, database_location="./missions")
+            initial.save()
+            return initial
+
+        initial = setting_models.LocalSetting.objects.using('default').get(pk=1)
+
+    return initial
 
 
 class MissionFilterView(GenericTemplateView):
@@ -36,16 +102,89 @@ class MissionFilterView(GenericTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        initial = init_connection()
         context['new_url'] = self.new_url
-
-        context['missions'] = get_mission_dictionary()
+        context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
+        context['missions'] = get_mission_dictionary(initial.database_location)
 
         return context
 
 
 def list_missions(request):
-    context = {'missions': get_mission_dictionary()}
+    connected = init_connection()
+
+    context = {'missions': get_mission_dictionary(connected.database_location)}
     html = render_block_to_string('settingsdb/mission_filter.html', 'mission_table_block', context)
     response = HttpResponse(html)
 
     return response
+
+
+def reset_connection(location_id):
+    connections = setting_models.LocalSetting.objects.filter(connected=True)
+    for connected in connections:
+        connected.connected = False
+        connected.save()
+
+    connection = setting_models.LocalSetting.objects.get(pk=location_id)
+    connection.connected = True
+    connection.save()
+
+
+def add_mission_dir(request):
+    soup = BeautifulSoup()
+
+    if request.method == "GET" and 'directory' in request.GET:
+        if request.GET['directory'] == '-1':
+            row = soup.new_tag('div')
+            row.attrs['class'] = 'container-fluid row'
+
+            station_input = soup.new_tag('input')
+            station_input.attrs['name'] = 'directory'
+            station_input.attrs['id'] = 'id_directory_field'
+            station_input.attrs['type'] = 'text'
+            station_input.attrs['class'] = 'textinput form-control form-control-sm col'
+
+            submit = soup.new_tag('button')
+            submit.attrs['class'] = 'btn btn-primary btn-sm ms-2 col-auto'
+            submit.attrs['name'] = "update_mission_directory"
+            submit.attrs['hx-post'] = request.path
+            submit.attrs['hx-target'] = '#div_id_directory'
+            submit.attrs['hx-select'] = '#div_id_directory'
+            submit.attrs['hx-swap'] = 'outerHTML'
+            submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
+
+            row.append(station_input)
+            row.append(submit)
+
+            soup.append(row)
+
+            return HttpResponse(soup)
+
+        location_id = int(request.GET['directory'])
+        reset_connection(location_id)
+
+        soup = BeautifulSoup()
+        mission_form = MissionDirForm(initial={"directory": location_id})
+        mission_html = render_crispy_form(mission_form)
+        select_soup = BeautifulSoup(mission_html)
+        soup.append(select_soup.find(id="select_id_mission_directory"))
+
+        response = HttpResponse(soup)
+        response['Hx-Trigger'] = "db_dir_changed"
+        return response
+
+    elif 'directory' in request.POST:
+        new_location = request.POST['directory']
+        location = setting_models.LocalSetting(database_location=new_location)
+        location.save(using='default')
+        location = setting_models.LocalSetting.objects.order_by('id').last()
+
+        reset_connection(location.pk)
+
+        mission_form = MissionDirForm(initial={"directory": location.pk})
+        mission_html = render_crispy_form(mission_form)
+
+        response = HttpResponse(mission_html)
+        response['Hx-Trigger'] = "db_dir_changed"
+        return response
