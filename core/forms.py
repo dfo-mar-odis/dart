@@ -17,6 +17,7 @@ import settingsdb.utils
 from dart2.utils import load_svg
 
 from . import models
+
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
 
@@ -350,7 +351,7 @@ class SampleTypeForm(forms.ModelForm):
                                       help_text=_("Filter the Datatype dropdown based on key terms"))
 
     class Meta:
-        model = models.GlobalSampleType
+        model = settings_models.GlobalSampleType
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
@@ -413,7 +414,7 @@ class BioChemDataType(forms.Form):
     start_sample = forms.IntegerField(label=_("Start"))
     end_sample = forms.IntegerField(label=_("End"))
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, mission, database, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         data_type_choices_qs = bio_models.BCDataType.objects.all()
@@ -443,9 +444,8 @@ class BioChemDataType(forms.Form):
             if 'data_type_code' in kwargs['initial']:
                 self.fields['data_type_description'].initial = kwargs['initial']['data_type_code']
 
-        if 'mission_id' in self.initial and 'sample_type_id' in self.initial:
-            mission_id = self.initial['mission_id']
-            min_max = models.Bottle.objects.filter(event__trip__mission_id=mission_id).aggregate(
+        if 'sample_type_id' in self.initial:
+            min_max = models.Bottle.objects.using(database).filter(event__trip__mission=mission).aggregate(
                 Min('bottle_id'), Max('bottle_id'))
             if 'start_sample' not in kwargs['initial']:
                 self.fields['start_sample'].initial = min_max['bottle_id__min']
@@ -538,10 +538,10 @@ class SampleTypeConfigForm(forms.ModelForm):
                                       help_text=_("Filter the Datatype field on key terms"))
 
     class Meta:
-        model = models.SampleTypeConfig
+        model = settings_models.SampleTypeConfig
         fields = "__all__"
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, database, *args, **kwargs):
 
         # To use this form 'field_choices', a list of options the user can select from for the
         # header row, must be passed in to populate the dropdowns. For some reason after the
@@ -580,14 +580,15 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.helper.form_tag = False
         self.helper.layout = Layout()
 
-        sample_type_choices = [(st.pk, st) for st in models.GlobalSampleType.objects.all().order_by('short_name')]
+        sample_type_choices = [(st.pk, st) for st in settings_models.GlobalSampleType.objects.all().order_by(
+            'short_name')]
         sample_type_choices.insert(0, (None, ""))
         sample_type_choices.insert(0, (-1, "New Sample Type"))
         sample_type_choices.insert(0, (None, '---------'))
         self.fields['sample_type'].choices = sample_type_choices
 
         hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:mission_samples_new_sample_config'),
+            'hx-post': reverse_lazy('core:mission_samples_new_sample_config', args=(database,)),
             'hx-select': "#div_id_fields_row",
             'hx-target': "#div_id_fields_row",
             'hx-swap': "outerHTML",
@@ -617,7 +618,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         if self.instance.pk:
             config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
 
-        url = reverse_lazy('core:mission_samples_new_sample_config')
+        url = reverse_lazy('core:mission_samples_new_sample_config', args=(database,))
         hx_sample_type_attrs = {
             'hx_get': url,
             'hx_trigger': 'change',
@@ -658,7 +659,7 @@ class SampleTypeConfigForm(forms.ModelForm):
             'css_class': "btn btn-primary btn-sm ms-2",
             'name': "add_sample_type",
             'title': _("Add as new configuration"),
-            'hx_get': reverse_lazy("core:mission_samples_save_sample_config"),
+            'hx_get': reverse_lazy("core:mission_samples_save_sample_config", args=(database,1)),
             'hx_target': "#button_row",
             'hx_select': "#div_id_loaded_sample_type_message",
         }
@@ -667,14 +668,15 @@ class SampleTypeConfigForm(forms.ModelForm):
         button_row.fields[0].insert(0, button_new)
 
         if self.instance.pk:
-            attrs['hx_get'] = reverse_lazy("core:mission_samples_save_sample_config", args=(self.instance.pk,))
+            attrs['hx_get'] = reverse_lazy("core:mission_samples_save_sample_config", args=(database,
+                                                                                            self.instance.pk,))
             attrs['name'] = "update_sample_type"
             attrs['title'] = _("Update existing configuration")
             attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
             button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
             button_row.fields[0].insert(0, button_update)
 
-        attrs['hx_get'] = reverse_lazy("core:mission_samples_load_sample_config")
+        attrs['hx_get'] = reverse_lazy("core:mission_samples_load_sample_config", args=(database,))
         attrs['name'] = "reload"
         attrs['title'] = _("Cancel")
         attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
@@ -740,14 +742,16 @@ class PlanktonForm(forms.Form):
     header = forms.IntegerField(label="Header Line")
     tab = forms.IntegerField(label="Tab")
 
-    def __init__(self, *args, **kwargs):
-        mission_id = kwargs.pop('mission_id')
+    def __init__(self, mission, database, *args, **kwargs):
+        self.mission = mission
+        self.database = database
+
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
 
-        url = reverse_lazy("core:mission_plankton_load_plankton", args=(mission_id,))
+        url = reverse_lazy("core:mission_plankton_load_plankton", args=(database, mission.pk,))
         tab_field = Field('tab')
         tab_field.attrs['hx-post'] = url
         tab_field.attrs['hx-swap'] = "none"
@@ -758,7 +762,7 @@ class PlanktonForm(forms.Form):
         header_field.attrs['hx-swap'] = "none"
         header_field.attrs['class'] = "form-control form-control-sm"
 
-        importurl = reverse_lazy("core:mission_plankton_import_plankton", args=(mission_id,))
+        importurl = reverse_lazy("core:mission_plankton_import_plankton", args=(database, mission.pk,))
         button_attrs = {
             'title': _('Import'),
             'name': 'import',

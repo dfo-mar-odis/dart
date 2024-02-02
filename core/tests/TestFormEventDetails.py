@@ -110,7 +110,7 @@ class TestTripEventForm(DartTestCase):
 
         self.assertFalse(models.Event.objects.using('default').filter(pk=event.pk).exists())
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         new_detail_card = soup.find(id="div_id_card_event_details")
         self.assertIsNotNone(new_detail_card)
         self.assertIn('hx-swap-oob', new_detail_card.attrs)
@@ -172,7 +172,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_edit_action", args=('default', action.pk))
         response = self.client.get(url)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         action_form = soup.find(id="actions_form_id")
         self.assertIsNotNone(action_form)
         self.assertEquals(action_form.name, 'form')
@@ -214,7 +214,7 @@ class TestTripEventForm(DartTestCase):
         self.assertEquals(updated_action.latitude, kwargs['latitude'])
         self.assertEquals(updated_action.longitude, kwargs['longitude'])
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         action_form = soup.find(id="actions_form_id")
         self.assertIsNotNone(action_form)
 
@@ -245,7 +245,7 @@ class TestTripEventForm(DartTestCase):
         deployed = event.actions.filter(pk=deployed.pk)
         self.assertFalse(deployed.exists())
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         self.assertEquals(soup.prettify(), '')
 
     @tag('form_trip_event_test_form_event_list_action_get')
@@ -257,7 +257,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_list_action", args=('default', event.pk))
 
         response = self.client.get(url)
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
 
         action_table = soup.find(id='action_table_id')
         self.assertIsNotNone(action_table)
@@ -276,7 +276,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_list_action", args=('default', event.pk, 'true'))
 
         response = self.client.get(url)
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
 
         action_table = soup.find(id='action_table_id')
         self.assertIsNotNone(action_table)
@@ -315,7 +315,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_add_attachment", args=('default', event.pk))
         response = self.client.post(url, kwargs)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         attachment_form = soup.find(id="attachments_form_id")
         self.assertIsNotNone(attachment_form)
         attachment_text = attachment_form.find(id="id_attachment_name_field")
@@ -332,7 +332,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_edit_attachment", args=('default', attachment.pk))
         response = self.client.get(url)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         attachment_form = soup.find(id="attachments_form_id")
         self.assertIsNotNone(attachment_form)
         self.assertEquals(attachment_form.name, 'form')
@@ -368,7 +368,7 @@ class TestTripEventForm(DartTestCase):
         updated_attachment = models.Attachment.objects.using('default').get(pk=attachment.pk)
         self.assertEquals(updated_attachment.name, kwargs['name'])
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         action_form = soup.find(id="attachments_form_id")
         self.assertIsNotNone(action_form)
 
@@ -397,7 +397,7 @@ class TestTripEventForm(DartTestCase):
 
         self.assertFalse(event.attachments.filter(pk=attachment.pk).exists())
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         self.assertEquals(soup.prettify(), '')
 
     @tag('form_trip_event_list_attachment_get')
@@ -411,7 +411,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_list_attachment", args=('default', event.pk))
         response = self.client.get(url)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
 
         att_table = soup.find(id='attachment_table_id')
         self.assertIsNotNone(att_table)
@@ -431,7 +431,7 @@ class TestTripEventForm(DartTestCase):
         url = reverse("core:form_event_list_attachment", args=('default', event.pk, "True"))
         response = self.client.get(url)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
 
         att_table = soup.find(id='attachment_table_id')
         self.assertIsNotNone(att_table)

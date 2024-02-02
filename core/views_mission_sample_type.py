@@ -33,29 +33,27 @@ class SampleTypeDetails(GenericDetailView):
         context['mission_sample_type'] = self.object
         data_type_seq = self.object.datatype
 
-        initial = {}
-        initial['sample_type_id'] = self.object.id
-        initial['mission_id'] = self.object.mission.id
+        database = self.kwargs['database']
+        initial = {'sample_type_id': self.object.id, 'mission_id': self.object.mission.id}
         if data_type_seq:
             initial['data_type_code'] = data_type_seq.data_type_seq
 
-        context['biochem_form'] = forms.BioChemDataType(initial=initial)
+        context['biochem_form'] = forms.BioChemDataType(database=database, initial=initial)
 
         return context
 
 
-def sample_type_card(request, **kwargs):
-    mission_sample_type_id = kwargs['mission_sample_type_id']
-    mission_sample_type = models.MissionSampleType.objects.get(pk=mission_sample_type_id)
+def sample_type_card(request, database, sample_type_id):
+    mission_sample_type = models.MissionSampleType.objects.using(database).get(pk=sample_type_id)
 
     sample_type_form = forms.CardForm(card_title=str(mission_sample_type), card_name="mission_sample_type")
     sample_type_html = render_crispy_form(sample_type_form)
     sample_type_soup = BeautifulSoup(sample_type_html, 'html.parser')
 
     card_body_div = sample_type_soup.find(id=sample_type_form.get_card_body_id())
-    card_body_div.attrs['hx-get'] = reverse_lazy("core:mission_sample_type_sample_list", args=(mission_sample_type_id,))
+    card_body_div.attrs['hx-get'] = reverse_lazy("core:mission_sample_type_sample_list", args=(database,
+                                                                                               sample_type_id,))
     card_body_div.attrs['hx-trigger'] = 'load'
-
 
     form_soup = BeautifulSoup(f'<div id="div_id_{sample_type_form.get_card_name()}"></div>', 'html.parser')
     form = form_soup.find('div')
@@ -64,26 +62,21 @@ def sample_type_card(request, **kwargs):
     return HttpResponse(form_soup)
 
 
-def list_samples(request, **kwargs):
-    sensor_id = kwargs['mission_sample_type_id']
-
-    mission_sample_type = models.MissionSampleType.objects.get(pk=sensor_id)
-    mission = mission_sample_type.mission
+def list_samples(request, database, sample_type_id, **kwargs):
+    mission_sample_type = models.MissionSampleType.objects.using(database).get(pk=sample_type_id)
 
     page = int(request.GET['page'] if 'page' in request.GET else 0)
     page_limit = 50
     page_start = page_limit * page
 
-    soup = BeautifulSoup('<table id="sample_table"></table>', 'html.parser')
-
     # unfortunately if a page doesn't contain columns for 1 or 2 replicates when there's more the
     # HTML table that gets returned to the interface will be missing columns and it throws everything
     # out of alignment. We'll get the replicate columns here and use that value to insert blank
     # columns into the dataframe if a replicate column is missing from the query set.
-    replicates = models.DiscreteSampleValue.objects.filter(
-        sample__type__id=sensor_id).aggregate(Max('replicate'))['replicate__max']
+    replicates = models.DiscreteSampleValue.objects.using(database).filter(
+        sample__type__id=sample_type_id).aggregate(Max('replicate'))['replicate__max']
 
-    queryset = models.Sample.objects.filter(type_id=sensor_id)
+    queryset = mission_sample_type.samples.all()
     queryset = queryset.order_by('bottle__bottle_id')[page_start:(page_start + page_limit)]
 
     if not queryset.exists():
@@ -130,7 +123,7 @@ def list_samples(request, **kwargs):
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
     last_tr.attrs['hx-get'] = reverse_lazy('core:mission_sample_type_sample_list',
-                                           args=(sensor_id,)) + f"?page={page + 1}"
+                                           args=(database, sample_type_id,)) + f"?page={page + 1}"
     last_tr.attrs['hx-swap'] = "afterend"
 
     # finally, align all text in each column to the center of the cell
@@ -213,9 +206,8 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: models.MissionSam
     return soup
 
 
-def sample_delete(request, **kwargs):
-    sample_type = kwargs['mission_sample_type_id']
-    mission_sample_type = models.MissionSampleType.objects.get(pk=sample_type)
+def sample_delete(request, database, sample_type_id):
+    mission_sample_type = models.MissionSampleType.objects.using(database).get(pk=sample_type_id)
     mission = mission_sample_type.mission
 
     if request.method == "POST":
@@ -227,23 +219,24 @@ def sample_delete(request, **kwargs):
             'component_id': "div_id_delete_samples",
             'alert_type': 'info',
             'message': _("Loading"),
-            'hx-get': reverse_lazy('core:mission_samples_sample_details', args=(mission.name, mission.pk,)),
+            'hx-get': reverse_lazy('core:mission_samples_sample_details', args=(database, mission.pk,)),
             'hx-trigger': 'load',
             'hx-push-url': 'true'
         }
         soup = forms.save_load_component(**attrs)
         return HttpResponse(soup)
 
-    return list_samples(request, mission_id=mission)
+    return list_samples(request, sample_type_id=sample_type_id)
 
 
 # ###### Mission Sample ###### #
+url_prefix = "<str:database>/sampletype"
 mission_sample_type_urls = [
-    path('sampletype/<int:pk>/', SampleTypeDetails.as_view(), name="mission_sample_type_details"),
+    path(f'{url_prefix}/<int:pk>/', SampleTypeDetails.as_view(), name="mission_sample_type_details"),
 
-    path('sampletype/card/<int:mission_sample_type_id>/', sample_type_card, name="mission_sample_type_card"),
-    path('sampletype/list/<int:mission_sample_type_id>/', list_samples, name="mission_sample_type_sample_list"),
+    path(f'{url_prefix}/card/<int:mission_sample_type_id>/', sample_type_card, name="mission_sample_type_card"),
+    path(f'{url_prefix}/list/<int:mission_sample_type_id>/', list_samples, name="mission_sample_type_sample_list"),
 
-    path('sampletype/delete/<int:mission_sample_type_id>/', sample_delete, name="mission_sample_type_delete"),
+    path(f'{url_prefix}/delete/<int:sample_type_id>/', sample_delete, name="mission_sample_type_delete"),
 
 ]

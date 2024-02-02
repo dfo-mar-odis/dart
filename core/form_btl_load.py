@@ -1,6 +1,5 @@
 import os
 import queue
-import threading
 import time
 
 import easygui
@@ -9,24 +8,20 @@ import concurrent.futures
 
 from bs4 import BeautifulSoup
 
-from threading import Thread
-
 from crispy_forms.bootstrap import StrictButton
-from crispy_forms.layout import Column, Row, Div, Field, HTML
+from crispy_forms.layout import Column, Row, Div, Field
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
 from django.conf import settings
 from django.http import HttpResponse
-from django.template.context_processors import csrf
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 import core.forms
-from core import htmx
 from core import models
 from core.parsers import ctd
-from core.forms import CollapsableCardForm, CardForm, save_load_component
+from core.forms import CollapsableCardForm
 from dart2.utils import load_svg
 
 import logging
@@ -60,10 +55,11 @@ class BottleLoadForm(CollapsableCardForm):
         button_id = f'btn_id_load_{self.card_name}'
         button_attrs = {
             'id': button_id,
-            'name': 'upload',
+            'name': 'change_dir',
             'title': _("Select BTL directory"),
             'hx-get': self.get_open_folder_url(),
-            'hx-swap': 'none'
+            'hx-swap': 'outerHTML',
+            'hx-target': f"#{self.get_card_id()}",
         }
         upload_button = StrictButton(button_icon, css_class='btn btn-sm btn-secondary', **button_attrs)
 
@@ -79,7 +75,7 @@ class BottleLoadForm(CollapsableCardForm):
         return msg_row
 
     def get_refresh_url(self, hide_loaded: bool=False):
-        url = reverse_lazy("core:form_btl_reload_files", args=(self.mission_id,))
+        url = reverse_lazy("core:form_btl_reload_files", args=(self.database, self.mission.pk,))
         if hide_loaded:
             url += '?hide_loaded=true'
 
@@ -88,13 +84,15 @@ class BottleLoadForm(CollapsableCardForm):
     def get_card_header(self):
         header = super().get_card_header()
 
+        url = reverse_lazy("core:form_btl_choose_bottle_dir", args=(self.database, self.mission.pk,))
         button_icon = load_svg('arrow-clockwise')
         button_attrs = {
             'id': f"{self.card_name}_refresh_files",
             'name': 'reload',
             'title': _("Refresh files in directory"),
-            'hx-get': self.get_refresh_url('hide_loaded' in self.initial),
-            'hx-swap': 'none',
+            'hx-post': url,
+            'hx-swap': 'outerHTML',
+            'hx-target': f"#{self.get_card_id()}",
             'value': "true"
         }
         refresh_button = StrictButton(
@@ -124,7 +122,7 @@ class BottleLoadForm(CollapsableCardForm):
         body = super().get_card_body()
 
         load_icon = load_svg("arrow-down-square")
-        url = reverse_lazy("core:form_btl_upload_bottles", args=(self.mission_id,))
+        url = reverse_lazy("core:form_btl_upload_bottles", args=(self.database, self.mission.pk,))
         load_attrs = {
             'id': f"{self.card_name}_load_bottles",
             'hx-get': url,
@@ -135,7 +133,8 @@ class BottleLoadForm(CollapsableCardForm):
         view_attrs = {
             'id': f"{self.card_name}_hide_loaded",
             'hx-get': self.get_refresh_url('hide_loaded' not in self.initial),
-            'hx-swap': 'none'
+            'hx-swap': 'outerHTML',
+            'hx-target': f"#{self.get_card_id()}",
         }
         if 'hide_loaded' in self.initial:
             view_icon = load_svg("eye-slash")
@@ -155,16 +154,13 @@ class BottleLoadForm(CollapsableCardForm):
         body.fields.append(Field('hide_loaded', type="hidden"))
         return body
 
-    def __init__(self, mission_id, *args, **kwargs):
-        if not mission_id:
-            raise KeyError("missing mission_id for database connection card")
+    def __init__(self, mission, database=None, *args, **kwargs):
 
-        self.mission_id = mission_id
+        self.mission = mission
+        self.database = database if database else self.mission._state.db
 
-        self.open_folder_url = reverse_lazy('core:form_btl_choose_bottle_dir', args=(self.mission_id,))
+        self.open_folder_url = reverse_lazy('core:form_btl_choose_bottle_dir', args=(self.database, self.mission.pk,))
         super().__init__(card_name="bottle_load", card_title=_("Load Bottles"), *args, **kwargs)
-
-        mission = models.Mission.objects.get(pk=mission_id)
 
         self.fields['dir_field'].label = False
         self.initial['dir_field'] = mission.bottle_directory
@@ -173,9 +169,9 @@ class BottleLoadForm(CollapsableCardForm):
         if mission.bottle_directory:
             files = [f for f in os.listdir(mission.bottle_directory) if f.upper().endswith('.BTL')]
             if 'hide_loaded' in self.initial:
-                loaded_files = [f.upper() for f in models.Sample.objects.filter(
+                loaded_files = [f.upper() for f in models.Sample.objects.using(self.database).filter(
                     type__is_sensor=True,
-                    bottle__event__trip__mission_id=mission_id).values_list('file', flat=True).distinct()]
+                    bottle__event__trip__mission=self.mission).values_list('file', flat=True).distinct()]
                 files = [f for f in files if f.upper() not in loaded_files]
 
             files.sort(key=lambda fn: os.path.getmtime(os.path.join(mission.bottle_directory, fn)))
@@ -184,17 +180,16 @@ class BottleLoadForm(CollapsableCardForm):
             self.initial['files'] = [file for file in files]
 
 
-def get_bottle_load_card(request, **kwargs):
-    mission_id = kwargs['mission_id']
-
+def get_bottle_load_card(request, database, mission_id, **kwargs):
     context = {}
 
-    initial = {'hide_loaded': "true"}
+    initial = {}
     if 'hide_loaded' in request.GET:
-        initial['hide_loaded'] = request.GET['hide_loaded']
+        initial = {'hide_loaded': "true"}
 
     collapsed = False if 'collapsed' in kwargs else True
-    bottle_load_form = BottleLoadForm(mission_id=mission_id, collapsed=collapsed, initial={'hide_loaded': "true"})
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    bottle_load_form = BottleLoadForm(mission=mission, collapsed=collapsed, initial=initial)
     bottle_load_html = render_crispy_form(bottle_load_form, context=context)
     bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
 
@@ -231,9 +226,9 @@ def get_bottle_load_card(request, **kwargs):
     return bottle_load_soup
 
 
-def bottle_load_card(request, **kwargs):
+def bottle_load_card(request, database, mission_id, **kwargs):
 
-    bottle_load_soup = get_bottle_load_card(request, **kwargs)
+    bottle_load_soup = get_bottle_load_card(request, database, mission_id, **kwargs)
     first_elm = bottle_load_soup.find(recursive=False)
     form_id = first_elm.attrs['id']
     form_soup = BeautifulSoup(f'<form id="form_id_{form_id}"></form>', 'html.parser')
@@ -241,6 +236,24 @@ def bottle_load_card(request, **kwargs):
     form.append(bottle_load_soup)
 
     return HttpResponse(form_soup)
+
+
+def load_ctd_file(ctd_mission: models.Mission, ctd_file):
+    bottle_dir = ctd_mission.bottle_directory
+    status = 'Success'
+    # group_name = 'mission_events'
+
+    ctd.logger_notifications.info(f"Loading file {ctd_file}")
+
+    ctd_file_path = os.path.join(bottle_dir, ctd_file)
+    try:
+        ctd.read_btl(ctd_mission, ctd_file_path)
+    except Exception as ctd_ex:
+        logger.exception(ctd_ex)
+        status = "Fail"
+
+    # update the user on our progress
+    return status
 
 
 def load_ctd_files(mission):
@@ -307,35 +320,30 @@ def load_ctd_files(mission):
     ctd.logger_notifications.info(f"Complete")
 
 
-def choose_bottle_dir(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    mission = models.Mission.objects.get(pk=mission_id)
-    result = easygui.diropenbox(title="Choose BTL directory")
-    logger.info(result)
+def choose_bottle_dir(request, database, mission_id, **kwargs):
+
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    if request.method == "POST" and 'dir_field' in request.POST:
+        result = request.POST['dir_field']
+    else:
+        result = easygui.diropenbox(title="Choose BTL directory")
 
     if result:
         mission.bottle_directory = result
-        mission.save()
+        mission.save(using=database)
 
-    return reload_files(request, **kwargs)
-
-
-def get_reload_files_form(request, **kwargs):
-    bottle_soup = get_bottle_load_card(request, collapsed=False, **kwargs)
-    bottle_soup.find(recursive=False).attrs['hx-swap-oob'] = "true"
-    return bottle_soup
+    return reload_files(request, database, mission_id, **kwargs)
 
 
-def reload_files(request, **kwargs):
-    soup = get_reload_files_form(request, **kwargs)
+def reload_files(request, database, mission_id, **kwargs):
+    soup = get_bottle_load_card(request, database, mission_id, collapsed=False, **kwargs)
     response = HttpResponse(soup)
     response['HX-Trigger'] = 'update_samples, file_errors_updated'
     return response
 
 
-def upload_btl_files(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    mission = models.Mission.objects.get(pk=mission_id)
+def upload_btl_files(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     thread_name = "load_ctd_files"
 
@@ -344,7 +352,7 @@ def upload_btl_files(request, **kwargs):
             'alert_area_id': "div_id_alert_bottle_load",
             'message': _("Loading Bottles"),
             'logger': ctd.logger_notifications.name,
-            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(mission_id,)),
+            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(database, mission_id,)),
             'hx-trigger': 'load'
         }
         alert = core.forms.websocket_post_request_alert(**attrs)
@@ -352,24 +360,32 @@ def upload_btl_files(request, **kwargs):
         return response
     else:
         files = request.POST.getlist('files')
-        logger.info(sample_file_queue.empty())
-        for file in files:
-            sample_file_queue.put((mission, file,))
+        counts = len(files)
+        for item, file in enumerate(files):
+            ctd.logger_notifications.info("Processing file %d/%d", item, counts)
+            load_ctd_file(mission, file)
 
-        start = True
-        for thread in threading.enumerate():
-            if thread.name == thread_name:
-                start = False
+        # logger.info(sample_file_queue.empty())
+        # for file in files:
+        #     sample_file_queue.put((mission, file,))
+        #
+        # start = True
+        # for thread in threading.enumerate():
+        #     if thread.name == thread_name:
+        #         start = False
+        #
+        # t = None
+        # if start:
+        #     (t := Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,))).start()
+        #     t.join()
 
-        t = None
-        if start:
-            (t := Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,))).start()
-            t.join()
-
-        soup = get_reload_files_form(request, **kwargs)
+        soup = get_bottle_load_card(request, database, mission_id, collapsed=False, **kwargs)
 
         alert = core.forms.blank_alert(component_id="div_id_alert_bottle_load", message="Done", alert_type="success")
         div = soup.new_tag("div", id="div_id_alert_bottle_load", attrs={'hx-swap-oob': 'true'})
+        div.attrs['hx-target'] = "#div_id_card_bottle_load"
+        div.attrs['hx-trigger'] = 'load'
+        div.attrs['hx-get'] = reverse_lazy('core:form_btl_reload_files', args=(database, mission_id))
         div.append(alert)
 
         soup.insert(0, div)
@@ -380,11 +396,12 @@ def upload_btl_files(request, **kwargs):
     return response
 
 
-# ###### Mission Sample ###### #
+# ###### Bottle Load ###### #
+url_prefix = "<str:database>/bottleload"
 bottle_load_urls = [
-    path('bottleload/card/<int:mission_id>/', bottle_load_card, name="form_btl_card"),
+    path(f'{url_prefix}/card/<int:mission_id>/', bottle_load_card, name="form_btl_card"),
 
-    path('bottleload/<int:mission_id>/', reload_files, name="form_btl_reload_files"),
-    path('bottleload/dir/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
-    path('bottleload/load/<int:mission_id>/', upload_btl_files, name="form_btl_upload_bottles"),
+    path(f'{url_prefix}/reload/<int:mission_id>/', reload_files, name="form_btl_reload_files"),
+    path(f'{url_prefix}/dir/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
+    path(f'{url_prefix}/load/<int:mission_id>/', upload_btl_files, name="form_btl_upload_bottles"),
 ]

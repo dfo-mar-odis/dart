@@ -44,14 +44,19 @@ def load_biochem_fixtures(database):
 
 def add_database(database):
 
-    location = models.LocalSetting.objects.first().database_location
+    locations = models.LocalSetting.objects.filter(connected=True)
+    if locations.exists():
+        location = locations.first()
+    else:
+        # pk = 1 should always be the default "./missions/" directory
+        location = models.LocalSetting.objects.get(pk=1)
 
-    if not os.path.exists(location):
-        os.makedirs(location)
+    if not os.path.exists(location.database_location):
+        os.makedirs(location.database_location)
 
     databases = settings.DATABASES
     databases[database] = databases['default'].copy()
-    databases[database]['NAME'] = os.path.join(location, f'{database}.sqlite3')
+    databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
 
     call_command('migrate', database=database, app_label="core")
     load_biochem_fixtures(database)

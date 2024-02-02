@@ -22,7 +22,7 @@
         <div class="col-auto">
             <button type="button" class="btn btn-secondary btn-sm me-1" name='edit'
                     title="{% trans "Edit file configuration" %}"
-                    hx-post="{% url 'core:mission_samples_new_sample_config' sample_config.pk %}"
+                    hx-post="{% url 'core:mission_samples_new_sample_config' database sample_config.pk %}"
                     hx-target="#div_id_sample_type_holder"
                     {# just a little javascript to scroll back to the new sample type form #}
                     hx-on="htmx:afterRequest: window.location.href = '#div_id_sample_type';"
@@ -30,7 +30,7 @@
             <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-primary{% endif %} btn-sm" name='load'
                     id="div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     title="{% trans "Load sample" %}"
-                    hx-get="{% url 'core:mission_samples_load_samples' sample_config.pk %}"
+                    hx-get="{% url 'core:mission_samples_load_samples' database sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-select="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
                     hx-swap="outerHTML"

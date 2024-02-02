@@ -26,7 +26,7 @@ logger = logging.getLogger("dart")
 
 
 def mission_delete(request, mission_id):
-    m = models.Mission.objects.get(pk=mission_id)
+    m = models.Mission.objects.using(database).get(pk=mission_id)
     m.delete()
 
     messages.success(request=request, message=_("Mission Deleted"))
@@ -185,7 +185,7 @@ def get_mission_validation_errors(mission):
 
 
 def get_file_errors(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     file_errors = get_mission_elog_errors(mission)
     validation_errors = get_mission_validation_errors(mission)
     error_count = len(file_errors) + len(validation_errors)
@@ -202,7 +202,7 @@ def get_file_errors(request, mission_id):
 
 
 def event_action(request, event_id):
-    event = models.Event.objects.get(pk=event_id)
+    event = models.Event.objects.using(database).get(pk=event_id)
     if request.method == 'GET':
         context = {'actionform': forms.ActionForm(instance=event), "event": event}
         response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_block', context))
@@ -226,7 +226,7 @@ def event_action(request, event_id):
 
 
 def event_list_action(request, event_id):
-    event = models.Event.objects.get(pk=event_id)
+    event = models.Event.objects.using(database).get(pk=event_id)
     context = {'event': event}
     response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_table_block', context))
 

@@ -1,5 +1,4 @@
 import datetime
-from decimal import Decimal
 
 import factory
 import random
@@ -155,31 +154,6 @@ class MissionSampleTypeFactory(DjangoModelFactory):
     datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
 
 
-class GlobalSampleTypeFactory(DjangoModelFactory):
-
-    class Meta:
-        model = models.GlobalSampleType
-
-    short_name = factory.lazy_attribute(lambda o: faker.word())
-    long_name = factory.lazy_attribute(lambda o: faker.name())
-
-    datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
-
-
-class SampleTypeConfigFactory(DjangoModelFactory):
-    FILE_TYPE_CHOICES = ['csv', 'xls', 'xlsx']
-
-    class Meta:
-        model = models.SampleTypeConfig
-        exclude = ('FILE_TYPE_CHOICES',)
-
-    sample_type = factory.SubFactory(MissionSampleTypeFactory)
-    file_type = factory.lazy_attribute(lambda o: faker.random.choice(o.FILE_TYPE_CHOICES))
-    skip = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
-    sample_field = factory.lazy_attribute(lambda o: faker.word())
-    value_field = factory.lazy_attribute(lambda o: faker.word())
-
-
 class BottleFactory(DjangoModelFactory):
     class Meta:
         model = models.Bottle
@@ -200,7 +174,7 @@ class SampleFactory(DjangoModelFactory):
         model = models.Sample
 
     bottle = factory.SubFactory(BottleFactory)
-    type = factory.SubFactory(MissionSampleTypeFactory, **{'file_type': 'csv'})
+    type = factory.SubFactory(MissionSampleTypeFactory)
     file = factory.lazy_attribute(lambda o: faker.word() + ".csv")
 
 
@@ -211,15 +185,6 @@ class DiscreteValueFactory(DjangoModelFactory):
 
     sample = factory.SubFactory(SampleFactory)
     value = factory.lazy_attribute(lambda o: faker.pyfloat())
-
-
-class MissionSampleConfig(DjangoModelFactory):
-
-    class Meta:
-        model = models.MissionSampleConfig
-
-    mission = factory.SubFactory(MissionFactory)
-    config = factory.SubFactory(SampleTypeConfigFactory)
 
 
 class PhytoplanktonSampleFactory(DjangoModelFactory):

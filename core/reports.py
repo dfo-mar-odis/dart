@@ -25,12 +25,12 @@ def convert_timedelta_to_string(delta: timedelta) -> str:
 
 def elog(request, **kwargs):
     mission_id = kwargs['mission_id']
-    mission = core_models.Mission.objects.get(pk=mission_id)
+    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     header = ['Mission', 'Event', 'Station', 'INSTRUMENT', 'AVG_SOUNDING', 'MIN_LAT', 'MIN_LON', 'MAX_LAT', 'MAX_LON',
               'SDATE', 'STIME', 'EDATE', 'ETIME', 'DURATION', 'ELAPSED_TIME', 'COMMENTS']
 
-    events = core_models.Event.objects.filter(trip__mission_id=mission_id).annotate(
+    events = core_models.Event.objects.using(database).filter(trip__mission_id=mission_id).annotate(
         start=Min("actions__date_time")).order_by('start')
 
     data = ",".join(header) + "\n"
@@ -97,7 +97,7 @@ def elog(request, **kwargs):
 
 def error_report(request, **kwargs):
     mission_id = kwargs['mission_id']
-    mission = core_models.Mission.objects.get(pk=mission_id)
+    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     header = ['MISSION', "FILE", "LINE/OBJECT", 'ERROR_TYPE', 'MESSAGE']
     data = ",".join(header) + '\n'
@@ -128,7 +128,7 @@ def error_report(request, **kwargs):
 
 def profile_summary(request, **kwargs):
     mission_id = kwargs['mission_id']
-    mission = core_models.Mission.objects.get(pk=mission_id)
+    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     exclude = []
     mission_included_sampletypes = core_models.MissionSampleType.objects.filter(samples__bottle__event__trip__mission_id=mission_id)
@@ -148,7 +148,7 @@ def profile_summary(request, **kwargs):
     header = ['MISSION', "STATION", "EVENT", 'GEAR', 'PRESSURE', "SAMPLE"] + [st.short_name.upper() for st in sample_types]
     data = ",".join(header) + '\n'
 
-    bottles = core_models.Bottle.objects.filter(event__trip__mission=mission).order_by('bottle_id')
+    bottles = core_models.Bottle.objects.using(database).filter(event__trip__mission=mission).order_by('bottle_id')
     for bottle in bottles:
         event = bottle.event
         row = [event.trip.mission, event.station, event.event_id, event.instrument.get_type_display(),
@@ -172,11 +172,11 @@ def profile_summary(request, **kwargs):
 
 def std_sample_report(request, **kwargs):
     mission_id = kwargs['mission_id']
-    mission = core_models.Mission.objects.get(pk=mission_id)
+    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     data = ",".join(kwargs['headers']) + '\n'
 
-    bottles = core_models.Bottle.objects.filter(event__trip__mission_id=mission_id).order_by('bottle_id')
+    bottles = core_models.Bottle.objects.using(database).filter(event__trip__mission_id=mission_id).order_by('bottle_id')
 
     for bottle in bottles:
         row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]

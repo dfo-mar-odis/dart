@@ -392,7 +392,7 @@ def import_elog_events(request, database, **kwargs):
                     file_error.type = models.ErrorType.unknown
                 file_errors.append(file_error)
 
-            models.FileError.objects.bulk_create(file_errors)
+            models.FileError.objects.using(database).bulk_create(file_errors)
 
         except Exception as ex:
             if type(ex) is LookupError:

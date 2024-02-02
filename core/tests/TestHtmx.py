@@ -66,8 +66,8 @@ class TestMissionDelete(DartTestCase):
         logger.info("Running test_hx_mission_delete")
 
         # Mission 1 and 2 should exist
-        self.assertTrue(models.Mission.objects.filter(pk=self.mission_1.pk).exists())
-        self.assertTrue(models.Mission.objects.filter(pk=self.mission_2.pk).exists())
+        self.assertTrue(models.Mission.objects.using('default').filter(pk=self.mission_1.pk).exists())
+        self.assertTrue(models.Mission.objects.using('default').filter(pk=self.mission_2.pk).exists())
 
         url = reverse_lazy('core:hx_mission_delete', args=(self.mission_1.pk,))
         logger.info(f"URL: {url}")
@@ -77,8 +77,8 @@ class TestMissionDelete(DartTestCase):
 
         content = response.content.decode('utf-8')
         self.assertTrue(content.strip().startswith('<tr class="table-row">\n'))
-        self.assertFalse(models.Mission.objects.filter(pk=self.mission_1.pk).exists(),
+        self.assertFalse(models.Mission.objects.using('default').filter(pk=self.mission_1.pk).exists(),
                          "Mission 1 should have been deleted")
 
-        self.assertTrue(models.Mission.objects.filter(pk=self.mission_2.pk).exists(),
+        self.assertTrue(models.Mission.objects.using('default').filter(pk=self.mission_2.pk).exists(),
                         "Mission 2 should NOT have been deleted")

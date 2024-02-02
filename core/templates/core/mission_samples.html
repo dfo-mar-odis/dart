@@ -20,8 +20,9 @@
 {% endblock %}
 
 {% block content %}
-    <div class="mb-2" hx-trigger="load" hx-get="{% url "core:form_btl_card" mission.pk %}?hide_loaded=true" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <div class="mb-2" hx-trigger="load" hx-get="{% url "core:form_btl_card" database mission.pk %}?hide_loaded=true" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {# The Load Bottle form will be swapped in here #}
+        {% include 'core/partials/card_placeholder.html' with card_name="bottle_load" card_title="Load Bottles" %}
     </div>
     <div class="mb-2" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% include 'core/partials/card_sample_load_header.html' %}
@@ -35,14 +36,14 @@
                 </div>
             </div>
             <div class="card-body">
-                <div class="vertical-scrollbar" hx-swap="none" hx-trigger="load, update_samples from:body" hx-get="{% url 'core:mission_samples_sample_list' mission.pk %}">
+                <div class="vertical-scrollbar" hx-swap="none" hx-trigger="load, update_samples from:body" hx-get="{% url 'core:mission_samples_sample_list' database mission.pk %}">
                     <table id="table_id_sample_table" class="table table-striped">
 
                     </table>
                 </div>
             </div>
         </div>
-        <div class="mb-2" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" mission.pk %}">
+        <div class="mb-2" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" database mission.pk %}">
             {# The Biochem database form will be swapped in here after the page loads #}
         </div>
         <div class="mb-2">

@@ -68,7 +68,7 @@ class ElogDetails(GenericDetailView):
 def hx_update_elog_config(request, **kwargs):
     if request.method == "POST":
         dict_vals = request.POST.copy()
-        mission = models.Mission.objects.get(pk=kwargs['mission_id'])
+        mission = models.Mission.objects.using(database).get(pk=kwargs['mission_id'])
 
         config = models.ElogConfig.get_default_config(mission)
         update_models = {'fields': set(), 'models': []}

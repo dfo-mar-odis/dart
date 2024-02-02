@@ -3,13 +3,13 @@ import shutil
 
 from bs4 import BeautifulSoup
 from django.test import tag, Client
-from django.db import connections
+from django.db import connections, close_old_connections
 from django.urls import reverse
+from django.conf import settings
 
 from dart2.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
-from core.tests import CoreFactoryFloor as core_factory
 
 from settingsdb import models as settings_models
 from settingsdb import utils
@@ -43,8 +43,10 @@ class TestMissionView(DartTestCase):
         if delete_db:
             for connection in connections.all():
                 if connection.alias == fake_db_name:
+                    settings.DATABASE.pop(connection.alias)
                     connection.close()
 
+            close_old_connections()
             if os.path.isdir(fake_location):
                 shutil.rmtree(fake_location)
 
@@ -93,7 +95,7 @@ class TestMissionViewUI(DartTestCase):
         url = reverse("settingsdb:mission_filter")
         response = self.client.get(url)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, "html.parser")
         mission_select = soup.find(id="select_id_mission_directory")
         self.assertIsNotNone(mission_select)
 

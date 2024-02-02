@@ -1,10 +1,12 @@
-import os.path
 import sys
 
-from os import listdir
-
 from django.apps import AppConfig
-from django.conf import settings
+from django.core.management import call_command
+from django.db import connection
+
+import logging
+
+logger = logging.getLogger('dart')
 
 
 class SettingsdbConfig(AppConfig):
@@ -18,6 +20,18 @@ class SettingsdbConfig(AppConfig):
         # if any of these actions are being preformed we don't want to run migrations and load fixtures
         if 'test' in sys.argv or 'migrate' in sys.argv or 'collectstatic' in sys.argv or 'makemigrations' in sys.argv:
             return
+
+        from . import models
+
+        try:
+            if 'settingsdb_globalsampletype' in connection.introspection.table_names():
+                if not models.GlobalSampleType.objects.all().exists():
+                    logger.info("Loading sample type fixtures, this may take a moment")
+                    call_command('loaddata', 'sample_type_fixtures')
+
+        except Exception as ex:
+            logger.error('Could not load biochem fixtures')
+            logger.exception(ex)
 
         # from . import models, utils
         #

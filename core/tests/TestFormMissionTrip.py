@@ -115,7 +115,7 @@ class TestMissionTripForm(DartTestCase):
         with open(self.sample_elog_file, 'rb') as fp:
             response = self.client.post(url, {'event': [fp]})
 
-        mission = models.Mission.objects.get(pk=mission.pk)
+        mission = models.Mission.objects.using('default').get(pk=mission.pk)
         trip = models.Trip.objects.get(pk=trip.pk)
 
         # Lead Scientists, platform and protocol as specified in the sample log file

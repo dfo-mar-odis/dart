@@ -178,13 +178,13 @@ class TestElogParser(DartTestCase):
         core_factory.StationFactory(name=expected_station, mission=self.mission)
         core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type, mission=self.mission)
 
-        events = core_models.Event.objects.filter(trip=self.trip)
+        events = core_models.Event.objects.using('default').filter(trip=self.trip)
         self.assertFalse(events.exists())
         errors = elog.process_events(self.trip, buffer)
 
         self.assertEquals(len(errors), 0)
 
-        events = core_models.Event.objects.filter(trip=self.trip)
+        events = core_models.Event.objects.using('default').filter(trip=self.trip)
         self.assertTrue(events.exists())
         self.assertEquals(len(events), 1)
 
@@ -312,6 +312,6 @@ class TestElogParser(DartTestCase):
         errors = elog.process_attachments_actions(event.trip, buffer, expected_file_name)
         self.assertEquals(len(errors), 0)
 
-        event = core_models.Event.objects.get(event_id=expected_event_id)
+        event = core_models.Event.objects.using('default').get(event_id=expected_event_id)
         self.assertEquals(len(event.attachments.all()), 2)
         self.assertEquals(len(event.actions.all()), 3)

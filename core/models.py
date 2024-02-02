@@ -415,50 +415,6 @@ class Bottle(models.Model):
         ordering = ['bottle_id']
 
 
-# Sample types help us track sensors and samples that have been previously loaded for any mission, when we see a
-# sensor or sample with the same short name in the future we'll know what biochem data types to use as well as what
-# file configurations to use when loading that data.
-class GlobalSampleType(models.Model):
-    short_name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20,
-                                  help_text=_("The column name of a sensor or a short name commonly "
-                                              "used for the sample"), unique=True)
-    long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
-                                 help_text=_("Short descriptive name for this type of sample/sensor"))
-    priority = models.IntegerField(verbose_name=_("Priority"), default=1)
-
-    # Datatype may not be known by the user at the time they need to create this sensor, but it will
-    # have to be specified before BioChem tables can be created
-    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
-                                 blank=True, related_name='sample_types', on_delete=models.SET_NULL)
-
-    is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
-                                    help_text=_("Identify this sample type as a type of sensor"))
-
-    class Meta:
-        ordering = ('is_sensor', 'short_name')
-
-    def get_mission_sample_type(self, mission: Mission):
-        mission_sample_type = mission.mission_sample_types.filter(name=self.short_name)
-        if not mission_sample_type.exists():
-            mission_sample_type = MissionSampleType(mission=mission,
-                                                    name=self.short_name,
-                                                    long_name=self.long_name,
-                                                    priority=self.priority,
-                                                    is_sensor=self.is_sensor,
-                                                    datatype=self.datatype)
-            mission_sample_type.save()
-        else:
-            mission_sample_type = mission_sample_type.first()
-
-        return mission_sample_type
-
-    def __str__(self):
-        label = self.short_name + (f" - {self.long_name}" if self.long_name else "")
-        label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
-
-        return label
-
-
 # if a biochem datatype is different from the default sample type for a specific mission use the mission sample type
 class MissionSampleType(models.Model):
     mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_types",
@@ -483,50 +439,6 @@ class MissionSampleType(models.Model):
         label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
 
         return label
-
-
-class SampleTypeConfig(models.Model):
-    sample_type = models.ForeignKey(GlobalSampleType, verbose_name=_("Sample Type"),
-                                    related_name="configs", on_delete=models.DO_NOTHING,
-                                    help_text=_("The sample type this config is intended for"))
-    file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
-                                 help_text=_("file type extension e.g csv, xls, xlsx, dat"))
-
-    skip = models.IntegerField(verbose_name=_("Header Row"), default=0,
-                               help_text=_("The row containing headers is often not the first row of a file. "
-                                           "This value indicates what row it is normally located on."))
-
-    sample_field = models.CharField(verbose_name=_("Sample Column"), max_length=50,
-                                    help_text=_("Lowercase name of the column that contains the bottle ids"))
-
-    value_field = models.CharField(verbose_name=_("Value Column"), max_length=50,
-                                   help_text=_("Lowercase name of the column that contains the value data"))
-
-    tab = models.IntegerField(verbose_name=_("Tab"), default=0, help_text=_("The tab number data is located on."
-                                                                            "For MS Excel, the first tab is zero"))
-
-    flag_field = models.CharField(verbose_name=_("Flag Column"), max_length=50, blank=True, null=True,
-                                  help_text=_("Lowercase name of the column that contains flags, if it exists"))
-
-    comment_field = models.CharField(verbose_name=_("Comment Column"), max_length=50, blank=True, null=True,
-                                     help_text=_("Lowercase name of the column containing comments, if it exists"))
-
-    allow_blank = models.BooleanField(verbose_name=_("Allow Blank Samples?"), default=True,
-                                      help_text=_("Should values be kept if the sample column is blank?"))
-
-    allow_replicate = models.BooleanField(verbose_name=_("Allow Replicate Samples?"), default=True,
-                                          help_text=_("Can this sample have replicate sample values?"))
-
-    def __str__(self):
-        return f"{self.sample_type}"
-
-
-class MissionSampleConfig(models.Model):
-    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_sample_configs",
-                                on_delete=models.CASCADE, help_text=_("Mission a sample type was loaded for"))
-    config = models.ForeignKey(SampleTypeConfig, verbose_name="Sample Configuration",
-                               related_name="mission_sample_configs",
-                               on_delete=models.DO_NOTHING, help_text=_("Sample configuration used in a mission"))
 
 
 # BioChemUpload is a table for tracking the last time a sensor or sample was uploaded to biochem. This way we can
@@ -822,45 +734,6 @@ class ElogConfig(FileConfiguration):
         return elog_config
 
 
-class EngineType(models.IntegerChoices):
-    oracle = 1, 'Oracle'
-
-
-class BcDatabaseConnection(models.Model):
-    engine = models.IntegerField(verbose_name=_("Database Type"), choices=EngineType.choices,
-                                 default=EngineType.oracle)
-    host = models.CharField(verbose_name=_("Server Address"), max_length=50)
-    name = models.CharField(verbose_name=_("Database Name"), help_text="TTRAN/PTRAN", max_length=20)
-    port = models.IntegerField(verbose_name=_("Port"), default=1521)
-
-    account_name = models.CharField(verbose_name=_('Account Name'), max_length=20)
-    uploader = models.CharField(verbose_name=_("Uploader Name"), max_length=20, blank=True, null=True,
-                                help_text=_("If not Account Name"))
-
-    def __str__(self):
-        return f'{self.account_name} - {self.name}'
-
-    # create a django database connection dictionary to be used with django-dynamic-db-router
-    def connect(self, password):
-        # at the moment we only handle Oracle Biochem DBs, but this could be expanded in the future
-        engine = 'django.db.backends.oracle'
-
-        biochem_db = {
-            'ENGINE': engine,
-            'NAME': self.name,
-            'USER': self.account_name,
-            'PASSWORD': password,
-            'PORT': self.port,
-            'HOST': self.host,
-            'TIME_ZONE': None,
-            'CONN_HEALTH_CHECKS': False,
-            'CONN_MAX_AGE': 0,
-            'AUTOCOMMIT': True,
-            'ATOMIC_REQUESTS': False,
-            'OPTIONS': {}
-        }
-
-        return biochem_db
 
 # Proc Codes
 # 20 = Gear / 1000 for min Sieve and 10 for Max Sieve

@@ -693,7 +693,7 @@ def delete_details(request, database, event_id, **kwargs):
 
 
 def list_action(request, database, event_id, editable=False):
-    event = models.Event.objects.get(pk=event_id)
+    event = models.Event.objects.using(database).get(pk=event_id)
     context = {'database': database, 'event': event, 'editable': editable}
     response = HttpResponse(render_to_string('core/partials/table_action.html', context=context))
     return response
@@ -761,7 +761,7 @@ def delete_action(request, database, action_id, **kwargs):
 
 
 def list_attachment(request, database, event_id, editable=False, **kwargs):
-    event = models.Event.objects.get(pk=event_id)
+    event = models.Event.objects.using(database).get(pk=event_id)
     context = {'database': database, 'event': event, 'editable': editable}
     return HttpResponse(render_to_string('core/partials/table_attachment.html', context=context))
 

@@ -2,29 +2,34 @@ import csv
 import pandas as pd
 import numpy as np
 from django.db import transaction
+from django.db.models.functions import Lower
 
 from django.utils.translation import gettext as _
 from core import models as core_models
+from settingsdb import models as settings_models
 from dart2.utils import updated_value
 
 import logging
 
 logger = logging.getLogger('dart')
+logger_notifications = logging.getLogger('dart.sampleparser')
 
 # popular excel extensions
 excel_extensions = ['xls', 'xlsx', 'xlsm']
 
 
 def get_file_configs(data, file_type):
-    sample_configs = core_models.SampleTypeConfig.objects.filter(file_type=file_type).order_by('tab')
+    sample_configs = settings_models.SampleTypeConfig.objects.annotate(
+        sample_field_lower=Lower('sample_field'),
+        value_field_lower=Lower('value_field')
+    ).filter(file_type=file_type).order_by('tab')
 
     # It's expensive to read headers.
     # If a config file matches a sample_field and a value_filed to a file then we'll assume we found
     # the correct header row for the correct tab, then we can narrow down our configs using the same settings
     lowercase_fields = []
     matching_config = None
-    curtab = -1
-    df = None
+
     for sample_type in sample_configs:
         if file_type == 'csv' or file_type == 'dat':
             if not lowercase_fields:
@@ -35,13 +40,11 @@ def get_file_configs(data, file_type):
         elif file_type in excel_extensions:
             # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
             # if the tab changes
-            if curtab != sample_type.tab:
-                df = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None)
-                curtab = sample_type.tab
+            header = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None,
+                                   skiprows=sample_type.skip, nrows=1).iloc[0].tolist()
+            lowercase_fields = [str(column).lower() for column in header]
 
-            lowercase_fields = [str(column).lower() for column in df.iloc[sample_type.skip]]
-
-        if sample_type.sample_field in lowercase_fields and sample_type.value_field in lowercase_fields:
+        if sample_type.sample_field_lower in lowercase_fields and sample_type.value_field_lower in lowercase_fields:
             matching_config = sample_type
             break
 
@@ -50,9 +53,10 @@ def get_file_configs(data, file_type):
         # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row with
         # values fields in the available columns should give us all file configurations for this type of file that
         # the user can load samples from.
-        file_configs = sample_configs.filter(tab=matching_config.tab, skip=matching_config.skip,
-                                             sample_field=matching_config.sample_field,
-                                             value_field__in=lowercase_fields)
+        file_configs = sample_configs.filter(
+            tab=matching_config.tab, skip=matching_config.skip,
+            sample_field__iexact=matching_config.sample_field,
+            value_field_lower__in=lowercase_fields)
         return file_configs
 
     return None
@@ -166,7 +170,7 @@ def _split_function(x):
     return s_id, r_id
 
 
-def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeConfig) -> pd.DataFrame:
+def split_sample(dataframe: pd.DataFrame, file_settings: settings_models.SampleTypeConfig) -> pd.DataFrame:
     """ if the sample column of the dataframe is of a string type and contains an underscore
         it should be split into s_id and r_id columns """
 
@@ -205,12 +209,14 @@ def split_sample(dataframe: pd.DataFrame, file_settings: core_models.SampleTypeC
 
 # once all the options are figured out (e.g what tab, what's the sample row, what's the value column)
 # this function will convert the dataframe into a sample
-def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, dataframe: pd.DataFrame):
-    mission = settings.mission
-    # clear errors for this file
-    core_models.FileError.objects.filter(file_name=file_name).delete()
+def parse_data_frame(mission: core_models.Mission, sample_config: settings_models.SampleTypeConfig,
+                     file_name: str, dataframe: pd.DataFrame):
+    database = mission._state.db
 
-    existing_samples = core_models.Sample.objects.filter(bottle__event__trip__mission=mission)
+    # clear errors for this file
+    core_models.FileError.objects.using(database).filter(file_name=file_name).delete()
+
+    existing_samples = core_models.Sample.objects.using(database).filter(bottle__event__trip__mission=mission)
 
     create_samples = {}
     update_samples = {'fields': set(), 'models': []}
@@ -224,7 +230,6 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
         # convert column names to lower case because it's expected that the file_settings fields will be lowercase
         dataframe.columns = dataframe.columns.str.lower()
         # prep the dataframe by splitting the samples, adding replicates
-        sample_config = settings.config
 
         dataframe = split_sample(dataframe, sample_config)
         sample_id_field, replicate_id_field = 'sid', 'rid'
@@ -241,7 +246,8 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
             sample_id = int(row[1][sample_id_field])
             value = row[1][value_field]
 
-            bottles = core_models.Bottle.objects.filter(event__trip__mission=mission, bottle_id=int(sample_id))
+            bottles = core_models.Bottle.objects.using(database).filter(event__trip__mission=mission,
+                                                                        bottle_id=int(sample_id))
             if not bottles.exists():
                 message = f"Could not find bottle matching id {sample_id} in file {file_name}"
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
@@ -313,17 +319,17 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
                 create_discrete_values[f'{db_sample.bottle_id}_{replicate}'] = discrete_sample
 
         with transaction.atomic():
-            core_models.Sample.objects.bulk_create(create_samples.values())
+            core_models.Sample.objects.using(database).bulk_create(create_samples.values())
             if len(update_samples['models']) > 0:
-                core_models.Sample.objects.bulk_update(update_samples['models'], update_samples['fields'])
+                core_models.Sample.objects.using(database).bulk_update(update_samples['models'], update_samples['fields'])
 
-            core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values.values())
+            core_models.DiscreteSampleValue.objects.using(database).bulk_create(create_discrete_values.values())
             if len(update_discrete_values['models']) > 0:
-                core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_values['models'],
+                core_models.DiscreteSampleValue.objects.using(database).bulk_update(update_discrete_values['models'],
                                                                     update_discrete_values['fields'])
 
     except ValueError as ex:
-        message = _("Could not read column") + f" '{settings.config.sample_field}'"
+        message = _("Could not read column") + f" '{sample_config.sample_field}'"
         message += " - " + str(ex)
         logger.error(message)
         logger.exception(ex)
@@ -336,4 +342,4 @@ def parse_data_frame(settings: core_models.MissionSampleConfig, file_name: str, 
         error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message)
         errors.append(error)
 
-    core_models.FileError.objects.bulk_create(errors)
+    core_models.FileError.objects.using(database).bulk_create(errors)

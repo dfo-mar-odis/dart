@@ -43,7 +43,7 @@
                                        {# for now plankton comes from an xls file so only allow xls types. #}
                                        type="file" name="plankton_file" accept=".xls,.xlsx,.xlsm"
                                        hx-trigger="change"
-                                       hx-get="{% url 'core:mission_plankton_load_plankton' mission.pk %}"
+                                       hx-get="{% url 'core:mission_plankton_load_plankton' database mission.pk %}"
                                        hx-swap="none"
                                 />
                             </div>
@@ -66,17 +66,17 @@
                         <h6 class="align-self-end">{% trans "Plankton Samples" %}</h6>
                     </div>
                     <div class="col-auto">
-                        <button class="btn btn-sm btn-danger" hx-swap="none" hx-confirm="{% trans "Are you sure?" %}" hx-get="{% url 'core:mission_plankton_clear' mission.pk %}">{% custom_icon 'dash-square' %}</button>
+                        <button class="btn btn-sm btn-danger" hx-swap="none" hx-confirm="{% trans "Are you sure?" %}" hx-get="{% url 'core:mission_plankton_clear' database mission.pk %}">{% custom_icon 'dash-square' %}</button>
                     </div>
                 </div>
             </div>
             <div class="card-body">
-                <div id="div_id_plankton_data_table" class="vertical-scrollbar" hx-get="{% url 'core:mission_plankton_list_plankton' mission.pk %}" hx-trigger="load, update_samples from:body">
+                <div id="div_id_plankton_data_table" class="vertical-scrollbar" hx-get="{% url 'core:mission_plankton_list_plankton' database mission.pk %}" hx-trigger="load, update_samples from:body">
                 </div>
             </div>
         </div>
     </div>
-    <div class="mt-2" hx-trigger="load" hx-get="{% url "core:mission_plankton_get_plankton_db_card" mission.pk %}">
+    <div class="mt-2" hx-trigger="load" hx-get="{% url "core:mission_plankton_get_plankton_db_card" database mission.pk %}">
 
     </div>
 {% endblock %}
