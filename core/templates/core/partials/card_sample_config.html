@@ -2,7 +2,7 @@
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
-<div id="div_id_sample_config_card_{{ sample_config.pk }}" class="card mt-2">
+<div id="div_id_sample_config_card_{{ sample_config.pk }}" class="card mb-2">
 <div class="card-header">
     <div class="card-title row">
         <button type="button" class="btn btn-light btn-sm col-auto collapsed" data-bs-toggle="collapse"
@@ -13,7 +13,7 @@
         <div class="col-auto">
             <button type="button" class="btn btn-danger btn-sm" name='delete'
                     title="{% trans "Delete configuration" %}"
-                    hx-post="{% url 'core:mission_samples_delete_sample_config' sample_config.pk %}"
+                    hx-post="{% url 'core:form_sample_config_delete' sample_config.pk %}"
                     hx-target="#div_id_sample_config_card_{{ sample_config.pk }}"
                     hx-swap="delete"
                     hx-confirm="{% trans "Are you sure?" %}"
@@ -22,43 +22,42 @@
         <div class="col-auto">
             <button type="button" class="btn btn-secondary btn-sm me-1" name='edit'
                     title="{% trans "Edit file configuration" %}"
-                    hx-post="{% url 'core:mission_samples_new_sample_config' database sample_config.pk %}"
+                    hx-post="{% url 'core:form_sample_config_new' database sample_config.pk %}"
                     hx-target="#div_id_sample_type_holder"
                     {# just a little javascript to scroll back to the new sample type form #}
                     hx-on="htmx:afterRequest: window.location.href = '#div_id_sample_type';"
             >{% custom_icon 'pencil-square' %}</button>
-            <button type="button" class="btn {% if errors %}btn-warning{% else %}btn-primary{% endif %} btn-sm" name='load'
-                    id="div_id_sample_config_card_{{ sample_config.pk }}_load_button"
-                    title="{% trans "Load sample" %}"
-                    hx-get="{% url 'core:mission_samples_load_samples' database sample_config.pk %}"
-                    hx-target="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
-                    hx-select="#div_id_sample_config_card_{{ sample_config.pk }}_load_button"
-                    hx-swap="outerHTML"
-                    hx-select-oob="#div_id_sample_config_card_{{ sample_config.pk }}_message"
-            >{% custom_icon 'arrow-down-square' %}</button>
+        </div>
+        <div class="col-auto">
+            <input class="form-check-input border-primary" title="{% trans 'selected for upload' %}" id="input_id_sample_config_{{ sample_config.pk }}" type="checkbox" name="sample_config" value="{{ sample_config.pk }}" />
         </div>
         <div id="div_id_sample_config_card_{{ sample_config.pk }}_message"></div>
     </div>
 </div>
 <div id="div_id_sample_config_card_body_{{ sample_config.pk }}" class="collapsed collapse">
     <div class="card-body">
-        <div class="row">
-            <div class="col-auto">{% trans "Tab #" %} : {{ sample_config.tab }}</div>
-            <div class="col-auto">{% trans "Header Row #" %} : {{ sample_config.skip }}</div>
-        </div>
-        <ul class="list-group">
-            <li class="list-group-item list-group-item-secondary">{% trans "Column Mappings" %}</li>
-            <li class="list-group-item">{% trans 'Sample' %} : {{ sample_config.sample_field }}</li>
-            <li class="list-group-item">{% trans 'Value' %} : {{ sample_config.value_field }}</li>
-
-            {% if sample_config.flag_field %}
-            <li class="list-group-item">{% trans 'Quality Flag' %} : {{ sample_config.flag_field }}</li>
-            {% endif %}
-
-            {% if sample_config.comment_field %}
-            <li class="list-group-item">{% trans 'Comment' %} : {{ sample_config.comment_field }}</li>
-            {% endif %}
-        </ul>
+        <table class="table" id="table_id_sample_config_{{ sample_config.pk }}">
+            <thead>
+                <tr>
+                    <th>{% trans "Tab #" %}</th>
+                    <th>{% trans "Header Row #" %}</th>
+                    <th>{% trans 'Sample' %}</th>
+                    <th>{% trans 'Value' %}</th>
+                    <th>{% trans 'Quality Flag' %}</th>
+                    <th>{% trans 'Comment' %}</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>{{ sample_config.tab }}</td>
+                    <td>{{ sample_config.skip }}</td>
+                    <td>{{ sample_config.sample_field }}</td>
+                    <td>{{ sample_config.value_field }}</td>
+                    <td>{% if sample_config.flag_field %}{{ sample_config.flag_field }}{% endif %}</td>
+                    <td>{% if sample_config.comment_field %}{{ sample_config.comment_field }}{% endif %}</td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 </div>
 </div>

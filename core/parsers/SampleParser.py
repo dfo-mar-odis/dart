@@ -214,15 +214,12 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
     database = mission._state.db
 
     # clear errors for this file
-    core_models.FileError.objects.using(database).filter(file_name=file_name).delete()
-
-    existing_samples = core_models.Sample.objects.using(database).filter(bottle__event__trip__mission=mission)
+    mission.file_errors.filter(file_name=file_name).delete()
 
     create_samples = {}
     update_samples = {'fields': set(), 'models': []}
 
-    create_discrete_values = {}
-    update_discrete_values = {'fields': set(), 'models': []}
+    create_discrete_values = []
 
     errors: [core_models.FileError] = []
 
@@ -232,6 +229,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         # prep the dataframe by splitting the samples, adding replicates
 
         dataframe = split_sample(dataframe, sample_config)
+        dataframe = dataframe.reset_index(drop=True)
         sample_id_field, replicate_id_field = 'sid', 'rid'
         value_field = sample_config.value_field
         flag_field = sample_config.flag_field
@@ -239,25 +237,34 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
         sample_type = sample_config.sample_type
         mission_sample_type = sample_type.get_mission_sample_type(mission)
+        bottles = {bottle.bottle_id: bottle for bottle in
+                   core_models.Bottle.objects.using(database).filter(event__trip__mission=mission)}
+        bottle_keys = sorted(bottles.keys())
 
-        current_sample = None
-        for row in dataframe.iterrows():
-            replicate = 1  # All samples will have at least one 'replicate'
-            sample_id = int(row[1][sample_id_field])
-            value = row[1][value_field]
+        # for speed we'll bulk delete Discrete values form all bottles with the requested sample type, then
+        # recreate them.
+        sample_ids = [sample_id for sample_id in dataframe[sample_id_field].unique()]
 
-            bottles = core_models.Bottle.objects.using(database).filter(event__trip__mission=mission,
-                                                                        bottle_id=int(sample_id))
-            if not bottles.exists():
+        existing_samples = mission_sample_type.samples.filter(bottle__event__trip__mission=mission)
+
+        core_models.DiscreteSampleValue.objects.using(database).filter(sample__bottle__bottle_id__in=sample_ids,
+                                                                       sample__type=mission_sample_type).delete()
+        replicate_counter = {}
+        rows = dataframe.shape[0]
+        for index, row in dataframe.iterrows():
+            logger_notifications.info(f"{file_name} : " + _("Processing row") + " %d/%d", index, rows)
+            sample_id = int(row[sample_id_field])
+            value = row[value_field]
+
+            if sample_id not in bottle_keys:
                 message = f"Could not find bottle matching id {sample_id} in file {file_name}"
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
                 logger.warning(message)
                 continue
 
-            bottle = bottles[0]
+            bottle = bottles[sample_id]
 
-            db_sample = core_models.Sample(bottle=bottle, type=mission_sample_type, file=file_name)
             if (existing_sample := existing_samples.filter(bottle=bottle, type=mission_sample_type)).exists():
                 # if the sample exists then we want to update it. Not create a new one
                 db_sample = existing_sample[0]
@@ -268,17 +275,22 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
                 if len(update_samples['fields']) > 0:
                     update_samples['models'].append(db_sample)
-            elif bottle.bottle_id in create_samples:
-                db_sample = create_samples[bottle.bottle_id]
-            else:
+            elif bottle.bottle_id not in create_samples:
+                db_sample = core_models.Sample(bottle=bottle, type=mission_sample_type, file=file_name)
                 create_samples[bottle.bottle_id] = db_sample
+            else:
+                db_sample = create_samples[bottle.bottle_id]
 
-            replicate = row[1][replicate_id_field]
+            if db_sample.bottle_id not in replicate_counter:
+                replicate_counter[db_sample.bottle_id] = []
+
+            replicate = row[replicate_id_field]
 
             # if replicates aren't allowed on this datatype then there should be an error here if the
             # replicate values is greater than 1
             if not sample_config.allow_replicate and replicate > 1:
-                message = _("Duplicate bottle found for sample ") + str(sample_id)
+                message = _("File configuration doesn't allow for multiple replicates. Replicates found for sample ")
+                message += str(sample_id)
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
                 logger.warning(message)
@@ -292,19 +304,14 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 logger.warning(message)
 
             comment = None
-            if comment_field and comment_field in row[1] and not pd.isna(row[1][comment_field]):
-                comment = row[1][comment_field]
+            if comment_field and comment_field in row and not pd.isna(row[comment_field]):
+                comment = row[comment_field]
 
             flag = None
-            if flag_field and flag_field in row[1] and not pd.isna(row[1][flag_field]):
-                flag = row[1][flag_field]
+            if flag_field and flag_field in row and not pd.isna(row[flag_field]):
+                flag = row[flag_field]
 
-            # If db_sample has a pk, then it has been created and we want to clear its replicates.
-            if db_sample.pk and current_sample != db_sample:
-                db_sample.discrete_values.all().delete()
-                current_sample = db_sample
-
-            if f'{db_sample.bottle_id}_{replicate}' in create_discrete_values:
+            if replicate in replicate_counter[db_sample.bottle_id]:
                 message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
                 errors.append(error)
@@ -315,18 +322,16 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 discrete_sample.replicate = replicate
                 discrete_sample.comment = comment
                 discrete_sample.flag = flag
+                create_discrete_values.append(discrete_sample)
 
-                create_discrete_values[f'{db_sample.bottle_id}_{replicate}'] = discrete_sample
+                replicate_counter[db_sample.bottle_id].append(replicate)
 
         with transaction.atomic():
             core_models.Sample.objects.using(database).bulk_create(create_samples.values())
             if len(update_samples['models']) > 0:
                 core_models.Sample.objects.using(database).bulk_update(update_samples['models'], update_samples['fields'])
 
-            core_models.DiscreteSampleValue.objects.using(database).bulk_create(create_discrete_values.values())
-            if len(update_discrete_values['models']) > 0:
-                core_models.DiscreteSampleValue.objects.using(database).bulk_update(update_discrete_values['models'],
-                                                                    update_discrete_values['fields'])
+            core_models.DiscreteSampleValue.objects.using(database).bulk_create(create_discrete_values)
 
     except ValueError as ex:
         message = _("Could not read column") + f" '{sample_config.sample_field}'"

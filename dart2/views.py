@@ -4,7 +4,6 @@ from django.views.generic.base import ContextMixin
 from django_filters.views import FilterView
 
 from settingsdb import utils
-from . import urls
 from . import settings
 
 from biochem import models as upload_models

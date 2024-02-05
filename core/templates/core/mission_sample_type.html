@@ -31,7 +31,7 @@
             {% include 'core/partials/card_sample_upload_header.html' with mission_sample=mission_sample_type %}
         </div>
         <div id="div_id_data_display" class="container-fluid mt-2" hx-swap-oob="#div_id_data_display"
-             hx-trigger="load" hx-get="{% url "core:mission_sample_type_card" mission_sample_type.pk %}">
+             hx-trigger="load" hx-get="{% url "core:mission_sample_type_card" database mission_sample_type.pk %}">
         </div>
     </div>
 {% endblock %}

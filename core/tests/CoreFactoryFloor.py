@@ -163,10 +163,6 @@ class BottleFactory(DjangoModelFactory):
     bottle_id = factory.sequence(lambda n: n)
     pressure = factory.lazy_attribute(lambda o: faker.pyfloat(left_digits=4, right_digits=3))
 
-    @classmethod
-    def _setup_next_sequence(cls):
-        return getattr(cls, 'start_bottle_seq', 0)
-
 
 class SampleFactory(DjangoModelFactory):
 

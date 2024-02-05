@@ -18,7 +18,7 @@
                     </div>
                     <div class="col-auto">
                         <button type="button" class="btn btn-danger btn-sm" name="delete" title="{% trans 'Delete' %}"
-                                hx-post="{% url 'core:mission_sample_type_delete' database mission_sample.pk %}"
+                                hx-post="{% url 'core:form_mission_sample_type_delete' database mission_sample.pk %}"
                                 hx-target="#div_content_block_id"
                                 hx-swap="afterbegin"
                                 hx-confirm="{% trans 'Are you sure?' %}"
@@ -27,7 +27,8 @@
                 </div>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" hx-trigger="keyup[key=='Escape']" {# pressing the Esc key will reset the form #}
+             hx-get="{% url 'core:form_mission_sample_type_set_get' database mission_sample.pk%}">
         {% if biochem_form %}
             {% crispy biochem_form %}
         {% endif %}

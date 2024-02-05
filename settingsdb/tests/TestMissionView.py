@@ -1,5 +1,6 @@
 import os.path
 import shutil
+import time
 
 from bs4 import BeautifulSoup
 from django.test import tag, Client
@@ -46,9 +47,10 @@ class TestMissionView(DartTestCase):
                     settings.DATABASE.pop(connection.alias)
                     connection.close()
 
-            close_old_connections()
-            if os.path.isdir(fake_location):
-                shutil.rmtree(fake_location)
+                    time.sleep(2)  # wait a couple of seconds to make sure the connection is closed
+
+                    if os.path.isdir(fake_location):
+                        shutil.rmtree(fake_location)
 
     def setUp(self) -> None:
         self.client = Client()

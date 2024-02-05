@@ -28,12 +28,12 @@
             <input id="id_input_sample_file" class="form-control form-control-sm"
                    type="file" name="sample_file" accept=".dat,.csv,.xls,.xlsx,.xlsm"
                    hx-trigger="change, reload_sample_file from:body"
-                   hx-get="{% url 'core:mission_samples_load_sample_config' database %}?mission_id={{ mission.pk }}"
+                   hx-get="{% url 'core:form_sample_config_load' database %}?mission_id={{ mission.pk }}"
             />
         </div>
         <div class="col-auto">
             <button class="btn btn-primary btn-sm" name="add_sample"
-                hx-get="{% url 'core:mission_samples_new_sample_config' database %}"
+                hx-get="{% url 'core:form_sample_config_new' database %}"
                 hx-target="#div_id_sample_type_holder"
             >{% custom_icon 'plus-square' %}</button>
         </div>
