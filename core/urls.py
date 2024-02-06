@@ -1,22 +1,23 @@
 from django.urls import path
 
-from . import views, views_mission_sample, views_sample_type, htmx, reports, form_btl_load
-from . import form_biochem_database, views_mission_event, views_mission_plankton, views_mission_sample_type
+from . import views, views_mission_sample, views_sample_type, views_mission_plankton
+from . import views_mission_sample_type, views_mission_event
+from . import form_biochem_database, form_btl_load, form_sample_type_config, form_mission_sample_type
+from . import htmx, reports
 
 app_name = 'core'
 
 
+url_prefix = "<str:database>/elog"
 urlpatterns = [
     # ###### Mission details and setting ###### #
-
-    path('mission/', views.MissionFilterView.as_view(), name="mission_filter"),
     path('mission/new/', views.MissionCreateView.as_view(), name="mission_new"),
-    path('mission/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
+    path('mission/<str:database>/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
     path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     # ###### Elog configuration ###### #
-    path('mission/elog/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
-    path('mission/update/elog/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
+    path(f'{url_prefix}/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
+    path(f'{url_prefix}/update/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
 
 ]
 
@@ -27,5 +28,7 @@ urlpatterns.extend(views_mission_sample_type.mission_sample_type_urls)
 urlpatterns.extend(views_mission_plankton.plankton_urls)
 urlpatterns.extend(form_btl_load.bottle_load_urls)
 urlpatterns.extend(form_biochem_database.database_urls)
+urlpatterns.extend(form_sample_type_config.sample_type_config_urls)
+urlpatterns.extend(form_mission_sample_type.sample_type_urls)
 urlpatterns.extend(htmx.htmx_urls)
 urlpatterns.extend(reports.report_urls)

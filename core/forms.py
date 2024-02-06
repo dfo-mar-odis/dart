@@ -1,4 +1,4 @@
-import datetime
+import os.path
 import re
 
 from bs4 import BeautifulSoup
@@ -7,15 +7,18 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
 
 from django import forms
+from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q, Min, Max
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
+import settingsdb
 from dart.utils import load_svg
 
 from . import models
+
 from bio_tables import models as bio_models
+from settingsdb import models as settings_models
 
 
 class NoWhiteSpaceCharField(forms.CharField):
@@ -188,10 +191,18 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['data_center'].required = False
         self.fields['geographic_region'].required = False
 
+        if self.instance.pk:
+            name_column = Column(
+                HTML(f"<h2>{self.instance.name}</h2>"),
+                Hidden('name', self.instance.name)
+            )
+        else:
+            name_column = Column(Field('name', autocomplete='true'))
+
         submit = Submit('submit', 'Submit')
         self.helper.layout = Layout(
             Row(
-                Column(Field('name', autocomplete='true')),
+                Column(name_column),
             ),
             Row(
                 Column(
@@ -240,13 +251,38 @@ class MissionSettingsForm(forms.ModelForm):
         regions = models.GeographicRegion.objects.all()
         return regions
 
-    def clean_end_date(self):
-        end_date = self.cleaned_data['end_date']
-        start_date = self.cleaned_data['start_date']
-        if end_date < start_date:
-            raise forms.ValidationError("The end date must occur after the start date")
+    def clean_name(self):
 
-        return end_date
+        mission_name = self.cleaned_data['name']
+        db_name = mission_name + '.sqlite3'
+        db_settings: settings_models.LocalSetting = settings_models.LocalSetting.objects.first()
+        location = db_settings.database_location
+        if location.startswith("./"):
+            location = os.path.join(settings.BASE_DIR, location.replace("./", ""))
+
+        if self.instance.pk:
+            # if there's an instance with this object we're updating an existing database
+            # allow the name within the database to be changed
+            return mission_name
+
+        # if there's no database, do not allow a name of an existing database to be used
+        database_location = os.path.join(location, db_name)
+        if os.path.exists(database_location):
+            message = _("A Mission Database with this name already exists in the mission directory")
+            message += f" : '{location}'"
+            raise forms.ValidationError(message)
+
+        return mission_name
+
+    def save(self, commit=True):
+        mission_name = self.cleaned_data['name']
+        if mission_name not in settings.DATABASES:
+            settingsdb.utils.add_database(mission_name)
+
+        instance = super().save(commit=False)
+        instance.save(using=mission_name)
+
+        return instance
 
 
 class MissionSearchForm(forms.Form):
@@ -314,7 +350,7 @@ class SampleTypeForm(forms.ModelForm):
                                       help_text=_("Filter the Datatype dropdown based on key terms"))
 
     class Meta:
-        model = models.GlobalSampleType
+        model = settings_models.GlobalSampleType
         fields = "__all__"
 
     def __init__(self, *args, **kwargs):
@@ -363,289 +399,6 @@ class SampleTypeForm(forms.ModelForm):
                 id="div_id_sample_type_holder_form"
             )
         )
-
-
-class BioChemDataType(forms.Form):
-    sample_type_id = forms.IntegerField(label=_("Sample Type"),
-                                        help_text=_("The Sample Type to apply the BioChem datatype to"))
-    mission_id = forms.IntegerField(label=_("Mission"),
-                                    help_text=_("The mission to apply the BioChem datatype to"))
-    data_type_filter = forms.CharField(label=_("Filter Datatype"), required=False)
-    data_type_code = forms.IntegerField(label=_("Datatype Code"), required=False)
-    data_type_description = forms.ChoiceField(label=_("Datatype Description"), required=False)
-
-    start_sample = forms.IntegerField(label=_("Start"))
-    end_sample = forms.IntegerField(label=_("End"))
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        data_type_choices_qs = bio_models.BCDataType.objects.all()
-        if 'data_type_filter' in kwargs['initial']:
-            filter = kwargs['initial']['data_type_filter'].split(" ")
-            q_set = Q()
-            for f in filter:
-                q_set = Q(description__icontains=f) & q_set
-            data_type_choices_qs = data_type_choices_qs.filter(q_set)
-
-            if data_type_choices_qs.exists():
-                data_type_choices = [(st.pk, st) for st in data_type_choices_qs]
-
-                self.fields['data_type_description'].choices = data_type_choices
-                self.fields['data_type_description'].initial = data_type_choices[0][0]
-                self.fields['data_type_code'].initial = data_type_choices[0][0]
-            else:
-                self.fields['data_type_description'].choices = [(None, '---------')]
-                self.fields['data_type_description'].initial = None
-                self.fields['data_type_code'].initial = None
-        else:
-            data_type_choices = [(st.pk, st) for st in data_type_choices_qs]
-            data_type_choices.insert(0, (None, '---------'))
-            self.fields['data_type_description'].choices = data_type_choices
-            self.fields['data_type_description'].initial = None
-
-            if 'data_type_code' in kwargs['initial']:
-                self.fields['data_type_description'].initial = kwargs['initial']['data_type_code']
-
-        if 'mission_id' in self.initial and 'sample_type_id' in self.initial:
-            mission_id = self.initial['mission_id']
-            min_max = models.Bottle.objects.filter(event__trip__mission_id=mission_id).aggregate(
-                Min('bottle_id'), Max('bottle_id'))
-            if 'start_sample' not in kwargs['initial']:
-                self.fields['start_sample'].initial = min_max['bottle_id__min']
-
-            if 'end_sample' not in kwargs['initial']:
-                self.fields['end_sample'].initial = min_max['bottle_id__max']
-
-        self.helper = FormHelper(self)
-
-        data_type_filter = Field('data_type_filter', css_class="form-control form-control-sm")
-        data_type_filter.attrs['hx-get'] = reverse_lazy('core:mission_samples_update_sample_type')
-        data_type_filter.attrs['hx-trigger'] = 'keyup changed delay:500ms, change'
-        data_type_filter.attrs['hx-target'] = "#div_id_data_type_row"
-        data_type_filter.attrs['hx-select'] = "#div_id_data_type_row"
-
-        data_type_code = Field('data_type_code', id='id_data_type_code', css_class="form-control-sm")
-        data_type_code.attrs['hx-get'] = reverse_lazy('core:mission_samples_update_sample_type')
-        data_type_code.attrs['hx-trigger'] = 'keyup changed delay:500ms, change'
-        data_type_code.attrs['hx-target'] = "#id_data_type_description"
-        data_type_code.attrs['hx-select-oob'] = "#id_data_type_description"
-
-        data_type_description = Field('data_type_description', id='id_data_type_description',
-                                      css_class='form-control form-select-sm')
-        data_type_description.attrs['hx-get'] = reverse_lazy('core:mission_samples_update_sample_type')
-        data_type_description.attrs['hx-trigger'] = 'change'
-        data_type_description.attrs['hx-target'] = "#id_data_type_code"
-        data_type_description.attrs['hx-select'] = "#id_data_type_code"
-
-        apply_attrs = {
-            'name': 'apply_data_type_row',
-            'title': _('Apply Datatype to row(s)'),
-            'hx-get': reverse_lazy('core:mission_samples_update_sample_type'),
-            'hx-target': "#div_id_data_type_message",
-            'hx-swap': 'innerHTML'
-        }
-        row_apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
-                                        **apply_attrs)
-
-        apply_attrs = {
-            'name': 'apply_data_type_sensor',
-            'title': _('Apply Datatype to mission'),
-            'hx-get': reverse_lazy('core:mission_samples_update_sample_type'),
-            'hx-target': "#div_id_data_type_message",
-            'hx-swap': 'innerHTML'
-        }
-        sensor_apply_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm ms-2",
-                                           **apply_attrs)
-
-        self.helper.form_tag = False
-        self.helper.layout = Layout(
-            Div(
-                Field('sample_type_id', type='hidden'),
-                Field('mission_id', type='hidden'),
-                Row(
-                    Column(data_type_filter, css_class='col'),
-                ),
-                Row(
-                    Column(data_type_code, css_class='col-auto'),
-                    Column(data_type_description, css_class="col"),
-                    id="div_id_data_type_row"
-                ),
-                Row(
-                    Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
-                    Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
-                    Column(row_apply_button, css_class="col-auto align-self-end mb-3"),
-                    Column(sensor_apply_button, css_class="col-auto align-self-end mb-3"),
-                    id="div_id_sample_range"
-                ),
-                Row(
-                    Column(id="div_id_data_type_message")
-                ), css_class="alert alert-secondary mt-2", id="div_id_data_type_form"
-            )
-        )
-
-
-# Form for loading a file, connecting sample, value, flag and replica fields to the SampleType so a user
-# doesn't have to constantly re-enter columns. Ultimately the user will select a file, the file type with the
-# expected headers for sample and value fields will be used to determine what SampleTypes the file contains
-# which will be automatically loaded if they've been previously seen. Otherwise a user will be able to add
-# new configurations for sample types.
-class SampleTypeConfigForm(forms.ModelForm):
-    sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
-    value_field = forms.CharField(help_text=_("Column that contains the value data"))
-    flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
-    comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
-
-    NONE_CHOICE = [(None, "------")]
-
-    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
-                                      help_text=_("Filter the Datatype field on key terms"))
-
-    class Meta:
-        model = models.SampleTypeConfig
-        fields = "__all__"
-
-    def __init__(self, *args, **kwargs):
-
-        # To use this form 'field_choices', a list of options the user can select from for the
-        # header row, must be passed in to populate the dropdowns. For some reason after the
-        # form has been created and populated the 'declared_fields' variable maintains the list
-        # of options and can be used when passing a request.GET or request.POST in
-        choice_fields = ['sample_field', 'value_field', 'flag_field', 'comment_field']
-        if 'field_choices' in kwargs:
-            field_choices: list = kwargs.pop('field_choices')
-
-            for field in choice_fields:
-                s_field: forms.CharField = self.base_fields[field]
-                self.base_fields[field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
-                if not self.base_fields[field].required:
-                    self.base_fields[field].choices = self.NONE_CHOICE
-                self.base_fields[field].choices += field_choices
-        else:
-            for field in choice_fields:
-                self.base_fields[field] = self.declared_fields[field]
-
-        file_type = None
-        if 'instance' in kwargs and kwargs['instance']:
-            file_type = kwargs['instance'].file_type
-        elif args and 'file_type' in args[0]:
-            file_type = args[0]['file_type']
-        elif 'initial' in kwargs and 'file_type' in kwargs['initial']:
-            file_type = kwargs['initial']['file_type']
-        elif 'file_type' in kwargs:
-            file_type = kwargs.pop('file_type')
-
-        if file_type is None:
-            raise KeyError({'message': 'missing initial "file_type"'})
-
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-        self.helper.layout = Layout()
-
-        sample_type_choices = [(st.pk, st) for st in models.GlobalSampleType.objects.all().order_by('short_name')]
-        sample_type_choices.insert(0, (None, ""))
-        sample_type_choices.insert(0, (-1, "New Sample Type"))
-        sample_type_choices.insert(0, (None, '---------'))
-        self.fields['sample_type'].choices = sample_type_choices
-
-        hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:mission_samples_new_sample_config'),
-            'hx-select': "#div_id_fields_row",
-            'hx-target': "#div_id_fields_row",
-            'hx-swap': "outerHTML",
-            'hx-trigger': "keyup changed delay:500ms, change"
-        }
-
-        # if the tab field is updated the form should reload looking for headers on the updated tab index
-        if file_type.startswith('xls'):
-            tab_field = Field('tab')
-            tab_field.attrs = hx_relaod_form_attributes
-            tab_col = Column(tab_field)
-        else:
-            tab_col = Hidden('tab', "0")
-
-        # if the header field is updated the form should reload looking for headers on the updated row
-        header_row_field = Field('skip')
-        header_row_field.attrs = hx_relaod_form_attributes
-
-        config_name_row = Row(
-            tab_col,
-            Column(header_row_field),
-            Column(Field('allow_blank', css_class='checkbox-primary')),
-            Column(Field('allow_replicate', css_class='checkbox-primary')),
-            css_class="flex-fill"
-        )
-
-        if self.instance.pk:
-            config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
-
-        url = reverse_lazy('core:mission_samples_new_sample_config')
-        hx_sample_type_attrs = {
-            'hx_get': url,
-            'hx_trigger': 'change',
-            'hx_target': '#div_id_sample_type',
-            'hx_select': '#div_id_sample_type',
-            'hx_swap': 'outerHTML'
-        }
-        sample_type_row = Div(
-            Field('sample_type', **hx_sample_type_attrs, wrapper_class="col-auto"),
-            css_class="row flex-fill mt-2"
-        )
-
-        div = Div(
-            # file type is hidden because it's taken care of by the form creation and
-            # the type of file a user is loading
-            Field('file_type', type="hidden"),
-            config_name_row,
-
-            Row(
-                Column(Field('sample_field')),
-                Column(Field('value_field')),
-                Column(Field('flag_field', )),
-                Column(Field('comment_field')),
-                css_class="flex-fill", id="div_id_fields_row"
-            ),
-            id="div_id_file_attributes",
-            css_class="form-control input-group mt-2"
-        )
-
-        self.helper[0].layout.fields.append(sample_type_row)
-        self.helper[0].layout.fields.append(div)
-
-        button_row = Row(
-            Column(css_class='col text-end'), css_class="mt-2", id="button_row"
-        )
-
-        attrs = {
-            'css_class': "btn btn-primary btn-sm ms-2",
-            'name': "add_sample_type",
-            'title': _("Add as new configuration"),
-            'hx_get': reverse_lazy("core:mission_samples_save_sample_config"),
-            'hx_target': "#button_row",
-            'hx_select': "#div_id_loaded_sample_type_message",
-        }
-
-        button_new = StrictButton(load_svg('plus-square'), **attrs)
-        button_row.fields[0].insert(0, button_new)
-
-        if self.instance.pk:
-            attrs['hx_get'] = reverse_lazy("core:mission_samples_save_sample_config", args=(self.instance.pk,))
-            attrs['name'] = "update_sample_type"
-            attrs['title'] = _("Update existing configuration")
-            attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
-            button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
-            button_row.fields[0].insert(0, button_update)
-
-        attrs['hx_get'] = reverse_lazy("core:mission_samples_load_sample_config")
-        attrs['name'] = "reload"
-        attrs['title'] = _("Cancel")
-        attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
-        button_cancel = StrictButton(load_svg('arrow-left-square'), **attrs)
-        button_row.fields[0].insert(0, button_cancel)
-
-        self.helper[0].layout.fields.append(button_row)
 
 
 class BottleSelection(forms.Form):
@@ -704,14 +457,16 @@ class PlanktonForm(forms.Form):
     header = forms.IntegerField(label="Header Line")
     tab = forms.IntegerField(label="Tab")
 
-    def __init__(self, *args, **kwargs):
-        mission_id = kwargs.pop('mission_id')
+    def __init__(self, mission, database, *args, **kwargs):
+        self.mission = mission
+        self.database = database
+
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
 
-        url = reverse_lazy("core:mission_plankton_load_plankton", args=(mission_id,))
+        url = reverse_lazy("core:mission_plankton_load_plankton", args=(database, mission.pk,))
         tab_field = Field('tab')
         tab_field.attrs['hx-post'] = url
         tab_field.attrs['hx-swap'] = "none"
@@ -722,7 +477,7 @@ class PlanktonForm(forms.Form):
         header_field.attrs['hx-swap'] = "none"
         header_field.attrs['class'] = "form-control form-control-sm"
 
-        importurl = reverse_lazy("core:mission_plankton_import_plankton", args=(mission_id,))
+        importurl = reverse_lazy("core:mission_plankton_import_plankton", args=(database, mission.pk,))
         button_attrs = {
             'title': _('Import'),
             'name': 'import',

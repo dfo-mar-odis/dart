@@ -11,33 +11,37 @@ logger_notifications = logging.getLogger('dart.validation')
 
 
 def validate_mission(mission: core_models.Mission):
-    events = core_models.Event.objects.filter(trip__mission=mission)
+    database = mission._state.db
+    events = core_models.Event.objects.using(database).filter(trip__mission=mission)
 
-    core_models.ValidationError.objects.filter(event__trip__mission=mission,
-                                               type=core_models.ErrorType.validation).delete()
+    core_models.ValidationError.objects.using(database).filter(event__trip__mission=mission,
+                                                               type=core_models.ErrorType.validation).delete()
     errors = []
     events_count = len(events)
     for index, event in enumerate(events):
         logger_notifications.info(_("Validating Event") + " : %d/%d", (index+1), events_count)
         errors += validate_event(event)
 
-    core_models.ValidationError.objects.bulk_create(errors)
+    core_models.ValidationError.objects.using(database).bulk_create(errors)
 
 
 def validate_trip(trip: core_models.Trip):
+    database = trip._state.db
     create_validation_errors = []
     for event in trip.events.all():
         event.validation_errors.all().delete()
         create_validation_errors += validate_event(event)
 
         if len(create_validation_errors) > 1000:
-            core_models.ValidationError.objects.bulk_create(create_validation_errors)
+            core_models.ValidationError.objects.using(database).bulk_create(create_validation_errors)
             create_validation_errors = []
 
-    core_models.ValidationError.objects.bulk_create(create_validation_errors)
+    core_models.ValidationError.objects.using(database).bulk_create(create_validation_errors)
 
 
 def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
+
+    database = event._state.db
 
     # I return the errors rather than just saving them so events can be validated and saved in bulk
     # it's up to the calling function to delete ValidationError objects on an event before validating it
@@ -80,7 +84,7 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
-    dup_events = core_models.Event.objects.filter(
+    dup_events = core_models.Event.objects.using(database).filter(
         event_id=event.event_id,
         station=event.station,
         instrument=event.instrument
@@ -145,7 +149,7 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.ValidationError
 
 
 def validate_net_event(event: core_models.Event) -> [core_models.ValidationError]:
-
+    database = event._state.db
     validation_errors = []
 
     # Don't validate aborted events
@@ -161,7 +165,7 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
     elif event.attachments.filter(name__iexact='76um').exists():
-        ctd_events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd)
+        ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
         if not ctd_events.filter(end_sample_id=event.sample_id).exists():
             message = _("No CTD event with matching surface bottle. "
                         "Check the deck sheet to confirm this is a surface bottle")
@@ -173,7 +177,7 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
             err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
     elif event.attachments.filter(name__iexact='202um').exists():
-        ctd_events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd)
+        ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
         if not ctd_events.filter(sample_id=event.sample_id).exists():
             message = _("No CTD event with matching bottom bottle. "
                         "Check the deck sheet to confirm this is a bottom bottle")

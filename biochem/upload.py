@@ -460,8 +460,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
             row_update = set("")
             plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{gear}'
 
-            m_start_date = mission.events.first().start_date
-            m_end_date = mission.events.last().end_date
+            m_start_date = trip.start_date
+            m_end_date = trip.end_date
 
             if exists := plankton_key in existing_samples.keys():
                 bcs_row = existing_samples[plankton_key]
@@ -480,13 +480,13 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
             row_update.add(updated_value(bcs_row, 'mission_sdate', m_start_date))
             row_update.add(updated_value(bcs_row, 'mission_edate', m_end_date))
             row_update.add(updated_value(bcs_row, 'mission_institute', institute.description if institute else "Not Specified"))
-            row_update.add(updated_value(bcs_row, 'mission_platform', mission.platform))
-            row_update.add(updated_value(bcs_row, 'mission_protocol', mission.protocol))
+            row_update.add(updated_value(bcs_row, 'mission_platform', trip.platform))
+            row_update.add(updated_value(bcs_row, 'mission_protocol', trip.protocol))
             row_update.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region.name
                                    if mission.geographic_region else ""))
-            row_update.add(updated_value(bcs_row, 'mission_collector_comment', mission.collector_comments))
-            row_update.add(updated_value(bcs_row, 'mission_more_comment', mission.more_comments))
-            row_update.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
+            row_update.add(updated_value(bcs_row, 'mission_collector_comment', trip.collector_comments))
+            row_update.add(updated_value(bcs_row, 'mission_more_comment', trip.more_comments))
+            row_update.add(updated_value(bcs_row, 'mission_data_manager_comment', trip.data_manager_comments))
 
             row_update.add(updated_value(bcs_row, 'event_collector_event_id', event.event_id))
             row_update.add(updated_value(bcs_row, 'event_collector_stn_name', event.station.name))

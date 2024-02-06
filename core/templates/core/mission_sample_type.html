@@ -5,22 +5,24 @@
 {% load crispy_forms_tags %}
 
 {% block nav_button_block %}
+    {% with mission_sample_type.mission as mission %}
     <li class="nav-item me-2">
-        <a href="{% url 'core:mission_events_details' mission_sample_type.mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_events_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:mission_samples_sample_details' mission_sample_type.mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_samples_sample_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a href="{% url 'core:mission_plankton_plankton_details' mission_sample_type.mission.pk %}" class="btn btn-primary"
+        <a href="{% url 'core:mission_plankton_plankton_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
     </li>
     <li class="nav-item me-2">
-        <a class="btn btn-primary" href="{% url 'core:mission_edit' mission_sample_type.mission.pk %}"
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' database mission.pk %}"
            title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
     </li>
+    {% endwith %}
 {% endblock %}
 
 {% block content %}
@@ -29,7 +31,7 @@
             {% include 'core/partials/card_sample_upload_header.html' with mission_sample=mission_sample_type %}
         </div>
         <div id="div_id_data_display" class="container-fluid mt-2" hx-swap-oob="#div_id_data_display"
-             hx-trigger="load" hx-get="{% url "core:mission_sample_type_card" mission_sample_type.pk %}">
+             hx-trigger="load" hx-get="{% url "core:mission_sample_type_card" database mission_sample_type.pk %}">
         </div>
     </div>
 {% endblock %}
