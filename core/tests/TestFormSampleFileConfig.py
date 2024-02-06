@@ -35,6 +35,7 @@ class TestSampleFileConfiguration(DartTestCase):
                                  "Standard_transmittance0(%%)", "Comments"]
         self.expected_headers = [(h.lower(), h) for h in self.expected_headers]
 
+    @tag('form_sample_config_test_form_exists')
     def test_form_exists(self):
         url = reverse("core:form_sample_config_load", args=('default',)) + f"?mission={self.mission.pk}"
         response = self.client.get(url)
@@ -133,6 +134,7 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-warning', 'mt-2'])
         self.assertEquals(msg_div.string, "File is required before adding sample")
 
+    @tag('form_sample_config_test_new_blank_form_with_file')
     def test_new_blank_form_with_file(self):
         # When the 'add' sample_type button is clicked if a file has been selected
         # the SampleTypeForm should be swapped into the div_id_sample_type_holder tag
@@ -152,7 +154,8 @@ class TestSampleFileConfiguration(DartTestCase):
         returned_content = response.content.decode('utf-8')
         self.assertEquals(returned_content, expected_form_html)
 
-    def test_submit_new_sample_type(self):
+    @tag('form_sample_config_test_submit_new_sample_type_get')
+    def test_submit_new_sample_type_get(self):
         # After the form has been filled out and the user clicks the submit button the 'save_sample_config' url
         # should be called with a get request to get the saving alert
 
@@ -191,7 +194,8 @@ class TestSampleFileConfiguration(DartTestCase):
         for field in missing_fields:
             self.assertIsNotNone(soup.find(id=field, attrs={'class': "is-invalid"}))
 
-    def test_submit_new_sample_type_valid(self):
+    @tag('form_sample_config_test_submit_new_sample_type_post')
+    def test_submit_new_sample_type_valid_post(self):
         # If a submitted form is valid a div#div_id_loaded_samples_list element should be returned
         # with the 'core/partials/card_sample_config.html' html to be swapped into the
         # #div_id_loaded_samples_list section of the 'core/partials/form_sample_config.html' template
@@ -220,6 +224,7 @@ class TestSampleFileConfiguration(DartTestCase):
         soup = BeautifulSoup(response.content, 'html.parser')
         div_id_loaded_samples_list = soup.find(id="div_id_loaded_samples_list")
         self.assertIsNotNone(div_id_loaded_samples_list)
+        self.assertIn('hx-swap-oob', div_id_loaded_samples_list.attrs)
 
         sample_type_load_card = div_id_loaded_samples_list.find(id=expected_sample_type_load_form_id)
         self.assertIsNotNone(sample_type_load_card)

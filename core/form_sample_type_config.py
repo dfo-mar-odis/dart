@@ -123,7 +123,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         div = Div(
             # file type is hidden because it's taken care of by the form creation and
             # the type of file a user is loading
-            Field('file_type', type="hidden"),
+            Hidden('file_type', file_type),
             config_name_row,
 
             Row(
@@ -168,7 +168,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         attrs['name'] = "reload"
         attrs['title'] = _("Cancel")
         attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
-        button_cancel = StrictButton(load_svg('arrow-left-square'), **attrs)
+        button_cancel = StrictButton(load_svg('x-square'), **attrs)
         button_row.fields[0].insert(0, button_cancel)
 
         self.helper[0].layout.fields.append(button_row)
@@ -306,6 +306,7 @@ def save_sample_config(request, database, **kwargs):
             else:
                 new_root = soup.new_tag('div')
                 new_root.attrs['id'] = "div_id_loaded_samples_list"
+                new_root.attrs['hx-swap-oob'] = 'true'
                 new_root.append(div)
                 soup.append(new_root)
 

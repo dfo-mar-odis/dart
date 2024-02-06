@@ -15,11 +15,10 @@ from django.conf import settings
 
 from django.db.models import Max, QuerySet
 from django.http import HttpResponse, Http404
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
-
-from render_block import render_block_to_string
 
 import biochem.upload
 from biochem import models as biochem_models
@@ -200,8 +199,7 @@ def load_samples(request, database):
         context = {}
         if 'sample_file' not in request.FILES:
             context['message'] = _("File is required before adding sample")
-            html = render_block_to_string("core/partials/form_sample_type.html", load_block,
-                                          context=context)
+            html = render_to_string("core/partials/form_sample_type.html", context=context)
             return HttpResponse(html)
 
         config_ids = request.POST.getlist('sample_config')

@@ -25,6 +25,9 @@ from dart2.views import GenericTemplateView
 
 
 def get_mission_dictionary(db_dir):
+    if not os.path.exists(db_dir):
+        os.mkdir(db_dir)
+
     databases = [f.replace(".sqlite3", "") for f in listdir(db_dir) if
                  os.path.isfile(os.path.join(db_dir, f)) and f.endswith('sqlite3')]
 

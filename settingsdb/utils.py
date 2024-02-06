@@ -6,6 +6,7 @@ from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
 
+import settingsdb.models
 from settingsdb import models
 from bio_tables import models as biomodels
 from dart2 import settings
@@ -64,7 +65,13 @@ def add_database(database):
 
 def connect_database(database):
     if database not in settings.DATABASES:
-        location = models.LocalSetting.objects.using('default').get(connected=True)
+        try:
+            location = models.LocalSetting.objects.get(connected=True)
+        except settingsdb.models.LocalSetting.DoesNotExist as ex:
+            location = models.LocalSetting.objects.order_by('id').first()
+            location.connected = True
+            location.save()
+
         databases = settings.DATABASES
         databases[database] = databases['default'].copy()
         databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
