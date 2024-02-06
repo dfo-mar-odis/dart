@@ -19,7 +19,9 @@ from core import forms as core_forms, validation, form_event_details
 from core import models
 from core.htmx import send_user_notification_elog
 from core.parsers import elog
-from dart2.utils import load_svg
+from dart.utils import load_svg
+
+from settingsdb import models as settings_models
 
 import logging
 logger = logging.getLogger("dart")
@@ -45,7 +47,7 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
                   'collector_comments', 'more_comments', 'data_manager_comments']
 
     def get_trip_select(self):
-        url = reverse_lazy('core:form_trip_select', args=(self.mission_id,))
+        url = reverse_lazy('core:form_trip_select', args=(self.mission.name, self.mission.pk,))
 
         title_id = f"control_id_trip_select_{self.card_name}"
 
@@ -73,7 +75,7 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         button_column = Column()
         if 'select_trip' in self.initial:
-            url = reverse_lazy('core:form_trip_save', args=(self.mission_id,))
+            url = reverse_lazy('core:form_trip_save', args=(self.mission.name, self.mission.pk))
             add_attrs = {
                 'id': 'btn_id_db_details_update',
                 'title': _('Update'),
@@ -85,7 +87,8 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
             add_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **add_attrs)
             spacer.append(add_button)
 
-            url = reverse_lazy('core:form_trip_delete', args=(self.mission_id, self.initial['select_trip']))
+            url = reverse_lazy('core:form_trip_delete', args=(self.mission.name, self.mission.pk,
+                                                              self.initial['select_trip']))
             remove_attrs = {
                 'id': 'btn_id_db_details_delete',
                 'title': _('Remove'),
@@ -98,7 +101,7 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
             delete_button = StrictButton(icon, css_class="btn btn-danger btn-sm", **remove_attrs)
             button_column.append(delete_button)
         else:
-            url = reverse_lazy('core:form_trip_save', args=(self.mission_id,))
+            url = reverse_lazy('core:form_trip_save', args=(self.mission.name, self.mission.pk,))
             add_attrs = {
                 'id': 'btn_id_db_details_add',
                 'title': _('Add'),
@@ -124,7 +127,7 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
     def get_card_body(self) -> Div:
         div = super().get_card_body()
 
-        div.append(Hidden('mission', self.mission_id))
+        div.append(Hidden('mission', self.mission.pk))
         div.append(Row(Column(Field('start_date')), Column(Field('end_date'))))
 
         div.append(Row(Column(Field('platform')), Column(Field('protocol'))))
@@ -134,10 +137,13 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         return div
 
-    def __init__(self, mission_id, *args, **kwargs):
-        self.mission_id = mission_id
+    def __init__(self, mission, database=None, *args, **kwargs):
+        self.mission = mission
+        self.database = database if database else mission.name
 
         super().__init__(card_title=_("Trip"), card_name="mission_trips", *args, **kwargs)
+
+        self.fields['mission'].queryset = models.Mission.objects.using(self.database).all()
 
         if self.instance:
             start_date = self.instance.start_date.strftime("%Y-%m-%d")
@@ -148,30 +154,23 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         self.fields['select_trip'].label = False
 
-        trips = models.Mission.objects.get(pk=mission_id).trips.all()
+        trips = mission.trips.all()
         self.fields['select_trip'].choices = [(trip.id, trip) for trip in trips]
         self.fields['select_trip'].choices.insert(0, (None, '--- New ---'))
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.save(using=self.database)
 
-def mission_trip_card(request, **kwargs):
-    mission_id = kwargs['mission_id']
+        return instance
 
-    soup = BeautifulSoup('', 'html.parser')
-    mission = models.Mission.objects.get(pk=mission_id)
-    trip = None
-    if 'trip_id' in kwargs and kwargs['trip_id'] == '':
-        trip_form = TripForm(mission_id=mission_id, collapsed=False)
+
+def get_mision_trip_form(mission, trip=None):
+    if trip:
+        initial = {"select_trip": trip.pk}
+        trip_form = TripForm(mission, collapsed=True, instance=trip, initial=initial)
     else:
-        if 'trip_id' in kwargs and mission.trips.filter(pk=kwargs['trip_id']).exists():
-            trip = mission.trips.get(pk=kwargs['trip_id'])
-        else:
-            trip = mission.trips.last()
-
-        if trip:
-            initial = {"select_trip": trip.pk}
-            trip_form = TripForm(mission_id=mission_id, collapsed=True, instance=trip, initial=initial)
-        else:
-            trip_form = TripForm(mission_id=mission_id, collapsed=False)
+        trip_form = TripForm(mission, collapsed=False)
 
     trip_html = render_crispy_form(trip_form)
     trip_soup = BeautifulSoup(trip_html, 'html.parser')
@@ -180,7 +179,22 @@ def mission_trip_card(request, **kwargs):
     form = form_soup.find('form')
     form.append(trip_soup)
 
-    soup.append(form_soup)
+    return form
+
+
+def mission_trip_card(request, database, mission_id, **kwargs):
+
+    soup = BeautifulSoup('', 'html.parser')
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+
+    trip = None
+    if 'trip_id' in kwargs and kwargs['trip_id'] != '':
+        if mission.trips.filter(pk=int(kwargs['trip_id'])).exists():
+            trip = mission.trips.get(pk=int(kwargs['trip_id']))
+        else:
+            trip = mission.trips.last()
+
+    soup.append(get_mision_trip_form(mission, trip))
 
     div = soup.new_tag('div')
     div.attrs['id'] = 'div_id_trip_events'
@@ -188,37 +202,36 @@ def mission_trip_card(request, **kwargs):
     div.attrs['class'] = "mb-2"
     soup.append(div)
 
-    args = (mission_id,)
+    args = (database, mission_id,)
     if trip:
-        details_form = form_event_details.EventDetails(trip=trip)
+        # if a trip id is provided return a cleared Event Detail form
+        details_form = form_event_details.EventDetails(trip=trip, database=database)
         event_html = render_to_string('core/partials/card_event_row.html',
-                                      context={'trip': trip, 'details_form': details_form})
+                                      context={'database': database, 'trip': trip, 'details_form': details_form})
         event_table_soup = BeautifulSoup(event_html, 'html.parser')
 
         div.append(event_table_soup)
 
-        args = (mission_id, trip.pk)
+        args = (database, mission_id, trip.pk)
 
     response = HttpResponse(soup)
     response['HX-Push-Url'] = reverse_lazy("core:mission_events_details", args=args)
     return response
 
 
-def save_trip(request, **kwargs):
-
-    mission_id = kwargs['mission_id']
-
+def save_trip(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "GET":
-        form = TripForm(mission_id)
+        form = TripForm(mission, database=database)
 
         div = soup.new_tag("div")
         div.attrs['id'] = form.get_alert_area_id()
         div.attrs['hx-swap-oob'] = "true"
         soup.append(div)
 
-        url = reverse_lazy('core:form_trip_save', args=(mission_id,))
+        url = reverse_lazy('core:form_trip_save', args=(database, mission_id,))
         attrs = {
             'component_id': 'div_id_trip_alert',
             'message': _("Saving"),
@@ -229,17 +242,17 @@ def save_trip(request, **kwargs):
         div.append(alert_soup)
     else:
         if 'select_trip' in request.POST and request.POST['select_trip']:
-            trip = models.Trip.objects.get(pk=request.POST['select_trip'])
-            form = TripForm(mission_id, instance=trip, data=request.POST)
+            trip = models.Trip.objects.using(database).get(pk=request.POST['select_trip'])
+            form = TripForm(mission, database=database, instance=trip, data=request.POST)
         else:
-            form = TripForm(mission_id, data=request.POST)
+            form = TripForm(mission, database=database, data=request.POST)
 
         if form.is_valid():
             trip = form.save()
-            http_response: HttpResponse = select_trip(request, select_trip=trip.pk, **kwargs)
+            http_response: HttpResponse = select_trip(request, database, select_trip=trip.pk, **kwargs)
             soup = BeautifulSoup(http_response.content, 'html.parser')
 
-            url = reverse_lazy("core:mission_events_revalidate", args=(trip.mission.pk,))
+            url = reverse_lazy("core:mission_events_revalidate", args=(database, trip.mission.pk,))
             soup.append(alert_div := soup.new_tag("div", id="div_id_card_alert_mission_trips"))
             alert_div.attrs['hx-get'] = url
             alert_div.attrs['hx-trigger'] = 'load'
@@ -256,7 +269,7 @@ def save_trip(request, **kwargs):
     return HttpResponse(soup)
 
 
-def select_trip(request, **kwargs):
+def select_trip(request, database, **kwargs):
 
     trip_id = None
     if 'select_trip' in request.GET:
@@ -264,12 +277,16 @@ def select_trip(request, **kwargs):
     elif 'select_trip' in kwargs:
         trip_id = kwargs['select_trip']
     else:
-        html = mission_trip_card(request, **kwargs)
+        html = mission_trip_card(request, database, **kwargs)
         soup = BeautifulSoup(html.content, 'html.parser')
         soup.find('form').attrs['hx-swap-oob'] = "true"
         return HttpResponse(soup)
 
-    html = mission_trip_card(request, trip_id=trip_id, **kwargs)
+    if 'mission_id' not in kwargs:
+        mission = models.Mission.objects.using(database).first()
+        html = mission_trip_card(request, database, mission.pk, trip_id=trip_id, **kwargs)
+    else:
+        html = mission_trip_card(request, database, trip_id=trip_id, **kwargs)
 
     # if the selected trip changes update the form to show the selection
     soup = BeautifulSoup(html.content, 'html.parser')
@@ -277,33 +294,32 @@ def select_trip(request, **kwargs):
 
     response = HttpResponse(soup)
     if trip_id:
-        trip = models.Trip.objects.get(pk=trip_id)
-        response['HX-Push-Url'] = reverse_lazy("core:mission_events_details", args=(trip.mission_id, trip_id,))
+        trip = models.Trip.objects.using(database).get(pk=trip_id)
+        response['HX-Push-Url'] = reverse_lazy("core:mission_events_details", args=(database, trip.mission_id, trip_id,))
 
     return response
 
 
-def delete_trip(request, **kwargs):
-    trip_id = kwargs['trip_id']
-    trip = models.Trip.objects.get(pk=trip_id)
+def delete_trip(request, database, trip_id, **kwargs):
+    trip = models.Trip.objects.using(database).get(pk=trip_id)
     mission = trip.mission
 
     trip.delete()
 
     last_trip = mission.trips.last()
     if last_trip:
-        args = (trip.mission_id, last_trip.pk,)
+        args = (database, trip.mission_id, last_trip.pk,)
     else:
-        args = (trip.mission_id,)
+        args = (database, trip.mission_id,)
 
     response = HttpResponse()
     response['HX-Redirect'] = reverse_lazy("core:mission_events_details", args=args)
     return response
 
 
-def import_elog_events(request, **kwargs):
+def import_elog_events(request, database, **kwargs):
     trip_id = kwargs['trip_id']
-    trip = models.Trip.objects.get(pk=trip_id)
+    trip = models.Trip.objects.using(database).get(pk=trip_id)
     mission = trip.mission
 
     if request.method == 'GET':
@@ -311,7 +327,7 @@ def import_elog_events(request, **kwargs):
             'alert_area_id': "div_id_event_alert",
             'message': _("Processing Elog"),
             'logger': elog.logger_notifications.name,
-            'hx-post': reverse_lazy("core:form_trip_import_events_elog", args=(trip_id,)),
+            'hx-post': reverse_lazy("core:form_trip_import_events_elog", args=(database, trip_id,)),
             'hx-trigger': 'load'
         }
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
@@ -376,7 +392,7 @@ def import_elog_events(request, **kwargs):
                     file_error.type = models.ErrorType.unknown
                 file_errors.append(file_error)
 
-            models.FileError.objects.bulk_create(file_errors)
+            models.FileError.objects.using(database).bulk_create(file_errors)
 
         except Exception as ex:
             if type(ex) is LookupError:
@@ -399,37 +415,45 @@ def import_elog_events(request, **kwargs):
     # If we don't clear the input element here and the user tries to reload the same file, nothing will happen
     # and the user will be left clicking the button endlessly wondering why it won't load the file
     event_form = render_block_to_string('core/partials/card_event_row.html', 'event_import_form',
-                                        context={'trip': trip})
+                                        context={'database': database, 'trip': trip})
+
+    soup = BeautifulSoup()
+    trip_form = get_mision_trip_form(mission, trip)
+    trip_form.attrs['hx-swap-oob'] = 'true'
+
+    soup.append(trip_form)
     event_form_soup = BeautifulSoup(event_form, 'html.parser')
 
     # Now that events are reloaded we should trigger a validation of the events
     msg_div = event_form_soup.find(id="div_id_event_message_area")
     alert_area = msg_div.find(id="div_id_event_alert")
-    alert_area.attrs['hx-get'] = reverse_lazy("core:mission_events_revalidate", args=(mission.pk,))
+    alert_area.attrs['hx-get'] = reverse_lazy("core:mission_events_revalidate", args=(database, mission.pk,))
     alert_area.attrs['hx-trigger'] = 'load'
     msg_div.attrs['hx-swap-oob'] = 'true'
 
-    response = HttpResponse(event_form_soup)
+    soup.append(event_form_soup)
+
+    response = HttpResponse(soup)
     response['HX-Trigger'] = 'event_updated'
     return response
 
 
-def list_events(request, **kwargs):
-    trip_id = kwargs['trip_id']
-    trip = models.Trip.objects.get(pk=trip_id)
+def list_events(request, database, trip_id, **kwargs):
+    trip = models.Trip.objects.using(database).get(pk=trip_id)
 
-    tr_html = render_to_string('core/partials/table_event.html', context={'trip': trip})
+    tr_html = render_to_string('core/partials/table_event.html', context={'database': database, 'trip': trip})
 
     return HttpResponse(tr_html)
 
 
+url_prefix = "<str:database>/trip"
 trip_load_urls = [
-    path('trip/card/<int:mission_id>/', mission_trip_card, name="form_trip_card"),
-    path('trip/card/<int:mission_id>/<int:trip_id>/', mission_trip_card, name="form_trip_card"),
-    path('trip/save/<int:mission_id>/', save_trip, name="form_trip_save"),
-    path('trip/delete/<int:mission_id>/<int:trip_id>/', delete_trip, name="form_trip_delete"),
-    path('trip/select/<int:mission_id>/', select_trip, name="form_trip_select"),
+    path(f'{url_prefix}/card/<int:mission_id>/', mission_trip_card, name="form_trip_card"),
+    path(f'{url_prefix}/card/<int:mission_id>/<int:trip_id>/', mission_trip_card, name="form_trip_card"),
+    path(f'{url_prefix}/save/<int:mission_id>/', save_trip, name="form_trip_save"),
+    path(f'{url_prefix}/delete/<int:mission_id>/<int:trip_id>/', delete_trip, name="form_trip_delete"),
+    path(f'{url_prefix}/select/<int:mission_id>/', select_trip, name="form_trip_select"),
 
-    path('trip/event/import/<int:trip_id>/', import_elog_events, name="form_trip_import_events_elog"),
-    path('trip/event/list/<int:trip_id>/', list_events, name="form_trip_get_events"),
+    path(f'{url_prefix}/event/import/<int:trip_id>/', import_elog_events, name="form_trip_import_events_elog"),
+    path(f'{url_prefix}/event/list/<int:trip_id>/', list_events, name="form_trip_get_events"),
 ]

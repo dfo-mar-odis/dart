@@ -1,3 +1,4 @@
+import os
 import time
 
 from bs4 import BeautifulSoup
@@ -9,10 +10,11 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
+from settingsdb import utils
 from core import models, forms, validation, form_event_details, form_mission_trip
 from core.views import MissionMixin, reports
-from dart2.utils import load_svg
-from dart2.views import GenericDetailView
+from dart.utils import load_svg
+from dart.views import GenericDetailView
 
 
 class EventDetails(MissionMixin, GenericDetailView):
@@ -49,7 +51,7 @@ class ValidationEventCard(forms.CardForm):
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
-        validation_errors = models.ValidationError.objects.filter(event=self.event)
+        validation_errors = models.ValidationError.objects.using(self.database).filter(event=self.event)
 
         html = ""
         for error in validation_errors:
@@ -59,8 +61,9 @@ class ValidationEventCard(forms.CardForm):
         body.fields.append(HTML(html))
         return body
 
-    def __init__(self, event, *args, **kwargs):
+    def __init__(self, event, database=None, *args, **kwargs):
         self.event = event
+        self.database = database if database else event._state.db
         title = _("Event") + f" {event.event_id} : {event.trip.start_date} - {event.trip.end_date}"
         super().__init__(card_name=f"event_validation_{event.pk}", card_title=title, *args, **kwargs)
 
@@ -79,14 +82,14 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         header.fields[0].fields.append(buttons)
 
         btn_attrs = {
-            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.mission.pk,)),
+            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.database, self.mission.pk,)),
             'hx-swap': 'none',
         }
         icon = load_svg('arrow-clockwise')
         revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
         spacer_col.fields.append(revalidate)
 
-        issue_count = models.ValidationError.objects.filter(event__trip__mission=self.mission).count()
+        issue_count = models.ValidationError.objects.using(self.database).filter(event__trip__mission=self.mission).count()
         issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
         buttons.fields.append(issue_count_col)
 
@@ -98,10 +101,10 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        events_ids = models.ValidationError.objects.filter(
+        events_ids = models.ValidationError.objects.using(self.database).filter(
             event__trip__mission=self.mission
         ).values_list('event', flat=True)
-        events = models.Event.objects.filter(pk__in=events_ids)
+        events = models.Event.objects.using(self.database).filter(pk__in=events_ids)
         for event in events:
             event_card = ValidationEventCard(event=event)
             div = Div(event_card.helper.layout, css_class="mb-2")
@@ -109,8 +112,10 @@ class ValidateEventsCard(forms.CollapsableCardForm):
 
         return body
 
-    def __init__(self, mission, *args, **kwargs):
+    def __init__(self, mission, database=None, *args, **kwargs):
         self.mission = mission
+        self.database = database if database else mission._state.db
+
         super().__init__(card_name="event_validation", card_title=_("Event Validation"), *args, **kwargs)
 
 
@@ -150,7 +155,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         buttons = Column(css_class="col-auto align-self-end")
         header.fields[0].fields.append(buttons)
 
-        issue_count = models.FileError.objects.filter(mission=self.mission).count()
+        issue_count = self.mission.file_errors.count()
         if issue_count > 0:
             issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
             buttons.fields.append(issue_count_col)
@@ -174,8 +179,8 @@ class ValidateFileCard(forms.CollapsableCardForm):
         super().__init__(card_name="file_validation", card_title=_("File Issues"), *args, **kwargs)
 
 
-def get_validation_card(request, mission_id, **kwargs):
-    mission = models.Mission.objects.get(pk=mission_id)
+def get_validation_card(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     validation_card = ValidateEventsCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
@@ -186,8 +191,8 @@ def get_validation_card(request, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
-def get_file_validation_card(request, mission_id, **kwargs):
-    mission = models.Mission.objects.get(pk=mission_id)
+def get_file_validation_card(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     validation_card = ValidateFileCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
@@ -198,8 +203,8 @@ def get_file_validation_card(request, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
-def revalidate_events(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
+def revalidate_events(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     if request.method == "GET":
 
@@ -208,22 +213,23 @@ def revalidate_events(request, mission_id):
             'logger': validation.logger_notifications.name,
             'message': _("Revalidating"),
             'hx-trigger': 'load',
-            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(mission_id,)),
+            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(database, mission_id,)),
         }
         return HttpResponse(forms.websocket_post_request_alert(**attrs))
 
     validation.validate_mission(mission)
-    response = get_validation_card(request, mission_id, swap=True, collapsed=False)
+    response = get_validation_card(request, database, mission_id, swap=True, collapsed=False)
     response['HX-Trigger'] = 'event_updated'
     return response
 
 
+path_prefix = '<str:database>/mission'
 mission_event_urls = [
-    path('mission/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
-    path('mission/event/<int:pk>/<int:trip_id>/', EventDetails.as_view(), name="mission_events_details"),
-    path('mission/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
-    path('mission/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
-    path('mission/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
+    path(f'{path_prefix}/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
+    path(f'{path_prefix}/event/<int:pk>/<int:trip_id>/', EventDetails.as_view(), name="mission_events_details"),
+    path(f'{path_prefix}/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
+    path(f'{path_prefix}/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
+    path(f'{path_prefix}/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
 ]
 
 mission_event_urls += form_mission_trip.trip_load_urls + form_event_details.event_detail_urls

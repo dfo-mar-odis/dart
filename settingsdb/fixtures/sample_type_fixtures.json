@@ -1,0 +1,1718 @@
+[
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 1,
+    "fields": {
+        "short_name": "oxy",
+        "long_name": "Oxygen",
+        "priority": 1,
+        "datatype": 90000203,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 2,
+    "fields": {
+        "short_name": "salts",
+        "long_name": "Salinity",
+        "priority": 1,
+        "datatype": 90000105,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 3,
+    "fields": {
+        "short_name": "chl",
+        "long_name": "Chlorophyll",
+        "priority": 1,
+        "datatype": 90000243,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 4,
+    "fields": {
+        "short_name": "phae",
+        "long_name": "Phaeophytin",
+        "priority": 1,
+        "datatype": 90000244,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 5,
+    "fields": {
+        "short_name": "chl_mean",
+        "long_name": "Mean Chlorophyll",
+        "priority": 1,
+        "datatype": 90000243,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 6,
+    "fields": {
+        "short_name": "phae_mean",
+        "long_name": "Mean Phaeophytin",
+        "priority": 1,
+        "datatype": 90000244,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 7,
+    "fields": {
+        "short_name": "carb",
+        "long_name": "Carbon",
+        "priority": 1,
+        "datatype": 90000192,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 8,
+    "fields": {
+        "short_name": "nitro",
+        "long_name": "Nitrogen",
+        "priority": 1,
+        "datatype": 90000193,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 9,
+    "fields": {
+        "short_name": "carb_l",
+        "long_name": "Carbon (Micrograms/Litre)",
+        "priority": 1,
+        "datatype": 90000192,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 10,
+    "fields": {
+        "short_name": "nitro_l",
+        "long_name": "Nitrogen (Micrograms/Litre)",
+        "priority": 1,
+        "datatype": 90000193,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 11,
+    "fields": {
+        "short_name": "nitrate",
+        "long_name": "Nitrate",
+        "priority": 1,
+        "datatype": 90000199,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 12,
+    "fields": {
+        "short_name": "nitrite",
+        "long_name": "Nitrite",
+        "priority": 1,
+        "datatype": 90000204,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 13,
+    "fields": {
+        "short_name": "phosphate",
+        "long_name": "Phosphate",
+        "priority": 1,
+        "datatype": 90000198,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 14,
+    "fields": {
+        "short_name": "silicate",
+        "long_name": "Silicate",
+        "priority": 1,
+        "datatype": 90000200,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 15,
+    "fields": {
+        "short_name": "ammonium",
+        "long_name": "Ammonium",
+        "priority": 1,
+        "datatype": 90000367,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 16,
+    "fields": {
+        "short_name": "acarot",
+        "long_name": "HPLC ACAROT",
+        "priority": 1,
+        "datatype": 90000276,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 17,
+    "fields": {
+        "short_name": "allox",
+        "long_name": "HPLC ALLOX",
+        "priority": 1,
+        "datatype": 90000277,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 18,
+    "fields": {
+        "short_name": "astax",
+        "long_name": "HPLC ASTAX",
+        "priority": 1,
+        "datatype": 90000278,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 19,
+    "fields": {
+        "short_name": "bcarot",
+        "long_name": "HPLC BCAROT",
+        "priority": 1,
+        "datatype": 90000279,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 20,
+    "fields": {
+        "short_name": "but19",
+        "long_name": "HPLC BUT19",
+        "priority": 1,
+        "datatype": 90000280,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 21,
+    "fields": {
+        "short_name": "butlike",
+        "long_name": "HPLC BUTLIKE",
+        "priority": 1,
+        "datatype": 90000281,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 22,
+    "fields": {
+        "short_name": "chla",
+        "long_name": "HPLC CHLA",
+        "priority": 1,
+        "datatype": 90000282,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 23,
+    "fields": {
+        "short_name": "chlb",
+        "long_name": "HPLC CHLB",
+        "priority": 1,
+        "datatype": 90000283,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 24,
+    "fields": {
+        "short_name": "chlc12",
+        "long_name": "HPLC CHLC12",
+        "priority": 1,
+        "datatype": 90000284,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 25,
+    "fields": {
+        "short_name": "chlc3",
+        "long_name": "HPLC CHLC3",
+        "priority": 1,
+        "datatype": 90000285,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 26,
+    "fields": {
+        "short_name": "chlidea",
+        "long_name": "HPLC CHLIDEA",
+        "priority": 1,
+        "datatype": 90000286,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 27,
+    "fields": {
+        "short_name": "diadinox",
+        "long_name": "HPLC DIADINOX",
+        "priority": 1,
+        "datatype": 90000287,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 28,
+    "fields": {
+        "short_name": "diatox",
+        "long_name": "HPLC DIATOX",
+        "priority": 1,
+        "datatype": 90000288,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 29,
+    "fields": {
+        "short_name": "fucox",
+        "long_name": "HPLC FUCOX",
+        "priority": 1,
+        "datatype": 90000289,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 30,
+    "fields": {
+        "short_name": "hex19",
+        "long_name": "HPLC HEX19",
+        "priority": 1,
+        "datatype": 90000290,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 31,
+    "fields": {
+        "short_name": "hexlike",
+        "long_name": "HPLC HEXLIKE",
+        "priority": 1,
+        "datatype": 90000291,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 32,
+    "fields": {
+        "short_name": "hexlike2",
+        "long_name": "HPLC HEXLIKE2",
+        "priority": 1,
+        "datatype": 90000292,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 33,
+    "fields": {
+        "short_name": "perid",
+        "long_name": "HPLC PERID",
+        "priority": 1,
+        "datatype": 90000293,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 34,
+    "fields": {
+        "short_name": "phaeo",
+        "long_name": "HPLC PHAEO",
+        "priority": 1,
+        "datatype": 90000294,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 35,
+    "fields": {
+        "short_name": "prasinox",
+        "long_name": "HPLC PRASINOX",
+        "priority": 1,
+        "datatype": 90000295,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 36,
+    "fields": {
+        "short_name": "pyrophae",
+        "long_name": "HPLC PYROPHAE",
+        "priority": 1,
+        "datatype": 90000296,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 37,
+    "fields": {
+        "short_name": "violax",
+        "long_name": "HPLC VIOLAX",
+        "priority": 1,
+        "datatype": 90000297,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 38,
+    "fields": {
+        "short_name": "zea",
+        "long_name": "HPLC ZEA",
+        "priority": 1,
+        "datatype": 90000298,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 39,
+    "fields": {
+        "short_name": "f12",
+        "long_name": "Freon 12",
+        "priority": 1,
+        "datatype": 90001136,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 40,
+    "fields": {
+        "short_name": "sf6",
+        "long_name": "Sulfur Hexafluoride",
+        "priority": 1,
+        "datatype": 90001135,
+        "is_sensor": false
+    }
+},
+    {
+    "model": "settingsdb.globalsampletype",
+    "pk": 41,
+    "fields": {
+        "short_name": "ph_25",
+        "long_name": "pH at 25°C",
+        "priority": 1,
+        "datatype": 90000330,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 1,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "csv",
+        "skip": 9,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 2,
+    "fields": {
+        "sample_type": 2,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "bottle label",
+        "value_field": "calculated salinity",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 3,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 19,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 4,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 19,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 5,
+    "fields": {
+        "sample_type": 11,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "nitrate",
+        "tab": 0,
+        "flag_field": "nitrate_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 6,
+    "fields": {
+        "sample_type": 12,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "nitrite",
+        "tab": 0,
+        "flag_field": "nitrite_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 7,
+    "fields": {
+        "sample_type": 13,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "phosphate",
+        "tab": 0,
+        "flag_field": "phosphate_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 8,
+    "fields": {
+        "sample_type": 14,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "silicate",
+        "tab": 0,
+        "flag_field": "silicate_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 9,
+    "fields": {
+        "sample_type": 15,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "ammonium",
+        "tab": 0,
+        "flag_field": "ammonium_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 10,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 11,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 12,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 13,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 14,
+    "fields": {
+        "sample_type": 16,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "acarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 15,
+    "fields": {
+        "sample_type": 17,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "allox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 16,
+    "fields": {
+        "sample_type": 18,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "astax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 17,
+    "fields": {
+        "sample_type": 19,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "bcarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 18,
+    "fields": {
+        "sample_type": 20,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "but19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 19,
+    "fields": {
+        "sample_type": 21,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "butlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 20,
+    "fields": {
+        "sample_type": 22,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hplchla",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 21,
+    "fields": {
+        "sample_type": 23,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlb",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 22,
+    "fields": {
+        "sample_type": 24,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlc12",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 23,
+    "fields": {
+        "sample_type": 25,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlc3",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 24,
+    "fields": {
+        "sample_type": 26,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlidea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 25,
+    "fields": {
+        "sample_type": 27,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "diadinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 26,
+    "fields": {
+        "sample_type": 28,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "diatox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 27,
+    "fields": {
+        "sample_type": 29,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "fucox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 28,
+    "fields": {
+        "sample_type": 30,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hex19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 29,
+    "fields": {
+        "sample_type": 31,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hexlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 30,
+    "fields": {
+        "sample_type": 32,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hexlike2",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 31,
+    "fields": {
+        "sample_type": 33,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "perid",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 32,
+    "fields": {
+        "sample_type": 34,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hplcphae",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 33,
+    "fields": {
+        "sample_type": 35,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "prasinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 34,
+    "fields": {
+        "sample_type": 37,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "violax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 35,
+    "fields": {
+        "sample_type": 38,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "zea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 36,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "xlsx",
+        "skip": 9,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 37,
+    "fields": {
+        "sample_type": 2,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "bottle label",
+        "value_field": "calculated salinity",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 38,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 39,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 40,
+    "fields": {
+        "sample_type": 11,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "nitrate",
+        "tab": 0,
+        "flag_field": "nitrate_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 41,
+    "fields": {
+        "sample_type": 12,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "nitrite",
+        "tab": 0,
+        "flag_field": "nitrite_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 42,
+    "fields": {
+        "sample_type": 13,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "phosphate",
+        "tab": 0,
+        "flag_field": "phosphate_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 43,
+    "fields": {
+        "sample_type": 14,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "silicate",
+        "tab": 0,
+        "flag_field": "silicste_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 44,
+    "fields": {
+        "sample_type": 15,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "ammonium",
+        "tab": 0,
+        "flag_field": "ammonium_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 45,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "poc_qc",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 46,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "pon_qc",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 47,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 48,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 49,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 50,
+    "fields": {
+        "sample_type": 3,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "chl.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 51,
+    "fields": {
+        "sample_type": 4,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "phae.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 52,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "poc_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 53,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "pon_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 54,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "poc_qc.1",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 55,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "pon_qc.1",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 56,
+    "fields": {
+        "sample_type": 16,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "acarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 57,
+    "fields": {
+        "sample_type": 17,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "allox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 58,
+    "fields": {
+        "sample_type": 18,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "astax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 59,
+    "fields": {
+        "sample_type": 19,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "bcarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 60,
+    "fields": {
+        "sample_type": 20,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "but19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 61,
+    "fields": {
+        "sample_type": 21,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "butlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 62,
+    "fields": {
+        "sample_type": 22,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hplchla",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 63,
+    "fields": {
+        "sample_type": 23,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlb",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 64,
+    "fields": {
+        "sample_type": 24,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlc12",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 65,
+    "fields": {
+        "sample_type": 25,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlc3",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 66,
+    "fields": {
+        "sample_type": 26,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlidea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 67,
+    "fields": {
+        "sample_type": 27,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "diadinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 68,
+    "fields": {
+        "sample_type": 28,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "diatox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 69,
+    "fields": {
+        "sample_type": 29,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "fucox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 70,
+    "fields": {
+        "sample_type": 30,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hex19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 71,
+    "fields": {
+        "sample_type": 31,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hexlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 72,
+    "fields": {
+        "sample_type": 32,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hexlike2",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 73,
+    "fields": {
+        "sample_type": 33,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "perid",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 74,
+    "fields": {
+        "sample_type": 34,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hplcphae",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 75,
+    "fields": {
+        "sample_type": 35,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "prasinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 76,
+    "fields": {
+        "sample_type": 37,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "violax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 38,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "zea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 39,
+        "file_type": "csv",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "f12_pmol_L",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 40,
+        "file_type": "csv",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "sf6_fmol_L",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+}
+
+]

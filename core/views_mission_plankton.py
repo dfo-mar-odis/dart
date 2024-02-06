@@ -21,9 +21,9 @@ from core import models
 import biochem.upload
 from biochem import models as biochem_models
 
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
-from dart2.views import GenericDetailView
+from dart.views import GenericDetailView
 
 debug_logger = logging.getLogger('dart.debug')
 logger = logging.getLogger('dart')
@@ -34,23 +34,24 @@ class PlanktonDetails(MissionMixin, GenericDetailView):
     template_name = "core/mission_plankton.html"
 
     def get_upload_url(self):
-        return reverse_lazy("core:mission_plankton_list_plankton", args=(self.object.pk,))
+        return reverse_lazy("core:mission_plankton_list_plankton", args=(self.kwargs['database'], self.object.pk,))
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['mission'] = self.object
+        context['database'] = self.kwargs['database']
         return context
 
     def get_page_title(self):
         return _("Mission Plankton") + " : " + self.object.name
 
 
-def load_plankton(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def load_plankton(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     if request.method == 'GET':
         # you can only get the file though a POST request
-        url = reverse_lazy('core:mission_plankton_load_plankton', args=(mission_id,))
+        url = reverse_lazy('core:mission_plankton_load_plankton', args=(database, mission.pk,))
         attrs = {
             'component_id': 'div_id_message',
             'message': _("Loading"),
@@ -93,7 +94,7 @@ def load_plankton(request, **kwargs):
 
         file = request.FILES['plankton_file']
 
-        #determine the file type
+        # determine the file type
         debug_logger.debug(file)
 
         # the file can only be read once per request
@@ -140,7 +141,7 @@ def load_plankton(request, **kwargs):
                 }
                 table_div = forms.blank_alert(**attrs)
 
-            form = forms.PlanktonForm(dict_vals, mission_id=mission_id)
+            form = forms.PlanktonForm(dict_vals, mission=mission, database=database)
             form_html = render_crispy_form(form)
 
             form_soup = BeautifulSoup(form_html, 'html.parser')
@@ -158,13 +159,13 @@ def load_plankton(request, **kwargs):
     return HttpResponse("Hi")
 
 
-def import_plankton(request, **kwargs):
+def import_plankton(request, database, mission_id):
 
-    mission_id = kwargs['mission_id']
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     if request.method == 'GET':
         # you can only get the file though a POST request
-        url = reverse_lazy('core:mission_plankton_import_plankton', args=(mission_id,))
+        url = reverse_lazy('core:mission_plankton_import_plankton', args=(database, mission.pk,))
         component_id = "div_id_message"
         attrs = {
             'component_id': component_id,
@@ -212,7 +213,6 @@ def import_plankton(request, **kwargs):
 
         # the file can only be read once per request
         data = file.read()
-        file_type: str = file.name.split('.')[-1].lower()
 
         # because this is an excel format, we now need to know what tab and line the header
         # appears on to figure out if this is zoo or phyto plankton
@@ -224,12 +224,11 @@ def import_plankton(request, **kwargs):
             dataframe.columns = map(str.upper, dataframe.columns)
 
             if 'WHAT_WAS_IT' in dataframe.columns:
-                parse_zooplankton(mission_id, file.name, dataframe)
+                parse_zooplankton(mission, file.name, dataframe)
             else:
-                parse_phytoplankton(mission_id, file.name, dataframe)
+                parse_phytoplankton(mission, file.name, dataframe)
 
-            if (errs := models.FileError.objects.filter(mission_id=mission_id,
-                                                             file_name__iexact=file.name)).exists():
+            if (errs := mission.file_errors.filter(file_name__iexact=file.name)).exists():
                 # might as well add the list of issues while loading the file to the response so the
                 # user knows what went wrong.
                 attrs['message'] = _("Completed with issues")
@@ -247,18 +246,19 @@ def import_plankton(request, **kwargs):
 
             message_div.append(alert)
             # clear the file input upon success
-            input = soup.new_tag('input')
-            input.attrs['id'] = "id_input_sample_file"
-            input.attrs['class'] = "form-control form-control-sm"
-            input.attrs['hx-swap-oob'] = "true"
-            input.attrs['type'] = "file"
-            input.attrs['name'] = "plankton_file"
-            input.attrs['accept'] = ".xls,.xlsx,.xlsm"
-            input.attrs['hx-trigger'] = "change"
-            input.attrs['hx-get'] = reverse_lazy('core:mission_plankton_load_plankton', args=(mission_id,))
-            input.attrs['hx-swap'] = "none"
+            file_input = soup.new_tag('input')
+            file_input.attrs['id'] = "id_input_sample_file"
+            file_input.attrs['class'] = "form-control form-control-sm"
+            file_input.attrs['hx-swap-oob'] = "true"
+            file_input.attrs['type'] = "file"
+            file_input.attrs['name'] = "plankton_file"
+            file_input.attrs['accept'] = ".xls,.xlsx,.xlsm"
+            file_input.attrs['hx-trigger'] = "change"
+            file_input.attrs['hx-get'] = reverse_lazy('core:mission_plankton_load_plankton', args=(database,
+                                                                                                   mission_id,))
+            file_input.attrs['hx-swap'] = "none"
 
-            soup.append(input)
+            soup.append(file_input)
         except ValueError as e:
             logger.exception(e)
             attrs = {
@@ -281,22 +281,22 @@ def import_plankton(request, **kwargs):
         return response
 
 
-def list_plankton(request, **kwargs):
+def list_plankton(request, database, mission_id):
 
-    mission_id = kwargs['mission_id']
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     soup = BeautifulSoup('', "html.parser")
     div = soup.new_tag('div')
     div.attrs['id'] = "div_id_plankton_data_table"
     div.attrs['hx-trigger'] = 'update_samples from:body'
-    div.attrs['hx-get'] = reverse_lazy('core:mission_plankton_list_plankton', args=(mission_id,))
+    div.attrs['hx-get'] = reverse_lazy('core:mission_plankton_list_plankton', args=(database, mission.pk,))
     soup.append(div)
 
     page = int(request.GET['page'] if 'page' in request.GET else 0)
     page_limit = 50
     page_start = page_limit * page
 
-    samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission_id=mission_id).order_by(
+    samples = models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission=mission).order_by(
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():
@@ -323,9 +323,10 @@ def list_plankton(request, **kwargs):
 
         table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
 
+        url = reverse_lazy('core:mission_plankton_list_plankton', args=(database, mission.pk,))
         last_tr = table.find('tbody').find_all('tr')[-1]
         last_tr.attrs['hx-trigger'] = 'intersect once'
-        last_tr.attrs['hx-get'] = reverse_lazy('core:mission_plankton_list_plankton', args=(mission_id,)) + f"?page={page + 1}"
+        last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
         last_tr.attrs['hx-swap'] = "afterend"
 
         div.append(table)
@@ -345,12 +346,12 @@ def list_plankton(request, **kwargs):
     return HttpResponse(soup)
 
 
-def get_plankton_db_card(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def get_plankton_db_card(request, database, mission_id):
     upload_url = reverse_lazy("core:mission_plankton_biochem_upload_plankton", args=(mission_id,))
     download_url = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id,))
 
-    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, upload_url, download_url)
+    form_soup = form_biochem_database.get_database_connection_form(request, database, mission_id,
+                                                                   upload_url, download_url)
 
     return HttpResponse(form_soup)
 
@@ -364,8 +365,7 @@ def upload_plankton(request, **kwargs):
     return form_biochem_database.upload_bio_chem(request, upload_samples, **kwargs)
 
 
-def download_plankton(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def download_plankton(request, database, mission_id):
 
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
@@ -376,24 +376,24 @@ def download_plankton(request, **kwargs):
     soup.append(div)
 
     def get_progress_alert():
-        url = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id, ))
-        message_component_id = 'div_id_upload_biochem'
-        attrs = {
-            'component_id': message_component_id,
+        progress_url = reverse_lazy("core:mission_plankton_download_plankton", args=(database, mission_id, ))
+        progress_message_component_id = 'div_id_upload_biochem'
+        msg_attrs = {
+            'component_id': progress_message_component_id,
             'alert_type': 'info',
             'message': _("Saving to file"),
-            'hx-post': url,
+            'hx-post': progress_url,
             'hx-swap': 'none',
             'hx-trigger': 'load',
             'hx-target': "#div_id_biochem_alert_biochem_db_details",
             'hx-ext': "ws",
-            'ws-connect': f"/ws/biochem/notifications/{message_component_id}/"
+            'ws-connect': f"/ws/biochem/notifications/{progress_message_component_id}/"
         }
 
-        alert_soup = forms.save_load_component(**attrs)
+        msg_alert_soup = forms.save_load_component(**msg_attrs)
 
         # add a message area for websockets
-        msg_div = alert_soup.find(id="div_id_upload_biochem_message")
+        msg_div = msg_alert_soup.find(id="div_id_upload_biochem_message")
         msg_div.string = ""
 
         msg_div_status = soup.new_tag('div')
@@ -401,7 +401,7 @@ def download_plankton(request, **kwargs):
         msg_div_status.string = _("Loading")
         msg_div.append(msg_div_status)
 
-        return alert_soup
+        return msg_alert_soup
 
     if request.method == "GET":
 
@@ -413,7 +413,7 @@ def download_plankton(request, **kwargs):
 
     has_uploader = 'uploader' in request.POST and request.POST['uploader']
     if 'uploader2' not in request.POST and not has_uploader:
-        url = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id, ))
+        url = reverse_lazy("core:mission_plankton_download_plankton", args=(database, mission_id, ))
         message_component_id = 'div_id_upload_biochem'
         attrs = {
             'component_id': message_component_id,
@@ -425,13 +425,13 @@ def download_plankton(request, **kwargs):
         input_div = soup.new_tag('div')
         input_div['class'] = 'form-control input-group'
 
-        input = soup.new_tag('input')
-        input.attrs['id'] = 'input_id_uploader'
-        input.attrs['type'] = "text"
-        input.attrs['name'] = "uploader2"
-        input.attrs['class'] = 'textinput form-control'
-        input.attrs['maxlength'] = '20'
-        input.attrs['placeholder'] = _("Uploader")
+        uploader_input = soup.new_tag('input')
+        uploader_input.attrs['id'] = 'input_id_uploader'
+        uploader_input.attrs['type'] = "text"
+        uploader_input.attrs['name'] = "uploader2"
+        uploader_input.attrs['class'] = 'textinput form-control'
+        uploader_input.attrs['maxlength'] = '20'
+        uploader_input.attrs['placeholder'] = _("Uploader")
 
         icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
 
@@ -450,7 +450,7 @@ def download_plankton(request, **kwargs):
         cancel.attrs['name'] = 'cancel'
         cancel.append(icon)
 
-        input_div.append(input)
+        input_div.append(uploader_input)
         input_div.append(submit)
         input_div.append(cancel)
 
@@ -479,10 +479,10 @@ def download_plankton(request, **kwargs):
     uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
-    mission = models.Mission.objects.get(pk=mission_id)
-    plankton_samples = models.PlanktonSample.objects.filter(
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    plankton_samples = models.PlanktonSample.objects.using(database).filter(
         bottle__event__trip__mission=mission).values_list('pk', flat=True).distinct()
-    bottles = models.Bottle.objects.filter(plankton_data__id__in=plankton_samples).distinct()
+    bottles = models.Bottle.objects.using(database).filter(plankton_data__id__in=plankton_samples).distinct()
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -491,11 +491,11 @@ def download_plankton(request, **kwargs):
     headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
 
     file_name = f'{mission.name}_BCS_P.csv'
-    path = os.path.join(settings.BASE_DIR, "reports")
-    Path(path).mkdir(parents=True, exist_ok=True)
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
 
     try:
-        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
 
             writer = csv.writer(f)
             writer.writerow(headers)
@@ -518,7 +518,7 @@ def download_plankton(request, **kwargs):
 
         return HttpResponse(soup)
 
-    plankton_samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission=mission)
+    plankton_samples = models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission=mission)
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -527,11 +527,11 @@ def download_plankton(request, **kwargs):
     headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
 
     file_name = f'{mission.name}_BCD_P.csv'
-    path = os.path.join(settings.BASE_DIR, "reports")
-    Path(path).mkdir(parents=True, exist_ok=True)
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
 
     try:
-        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
 
             writer = csv.writer(f)
             writer.writerow(headers)
@@ -569,13 +569,13 @@ def download_plankton(request, **kwargs):
     return HttpResponse(soup)
 
 
-def clear_plankton(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def clear_plankton(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     if request.htmx:
-        samples = models.PlanktonSample.objects.filter(bottle__event__trip__mission_id=mission_id)
+        samples = models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission_id=mission_id)
         files = samples.values_list('file', flat=True).distinct()
-        errors = models.FileError.objects.filter(mission_id=mission_id, file_name__in=files)
+        errors = mission.file_errors.filter(file_name__in=files)
         errors.delete()
         samples.delete()
 
@@ -586,13 +586,16 @@ def clear_plankton(request, **kwargs):
 
 
 # ###### Plankton loading ###### #
+url_prefix = "<str:database>/plankton"
 plankton_urls = [
-    path('plankton/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
-    path('plankton/load/<int:mission_id>/', load_plankton, name="mission_plankton_load_plankton"),
-    path('plankton/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
-    path('plankton/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
-    path('plankton/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
-    path('plankton/biochem/upload/<int:mission_id>/', upload_plankton, name="mission_plankton_biochem_upload_plankton"),
-    path('plankton/biochem/download/<int:mission_id>/', download_plankton, name="mission_plankton_download_plankton"),
-    path('plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
+    path(f'{url_prefix}/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
+    path(f'{url_prefix}/load/<int:mission_id>/', load_plankton, name="mission_plankton_load_plankton"),
+    path(f'{url_prefix}/import/<int:mission_id>/', import_plankton, name="mission_plankton_import_plankton"),
+    path(f'{url_prefix}/list/<int:mission_id>/', list_plankton, name="mission_plankton_list_plankton"),
+    path(f'{url_prefix}/db/<int:mission_id>/', get_plankton_db_card, name="mission_plankton_get_plankton_db_card"),
+    path(f'{url_prefix}/biochem/upload/<int:mission_id>/', upload_plankton,
+         name="mission_plankton_biochem_upload_plankton"),
+    path(f'{url_prefix}/biochem/download/<int:mission_id>/', download_plankton,
+         name="mission_plankton_download_plankton"),
+    path(f'{url_prefix}/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 ]

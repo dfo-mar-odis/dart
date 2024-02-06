@@ -1,13 +1,10 @@
 import csv
 import io
+import time
 from pathlib import Path
 
 import numpy as np
 import os
-import threading
-import easygui
-
-from threading import Thread
 
 import bs4
 import pandas as pd
@@ -16,28 +13,27 @@ from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
 from django.conf import settings
 
-from django.db.models import Max, QuerySet, Q
+from django.db.models import Max, QuerySet
 from django.http import HttpResponse, Http404
-from django.template.context_processors import csrf
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 
-from render_block import render_block_to_string
-
 import biochem.upload
 from biochem import models as biochem_models
-from bio_tables import models as bio_models
 
 from core import forms, form_biochem_database, validation
 from core import models
 from core import views
+from core.form_sample_type_config import process_file
 from core.parsers import SampleParser
 
-from dart2.utils import load_svg
+from settingsdb import models as settings_models
 
-from dart2.views import GenericDetailView
+from dart.utils import load_svg
+
+from dart.views import GenericDetailView
 
 import logging
 
@@ -45,23 +41,13 @@ logger = logging.getLogger('dart')
 user_logger = logger.getChild('user')
 
 
-def process_file(file) -> [str, str, str]:
-    file_name = file.name
-    file_type = file_name.split('.')[-1].lower()
-
-    # the file can only be read once per request
-    data = file.read()
-
-    return file_name, file_type, data
-
-
-def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
-    sampletype = models.MissionSampleType.objects.get(pk=sampletype_id)
+def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Mission, sampletype_id: int):
+    sampletype = mission.mission_sample_types.get(pk=sampletype_id)
 
     sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
-    dc_samples = models.DiscreteSampleValue.objects.filter(
-        sample__bottle__event__trip__mission_id=mission_id, sample__type_id=sampletype_id)
+    dc_samples = models.DiscreteSampleValue.objects.using(database).filter(
+        sample__bottle__event__trip__mission_id=mission.pk, sample__type_id=sampletype_id)
 
     row_datatype = dc_samples.values_list("datatype", flat=True).distinct().first()
     datatype = sampletype.datatype if sampletype.datatype else None
@@ -96,31 +82,33 @@ def get_sensor_table_button(soup: BeautifulSoup, mission_id: int, sampletype_id:
     button.attrs['id'] = f'button_id_sample_type_details_{sampletype.pk}'
     button.attrs['class'] = 'btn btn-sm ' + button_colour
     button.attrs['style'] = 'width: 100%'
-    button.attrs['href'] = reverse_lazy('core:mission_sample_type_details', args=(sampletype.pk,))
+    button.attrs['href'] = reverse_lazy('core:mission_sample_type_details', args=(database, sampletype.pk,))
     button.attrs['title'] = title
 
     return button
 
 
-def get_sensor_table_upload_checkbox(soup: BeautifulSoup, mission_id: int, sampletype_id: int):
+def get_sensor_table_upload_checkbox(soup: BeautifulSoup, database,
+                                     mission: models.Mission,
+                                     sample_type_id):
 
+    sample_type = mission.mission_sample_types.get(pk=sample_type_id)
     enabled = False
-    sample_type = models.MissionSampleType.objects.get(pk=sampletype_id)
     if sample_type.datatype:
         # a sample must have either a Standard level or Mision level data type to be uploadable.
         enabled = True
 
     check = soup.new_tag('input')
-    check.attrs['id'] = f'input_id_sample_type_{sampletype_id}'
+    check.attrs['id'] = f'input_id_sample_type_{sample_type.pk}'
     check.attrs['type'] = 'checkbox'
-    check.attrs['value'] = sampletype_id
+    check.attrs['value'] = sample_type.pk
     check.attrs['hx-swap'] = 'outerHTML'
     check.attrs['hx-target'] = f"#{check.attrs['id']}"
     check.attrs['hx-post'] = reverse_lazy('core:mission_samples_add_sensor_to_upload',
-                                          args=(mission_id, sampletype_id,))
+                                          args=(database, mission.pk, sample_type.pk,))
 
     if enabled:
-        if models.BioChemUpload.objects.filter(type_id=sampletype_id).exists():
+        if sample_type.uploads.exists():
             check.attrs['name'] = 'remove_sensor'
             check.attrs['checked'] = 'checked'
         else:
@@ -149,234 +137,14 @@ class SampleDetails(GenericDetailView):
                               views.reports.keys()}
 
         context['mission'] = self.object
-        if 'sample_type_id' in self.kwargs:
-            sample_type = models.MissionSampleType.objects.get(pk=self.kwargs['sample_type_id'])
-            context['sample_type'] = sample_type
-            data_type_seq = sample_type.datatype
-
-            initial = {}
-            initial['sample_type_id'] = sample_type.id
-            initial['mission_id'] = self.object.id
-            if data_type_seq:
-                initial['data_type_code'] = data_type_seq.data_type_seq
-
-            context['biochem_form'] = forms.BioChemDataType(initial=initial)
-
         return context
 
 
-def get_sample_config_form(request, sample_type, **kwargs):
-    if sample_type == -1:
-        config_form = render_crispy_form(forms.SampleTypeConfigForm(file_type="", field_choices=[]))
-        soup = BeautifulSoup(config_form, 'html.parser')
-
-        # Drop the current existing dropdown from the form and replace it with a new sample type form
-        sample_drop_div = soup.find(id='div_id_sample_type')
-        sample_drop_div.attrs['class'] = 'col'
-
-        children = sample_drop_div.findChildren()
-        for child in children:
-            child.decompose()
-
-        sample_type_form = kwargs['sample_type_form'] if 'sample_type_form' in kwargs else forms.SampleTypeForm
-        context = {'sample_type_form': sample_type_form, "expanded": True}
-        new_sample_form = render_to_string('core/partials/form_sample_type.html', context=context)
-
-        new_form_div = BeautifulSoup(new_sample_form, 'html.parser')
-        sample_drop_div.append(new_form_div)
-
-        # add a back button to the forms button_row/button_column
-        url = reverse_lazy('core:mission_samples_new_sample_config') + "?sample_type="
-        back_button = soup.new_tag('button')
-        back_button.attrs = {
-            'id': 'id_new_sample_back',
-            'class': 'btn btn-primary btn-sm ms-2',
-            'name': 'back_sample',
-            'hx-target': '#div_id_sample_type',
-            'hx-select': '#div_id_sample_type',
-            'hx-swap': 'outerHTML',
-            'hx-get': url
-        }
-        icon = BeautifulSoup(load_svg('arrow-left-square'), 'html.parser').svg
-        back_button.append(icon)
-        sample_drop_div.find(id="div_id_sample_type_button_col").insert(0, back_button)
-
-        # redirect the submit button to this forms save function
-        submit_button = sample_drop_div.find(id="button_id_new_sample_type_submit")
-
-        url = reverse_lazy('core:mission_samples_save_sample_config')
-        submit_button.attrs['hx-target'] = '#div_id_sample_type'
-        submit_button.attrs['hx-select'] = '#div_id_sample_type'
-        submit_button.attrs['hx-swap'] = 'outerHTML'
-        submit_button.attrs['hx-post'] = url
-    else:
-        config_form = render_crispy_form(forms.SampleTypeConfigForm(file_type="", field_choices=[],
-                                                                    initial={'sample_type': sample_type}))
-        soup = BeautifulSoup(config_form, 'html.parser')
-
-    return soup
-
-
-def save_sample_config(request, **kwargs):
-    # Validate and save the mission form once the user has filled out the details
-    #
-    # Template: 'core/partials/form_sample_type.html template
-    #
-    # return the sample_type_block if the sample_type or the file configuration forms fail
-    # returns the loaded_samples_block if the forms validate and the objects are created
-
-    context = {}
-
-    if request.method == "GET":
-        if 'config_id' in kwargs and 'update_sample_type' in request.GET:
-            sample_type = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            url = reverse_lazy("core:mission_samples_save_sample_config", args=(sample_type.pk,))
-            oob_select = f"#div_id_sample_type_holder"
-        else:
-            url = reverse_lazy("core:mission_samples_save_sample_config")
-            oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
-
-        attrs = {
-            'component_id': "div_id_loaded_sample_type_message",
-            'message': _('Saving'),
-            'alert_type': 'info',
-            'hx-trigger': "load",
-            'hx-target': "#div_id_sample_type_holder",
-            'hx-post': url,
-            'hx-select-oob': oob_select
-        }
-        soup = forms.save_load_component(**attrs)
-
-        return HttpResponse(soup)
-    elif request.method == "POST":
-
-        if 'new_sample' in request.POST:
-            # if the new_sample_config method requires the user to create a new sample type we'll
-            # save the sample_type form here and return the whole sample_config_form with either the
-            # new sample type or the config form with the invalid sample_type_form
-            sample_form = forms.SampleTypeForm(request.POST)
-            if sample_form.is_valid():
-                sample_type = sample_form.save()
-                soup = get_sample_config_form(request, sample_type=sample_type.pk)
-                return HttpResponse(soup)
-
-            soup = get_sample_config_form(request, sample_type=-1, sample_type_form=sample_form)
-            return HttpResponse(soup)
-
-        # mission_id is a hidden field in the 'core/partials/form_sample_type.html' template, if it's needed
-        # mission_id = request.POST['mission_id']
-
-        # I don't know how to tell the user what is going on here if no sample_file has been chosen
-        # They shouldn't even be able to view the rest of the form with out it.
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
-
-        tab = int(request.POST['tab']) if 'tab' in request.POST else 0
-        skip = int(request.POST['skip']) if 'skip' in request.POST else 0
-
-        tab, skip, field_choices = SampleParser.get_headers(data, file_type, tab, skip)
-
-        config = None
-        if 'config_id' in kwargs:
-            config = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            sample_type_config_form = forms.SampleTypeConfigForm(request.POST, instance=config,
-                                                                 field_choices=field_choices)
-        else:
-            sample_type_config_form = forms.SampleTypeConfigForm(request.POST, field_choices=field_choices)
-
-        if sample_type_config_form.is_valid():
-            sample_config: models.SampleTypeConfig = sample_type_config_form.save()
-            # the load form is immutable to the user it just allows them the delete, send for edit or load the
-            # sample into the mission
-            html = render_to_string('core/partials/card_sample_config.html',
-                                    context={'sample_config': sample_config})
-            soup = BeautifulSoup(html, 'html.parser')
-
-            div_id = f"div_id_sample_config_card_{sample_config.id}"
-            div = soup.find(id=div_id)
-            if 'config_id' in kwargs:
-                div.attrs['hx-swap-oob'] = f"#{div_id}"
-            else:
-                new_root = soup.new_tag('div')
-                new_root.attrs['id'] = "div_id_loaded_samples_list"
-                new_root.append(div)
-                soup.append(new_root)
-
-            return HttpResponse(soup)
-
-        html = render_crispy_form(sample_type_config_form)
-        return HttpResponse(html)
-
-
-def new_sample_config(request, **kwargs):
-    context = {}
-
-    if request.method == "GET":
-
-        if 'sample_type' in request.GET:
-            sample_type = int(request.GET['sample_type']) if request.GET['sample_type'] else 0
-            soup = get_sample_config_form(request, sample_type, **kwargs)
-            return HttpResponse(soup)
-
-        # return a loading alert that calls this methods post request
-        # Let's make some soup
-        url = reverse_lazy("core:mission_samples_new_sample_config")
-
-        attrs = {
-            'component_id': "div_id_loaded_sample_type_message",
-            'message': _("Loading"),
-            'alert_type': 'info',
-            'hx-post': url,
-            'hx-target': "#div_id_sample_type_holder",
-            'hx-trigger': "load"
-        }
-        soup = forms.save_load_component(**attrs)
-
-        return HttpResponse(soup)
-    elif request.method == "POST":
-
-        if 'sample_file' not in request.FILES:
-            soup = BeautifulSoup('<div id="div_id_sample_type_holder"></div>', 'html.parser')
-
-            div = soup.new_tag('div')
-            div.attrs['class'] = 'alert alert-warning mt-2'
-            div.string = _("File is required before adding sample")
-            soup.find(id="div_id_sample_type_holder").append(div)
-            return HttpResponse(soup)
-
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
-
-        if 'config_id' in kwargs:
-            config = models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            tab, skip, field_choices = SampleParser.get_headers(data, config.file_type, config.tab, config.skip)
-            sample_config_form = forms.SampleTypeConfigForm(instance=config, field_choices=field_choices)
-        else:
-            tab = int(request.POST['tab']) if 'tab' in request.POST else 0
-            skip = int(request.POST['skip']) if 'skip' in request.POST else -1
-            field_choices = []
-
-            try:
-                tab, skip, field_choices = SampleParser.get_headers(data, file_type, tab, skip)
-            except Exception as ex:
-                logger.exception(ex)
-                if isinstance(ex, ValueError):
-                    logger.error("Likely chosen tab or header line is outside of the workbook")
-                pass
-
-            file_initial = {"file_type": file_type, "skip": skip, "tab": tab}
-            if 'sample_type' in kwargs:
-                file_initial['sample_type'] = kwargs['sample_type']
-            sample_config_form = forms.SampleTypeConfigForm(initial=file_initial, field_choices=field_choices)
-
-        html = render_crispy_form(sample_config_form)
-        return HttpResponse(html)
-
-
-def get_file_error_card(request, **kwargs):
+def get_file_error_card(request, database, mission_id):
     soup = BeautifulSoup("", "html.parser")
 
-    errors = models.FileError.objects.filter(mission_id=request.GET['mission_id'], file_name=request.GET['file_name'])
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    errors = mission.file_errors.filter(file_name=request.GET['file_name'])
     if errors.exists():
         attrs = {
             'card_name': "file_warnings",
@@ -403,272 +171,91 @@ def get_file_error_card(request, **kwargs):
     return HttpResponse(soup)
 
 
-def load_sample_config(request, **kwargs):
-    context = {}
-
-    if request.method == "GET":
-        if 'reload' in request.GET:
-            response = HttpResponse()
-            response['HX-Trigger'] = 'reload_sample_file'
-            return response
-
-        mission_id = request.GET['mission'] if 'mission' in request.GET else None
-        loading = 'sample_file' in request.GET
-
-        if loading:
-            # Let's make some soup
-            url = reverse_lazy("core:mission_samples_load_sample_config")
-
-            soup = BeautifulSoup('', "html.parser")
-
-            div_sampletype_holder = soup.new_tag("div")
-            div_sampletype_holder.attrs['id'] = "div_id_sample_type_holder"
-            div_sampletype_holder.attrs['hx-swap-oob'] = "true"
-
-            div_loaded_sample_types = soup.new_tag("div")
-            div_loaded_sample_types.attrs['id'] = "div_id_loaded_samples_list"
-            div_loaded_sample_types.attrs['hx-swap-oob'] = "true"
-
-            attrs = {
-                'component_id': "div_id_loaded_sample_type_message",
-                'message': _("Loading"),
-                'alert_type': 'info',
-                'hx-post': url,
-                'hx-trigger': "load",
-                'hx-swap-oob': "#div_id_sample_type_holder",
-            }
-            dialog_soup = forms.save_load_component(**attrs)
-
-            div_sampletype_holder.append(dialog_soup)
-
-            soup.append(div_sampletype_holder)
-            soup.append(div_loaded_sample_types)
-
-            return HttpResponse(soup)
-
-        if request.htmx:
-            # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
-            # field after the Datatype_filter has been triggered.
-            sample_config_form = forms.SampleTypeConfigForm(file_type="", field_choices=[], initial=request.GET)
-            html = render_crispy_form(sample_config_form)
-            return HttpResponse(html)
-
-        if mission_id is None:
-            raise Http404(_("Mission does not exist"))
-
-        context['mission'] = models.Mission.objects.get(pk=mission_id)
-        html = render_to_string("core/mission_samples.html", request=request, context=context)
-        return HttpResponse(html)
-    elif request.method == "POST":
-
-        if 'sample_file' not in request.FILES:
-            context['message'] = _("File is required before adding sample")
-            html = render_block_to_string("core/partials/form_sample_type.html", "sample_type_block", context=context)
-            return HttpResponse(html)
-
-        if 'config' in kwargs:
-            return new_sample_config(request, config=kwargs['config'])
-        mission_id = request.POST['mission_id']
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
-
-        # If mission ID is present this is an initial page load from the sample_file input
-        # We want to locate file configurations that match this file_type
-        file_configs = SampleParser.get_file_configs(data, file_type)
-
-        soup = BeautifulSoup("", 'html.parser')
-        div_sample_type_holder = soup.new_tag("div")
-        div_sample_type_holder.attrs['id'] = "div_id_sample_type_holder"
-        div_sample_type_holder.attrs['hx-swap-oob'] = 'true'
-
-        soup.append(div_sample_type_holder)
-
-        soup.append(div_sample_type := soup.new_tag("div", id='div_id_loaded_sample_type'))
-        div_sample_type.attrs['hx-swap-oob'] = "true"
-
-        file_error_url = reverse_lazy("core:mission_samples_get_file_errors")
-        file_error_url += f"?mission_id={mission_id}&file_name={file_name}"
-        div_error_list = soup.new_tag('div')
-        div_error_list.attrs['id'] = "div_id_error_list"
-        div_error_list.attrs['hx-get'] = file_error_url
-        div_error_list.attrs['hx-trigger'] = "load, file_errors_updated from:body"
-        div_error_list.attrs['class'] = "mt-2"
-        div_sample_type.append(div_error_list)
-
-        div_sample_type_list = soup.new_tag("div")
-        div_sample_type_list.attrs['id'] = "div_id_loaded_samples_list"
-        div_sample_type_list.attrs['class'] = "mt-2"
-        div_sample_type.append(div_sample_type_list)
-
-        if file_configs:
-
-            for config in file_configs:
-                html = render_to_string('core/partials/card_sample_config.html', context={'sample_config': config})
-                sample_type = BeautifulSoup(html, 'html.parser')
-                div_sample_type_list.append(sample_type.find("div"))
-        else:
-            attrs = {
-                'component_id': "div_id_loaded_samples_alert",
-                'message': _("No File Configurations Found"),
-                'type': 'info'
-            }
-            alert_div = forms.blank_alert(**attrs)
-            soup.find(id="div_id_sample_type_holder").append(alert_div)
-
-        # html = render_block_to_string("core/partials/form_sample_type.html", "loaded_samples_block",
-        #                               context=context)
-        return HttpResponse(soup)
-
-
-def load_samples(request, **kwargs):
+def load_samples(request, database):
     # Either delete a file configuration or load the samples from the sample file
 
-    if 'config_id' not in kwargs:
-        raise Http404("Missing Sample ID")
-
-    config_id = kwargs['config_id']
     load_block = "loaded_sample_list_block"
 
     if request.method == "GET":
 
-        message_div_id = f'div_id_sample_config_card_{config_id}'
         soup = BeautifulSoup(f'', 'html.parser')
-        root_div = soup.new_tag("div")
-        root_div.attrs['id'] = f'{message_div_id}_message'
 
-        url = reverse_lazy("core:mission_samples_load_samples", args=(config_id,))
+        url = reverse_lazy("core:mission_samples_load_samples", args=(database,))
         attrs = {
-            'component_id': f'div_id_loading_{message_div_id}',
+            'alert_area_id': f'div_id_sample_type_holder',
             'message': _("Loading"),
+            'logger': SampleParser.logger_notifications.name,
             'alert_type': 'info',
-            'hx-select': f"#{message_div_id}_load_button",
-            'hx-target': f'#{message_div_id}_load_button',
             'hx-post': url,
             'hx-trigger': "load",
-            'hx-swap': "outerHTML",
-            'hx-select-oob': f"#{message_div_id}_message"
         }
-        dialog_soup = forms.save_load_component(**attrs)
-        message_div = dialog_soup.find(id=f'div_id_loading_{message_div_id}')
-
-        button = soup.new_tag('button')
-        button.attrs['id'] = f'{message_div_id}_load_button'
-        button.attrs['class'] = "btn btn-secondary btn-sm placeholder-glow"
-        button.attrs['disabled'] = "True"
-        icon = BeautifulSoup(load_svg("folder"), 'html.parser').svg
-        icon.attrs['class'] = 'placeholder'
-
-        button.append(icon)
-
-        soup.append(button)
-        root_div.append(message_div)
-        soup.append(root_div)
+        alert = forms.websocket_post_request_alert(**attrs)
+        soup.append(alert)
 
         return HttpResponse(soup)
 
     elif request.method == "POST":
-        mission_id = request.POST['mission_id']
-        message_div_id = f'div_id_sample_config_card_{config_id}'
-
+        time.sleep(2)  # give the websocket a couple seconds to connect
         context = {}
         if 'sample_file' not in request.FILES:
             context['message'] = _("File is required before adding sample")
-            html = render_block_to_string("core/partials/form_sample_type.html", load_block,
-                                          context=context)
+            html = render_to_string("core/partials/form_sample_type.html", context=context)
             return HttpResponse(html)
 
+        config_ids = request.POST.getlist('sample_config')
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
-        sample_config = models.SampleTypeConfig.objects.get(pk=config_id)
-        mission = models.Mission.objects.get(pk=mission_id)
+        config_count = len(config_ids)
+        for index, config_id in enumerate(config_ids):
+            SampleParser.logger_notifications.info(_("Loading file") + f" : {file_name} : %d/%d",
+                                                   index, config_count)
 
-        mission_sample_config = models.MissionSampleConfig.objects.filter(mission=mission, config=sample_config)
-        if mission_sample_config.exists():
-            mission_sample_config = mission_sample_config[0]
-        else:
-            mission_sample_config = models.MissionSampleConfig(mission=mission, config=sample_config)
-            mission_sample_config.save()
+            sample_config = settings_models.SampleTypeConfig.objects.get(pk=config_id)
+            mission = models.Mission.objects.using(database).get(pk=request.POST['mission_id'])
 
-        if file_type == 'csv' or file_type == 'dat':
-            io_stream = io.BytesIO(data)
-            dataframe = pd.read_csv(filepath_or_buffer=io_stream, header=sample_config.skip)
-        else:
-            dataframe = SampleParser.get_excel_dataframe(stream=data, sheet_number=sample_config.tab,
-                                                         header_row=sample_config.skip)
+            if file_type == 'csv' or file_type == 'dat':
+                io_stream = io.BytesIO(data)
+                dataframe = pd.read_csv(filepath_or_buffer=io_stream, header=sample_config.skip)
+            else:
+                dataframe = SampleParser.get_excel_dataframe(stream=data, sheet_number=sample_config.tab,
+                                                             header_row=sample_config.skip)
 
-        soup = BeautifulSoup('', 'html.parser')
+            try:
+                # Remove any row that is *all* nan values
+                dataframe.dropna(axis=0, how='all', inplace=True)
 
-        button_class = "btn btn-success btn-sm"
-        icon = BeautifulSoup(load_svg("arrow-down-square"), 'html.parser').svg
-        try:
-            logger.info(f"Starting sample load for file {file_name}")
+                SampleParser.parse_data_frame(mission, sample_config, file_name=file_name, dataframe=dataframe)
 
-            # Remove any row that is *all* nan values
-            dataframe.dropna(axis=0, how='all', inplace=True)
+                # if the datatypes are valid, then before we upload we should copy any
+                # 'standard' level biochem data types to the mission level
+                user_logger.info(_("Copying Mission Datatypes"))
 
-            SampleParser.parse_data_frame(settings=mission_sample_config, file_name=file_name, dataframe=dataframe)
+                # once loaded apply the default sample type as a mission sample type so that if the default type is ever
+                # changed it won't affect the data type for this mission
+                sample_type = sample_config.sample_type
+                if sample_type.datatype and not mission.mission_sample_types.filter(name=sample_type.short_name).exists():
+                    mst = models.MissionSampleType(mission=mission,
+                                                   name=sample_type.short_name,
+                                                   long_name=sample_type.long_name,
+                                                   priority=sample_type.priority,
+                                                   is_sensor=sample_type.is_sensor,
+                                                   datatype=sample_type.datatype)
+                    mst.save(using=database)
 
-            # if the datatypes are valid, then before we upload we should copy any 'standard' level biochem data types
-            # to the mission level
-            user_logger.info(_("Copying Mission Datatypes"))
+                if (mission.file_errors.filter(file_name=file_name)).exists():
+                    button_class = "btn btn-warning btn-sm"
 
-            # once loaded apply the default sample type as a mission sample type so that if the default type is ever
-            # changed it won't affect the data type for this mission
-            sample_type = mission_sample_config.config.sample_type
-            if sample_type.datatype and not mission.mission_sample_types.filter(name=sample_type.short_name).exists():
-                mst = models.MissionSampleType(mission=mission,
-                                               name=sample_type.short_name,
-                                               long_name=sample_type.long_name,
-                                               priority=sample_type.priority,
-                                               is_sensor=sample_type.is_sensor,
-                                               datatype=sample_type.datatype)
-                mst.save()
+            except Exception as ex:
+                logger.error(f"Failed to load file {file_name}")
+                logger.exception(ex)
 
-            if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name=file_name)).exists():
-                button_class = "btn btn-warning btn-sm"
-
-            # create an empty message div to remove the loading alert
-            msg_div = soup.new_tag('div')
-            msg_div.attrs['id'] = f'{message_div_id}_message'
-            soup.append(msg_div)
-
-        except Exception as ex:
-            logger.error(f"Failed to load file {file_name}")
-            logger.exception(ex)
-            button_class = "btn btn-danger btn-sm"
-
-        # url = reverse_lazy('core:mission_samples_load_samples', args=(file_config.pk,))
-        button = soup.new_tag('button')
-        button.attrs = {
-            'id': f"{message_div_id}_load_button",
-            'class': button_class,
-            'name': "load",
-            'hx-get': reverse_lazy('core:mission_samples_load_samples', args=(config_id,)),
-            'hx-swap': "outerHTML",
-            'hx-target': f"#{message_div_id}_load_button",
-            'hx-select': f"#{message_div_id}_load_button",
-            'hx-select-oob': f"#{message_div_id}_message"
-        }
-
-        soup.append(button)
-        button.append(icon)
-
+        soup = BeautifulSoup("", "html.parser")
         response = HttpResponse(soup)
 
         # This will trigger the Sample table on the 'core/mission_samples.html' template to update
-        response['HX-Trigger'] = 'update_samples, file_errors_updated'
+        response['HX-Trigger'] = 'update_samples, file_errors_updated, reload_sample_file'
         return response
-
-
-def delete_sample_config(request, **kwargs):
-    config_id = kwargs['config_id']
-    if request.method == "POST":
-        if models.MissionSampleConfig.objects.filter(config_id=config_id).exists():
-            models.MissionSampleConfig.objects.get(config_id=config_id).delete()
-        models.SampleTypeConfig.objects.get(pk=config_id).delete()
-
-    return HttpResponse()
 
 
 def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
@@ -689,26 +276,22 @@ def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
     return column
 
 
-def list_samples(request, **kwargs):
-    context = {}
-
-    mission_id = kwargs['mission_id']
-
+def list_samples(request, database, mission_id):
     page = int(request.GET['page'] if 'page' in request.GET else 0)
     page_limit = 50
     page_start = page_limit * page
 
     table_soup = BeautifulSoup('', 'html.parser')
 
-    mission = models.Mission.objects.get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.filter(event__trip__mission=mission).order_by('bottle_id')[
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    bottle_limit = models.Bottle.objects.using(database).filter(event__trip__mission=mission).order_by('bottle_id')[
                    page_start:(page_start + page_limit)]
 
     if not bottle_limit.exists():
         # if there are no more bottles then we stop loading, otherwise weird things happen
         return HttpResponse()
 
-    queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
+    queryset = models.Sample.objects.using(database).filter(bottle__in=bottle_limit)
     queryset = queryset.order_by('bottle__bottle_id')
     queryset = queryset.values(
         'bottle__bottle_id',
@@ -737,7 +320,7 @@ def list_samples(request, **kwargs):
                         df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
         df = df.reindex(sorted(df.columns), axis=1)
-        table_soup = format_all_sensor_table(df, mission)
+        table_soup = format_all_sensor_table(df, database, mission)
     except Exception as ex:
         logger.exception(ex)
 
@@ -748,15 +331,16 @@ def list_samples(request, **kwargs):
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
-    table_head = table.find('thead')
+    # table_head = table.find('thead')
 
     table_body = table.find('tbody')
     table_body.attrs['id'] = "tbody_id_sample_table"
 
+    url = reverse_lazy('core:mission_samples_sample_list', args=(database, mission.pk,))
     last_tr = table_body.find_all('tr')[0]
     last_tr.attrs['hx-target'] = '#tbody_id_sample_table'
     last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = reverse_lazy('core:mission_samples_sample_list', args=(mission.pk,)) + f"?page={page + 1}"
+    last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
     last_tr.attrs['hx-swap'] = "beforeend"
 
     # finally, align all text in each column to the center of the cell
@@ -775,7 +359,7 @@ def list_samples(request, **kwargs):
     return response
 
 
-def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> BeautifulSoup:
+def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission) -> BeautifulSoup:
     # start by replacing nan values with '---'
     df.fillna('---', inplace=True)
 
@@ -833,7 +417,7 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
 
         sampletype_id = column.string
 
-        button = get_sensor_table_button(soup, mission.pk, sampletype_id)
+        button = get_sensor_table_button(soup, database, mission, sampletype_id)
 
         # clear the column string and add the button instead
         column.string = ''
@@ -843,7 +427,7 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
         upload = soup.new_tag('th')
         upload.attrs = column.attrs
 
-        check = get_sensor_table_upload_checkbox(soup, mission.pk, sampletype_id)
+        check = get_sensor_table_upload_checkbox(soup, database, mission, sampletype_id)
         upload.append(check)
         upload_row.append(upload)
 
@@ -853,93 +437,15 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
     return soup
 
 
-def update_sample_type_row(request, **kwargs):
-    if request.method == "POST":
-
-        mission_id = request.POST['mission_id']
-        sample_type_id = request.POST['sample_type_id']
-        data_type_code = request.POST['data_type_code']
-        start_sample = request.POST['start_sample']
-        end_sample = request.POST['end_sample']
-
-        data_type = None
-        if data_type_code:
-            data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
-
-        discrete_update = models.DiscreteSampleValue.objects.filter(sample__bottle__event__trip__mission_id=mission_id,
-                                                                    sample__bottle__bottle_id__gte=start_sample,
-                                                                    sample__bottle__bottle_id__lte=end_sample,
-                                                                    sample__type__id=sample_type_id, )
-        for value in discrete_update:
-            value.datatype = data_type
-        models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['datatype'])
-
-        response = list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
-        return response
-
-    return Http404("Invalid action")
-
-
-def update_sample_type_mission(request, **kwargs):
-    if request.method == "POST":
-
-        mission_id = request.POST['mission_id']
-        sample_type_id = request.POST['sample_type_id']
-        data_type_code = request.POST['data_type_code']
-
-        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
-
-        sample_type = models.MissionSampleType.objects.get(pk=sample_type_id)
-        sample_type.datatype = data_type
-        sample_type.save()
-
-        response = list_samples(request, mission_id=mission_id, sensor_id=sample_type_id)
-        return response
-
-    return Http404("Invalid action")
-
-
-def update_sample_type(request, **kwargs):
-    if request.method == "GET":
-        attrs = {
-            'component_id': 'div_id_data_type_update_save',
-            'message': _("Saving"),
-            'hx-trigger': 'load',
-            'hx-target': '#div_id_data_type_message',
-            'hx-select': '#div_id_data_type_message',
-            'hx-select-oob': '#table_id_sample_table'
-        }
-        if 'apply_data_type_row' in request.GET:
-            attrs['hx-post'] = reverse_lazy('core:mission_samples_update_sample_type_row')
-            soup = forms.save_load_component(**attrs)
-            return HttpResponse(soup)
-        elif 'apply_data_type_sensor' in request.GET:
-            attrs['hx-post'] = reverse_lazy('core:mission_samples_update_sample_type_mission')
-            soup = forms.save_load_component(**attrs)
-            return HttpResponse(soup)
-
-        if 'data_type_filter' in request.GET:
-            biochem_form = forms.BioChemDataType(initial={'data_type_filter': request.GET['data_type_filter']})
-            html = render_crispy_form(biochem_form)
-            return HttpResponse(html)
-
-        data_type_code = request.GET['data_type_code'] if 'data_type_code' in request.GET else \
-            request.GET['data_type_description']
-
-        biochem_form = forms.BioChemDataType(initial={'data_type_code': data_type_code})
-        html = render_crispy_form(biochem_form)
-        return HttpResponse(html)
-
-
-def add_sensor_to_upload(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    sensor_id = kwargs['sensor_id']
+def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
     soup = BeautifulSoup('', 'html.parser')
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     if request.method == 'POST':
-        button = get_sensor_table_button(soup, mission_id, sensor_id)
+        button = get_sensor_table_button(soup, database, mission, sensor_id)
         button.attrs['hx-swap-oob'] = 'true'
 
-        upload_sensors: QuerySet[models.BioChemUpload] = models.BioChemUpload.objects.filter(type_id=sensor_id)
+        upload_sensors: QuerySet[models.BioChemUpload] = \
+            models.BioChemUpload.objects.using(database).filter(type_id=sensor_id)
 
         if 'add_sensor' in request.POST:
             if not upload_sensors.filter(type_id=sensor_id).exists():
@@ -948,7 +454,7 @@ def add_sensor_to_upload(request, **kwargs):
         else:
             upload_sensors.filter(type_id=sensor_id).delete()
 
-        check = get_sensor_table_upload_checkbox(soup, mission_id, sensor_id)
+        check = get_sensor_table_upload_checkbox(soup, database, mission, sensor_id)
         soup.append(check)
         soup.append(button)
 
@@ -963,25 +469,25 @@ def add_sensor_to_upload(request, **kwargs):
     return Http404("You shouldn't be here")
 
 
-def biochem_upload_card(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    upload_url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(mission_id,))
-    download_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(mission_id,))
+def biochem_upload_card(request, database, mission_id):
+    upload_url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(database, mission_id,))
+    download_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(database, mission_id,))
 
-    form_soup = form_biochem_database.get_database_connection_form(request, mission_id, upload_url,
+    form_soup = form_biochem_database.get_database_connection_form(request, database, mission_id, upload_url,
                                                                    download_url=download_url)
 
     return HttpResponse(form_soup)
 
 
-def sample_data_upload(mission: models.Mission, uploader: str):
+def sample_data_upload(database, mission: models.Mission, uploader: str):
     # clear previous errors if there were any from the last upload attempt
+    mission.errors.filter(type=models.ErrorType.biochem).delete()
     models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
     samples_types_for_upload = [bcupload.type for bcupload in
-                                models.BioChemUpload.objects.filter(type__mission=mission)]
+                                models.BioChemUpload.objects.using(database).filter(type__mission=mission)]
     errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
 
     if errors:
@@ -998,9 +504,7 @@ def upload_samples(request, **kwargs):
     return form_biochem_database.upload_bio_chem(request, sample_data_upload, **kwargs)
 
 
-def download_samples(request, **kwargs):
-    mission_id = kwargs['mission_id']
-
+def download_samples(request, database, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
     div.attrs = {
@@ -1010,21 +514,21 @@ def download_samples(request, **kwargs):
     soup.append(div)
 
     def get_progress_alert():
-        url = reverse_lazy("core:mission_samples_download_bio_chem", args=(mission_id, ))
-        message_component_id = 'div_id_upload_biochem'
-        attrs = {
-            'component_id': message_component_id,
+        msg_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(database, mission_id, ))
+        bio_message_component_id = 'div_id_upload_biochem'
+        msg_attrs = {
+            'component_id': bio_message_component_id,
             'alert_type': 'info',
             'message': _("Saving to file"),
-            'hx-post': url,
+            'hx-post': msg_url,
             'hx-swap': 'none',
             'hx-trigger': 'load',
             'hx-target': "#div_id_biochem_alert_biochem_db_details",
             'hx-ext': "ws",
-            'ws-connect': f"/ws/biochem/notifications/{message_component_id}/"
+            'ws-connect': f"/ws/biochem/notifications/{bio_message_component_id}/"
         }
 
-        alert_soup = forms.save_load_component(**attrs)
+        bio_alert_soup = forms.save_load_component(**msg_attrs)
 
         # add a message area for websockets
         msg_div = alert_soup.find(id="div_id_upload_biochem_message")
@@ -1035,7 +539,7 @@ def download_samples(request, **kwargs):
         msg_div_status.string = _("Loading")
         msg_div.append(msg_div_status)
 
-        return alert_soup
+        return bio_alert_soup
 
     if request.method == "GET":
 
@@ -1059,13 +563,13 @@ def download_samples(request, **kwargs):
         input_div = soup.new_tag('div')
         input_div['class'] = 'form-control input-group'
 
-        input = soup.new_tag('input')
-        input.attrs['id'] = 'input_id_uploader'
-        input.attrs['type'] = "text"
-        input.attrs['name'] = "uploader2"
-        input.attrs['class'] = 'textinput form-control'
-        input.attrs['maxlength'] = '20'
-        input.attrs['placeholder'] = _("Uploader")
+        uploader_input = soup.new_tag('input')
+        uploader_input.attrs['id'] = 'input_id_uploader'
+        uploader_input.attrs['type'] = "text"
+        uploader_input.attrs['name'] = "uploader2"
+        uploader_input.attrs['class'] = 'textinput form-control'
+        uploader_input.attrs['maxlength'] = '20'
+        uploader_input.attrs['placeholder'] = _("Uploader")
 
         icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
 
@@ -1084,7 +588,7 @@ def download_samples(request, **kwargs):
         cancel.attrs['name'] = 'cancel'
         cancel.append(icon)
 
-        input_div.append(input)
+        input_div.append(uploader_input)
         input_div.append(submit)
         input_div.append(cancel)
 
@@ -1113,9 +617,10 @@ def download_samples(request, **kwargs):
     uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
-    mission = models.Mission.objects.get(pk=mission_id)
-    events = models.Event.objects.filter(trip__mission=mission, instrument__type=models.InstrumentType.ctd)
-    bottles = models.Bottle.objects.filter(event__in=events)
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    events = models.Event.objects.using(database).filter(trip__mission=mission, 
+                                                         instrument__type=models.InstrumentType.ctd)
+    bottles = models.Bottle.objects.using(database).filter(event__in=events)
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -1124,11 +629,11 @@ def download_samples(request, **kwargs):
     headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
 
     file_name = f'{mission.name}_BCS_D.csv'
-    path = os.path.join(settings.BASE_DIR, "reports")
-    Path(path).mkdir(parents=True, exist_ok=True)
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
 
     try:
-        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
 
             writer = csv.writer(f)
             writer.writerow(headers)
@@ -1151,23 +656,25 @@ def download_samples(request, **kwargs):
 
         return HttpResponse(soup)
 
-    datatypes = models.BioChemUpload.objects.filter(type__mission=mission).values_list('type', flat=True).distinct()
+    data_types = models.BioChemUpload.objects.using(database).filter(
+        type__mission=mission).values_list('type', flat=True).distinct()
 
-    discreate_samples = models.DiscreteSampleValue.objects.filter(sample__bottle__event__trip__mission=mission)
-    discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
+    discrete_samples = models.DiscreteSampleValue.objects.using(database).filter(
+        sample__bottle__event__trip__mission=mission)
+    discrete_samples = discrete_samples.filter(sample__type_id__in=data_types)
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = biochem.upload.get_bcd_d_rows(uploader=uploader, samples=discreate_samples)
+    create, update, fields = biochem.upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
 
     headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
     file_name = f'{mission.name}_BCD_D.csv'
-    path = os.path.join(settings.BASE_DIR, "reports")
-    Path(path).mkdir(parents=True, exist_ok=True)
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
 
     try:
-        with open(os.path.join(path, file_name), 'w', newline='', encoding="UTF8") as f:
+        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
 
             writer = csv.writer(f)
             writer.writerow(headers)
@@ -1206,39 +713,26 @@ def download_samples(request, **kwargs):
 
 
 # ###### Mission Sample ###### #
+url_prefix = "<str:database>/sample"
 mission_sample_urls = [
-    path('mission/sample/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
+    path(f'{url_prefix}/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
 
     # used to reload elements on the sample form if a GET htmx request
-    path('sample_config/hx/', load_sample_config, name="mission_samples_load_sample_config"),
-    path('sample_config/hx/<int:config>/', load_sample_config, name="mission_samples_load_sample_config"),
-    path('sample_config/hx/file_errors/', get_file_error_card, name="mission_samples_get_file_errors"),
+    path(f'{url_prefix}/sample/file_errors/<int:mission_id>/', get_file_error_card,
+         name="mission_samples_get_file_errors"),
 
-    # show the create a sample config form
-    path('sample_config/hx/new/', new_sample_config, name="mission_samples_new_sample_config"),
-    path('sample_config/hx/new/<int:config_id>/', new_sample_config, name="mission_samples_new_sample_config"),
-
-    # save the sample config
-    path('sample_config/hx/save/', save_sample_config, name="mission_samples_save_sample_config"),
-    path('sample_config/hx/update/<int:config_id>/', save_sample_config, name="mission_samples_save_sample_config"),
-
-    # delete a sample file configuration or load samples using that file configuration
-    path('sample_config/hx/load/<int:config_id>/', load_samples, name="mission_samples_load_samples"),
-    path('sample_config/hx/delete/<int:config_id>/', delete_sample_config, name="mission_samples_delete_sample_config"),
+    # load samples using a given sample type configuration file configuration
+    path(f'{url_prefix}/sample/load/', load_samples, name="mission_samples_load_samples"),
 
     # ###### sample details ###### #
 
-    path('mission/sample/hx/list/<int:mission_id>', list_samples, name="mission_samples_sample_list"),
+    path('<str:database>/sample/list/<int:mission_id>/', list_samples, name="mission_samples_sample_list"),
 
-    path('mission/sample/hx/datatype/', update_sample_type, name="mission_samples_update_sample_type"),
-    path('mission/sample/hx/datatype/row/', update_sample_type_row, name="mission_samples_update_sample_type_row"),
-    path('mission/sample/hx/datatype/mission/', update_sample_type_mission,
-         name="mission_samples_update_sample_type_mission"),
-    path('mission/sample/hx/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload,
+    path('<str:database>/sample/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload,
          name="mission_samples_add_sensor_to_upload"),
-    path('mission/sample/hx/upload/sensor/<int:mission_id>/', biochem_upload_card,
+    path('<str:database>/sample/upload/sensor/<int:mission_id>/', biochem_upload_card,
          name="mission_samples_biochem_upload_card"),
-    path('mission/sample/hx/upload/biochem/<int:mission_id>/', upload_samples, name="mission_samples_upload_bio_chem"),
-    path('mission/sample/hx/download/biochem/<int:mission_id>/', download_samples,
+    path('<str:database>/sample/upload/biochem/<int:mission_id>/', upload_samples, name="mission_samples_upload_bio_chem"),
+    path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
          name="mission_samples_download_bio_chem"),
 ]

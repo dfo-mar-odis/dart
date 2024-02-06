@@ -1,5 +1,4 @@
 import datetime
-from decimal import Decimal
 
 import factory
 import random
@@ -81,11 +80,13 @@ class EventFactory(DjangoModelFactory):
                                     mission=mission)
 
 
-class CTDEventFactory(EventFactory):
-
+class CTDEventFactoryBlank(EventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     end_sample_id = factory.lazy_attribute(lambda o: (o.sample_id + faker.random.randint(0, 1000)))
     instrument = factory.SubFactory(CTDInstrumentFactory)
+
+
+class CTDEventFactory(CTDEventFactoryBlank):
 
     @post_generation
     def add_actions(self, create, extracted, **kwargs):
@@ -153,31 +154,6 @@ class MissionSampleTypeFactory(DjangoModelFactory):
     datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
 
 
-class GlobalSampleTypeFactory(DjangoModelFactory):
-
-    class Meta:
-        model = models.GlobalSampleType
-
-    short_name = factory.lazy_attribute(lambda o: faker.word())
-    long_name = factory.lazy_attribute(lambda o: faker.name())
-
-    datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
-
-
-class SampleTypeConfigFactory(DjangoModelFactory):
-    FILE_TYPE_CHOICES = ['csv', 'xls', 'xlsx']
-
-    class Meta:
-        model = models.SampleTypeConfig
-        exclude = ('FILE_TYPE_CHOICES',)
-
-    sample_type = factory.SubFactory(MissionSampleTypeFactory)
-    file_type = factory.lazy_attribute(lambda o: faker.random.choice(o.FILE_TYPE_CHOICES))
-    skip = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
-    sample_field = factory.lazy_attribute(lambda o: faker.word())
-    value_field = factory.lazy_attribute(lambda o: faker.word())
-
-
 class BottleFactory(DjangoModelFactory):
     class Meta:
         model = models.Bottle
@@ -187,10 +163,6 @@ class BottleFactory(DjangoModelFactory):
     bottle_id = factory.sequence(lambda n: n)
     pressure = factory.lazy_attribute(lambda o: faker.pyfloat(left_digits=4, right_digits=3))
 
-    @classmethod
-    def _setup_next_sequence(cls):
-        return getattr(cls, 'start_bottle_seq', 0)
-
 
 class SampleFactory(DjangoModelFactory):
 
@@ -198,7 +170,7 @@ class SampleFactory(DjangoModelFactory):
         model = models.Sample
 
     bottle = factory.SubFactory(BottleFactory)
-    type = factory.SubFactory(MissionSampleTypeFactory, **{'file_type': 'csv'})
+    type = factory.SubFactory(MissionSampleTypeFactory)
     file = factory.lazy_attribute(lambda o: faker.word() + ".csv")
 
 
@@ -209,15 +181,6 @@ class DiscreteValueFactory(DjangoModelFactory):
 
     sample = factory.SubFactory(SampleFactory)
     value = factory.lazy_attribute(lambda o: faker.pyfloat())
-
-
-class MissionSampleConfig(DjangoModelFactory):
-
-    class Meta:
-        model = models.MissionSampleConfig
-
-    mission = factory.SubFactory(MissionFactory)
-    config = factory.SubFactory(SampleTypeConfigFactory)
 
 
 class PhytoplanktonSampleFactory(DjangoModelFactory):

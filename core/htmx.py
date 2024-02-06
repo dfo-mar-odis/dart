@@ -3,12 +3,14 @@ from bs4 import BeautifulSoup
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
 from crispy_forms.utils import render_crispy_form
+
 from django.contrib import messages
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
-from django.http import HttpResponseRedirect, HttpResponse
+from django.http import HttpResponseRedirect, HttpResponse, HttpRequest
+from django.conf import settings
 
 from render_block import render_block_to_string
 
@@ -17,40 +19,18 @@ from core import models, forms
 
 
 from core import validation
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 import logging
 logger = logging.getLogger("dart")
 
 
 def mission_delete(request, mission_id):
-    m = models.Mission.objects.get(pk=mission_id)
+    m = models.Mission.objects.using(database).get(pk=mission_id)
     m.delete()
 
     messages.success(request=request, message=_("Mission Deleted"))
     return HttpResponseRedirect(reverse_lazy("core:mission_filter"))
-
-
-def hx_mission_delete(request, mission_id):
-    m = models.Mission.objects.get(pk=mission_id)
-    m.delete()
-
-    return list_missions(request)
-
-
-def list_missions(request):
-    missions = None
-    if request.GET:
-        if 'name' in request.GET:
-            missions = models.Mission.objects.filter(name__icontains=request.GET['name'])
-
-    # if use the filtered list of missions if there was a git request otherwise return all missions
-    missions = missions if missions else models.Mission.objects.all()
-
-    context = {'missions': missions}
-    response = HttpResponse(render_block_to_string('core/mission_filter.html', 'mission_table_block', context))
-
-    return response
 
 
 def update_geographic_regions(request, **kwargs):
@@ -205,7 +185,7 @@ def get_mission_validation_errors(mission):
 
 
 def get_file_errors(request, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
     file_errors = get_mission_elog_errors(mission)
     validation_errors = get_mission_validation_errors(mission)
     error_count = len(file_errors) + len(validation_errors)
@@ -222,7 +202,7 @@ def get_file_errors(request, mission_id):
 
 
 def event_action(request, event_id):
-    event = models.Event.objects.get(pk=event_id)
+    event = models.Event.objects.using(database).get(pk=event_id)
     if request.method == 'GET':
         context = {'actionform': forms.ActionForm(instance=event), "event": event}
         response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_block', context))
@@ -246,7 +226,7 @@ def event_action(request, event_id):
 
 
 def event_list_action(request, event_id):
-    event = models.Event.objects.get(pk=event_id)
+    event = models.Event.objects.using(database).get(pk=event_id)
     context = {'event': event}
     response = HttpResponse(render_block_to_string('core/event_settings.html', 'action_table_block', context))
 
@@ -254,12 +234,9 @@ def event_list_action(request, event_id):
 
 
 htmx_urls = [
-    path('mission/list/', list_missions, name="hx_list_missions"),
-    path('hx/mission/delete/<int:mission_id>/', hx_mission_delete, name="hx_mission_delete"),
     path('geographic_region/add/', add_geo_region, name="hx_geo_region_add"),
     path('update_regions/', update_geographic_regions, name="hx_update_regions"),
     path('mission/errors/<int:mission_id>/', get_file_errors, name="hx_get_file_errors"),
     path('event/action/blank/<int:event_id>/', event_action, name="hx_get_blank_action"),
     path('event/action/list/<int:event_id>/', event_list_action, name="hx_list_actions"),
-
 ]

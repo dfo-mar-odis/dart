@@ -1,20 +1,15 @@
-import concurrent.futures
-import os
-import time
-
 from bs4 import BeautifulSoup
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 
-import core.htmx
 from biochem import models
-from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
-from dart2 import utils
 
-from core import forms, filters, models, validation
-from core.parsers import ctd
+from dart.views import GenericCreateView, GenericUpdateView, GenericDetailView
+from dart import utils
+
+from core import forms, models
 
 import logging
 
@@ -40,24 +35,22 @@ class EventMixin:
     page_title = _("Event Details")
 
 
-class MissionFilterView(MissionMixin, GenericFlilterMixin):
-    filterset_class = filters.MissionFilter
-    new_url = reverse_lazy("core:mission_new")
-    home_url = ""
-    fields = ["id", "name", "biochem_table"]
-
-
 class MissionCreateView(MissionMixin, GenericCreateView):
     form_class = forms.MissionSettingsForm
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):
-        success = reverse_lazy("core:mission_events_details", args=(self.object.pk, ))
+        success = reverse_lazy("core:mission_events_details", args=(self.object.name, self.object.pk, ))
         return success
 
 
 class MissionUpdateView(MissionCreateView, GenericUpdateView):
-    pass
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['database'] = self.kwargs['database']
+
+        return context
 
 
 class ElogDetails(GenericDetailView):
@@ -73,10 +66,10 @@ class ElogDetails(GenericDetailView):
         return context
 
 
-def hx_update_elog_config(request, **kwargs):
+def hx_update_elog_config(request, database, mission_id):
     if request.method == "POST":
         dict_vals = request.POST.copy()
-        mission = models.Mission.objects.get(pk=kwargs['mission_id'])
+        mission = models.Mission.objects.using(database).get(pk=mission_id)
 
         config = models.ElogConfig.get_default_config(mission)
         update_models = {'fields': set(), 'models': []}
@@ -96,7 +89,7 @@ def hx_update_elog_config(request, **kwargs):
         html = render_to_string(template_name='core/mission_elog.html', context=context)
         soup = BeautifulSoup(html, 'html.parser')
         for mapping in update_models['models']:
-            input = soup.find(id=f'mapping_{mapping.id}')
-            input.attrs['class'].append("bg-success-subtle")
+            mapping_input = soup.find(id=f'mapping_{mapping.id}')
+            mapping_input.attrs['class'].append("bg-success-subtle")
 
         return HttpResponse(soup)

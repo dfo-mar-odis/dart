@@ -2,22 +2,24 @@ import os
 
 import numpy as np
 import pandas as pd
-import io
 import ctd
 
+from datetime import datetime
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 from django.test import tag
 
 import bio_tables.models
-from dart2.tests.DartTestCase import DartTestCase
-from dart2 import settings
+from dart.tests.DartTestCase import DartTestCase
+from dart import settings
 
 from core import models as core_models
-from core.parsers import elog
 from core.parsers import ctd as ctd_parser
 from core.parsers import SampleParser, PlanktonParser
 from core.tests import CoreFactoryFloor as core_factory
+
+from settingsdb import models as settings_models
+from settingsdb.tests import SettingsFactoryFloor as settings_factory
 
 import logging
 
@@ -47,9 +49,9 @@ class TestPhytoplanktonParser(DartTestCase):
     def test_parser(self):
 
         # this should create 32 plankton samples
-        PlanktonParser.parse_phytoplankton(mission_id=self.mission.pk, filename=self.file_name,
+        PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
                                            dataframe=self.dataframe)
-        samples = core_models.PlanktonSample.objects.all()
+        samples = core_models.PlanktonSample.objects.using('default').all()
         self.assertEquals(len(samples), 32)
 
     def test_update(self):
@@ -58,13 +60,13 @@ class TestPhytoplanktonParser(DartTestCase):
         core_factory.PhytoplanktonSampleFactory(bottle=self.bottle_mission_start, file=self.file_name, taxa=taxa,
                                                 count=1000)
 
-        expected_plankton = core_models.PlanktonSample.objects.get(bottle=self.bottle_mission_start, taxa=taxa)
+        expected_plankton = core_models.PlanktonSample.objects.using('default').get(bottle=self.bottle_mission_start, taxa=taxa)
         self.assertEquals(expected_plankton.count, 1000)
 
-        PlanktonParser.parse_phytoplankton(mission_id=self.mission.pk, filename=self.file_name,
+        PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
                                            dataframe=self.dataframe)
 
-        expected_plankton = core_models.PlanktonSample.objects.get(bottle=self.bottle_mission_start, taxa=taxa)
+        expected_plankton = core_models.PlanktonSample.objects.using('default').get(bottle=self.bottle_mission_start, taxa=taxa)
         self.assertEquals(expected_plankton.count, 200)
 
 
@@ -112,14 +114,14 @@ class TestZooplanktonParser(DartTestCase):
             'WHAT_WAS_IT': [1]
         })
 
-        PlanktonParser.parse_zooplankton(mission_id=self.mission.pk, filename=self.file_name, dataframe=dataframe)
+        PlanktonParser.parse_zooplankton(mission=self.mission, filename=self.file_name, dataframe=dataframe)
 
         # the taxa key is 90000000000000 plus whatever the ncode is
         taxa_key = 90000000000000 + 58
         taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(pk=taxa_key)
 
         bottle = core_models.Bottle.objects.get(bottle_id=self.event_mission_start.sample_id)
-        plankton = core_models.PlanktonSample.objects.filter(bottle=bottle, taxa=taxa)
+        plankton = core_models.PlanktonSample.objects.using('default').filter(bottle=bottle, taxa=taxa)
 
         self.assertTrue(plankton.exists())
 
@@ -149,9 +151,9 @@ class TestZooplanktonParser(DartTestCase):
         # same NCODE and SampleID, but different Sex or Stage
 
         # the sample data frame should have 28 samples for id 488275 and 42 samples for id 488685
-        PlanktonParser.parse_zooplankton(self.mission.pk, self.file_name, self.dataframe)
+        PlanktonParser.parse_zooplankton(self.mission, self.file_name, self.dataframe)
 
-        samples = core_models.PlanktonSample.objects.filter(bottle__bottle_id=488275)
+        samples = core_models.PlanktonSample.objects.using('default').filter(bottle__bottle_id=488275)
         self.assertEquals(len(samples), 28)
 
     def test_get_min_sieve(self):
@@ -247,7 +249,7 @@ class TestCTDParser(DartTestCase):
 
         self.assertEquals(len(errors), 0)
 
-        bottles = core_models.Bottle.objects.filter(event=event)
+        bottles = core_models.Bottle.objects.using('default').filter(event=event)
         self.assertTrue(bottles.exists())
         self.assertEquals(len(bottles), 19)
         self.assertEquals(bottles.first().bottle_id, event.sample_id)
@@ -299,7 +301,7 @@ class TestCTDParser(DartTestCase):
             self.assertIsInstance(error, core_models.ValidationError)
 
         # 14 bottles should have been created even though there are 24 bottles in the BTL file
-        bottles = core_models.Bottle.objects.filter(event=event)
+        bottles = core_models.Bottle.objects.using('default').filter(event=event)
         self.assertEquals(len(bottles), 14)
 
     # The number of bottles loaded from a dataframe should match (event.end_sample_id - event.sample_id)
@@ -329,11 +331,13 @@ class TestCTDParser(DartTestCase):
 
     def test_read_btl(self):
         # this tests the overall result
-        event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
+        trip = core_factory.TripFactory(start_date=datetime.strptime('2022-10-01', '%Y-%m-%d'),
+                                        end_date=datetime.strptime('2022-10-24', '%Y-%m-%d'))
+        event = core_factory.CTDEventFactory(trip=trip, event_id=1, sample_id=495271, end_sample_id=495289)
         ctd_parser.read_btl(mission=event.trip.mission,
                             btl_file=os.path.join(self.test_file_location, self.test_file_001))
 
-        sample_types = core_models.GlobalSampleType.objects.all()
+        sample_types = settings_models.GlobalSampleType.objects.all()
         samples = core_models.Sample.objects.all()
 
         self.assertTrue(sample_types.exists())
@@ -356,21 +360,18 @@ class TestSampleCSVParser(DartTestCase):
         self.file_name = "sample_oxy.csv"
         self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)
 
-        self.oxy_sample_type: core_models.GlobalSampleType = core_factory.GlobalSampleTypeFactory(
+        self.oxy_sample_type: settings_models.GlobalSampleType = settings_factory.GlobalSampleTypeFactory(
             short_name='oxy', long_name="Oxygen")
 
-        self.oxy_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
+        self.oxy_file_settings: settings_models.SampleTypeConfig = settings_factory.SampleTypeConfigFactory(
             sample_type=self.oxy_sample_type, file_type='csv', skip=9, tab=0,
             sample_field="sample", value_field="o2_concentration(ml/l)", comment_field="comments",
             allow_blank=False, allow_replicate=True
         )
-        self.mission_oxy_file_settings = core_models.MissionSampleConfig = core_factory.MissionSampleConfig(
-            mission=self.mission, config=self.oxy_file_settings
-        )
-        self.salt_sample_type: core_models.GlobalSampleType = core_factory.GlobalSampleTypeFactory(
+        self.salt_sample_type: settings_models.GlobalSampleType = settings_factory.GlobalSampleTypeFactory(
             short_name='salts', long_name="Salinity")
 
-        self.salt_file_settings: core_models.SampleTypeConfig = core_factory.SampleTypeConfigFactory(
+        self.salt_file_settings: settings_models.SampleTypeConfig = settings_factory.SampleTypeConfigFactory(
             sample_type=self.salt_sample_type, file_type='xlsx', skip=1, tab=0,
             sample_field="bottle label", value_field="calculated salinity", comment_field="comments",
             allow_blank=False, allow_replicate=True
@@ -396,7 +397,7 @@ class TestSampleCSVParser(DartTestCase):
         df = pd.DataFrame(data)
 
         different_file = 'some_other_file.csv'
-        SampleParser.parse_data_frame(self.mission_oxy_file_settings, different_file, df)
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, different_file, df)
 
         sample = core_models.Sample.objects.filter(bottle=bottle)
         self.assertEquals(len(sample), 1)
@@ -413,7 +414,7 @@ class TestSampleCSVParser(DartTestCase):
         sample = core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
         core_factory.DiscreteValueFactory(sample=sample, replicate=1, value=0.001, comment="some comment")
 
-        discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
+        discrete = core_models.DiscreteSampleValue.objects.using('default').filter(sample=sample)
         self.assertEquals(len(discrete), 1)
 
         # this should update one discrete value and attach a second to the sample
@@ -424,9 +425,9 @@ class TestSampleCSVParser(DartTestCase):
         }
         df = pd.DataFrame(data)
 
-        SampleParser.parse_data_frame(self.mission_oxy_file_settings, self.file_name, df)
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
 
-        discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
+        discrete = core_models.DiscreteSampleValue.objects.using('default').filter(sample=sample)
         self.assertEquals(len(discrete), 2)
         self.assertEquals(discrete[0].replicate, 1)
         self.assertEquals(discrete[0].value, 3.932)
@@ -452,7 +453,7 @@ class TestSampleCSVParser(DartTestCase):
             self.oxy_file_settings.value_field: [0.38]
         }
         df = pd.DataFrame(data)
-        SampleParser.parse_data_frame(self.mission_oxy_file_settings, file_name=file_name, dataframe=df)
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, file_name=file_name, dataframe=df)
 
         samples = core_models.Sample.objects.filter(bottle__bottle_id=bottle_id)
         self.assertEquals(len(samples), 1)
@@ -589,11 +590,11 @@ class TestSampleCSVParser(DartTestCase):
         }
         df = pd.DataFrame(data)
 
-        SampleParser.parse_data_frame(self.mission_oxy_file_settings, file_name=self.file_name, dataframe=df)
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, file_name=self.file_name, dataframe=df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
         self.assertEquals(len(errors), 0)
-        bottles = core_models.Bottle.objects.filter(event=self.ctd_event)
+        bottles = core_models.Bottle.objects.using('default').filter(event=self.ctd_event)
 
         # check that a replicate was created for the first sample
         bottle_with_replicate = bottles.get(bottle_id=495271)
@@ -636,317 +637,11 @@ class TestSampleCSVParser(DartTestCase):
         }
 
         df = pd.DataFrame(data)
-        SampleParser.parse_data_frame(self.mission_oxy_file_settings, self.file_name, df)
+        SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
         self.assertEquals(len(errors), 1)
         self.assertIsInstance(errors[0], core_models.FileError)
-        self.assertEquals(errors[0].message, 'Duplicate replicate id found for sample 491')
+        self.assertEquals('Duplicate replicate id found for sample 491', errors[0].message)
 
 
-@tag('parsers', 'parsers_elog')
-class TestElogParser(DartTestCase):
-
-    def setUp(self) -> None:
-        self.mission = core_factory.MissionFactory(name='test')
-        self.trip = core_factory.TripFactory(mission=self.mission)
-
-        logger.info("getting the elog configuration")
-        self.config = core_models.ElogConfig.get_default_config(self.mission)
-
-    # The parser should take a file and return a dictionary of mid objects, stations and instruments,
-    # each MID object is a dictionary of key value pairs,
-    # the stations and instruments are sets so unique stations and instruments to this log file will be returned.
-
-    @tag('parsers_elog_parse')
-    def test_parse_elog(self):
-        logger.info("Running test_parse_elog")
-        sample_file_pointer = open(r'core/tests/sample_data/good.log', mode='r')
-
-        logger.info("Parsing sample file")
-        stream = io.StringIO(sample_file_pointer.read())
-        mid_dictionary = elog.parse(stream, self.config)
-
-        # returned dictionary should not be empty
-        self.assertIsNotNone(mid_dictionary)
-
-        # Returned dictionary should contain 9 elements
-        self.assertEquals(len(mid_dictionary[elog.ParserType.MID]), 9)
-
-        logger.debug(f"Stations: {mid_dictionary[elog.ParserType.STATIONS]}")
-        logger.debug(f"Instruments: {mid_dictionary[elog.ParserType.INSTRUMENTS]}")
-
-        sample_file_pointer.close()
-
-    @tag('parsers_elog_parse')
-    def test_missing_mid(self):
-        logger.info("Running test_missing_mid")
-        sample_file_pointer = open(r'core/tests/sample_data/missing_mid_bad.log', mode='r')
-
-        logger.info("Parsing sample file")
-        stream = io.StringIO(sample_file_pointer.read())
-        try:
-            elog.parse(stream, self.config)
-            self.fail("A lookup error should have been thrown")
-        except LookupError as e:
-            logger.info("Received the expected exception")
-            self.assertIn('message', e.args[0])  # This is what happened
-            logger.info(f"Exception Message: {e.args[0]['message']}")
-            self.assertIn('paragraph', e.args[0])  # This is to help figure out where it happened
-            logger.info(f"Exception Paragraph:\n{e.args[0]['paragraph']}")
-        except Exception as e:
-            logger.exception(e)
-            raise e
-
-        sample_file_pointer.close()
-
-    @tag('parsers_elog_parse')
-    def test_parser_validation(self):
-        logger.info("Running test_validate_message_object")
-        sample_file_pointer = open(r'core/tests/sample_data/bad.log', mode='r')
-
-        stream = io.StringIO(sample_file_pointer.read())
-        mid_dictionary = elog.parse(stream, self.config)
-
-        self.assertIn(elog.ParserType.ERRORS, mid_dictionary)
-        self.assertIn('1', mid_dictionary[elog.ParserType.ERRORS])
-        self.assertIn('2', mid_dictionary[elog.ParserType.ERRORS])
-        self.assertIn('3', mid_dictionary[elog.ParserType.ERRORS])
-
-        # There should be ValueErrors in the array for message object 1 describing what keys are missing
-        for i in range(0, len(mid_dictionary[elog.ParserType.ERRORS]['1'])):
-            self.assertIsInstance(mid_dictionary[elog.ParserType.ERRORS]['1'][i], KeyError)
-            logger.info(f"Error {i}: {mid_dictionary[elog.ParserType.ERRORS]['1'][i]}")
-
-        # There should be ValueErrors in the array for message object 1 describing what keys are missing
-        for i in range(0, len(mid_dictionary[elog.ParserType.ERRORS]['2'])):
-            self.assertIsInstance(mid_dictionary[elog.ParserType.ERRORS]['2'][i], KeyError)
-            logger.info(f"Error {i}: {mid_dictionary[elog.ParserType.ERRORS]['2'][i]}")
-
-        # There should be ValueErrors in the array for message object 1 describing what keys are missing
-        for i in range(0, len(mid_dictionary[elog.ParserType.ERRORS]['3'])):
-            self.assertIsInstance(mid_dictionary[elog.ParserType.ERRORS]['3'][i], KeyError)
-            logger.info(f"Error {i}: {mid_dictionary[elog.ParserType.ERRORS]['3'][i]}")
-
-        sample_file_pointer.close()
-
-    @tag('parsers_elog_validate_message_object')
-    def test_validate_message_object(self):
-        elog_config = core_models.ElogConfig.get_default_config(self.mission)
-        buffer = {}
-        # load all but the station field into the buffer for testing a field is missing
-        for field in elog_config.mappings.all():
-            if field.field == 'station':
-                continue
-
-            buffer[field.mapped_to] = "some value"
-
-        response = elog.validate_message_object(elog_config, buffer)
-        self.assertEquals(len(response), 1)
-        self.assertIsInstance(response[0], KeyError)
-        self.assertEquals(response[0].args[0]['key'], 'station')
-        self.assertEquals(response[0].args[0]['expected'], 'Station')
-        self.assertEquals(response[0].args[0]['message'], 'Message object missing key')
-
-    def test_process_stations(self):
-        stations = ['HL_01', 'HL_02', 'hl_02']
-
-        # make sure the stations don't currently exist
-        for station in stations:
-            self.assertFalse(core_models.Station.objects.filter(name__iexact=station).exists())
-
-        elog.process_stations(self.trip, stations)
-
-        for station in stations:
-            self.assertTrue(core_models.Station.objects.filter(name__iexact=station).exists())
-
-        # HL_02 should have only been added once
-        self.assertEquals(len(core_models.Station.objects.filter(name__iexact='HL_02')), 1)
-
-    def test_get_instrument_type(self):
-        instruments = [
-            ('ctd', core_models.InstrumentType.ctd),
-            ('RingNet', core_models.InstrumentType.net),
-            ('Viking Buoy', core_models.InstrumentType.buoy),
-        ]
-
-        for instrument in instruments:
-            instrument_type = elog.get_instrument_type(instrument[0])
-            self.assertEquals(instrument_type, instrument[1], f'{instrument[0]} should be of type {instrument[1].name}')
-
-    def test_process_instruments(self):
-        instruments = [
-            ('ctd', core_models.InstrumentType.ctd),
-            ('RingNet', core_models.InstrumentType.net),
-            ('Viking Buoy', core_models.InstrumentType.buoy),
-            ('ctd', core_models.InstrumentType.ctd),
-        ]
-
-        # make sure the stations don't currently exist
-        for instrument in instruments:
-            self.assertFalse(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
-
-        elog.process_instruments(self.trip, [instrument[0] for instrument in instruments])
-
-        for instrument in instruments:
-            self.assertTrue(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
-
-        # HL_02 should have only been added once
-        self.assertEquals(len(core_models.Instrument.objects.filter(name__iexact='ctd')), 1)
-
-    def test_process_events(self):
-        expected_event_id = 1
-        expected_station = "HL_02"
-        expected_instrument = "CTD"
-        expected_instrument_type = core_models.InstrumentType.ctd
-        expected_sample_id = 490000
-        expected_end_sample_id = 490012
-        buffer = {
-            '1': {
-                "Event": str(expected_event_id),
-                "Station": expected_station,
-                "Instrument": expected_instrument,
-                "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id)
-            }
-        }
-        core_factory.StationFactory(name=expected_station, mission=self.mission)
-        core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type, mission=self.mission)
-
-        events = core_models.Event.objects.filter(trip=self.trip)
-        self.assertFalse(events.exists())
-        errors = elog.process_events(self.trip, buffer)
-
-        self.assertEquals(len(errors), 0)
-
-        events = core_models.Event.objects.filter(trip=self.trip)
-        self.assertTrue(events.exists())
-        self.assertEquals(len(events), 1)
-
-        event: core_models.Event = events[0]
-        self.assertEquals(event.event_id, expected_event_id)
-        self.assertEquals(event.instrument.name, expected_instrument)
-        self.assertEquals(event.instrument.type, expected_instrument_type)
-        self.assertEquals(event.sample_id, expected_sample_id)
-        self.assertEquals(event.end_sample_id, expected_end_sample_id)
-
-    def test_process_events_no_station(self):
-        buffer = {
-            '1': {
-                "Event": 1,
-                "Station": 'XX_01',
-                "Instrument": "CTD",
-                "Sample ID": '',
-                "End_Sample_ID": ''
-            }
-        }
-
-        errors = elog.process_events(self.trip, buffer)
-        self.assertEquals(len(errors), 1)
-
-        error = errors[0]
-        # The message id the error occurred during
-        self.assertEquals(error[0], '1')
-
-        # The message
-        self.assertEquals(error[1], 'Error processing events, see error.log for details')
-
-        # The actual exception that occurred
-        self.assertIsInstance(error[2], core_models.Station.DoesNotExist)
-        logger.info(error)
-
-    def test_process_events_no_instrument(self):
-        expected_event_id = 1
-        expected_station = "HL_02"
-        expected_instrument = "xxx"
-        expected_sample_id = 490000
-        expected_end_sample_id = 490012
-        buffer = {
-            '1': {
-                "Event": str(expected_event_id),
-                "Station": expected_station,
-                "Instrument": expected_instrument,
-                "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id)
-            }
-        }
-
-        core_factory.StationFactory(name=expected_station, mission=self.mission)
-
-        errors = elog.process_events(self.trip, buffer)
-        self.assertEquals(len(errors), 1)
-
-        error = errors[0]
-        # The message id the error occurred during
-        self.assertEquals(error[0], '1')
-
-        # The message
-        self.assertEquals(error[1], 'Error processing events, see error.log for details')
-
-        # The actual exception that occurred
-        self.assertIsInstance(error[2], core_models.Instrument.DoesNotExist)
-        logger.info(error)
-
-    def test_process_attachments_actions(self):
-        expected_file_name = "2020020a.log"
-        expected_event_id = 1
-        expected_station = "HL_02"
-        expected_instrument = "CTD"
-        expected_sounding = 181
-        expected_sample_id = 490000
-        expected_end_sample_id = 490012
-        expected_attached_field = "SBE34 | pH"
-        expected_time_position_field = "2022-10-02 | 142135.242 | 44 16.04264 N | 63 19.03938 W"
-        expected_comment_field = "No Comment"
-        expected_data_collector_field = "Patrick Upson"
-        buffer = {
-            '1': {
-                "Event": str(expected_event_id),
-                "Station": expected_station,
-                "Instrument": expected_instrument,
-                "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id),
-                "Sounding": expected_sounding,
-                "Action": core_models.ActionType.deployed.label,
-                "Attached": expected_attached_field,
-                "Time|Position": expected_time_position_field,
-                "Author": expected_data_collector_field,
-                "Comment": expected_comment_field
-            },
-            '2': {
-                "Event": str(expected_event_id),
-                "Station": expected_station,
-                "Instrument": expected_instrument,
-                "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id),
-                "Sounding": expected_sounding,
-                "Action": core_models.ActionType.bottom.label,
-                "Attached": expected_attached_field,
-                "Time|Position": expected_time_position_field,
-                "Author": expected_data_collector_field,
-                "Comment": expected_comment_field
-            },
-            '3': {
-                "Event": str(expected_event_id),
-                "Station": expected_station,
-                "Instrument": expected_instrument,
-                "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id),
-                "Sounding": expected_sounding,
-                "Action": core_models.ActionType.recovered.label,
-                "Attached": expected_attached_field,
-                "Time|Position": expected_time_position_field,
-                "Author": expected_data_collector_field,
-                "Comment": expected_comment_field
-            }
-        }
-
-        station = core_factory.StationFactory(name=expected_station)
-        event = core_factory.CTDEventFactory(mission=self.mission, event_id=expected_event_id, station=station)
-
-        errors = elog.process_attachments_actions(event.trip, buffer, expected_file_name)
-        self.assertEquals(len(errors), 0)
-
-        event = core_models.Event.objects.get(event_id=expected_event_id)
-        self.assertEquals(len(event.attachments.all()), 2)
-        self.assertEquals(len(event.actions.all()), 3)

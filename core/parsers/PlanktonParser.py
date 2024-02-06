@@ -9,7 +9,7 @@ from django.utils.translation import gettext as _
 import core.models
 from core import models as core_models
 from bio_tables import models as bio_models
-from dart2.utils import updated_value
+from dart.utils import updated_value
 
 logger = logging.getLogger('dart')
 user_logger = logging.getLogger('dart.user')
@@ -47,7 +47,8 @@ zoo_column_dict = {
 }
 
 
-def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, row_mapping=None):
+def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: DataFrame, row_mapping=None):
+    database = mission._state.db
     if row_mapping is None:
         row_mapping = phyto_column_dict
 
@@ -57,13 +58,12 @@ def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, ro
     dataframe.columns = map(str.upper, dataframe.columns)
 
     # for phytoplankton bottles are associated with a CTD bottle
-    mission = core_models.Mission.objects.get(pk=mission_id)
-    events = core_models.Event.objects.filter(trip__mission_id=mission_id,
-                                              instrument__type=core_models.InstrumentType.ctd)
+    events = core_models.Event.objects.using(database).filter(trip__mission=mission,
+                                                              instrument__type=core_models.InstrumentType.ctd)
     events = events.exclude(actions__type=core_models.ActionType.aborted)
-    bottles = core_models.Bottle.objects.filter(event__in=events)
+    bottles = core_models.Bottle.objects.using(database).filter(event__in=events)
 
-    core_models.FileError.objects.filter(mission=mission, file_name=filename).delete()
+    mission.file_errors.filter(file_name=filename).delete()
 
     create_plankton = []
     update_plankton = {'objects': [], 'fields': set()}
@@ -114,7 +114,7 @@ def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, ro
             logger.error(err.message)
             continue
 
-        if not core_models.PlanktonSample.objects.filter(bottle=bottle, taxa__national_taxonomic_seq=taxa).exists():
+        if not bottle.plankton_data.filter(taxa__national_taxonomic_seq=taxa).exists():
             plankton = core_models.PlanktonSample(file=filename, bottle=bottle)
 
             plankton.count = count
@@ -128,7 +128,7 @@ def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, ro
         else:
             updated_fields = set('')
 
-            plankton = core_models.PlanktonSample.objects.get(bottle=bottle, taxa=taxa)
+            plankton = bottle.plankton_data.get(taxa=taxa)
             updated_fields.add(updated_value(plankton, 'count', count))
             updated_fields.add(updated_value(plankton, 'taxa_id', taxa))
             updated_fields.add(updated_value(plankton, 'stage_id', stage if stage else 90000000))
@@ -141,16 +141,16 @@ def parse_phytoplankton(mission_id: int, filename: str, dataframe: DataFrame, ro
                 update_plankton['objects'].append(plankton)
                 update_plankton['fields'].update(updated_fields)
 
-    core_models.FileError.objects.bulk_create(errors)
+    core_models.FileError.objects.using(database).bulk_create(errors)
 
     if len(create_plankton) > 0:
         logger.info(f'Creating {len(create_plankton)} plankton samples')
-        core_models.PlanktonSample.objects.bulk_create(create_plankton)
+        core_models.PlanktonSample.objects.using(database).bulk_create(create_plankton)
 
     if len(update_plankton['objects']) > 0:
         logger.info(f'Updating {len(update_plankton["objects"])} plankton samples')
         fields = [field for field in update_plankton["fields"]]
-        core_models.PlanktonSample.objects.bulk_update(update_plankton["objects"], fields)
+        core_models.PlanktonSample.objects.using(database).bulk_update(update_plankton["objects"], fields)
 
 
 # values taken from AZMP template
@@ -197,7 +197,8 @@ def get_split_fraction(proc_code: int, split: float):
     return 9999
 
 
-def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_mapping=None):
+def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: DataFrame, row_mapping=None):
+    database = mission._state.db
     if row_mapping is None:
         row_mapping = zoo_column_dict
 
@@ -207,13 +208,12 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
     dataframe.columns = map(str.upper, dataframe.columns)
 
     # for zooplankton bottles are associated with a RingNet bottles, which won't exist and will have to be created
-    mission = core_models.Mission.objects.get(pk=mission_id)
-    events = core_models.Event.objects.filter(trip__mission_id=mission_id,
+    events = core_models.Event.objects.using(database).filter(trip__mission_id=mission.pk,
                                               instrument__type=core_models.InstrumentType.net)
 
     # don't care about aborted events
     # events = events.exclude(actions__type=core_models.ActionType.aborted)
-    ringnet_bottles = core_models.Bottle.objects.filter(event__in=events)
+    ringnet_bottles = core_models.Bottle.objects.using(database).filter(event__in=events)
 
     core_models.FileError.objects.filter(mission=mission, file_name=filename).delete()
 
@@ -258,7 +258,7 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
             message = _("Could not find Biochem Taxa with code") + f" : {taxa_id}"
             error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
                                           type=core_models.ErrorType.missing_id)
-            error.save()
+            error.save(using=database)
             continue
 
         # if the ringnet bottle doesn't exist it needs to be created
@@ -302,8 +302,8 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
 
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
 
-        plankton = core_models.PlanktonSample.objects.filter(taxa=taxa, bottle=bottle, stage_id=stage, sex_id=sex,
-                                                             proc_code=proc_code)
+        plankton = core_models.PlanktonSample.objects.using(database).filter(
+            bottle=bottle, taxa=taxa, stage_id=stage, sex_id=sex, proc_code=proc_code)
         if plankton.exists():
             # taxa, bottle, stage and sex are all part of a primary key and therefore cannot be updated
             plankton = plankton.first()
@@ -361,18 +361,18 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
                     raise ValueError({'missing_value', 'what_was_it'})
 
     if len(errors) > 0:
-        core_models.FileError.objects.bulk_create(errors)
+        core_models.FileError.objects.using(database).bulk_create(errors)
 
     if len(create_bottles) > 0:
         logger.info(_("Creating Net Bottles"))
-        core_models.Bottle.objects.bulk_create(create_bottles.values())
+        core_models.Bottle.objects.using(database).bulk_create(create_bottles.values())
 
     if len(create_plankton) > 0:
         logger.info(_("Creating Zooplankton Samples"))
-        core_models.PlanktonSample.objects.bulk_create(create_plankton.values())
+        core_models.PlanktonSample.objects.using(database).bulk_create(create_plankton.values())
 
     logger.info("Setting collector comments")
-    for plankton in core_models.PlanktonSample.objects.filter(file=filename):
+    for plankton in core_models.PlanktonSample.objects.using(database).filter(file=filename):
         new_comment = plankton.comments
         if plankton.raw_wet_weight == -1 or plankton.raw_dry_weight == -1:
             new_comment = 'TOO MUCH PHYTOPLANKTON TO WEIGH'
@@ -394,4 +394,4 @@ def parse_zooplankton(mission_id: int, filename: str, dataframe: DataFrame, row_
         logger.info(_("Updating Zooplankton Samples"))
 
         fields = [field for field in update_plankton['fields']]
-        core_models.PlanktonSample.objects.bulk_update(update_plankton['objects'], fields)
+        core_models.PlanktonSample.objects.using(database).bulk_update(update_plankton['objects'], fields)

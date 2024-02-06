@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db.models import QuerySet
 from django.test import tag
 
-from dart2.tests.DartTestCase import DartTestCase
+from dart.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models
@@ -35,7 +35,8 @@ class TestGetBCSPRows(DartTestCase):
     def test_get_bcs_p_rows(self):
         core_factory.BottleFactory.start_bottle_seq = 400000
         mission = core_factory.MissionFactory(mission_descriptor="test_db")
-        bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=mission))
+        trip = core_factory.TripFactory(mission=mission)
+        bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(trip=trip))
         core_factory.PhytoplanktonSampleFactory.create_batch(
             10, bottle=bottle, gear_type_id=90000102
         )
