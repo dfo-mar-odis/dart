@@ -5,7 +5,7 @@ from django.db import transaction
 
 from django.utils.translation import gettext as _
 from core import models as core_models
-from dart2.utils import updated_value
+from dart.utils import updated_value
 
 import logging
 

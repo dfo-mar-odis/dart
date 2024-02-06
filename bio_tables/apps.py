@@ -7,7 +7,7 @@ from django.apps import AppConfig
 from django.core.management import call_command
 from django.db import connection
 
-from dart2 import settings
+from dart import settings
 
 import logging
 

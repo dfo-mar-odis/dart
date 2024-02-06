@@ -8,8 +8,8 @@
 ## Windows
 1. Open a windows file explorer and navigate to the directory you wish to install DART
 1. In the address bar, where the current working directory is specified, type `cmd`
-1. In the command window type `git clone http://github.com/upsonp/dart2`
-1. When the application has been checked out, type 'cd dart2' to change to the dart2 project directory
+1. In the command window type `git clone http://github.com/upsonp/dart`
+1. When the application has been checked out, type 'cd dart' to change to the dart project directory
 1. Type start_dart.bat to start the application for the first time.
 
 The first time running the application may take several minutes to start while python packages and the inital local database is created. When you see `Listening on TCP address 127.0.0.1:8000` in the command window, open a web browser and enter localhost:8000 in the address bar.
@@ -24,4 +24,4 @@ The default settings do not require modification, but using the .env file you ca
 
 # Starting DART
 
-After the initial setup the application can be started at any time by navigating to the dart2 directory and double clicking the 'start_dart.bat' file or 'server.bat' scripts. Using 'server.bat' instead of 'start_dart.bat' will skip the process of updating the application from git hub and will just start the webserver, at which point entering 'localhost:8000' in a web browser (Chrome or FireFox is prefered) will access the applications main page.
+After the initial setup the application can be started at any time by navigating to the dart directory and double clicking the 'start_dart.bat' file or 'server.bat' scripts. Using 'server.bat' instead of 'start_dart.bat' will skip the process of updating the application from git hub and will just start the webserver, at which point entering 'localhost:8000' in a web browser (Chrome or FireFox is prefered) will access the applications main page.

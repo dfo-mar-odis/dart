@@ -3,7 +3,7 @@ from django.conf import settings
 from django.db.models import QuerySet
 from django.test import tag
 
-from dart2.tests.DartTestCase import DartTestCase
+from dart.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models

@@ -10,8 +10,8 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import tag
 
 import bio_tables.models
-from dart2.tests.DartTestCase import DartTestCase
-from dart2 import settings
+from dart.tests.DartTestCase import DartTestCase
+from dart import settings
 
 from core import models as core_models
 from core.parsers import elog

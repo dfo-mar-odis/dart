@@ -1,6 +1,6 @@
 import sys
 if __name__ == '__main__':
-    sys.argv = ['daphne', 'dart2.asgi:application']
+    sys.argv = ['daphne', 'dart.asgi:application']
     from daphne.cli import CommandLineInterface
 
     CommandLineInterface.entrypoint()

@@ -4,7 +4,7 @@ import re
 
 from enum import Enum
 
-import dart2.utils
+import dart.utils
 from bio_tables import models as local_biochem_models
 from core import models as core_models
 
@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 import logging
 
-from dart2.utils import convertDMS_degs
+from dart.utils import convertDMS_degs
 
 logger = logging.getLogger('dart')
 logger_notifications = logging.getLogger('dart.elog')
@@ -325,13 +325,13 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
             flow_start = flow_start if flow_start else event.flow_start
             flow_end = flow_end if flow_end else event.flow_end
 
-            update_fields.add(dart2.utils.updated_value(event, 'station_id', station.pk))
-            update_fields.add(dart2.utils.updated_value(event, 'instrument_id', instrument.pk))
-            update_fields.add(dart2.utils.updated_value(event, 'sample_id', sample_id))
-            update_fields.add(dart2.utils.updated_value(event, 'end_sample_id', end_sample_id))
-            update_fields.add(dart2.utils.updated_value(event, 'wire_out', wire_out))
-            update_fields.add(dart2.utils.updated_value(event, 'flow_start', flow_start))
-            update_fields.add(dart2.utils.updated_value(event, 'flow_end', flow_end))
+            update_fields.add(dart.utils.updated_value(event, 'station_id', station.pk))
+            update_fields.add(dart.utils.updated_value(event, 'instrument_id', instrument.pk))
+            update_fields.add(dart.utils.updated_value(event, 'sample_id', sample_id))
+            update_fields.add(dart.utils.updated_value(event, 'end_sample_id', end_sample_id))
+            update_fields.add(dart.utils.updated_value(event, 'wire_out', wire_out))
+            update_fields.add(dart.utils.updated_value(event, 'flow_start', flow_start))
+            update_fields.add(dart.utils.updated_value(event, 'flow_end', flow_end))
 
             update_fields.remove('')
 

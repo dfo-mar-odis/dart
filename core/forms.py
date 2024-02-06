@@ -12,7 +12,7 @@ from django.db.models import Q, Min, Max
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 from . import models
 from bio_tables import models as bio_models

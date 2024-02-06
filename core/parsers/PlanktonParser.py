@@ -9,7 +9,7 @@ from django.utils.translation import gettext as _
 import core.models
 from core import models as core_models
 from bio_tables import models as bio_models
-from dart2.utils import updated_value
+from dart.utils import updated_value
 
 logger = logging.getLogger('dart')
 user_logger = logging.getLogger('dart.user')

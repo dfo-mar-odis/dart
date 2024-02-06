@@ -35,9 +35,9 @@ from core import models
 from core import views
 from core.parsers import SampleParser
 
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
-from dart2.views import GenericDetailView
+from dart.views import GenericDetailView
 
 import logging
 

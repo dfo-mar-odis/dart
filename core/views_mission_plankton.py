@@ -21,9 +21,9 @@ from core import models
 import biochem.upload
 from biochem import models as biochem_models
 
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
-from dart2.views import GenericDetailView
+from dart.views import GenericDetailView
 
 debug_logger = logging.getLogger('dart.debug')
 logger = logging.getLogger('dart')

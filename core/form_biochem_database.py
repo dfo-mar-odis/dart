@@ -20,7 +20,7 @@ import biochem.upload
 from core import models
 from core import forms as core_forms
 from core.forms import get_crispy_element_attributes
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 import logging
 

@@ -15,7 +15,7 @@ from core import validation
 
 import logging
 
-from dart2.utils import updated_value
+from dart.utils import updated_value
 
 logger = logging.getLogger("dart")
 logger_notifications = logging.getLogger('dart.ctd')

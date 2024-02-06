@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 from django.views.generic import TemplateView
 from render_block import render_block_to_string
 
-from dart2.views import GenericViewMixin
+from dart.views import GenericViewMixin
 from core import models as core_models
 from core import forms
 

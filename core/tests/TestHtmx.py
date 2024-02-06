@@ -5,7 +5,7 @@ from django.urls import reverse_lazy
 
 from core import models
 
-from dart2.tests.DartTestCase import DartTestCase
+from dart.tests.DartTestCase import DartTestCase
 from . import CoreFactoryFloor as core_factory
 
 import logging

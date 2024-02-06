@@ -6,12 +6,12 @@ from django.core import management
 from django.core.management.commands import dumpdata, inspectdb
 from django.db.models.fields.related import ForeignKey
 
-import dart2.db_routers
+import dart.db_routers
 from biochem import models as biochem_models
 from . import models as bio_models
 
-# The label used in settings.DATABASES must match the label the dart2.db_router uses
-database_label = dart2.db_routers.biochem_database_label
+# The label used in settings.DATABASES must match the label the dart.db_router uses
+database_label = dart.db_routers.biochem_database_label
 
 
 def connect(user: str, password: str, name: str, host: str, port: int, engine: str = 'django.db.backends.oracle'):

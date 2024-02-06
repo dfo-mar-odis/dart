@@ -27,7 +27,7 @@ from core import htmx
 from core import models
 from core.parsers import ctd
 from core.forms import CollapsableCardForm, CardForm, save_load_component
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 import logging
 

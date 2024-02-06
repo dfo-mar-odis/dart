@@ -11,7 +11,7 @@ from django_pandas.io import read_frame
 
 from core import views, models, forms
 
-from dart2.views import GenericDetailView
+from dart.views import GenericDetailView
 
 
 class SampleTypeDetails(GenericDetailView):

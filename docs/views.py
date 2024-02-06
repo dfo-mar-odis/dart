@@ -1,6 +1,6 @@
 from django.views.generic import TemplateView
 
-from dart2.views import GenericViewMixin
+from dart.views import GenericViewMixin
 
 from django.utils.translation import gettext as _
 

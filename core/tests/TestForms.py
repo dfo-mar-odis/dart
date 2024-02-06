@@ -11,8 +11,8 @@ from django.utils.translation import gettext as _
 
 import core.models
 from core.parsers import ctd
-from dart2 import settings
-from dart2.tests.DartTestCase import DartTestCase
+from dart import settings
+from dart.tests.DartTestCase import DartTestCase
 
 from core import forms
 from core.tests import CoreFactoryFloor as core_factory

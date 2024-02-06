@@ -13,4 +13,4 @@ if exist ".\settings\DefaultElogConfiguration.json" python .\manage.py loaddata 
 echo "Starting webserver: http://localhost:8000/"
 
 Rem Start the webserver
-daphne dart2.asgi:application >> logs/start_dart.log
+daphne dart.asgi:application >> logs/start_dart.log

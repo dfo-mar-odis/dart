@@ -10,8 +10,8 @@ from django.urls import reverse_lazy
 
 import core.htmx
 from biochem import models
-from dart2.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
-from dart2 import utils
+from dart.views import GenericFlilterMixin, GenericCreateView, GenericUpdateView, GenericDetailView
+from dart import utils
 
 from core import forms, filters, models, validation
 from core.parsers import ctd

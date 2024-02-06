@@ -15,7 +15,7 @@ from django.utils.translation import gettext as _
 from render_block import render_block_to_string
 
 from core import forms as core_forms, models
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 
 class EventDetails(core_forms.CardForm):

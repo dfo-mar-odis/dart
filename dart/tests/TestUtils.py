@@ -1,6 +1,6 @@
 from .DartTestCase import DartTestCase
 
-from dart2 import utils
+from dart import utils
 
 import logging
 

@@ -2,7 +2,7 @@ from django.test import tag
 
 from core import models
 
-from dart2.tests.DartTestCase import DartTestCase
+from dart.tests.DartTestCase import DartTestCase
 from . import CoreFactoryFloor as core_factory
 
 

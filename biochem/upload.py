@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 import bio_tables.models
 import core.models
 from biochem import models
-from dart2.utils import updated_value
+from dart.utils import updated_value
 from core import models as core_models
 
 import logging

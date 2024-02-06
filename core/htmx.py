@@ -17,7 +17,7 @@ from core import models, forms
 
 
 from core import validation
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 import logging
 logger = logging.getLogger("dart")

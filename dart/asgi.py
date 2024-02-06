@@ -1,5 +1,5 @@
 """
-ASGI config for dart2 project.
+ASGI config for dart project.
 
 It exposes the ASGI callable as a module-level variable named ``application``.
 
@@ -10,7 +10,7 @@ https://docs.djangoproject.com/en/3.2/howto/deployment/asgi/
 import os
 import django
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dart2.settings')
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'dart.settings')
 django.setup()
 
 from django.core.asgi import get_asgi_application

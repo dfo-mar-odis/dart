@@ -19,7 +19,7 @@ from core import forms as core_forms, validation, form_event_details
 from core import models
 from core.htmx import send_user_notification_elog
 from core.parsers import elog
-from dart2.utils import load_svg
+from dart.utils import load_svg
 
 import logging
 logger = logging.getLogger("dart")
