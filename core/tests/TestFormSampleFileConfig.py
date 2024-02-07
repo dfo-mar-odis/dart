@@ -3,12 +3,12 @@ import os
 import bs4
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
-from django.template.loader import render_to_string
 from django.test import tag, Client
 from django.urls import reverse
 
 from core import form_sample_type_config
 from core import forms
+from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
 from core.tests.TestForms import logger
 
@@ -80,10 +80,10 @@ class TestSampleFileConfiguration(DartTestCase):
         alert = message.find('div')
         self.assertEquals(alert.text, "Loading")
 
+    @tag('form_sample_config_test_input_file_no_config')
     def test_input_file_no_config(self):
         # provided a file, if no configs are available the div_id_sample_type_holder
         # tag should contain a message that no configs were found and an empty div_id_loaded_samples_list
-
         url = reverse("core:form_sample_config_load", args=('default',))
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
@@ -95,6 +95,46 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertIsNotNone(msg_div)
         self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-info', 'mt-2'])
         self.assertEquals(msg_div.string, "No File Configurations Found")
+
+        # the check-square upload button should be on the page, but disabled
+        upload_btn = soup.find('button', {'name': 'upload_samples'})
+        self.assertIsNotNone(upload_btn)
+
+        # the upload_btn should be disabled if there are no configurations
+        self.assertIn('disabled', upload_btn.attrs)
+
+    @tag('form_sample_config_test_input_file_with_config')
+    def test_input_file_with_config(self):
+        # If a config exists for a selected file it should be presented as a SampleTypeLoadForm in the
+        # div_id_loaded_samples_list. This is populated by an out of band select on the file input on the
+        # 'core/partials/form_sample_type.html' template. So the 'load_sample_config' method should
+        # return an empty 'div_id_sample_type_holder' element to clear the 'loading' alert and the
+        # 'div_id_loaded_samples_list' to swap in the list of SampleTypeLoadForms
+        setting = settings_factory.SampleTypeConfigFactory(file_type='xlsx', tab=0, skip=9,
+                                                           sample_field="sample", value_field="o2_concentration(ml/l)")
+
+        url = reverse("core:form_sample_config_load", args=('default',))
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        samples_type = soup.find(id='div_id_sample_type_holder')
+        self.assertIsNotNone(samples_type)
+        self.assertIsNone(samples_type.string)
+
+        list_div = soup.find(id=f'div_id_loaded_sample_type')
+        self.assertIsNotNone(list_div)
+
+        self.assertGreater(len(list_div.find_all('div', recursive=False)), 0)
+        self.assertIsNotNone(list_div.find(id="div_id_error_list"))
+        self.assertIsNotNone(list_div.find(id=f"div_id_sample_config_card_{setting.pk}"))
+
+        # the check-square upload button should be on the page and not disabled
+        upload_btn = soup.find('button', {'name': 'upload_samples'})
+        self.assertIsNotNone(upload_btn)
+
+        # the upload_btn should be disabled if there are no configurations
+        self.assertNotIn('disabled', upload_btn.attrs)
 
     def test_new_blank_loading_msg(self):
         # When the 'add' sample_type button is clicked an alert dialog should be swapped in indicating that a loading
@@ -230,45 +270,12 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertIsNotNone(sample_type_load_card)
         self.assertEquals(len(sample_type_load_card.find_next_siblings()), 0)
 
-    def test_input_file_with_config(self):
-        # If a config exists for a selected file it should be presented as a SampleTypeLoadForm in the
-        # div_id_loaded_samples_list. This is populated by an out of band select on the file input on the
-        # 'core/partials/form_sample_type.html' template. So the 'load_sample_config' method should
-        # return an empty 'div_id_sample_type_holder' element to clear the 'loading' alert and the
-        # 'div_id_loaded_samples_list' to swap in the list of SampleTypeLoadForms
-
-        oxy_sample_type = settings_factory.GlobalSampleTypeFactory(
-            short_name="oxy",
-            long_name="Oxygen",
-        )
-
-        oxy_sample_type_config = settings_factory.SampleTypeConfigFactory(
-            sample_type=oxy_sample_type,
-            skip=9,
-            sample_field='sample',
-            value_field='o2_concentration(ml/l)',
-            comment_field='comment',
-            file_type='xlsx',
-        )
-
-        expected = render_to_string('core/partials/card_sample_config.html',
-                                    context={'database': 'default', 'sample_config': oxy_sample_type_config})
-
-        url = reverse("core:form_sample_config_load", args=('default',))
-        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
-            response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        samples_type = soup.find(id='div_id_sample_type_holder')
-        self.assertIsNotNone(samples_type)
-        self.assertIsNone(samples_type.string)
-
-        list_div = soup.find(id=f'div_id_loaded_sample_type')
-        self.assertIsNotNone(list_div)
-
-        self.assertEquals(len(list_div.find_all('div', recursive=False)), 2)
-        self.assertIsNotNone(list_div.find(id="div_id_error_list"))
-        self.assertIsNotNone(list_div.find(id="div_id_sample_config_card_1"))
+        # the response should also include a #button_id_load_samples element as an hx-swap-oob to enable
+        # the upload button if it was previously disabled because there was no configuration
+        upload_button = soup.find(id="button_id_load_samples")
+        self.assertIsNotNone(upload_button)
+        self.assertIn('hx-swap-oob', upload_button.attrs)
+        self.assertNotIn('disabled', upload_button.attrs)
 
     def test_edit_sample_type(self):
         # if the new_sample_config url contains an argument with a 'sample_type' id the form should load with the
@@ -341,21 +348,6 @@ class TestSampleFileConfiguration(DartTestCase):
     def test_edit_sample_type_save_message(self):
         # if the new_sample_config url contains an argument with a 'config_id' the form should load with the
         # existing config and pass back a saving message pointing to the "sample_type/hx/save/" url
-
-        oxy_sample_type = settings_factory.GlobalSampleTypeFactory(
-            short_name="oxy",
-            long_name="Oxygen",
-        )
-
-        oxy_sample_type_config = settings_factory.SampleTypeConfigFactory(
-            sample_type=oxy_sample_type,
-            skip=9,
-            sample_field='sample',
-            value_field='o2_concentration(ml/l)',
-            comment_field='comment',
-            file_type='xlsx',
-        )
-
         url = reverse("core:form_sample_config_save", args=('default',))
 
         response = self.client.get(url)

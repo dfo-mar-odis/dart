@@ -174,6 +174,18 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.helper[0].layout.fields.append(button_row)
 
 
+def get_upload_button(database):
+    soup = BeautifulSoup("", "html.parser")
+    load_button = soup.new_tag("button", attrs={'id': 'button_id_load_samples', 'class': "btn btn-primary",
+                                                'name': 'upload_samples'})
+    icon = BeautifulSoup(load_svg('check-square'), "html.parser").svg
+    load_button.append(icon)
+    load_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_load_samples", args=(database,))
+    load_button.attrs['hx-swap'] = "none"
+
+    return load_button
+
+
 def get_sample_config_form(database, sample_type, **kwargs):
     if sample_type == -1:
         config_form = render_crispy_form(SampleTypeConfigForm(database=database, file_type="", field_choices=[]))
@@ -309,6 +321,10 @@ def save_sample_config(request, database, **kwargs):
                 new_root.attrs['hx-swap-oob'] = 'true'
                 new_root.append(div)
                 soup.append(new_root)
+
+                upload_btn = get_upload_button(database)
+                upload_btn.attrs['hx-swap-oob'] = 'true'
+                soup.append(upload_btn)
 
             return HttpResponse(soup)
 
@@ -499,6 +515,11 @@ def load_sample_config(request, database, **kwargs):
         div_sample_type_list.attrs['class'] = "mt-2"
         div_sample_type.append(div_sample_type_list)
 
+        div_sample_type.append(button_row := soup.new_tag("div", attrs={'class': "row"}))
+        button_row.append(soup.new_tag("div", attrs={'class': "col"}))
+        button_row.append(button_col := soup.new_tag("div", attrs={'class': "col-auto"}))
+        button_col.append(load_button := get_upload_button(database))
+
         if file_configs:
 
             for config in file_configs:
@@ -506,16 +527,8 @@ def load_sample_config(request, database, **kwargs):
                                                                                           'sample_config': config})
                 sample_type = BeautifulSoup(html, 'html.parser')
                 div_sample_type_list.append(sample_type.find("div"))
-
-            div_sample_type_list.append(button_row := soup.new_tag("div", attrs={'class': "row"}))
-            button_row.append(soup.new_tag("div", attrs={'class': "col"}))
-            button_row.append(button_col := soup.new_tag("div", attrs={'class': "col-auto"}))
-            button_col.append(load_button := soup.new_tag("button", attrs={'class': "btn btn-primary"}))
-            icon = BeautifulSoup(load_svg('check-square'), "html.parser").svg
-            load_button.append(icon)
-            load_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_load_samples", args=(database,))
-            load_button.attrs['hx-swap'] = "none"
         else:
+            load_button.attrs['disabled'] = "disabled"
             attrs = {
                 'component_id': "div_id_loaded_samples_alert",
                 'message': _("No File Configurations Found"),
