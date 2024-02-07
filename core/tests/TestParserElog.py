@@ -16,21 +16,49 @@ class TestElogParser(DartTestCase):
         self.mission = core_factory.MissionFactory(name='test')
         self.trip = core_factory.TripFactory(mission=self.mission)
 
-        logger.info("getting the elog configuration")
-        self.config = core_models.ElogConfig.get_default_config(self.mission)
+    def assertElogField(self, queryset, required_field, mapped_field):
+        self.assertTrue(queryset.filter(required_field=required_field).exists(),
+                        f"Missing Required field {required_field}")
 
-    # The parser should take a file and return a dictionary of mid objects, stations and instruments,
-    # each MID object is a dictionary of key value pairs,
-    # the stations and instruments are sets so unique stations and instruments to this log file will be returned.
+        field = queryset.get(required_field=required_field)
+        self.assertEquals(mapped_field, field.mapped_field)
 
-    @tag('parsers_elog_parse')
+    @tag('parsers_elog_test_get_or_create_file_config')
+    def test_get_or_create_file_config(self):
+        queryset = elog.get_or_create_file_config()
+
+        # the config should only include elog mappings
+        values = queryset.values_list('file_type', flat=True).distinct()
+        self.assertEquals(1, len(values))
+        self.assertEquals(values[0], 'elog')
+
+        self.assertElogField(queryset, 'event', 'Event')
+        self.assertElogField(queryset, "time_position", "Time|Position")
+        self.assertElogField(queryset, "station", "Station")
+        self.assertElogField(queryset, "action", "Action")
+        self.assertElogField(queryset, "instrument", "Instrument")
+        self.assertElogField(queryset, 'lead_scientist', 'PI')
+        self.assertElogField(queryset, 'protocol', "Protocol")
+        self.assertElogField(queryset, 'cruise', "Cruise")
+        self.assertElogField(queryset, "platform", "Platform")
+        self.assertElogField(queryset, "attached", "Attached")
+        self.assertElogField(queryset, "start_sample_id", "Sample ID")
+        self.assertElogField(queryset, "end_sample_id", "End_Sample_ID")
+        self.assertElogField(queryset, "comment", "Comment")
+        self.assertElogField(queryset, "data_collector", "Author")
+        self.assertElogField(queryset, "sounding", "Sounding")
+        self.assertElogField(queryset, "wire_out", "Wire out")
+        self.assertElogField(queryset, "flow_start", "Flowmeter Start")
+        self.assertElogField(queryset, "flow_end", "Flowmeter End")
+
+    @tag('parsers_elog_test_parse_elog')
     def test_parse_elog(self):
         logger.info("Running test_parse_elog")
         sample_file_pointer = open(r'core/tests/sample_data/good.log', mode='r')
 
         logger.info("Parsing sample file")
         stream = io.StringIO(sample_file_pointer.read())
-        mid_dictionary = elog.parse(stream, self.config)
+        mid_dictionary = elog.parse("good.log", stream)
 
         # returned dictionary should not be empty
         self.assertIsNotNone(mid_dictionary)
@@ -43,7 +71,7 @@ class TestElogParser(DartTestCase):
 
         sample_file_pointer.close()
 
-    @tag('parsers_elog_parse')
+    @tag('parsers_elog_test_missing_mid')
     def test_missing_mid(self):
         logger.info("Running test_missing_mid")
         sample_file_pointer = open(r'core/tests/sample_data/missing_mid_bad.log', mode='r')
@@ -51,7 +79,7 @@ class TestElogParser(DartTestCase):
         logger.info("Parsing sample file")
         stream = io.StringIO(sample_file_pointer.read())
         try:
-            elog.parse(stream, self.config)
+            elog.parse('missing_mid_bad.log', stream)
             self.fail("A lookup error should have been thrown")
         except LookupError as e:
             logger.info("Received the expected exception")
@@ -65,13 +93,13 @@ class TestElogParser(DartTestCase):
 
         sample_file_pointer.close()
 
-    @tag('parsers_elog_parse')
+    @tag('parsers_elog_parse_test_parser_validation')
     def test_parser_validation(self):
         logger.info("Running test_validate_message_object")
         sample_file_pointer = open(r'core/tests/sample_data/bad.log', mode='r')
 
         stream = io.StringIO(sample_file_pointer.read())
-        mid_dictionary = elog.parse(stream, self.config)
+        mid_dictionary = elog.parse("bad.log", stream)
 
         self.assertIn(elog.ParserType.ERRORS, mid_dictionary)
         self.assertIn('1', mid_dictionary[elog.ParserType.ERRORS])
@@ -97,14 +125,14 @@ class TestElogParser(DartTestCase):
 
     @tag('parsers_elog_validate_message_object')
     def test_validate_message_object(self):
-        elog_config = core_models.ElogConfig.get_default_config(self.mission)
+        elog_config = elog.get_or_create_file_config()
         buffer = {}
         # load all but the station field into the buffer for testing a field is missing
-        for field in elog_config.mappings.all():
-            if field.field == 'station':
+        for field in elog_config:
+            if field.required_field == 'station':
                 continue
 
-            buffer[field.mapped_to] = "some value"
+            buffer[field.mapped_field] = "some value"
 
         response = elog.validate_message_object(elog_config, buffer)
         self.assertEquals(len(response), 1)
@@ -172,7 +200,10 @@ class TestElogParser(DartTestCase):
                 "Station": expected_station,
                 "Instrument": expected_instrument,
                 "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id)
+                "End_Sample_ID": str(expected_end_sample_id),
+                "Wire out": "",
+                "Flowmeter Start": "",
+                "Flowmeter End": ""
             }
         }
         core_factory.StationFactory(name=expected_station, mission=self.mission)
@@ -202,7 +233,10 @@ class TestElogParser(DartTestCase):
                 "Station": 'XX_01',
                 "Instrument": "CTD",
                 "Sample ID": '',
-                "End_Sample_ID": ''
+                "End_Sample_ID": '',
+                "Wire out": "",
+                "Flowmeter Start": "",
+                "Flowmeter End": ""
             }
         }
 
@@ -232,7 +266,10 @@ class TestElogParser(DartTestCase):
                 "Station": expected_station,
                 "Instrument": expected_instrument,
                 "Sample ID": str(expected_sample_id),
-                "End_Sample_ID": str(expected_end_sample_id)
+                "End_Sample_ID": str(expected_end_sample_id),
+                "Wire out": "",
+                "Flowmeter Start": "",
+                "Flowmeter End": ""
             }
         }
 
@@ -309,7 +346,11 @@ class TestElogParser(DartTestCase):
         station = core_factory.StationFactory(name=expected_station)
         event = core_factory.CTDEventFactory(mission=self.mission, event_id=expected_event_id, station=station)
 
-        errors = elog.process_attachments_actions(event.trip, buffer, expected_file_name)
+        parse_buffer = {
+            elog.ParserType.FILE: {expected_file_name: [1, 2, 3]},
+            elog.ParserType.MID: buffer
+        }
+        errors = elog.process_attachments_actions(event.trip, parse_buffer)
         self.assertEquals(len(errors), 0)
 
         event = core_models.Event.objects.using('default').get(event_id=expected_event_id)

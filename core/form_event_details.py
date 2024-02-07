@@ -361,7 +361,7 @@ class AttachmentForm(forms.ModelForm):
         return instance
 
 
-def update_stations(request, database, **kwargs):
+def update_stations(request, database):
     mission = models.Mission.objects.using(database).first()
     soup = BeautifulSoup('', 'html.parser')
 
@@ -421,7 +421,7 @@ def update_stations(request, database, **kwargs):
         return HttpResponse(soup)
 
 
-def update_instruments(request, database, **kwargs):
+def update_instruments(request, database):
     mission = models.Mission.objects.using(database).first()
     soup = BeautifulSoup('', 'html.parser')
 
@@ -546,7 +546,7 @@ def deselect_event(soup, database):
         soup.append(table)
 
 
-def add_event(request, database, trip_id, **kwargs):
+def add_event(request, database, trip_id):
     trip = models.Trip.objects.using(database).get(pk=trip_id)
 
     soup = BeautifulSoup("", "html.parser")
@@ -599,7 +599,7 @@ def add_event(request, database, trip_id, **kwargs):
     return HttpResponse(soup)
 
 
-def edit_event(request, database, event_id, **kwargs):
+def edit_event(request, database, event_id):
     event = models.Event.objects.using(database).get(pk=event_id)
 
     soup = BeautifulSoup("", "html.parser")
@@ -634,7 +634,7 @@ def edit_event(request, database, event_id, **kwargs):
     return HttpResponse(soup)
 
 
-def selected_details(request, database, event_id, **kwargs):
+def selected_details(request, database, event_id):
     soup = BeautifulSoup('', 'html.parser')
 
     deselect_event(soup, database)
@@ -663,7 +663,7 @@ def selected_details(request, database, event_id, **kwargs):
     return HttpResponse(soup)
 
 
-def delete_details(request, database, event_id, **kwargs):
+def delete_details(request, database, event_id):
     event = models.Event.objects.using(database).get(pk=event_id)
     trip = event.trip
 
@@ -712,7 +712,7 @@ def render_action_form(soup, action_form):
     return HttpResponse(soup)
 
 
-def add_action(request, database, event_id, **kwargs):
+def add_action(request, database, event_id):
     event = models.Event.objects.using(database).get(pk=event_id)
 
     soup = BeautifulSoup('', 'html.parser')
@@ -733,7 +733,7 @@ def add_action(request, database, event_id, **kwargs):
     return render_action_form(soup, action_form)
 
 
-def edit_action(request, database, action_id, **kwargs):
+def edit_action(request, database, action_id):
     action = models.Action.objects.using(database).get(pk=action_id)
 
     soup = BeautifulSoup('', 'html.parser')
@@ -755,12 +755,12 @@ def edit_action(request, database, action_id, **kwargs):
     return render_action_form(soup, action_form)
 
 
-def delete_action(request, database, action_id, **kwargs):
+def delete_action(request, database, action_id):
     models.Action.objects.using(database).get(pk=action_id).delete()
     return HttpResponse()
 
 
-def list_attachment(request, database, event_id, editable=False, **kwargs):
+def list_attachment(request, database, event_id, editable=False):
     event = models.Event.objects.using(database).get(pk=event_id)
     context = {'database': database, 'event': event, 'editable': editable}
     return HttpResponse(render_to_string('core/partials/table_attachment.html', context=context))
@@ -778,7 +778,7 @@ def render_attachment_form(soup, attachment_form):
     return HttpResponse(soup)
 
 
-def add_attachment(request, database, event_id, **kwargs):
+def add_attachment(request, database, event_id):
     event = models.Event.objects.using(database).get(pk=event_id)
     soup = BeautifulSoup('', 'html.parser')
 
@@ -800,7 +800,7 @@ def add_attachment(request, database, event_id, **kwargs):
     return render_attachment_form(soup, attachment_form)
 
 
-def edit_attachment(request, database, attachment_id, **kwargs):
+def edit_attachment(request, database, attachment_id):
     attachment = models.Attachment.objects.using(database).get(pk=attachment_id)
     soup = BeautifulSoup('', 'html.parser')
 
@@ -823,7 +823,7 @@ def edit_attachment(request, database, attachment_id, **kwargs):
     return render_attachment_form(soup, attachment_form)
 
 
-def delete_attachment(request, database, attachment_id, **kwargs):
+def delete_attachment(request, database, attachment_id):
     models.Attachment.objects.using(database).get(pk=attachment_id).delete()
     return HttpResponse()
 

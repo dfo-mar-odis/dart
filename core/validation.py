@@ -7,7 +7,7 @@ from django.db.models import Q
 
 import logging
 
-logger_notifications = logging.getLogger('dart.validation')
+logger_notifications = logging.getLogger('dart.user.validation')
 
 
 def validate_mission(mission: core_models.Mission):
