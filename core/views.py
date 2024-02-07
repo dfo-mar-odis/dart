@@ -4,6 +4,7 @@ from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
+from render_block import render_block_to_string
 
 from biochem import models
 
@@ -62,18 +63,29 @@ class ElogDetails(GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['file_config'] = elog.get_or_create_file_config()
         return context
 
 
 def hx_update_elog_config(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    config = elog.get_or_create_file_config()
+
+    context = {'database': database, 'object': mission}
     if request.method == "POST":
-        dict_vals = request.POST.copy()
-        mission = models.Mission.objects.using(database).get(pk=mission_id)
+        key = [key for key in request.POST.keys()][0]
+        mapping = config.get(required_field=key)
+        mapping.mapped_field = request.POST[key]
+        mapping.save()  # elog configs are part of the user settings so they save to the 'default' database
+    else:
+        key = [key for key in request.GET.keys()][0]
+        mapping = config.get(required_field=key)
+        if mapping.mapped_field != request.GET[key]:
+            context['enabled'] = 'ture'
+        context["mapping"] = mapping
 
-        config = elog.get_or_create_file_config()
+    context["mapping"] = mapping
+    html = render_block_to_string('core/mission_elog.html', "config_input", context)
+    soup = BeautifulSoup(html, 'html.parser')
 
-        context = {'object': mission}
-        html = render_to_string(template_name='core/mission_elog.html', context=context)
-        soup = BeautifulSoup(html, 'html.parser')
-
-        return HttpResponse(soup)
+    return HttpResponse(soup)

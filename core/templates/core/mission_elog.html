@@ -18,28 +18,40 @@
 {% endblock %}
 
 {% block content %}
-    <form class="form-control" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    {% for mapping in object.elogconfig.mappings.all %}
+    {% for mapping in file_config %}
+    <form hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         <div class="card mb-2">
             <div class="card-header">
                 <div class="row">
                 <h6 class="col-auto">{% trans "Variable Name" %} :
-                    <label for="mapping_{{ mapping.id }}" class="card-title col form-label">{{ mapping.field }}</label>
+                    <label for="mapping_{{ mapping.id }}" class="card-title col form-label">{{ mapping.required_field }}</label>
                 </h6>
                 </div>
             </div>
             <div class="card-body">
-                {% if mapping.purpose %}<h6>{{ mapping.purpose }}</h6>{% endif %}
+                {% if mapping.description %}<p><span class="h6">{% trans "Description" %} : </span>{{ mapping.description }}</p>{% endif %}
                 <h6>{% trans "Expected Elog Label" %} :</h6>
+            {% block config_input %}
+                <div class="input-group" id="mapping_input_{{ mapping.id }}">
                 <input id="mapping_{{ mapping.id }}" class="textinput form-control form-control-sm"
-                       type="text" name="{{ mapping.field }}" value="{{ mapping.mapped_to }}"
-                       hx-post="{% url 'core:update_elog_config' object.pk %}"
-                       hx-trigger="keyup changed delay:2s"
-                       hx-select="#mapping_{{ mapping.id }}"
+                       type="text" name="{{ mapping.required_field }}" value="{{ mapping.mapped_field }}"
+                       hx-get="{% url 'core:update_elog_config' database object.pk %}"
+                       hx-trigger="keyup changed delay:500ms"
+                       hx-target="#button_id_mapping_{{ mapping.id }}"
+                       hx-select="#button_id_mapping_{{ mapping.id }}"
                        hx-swap="outerHTML"
-                />
+                 />
+                <button id="button_id_mapping_{{ mapping.id }}" {% if enabled %}class="btn btn-primary"
+                        hx-post="{% url 'core:update_elog_config' database object.pk %}"
+                        hx-target="#mapping_input_{{ mapping.id }}"
+                        hx-swap="outerHTML"
+                        {% else %}class="btn btn-secondary"
+                        disabled="disabled"{% endif %}
+                >{% custom_icon 'check-square' %}</button>
+                </div>
+            {% endblock %}
             </div>
         </div>
-    {% endfor %}
     </form>
+    {% endfor %}
 {% endblock %}
