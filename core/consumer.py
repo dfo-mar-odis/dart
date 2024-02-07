@@ -119,7 +119,7 @@ class LoggerConsumer(CoreConsumer, logging.Handler):
         logging.getLogger(f'{logger_to_listen_to}').removeHandler(self)
         super().disconnect(code)
 
-    def process_render_queue(self, component_id, event):
+    def process_render_queue(self, component_id, event) -> None:
         soup = BeautifulSoup(f'<div id="{component_id}">{event["message"]}</div>', 'html.parser')
         progress_bar = soup.new_tag("div")
         progress_bar.attrs = {

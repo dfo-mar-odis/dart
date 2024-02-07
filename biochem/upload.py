@@ -555,7 +555,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
                 collection_method = 90000001  # vertical if this is zooplankton
                 large_plankton_removed = 'Y'  # Yes if Zooplankton
 
-            responsible_group = mission.protocol
+            responsible_group = trip.protocol
             collector = recovery_action.data_collector
             comment = recovery_action.comment
 

@@ -659,8 +659,7 @@ def get_database_connection_form(request, database, mission_id, upload_url, down
 
 # supply the upload_function that gathers data and sends it to the database.
 # It will receive a core.core_models.Mission and core.models.BcDatabaseConnection
-def upload_bio_chem(request, database, upload_function, **kwargs):
-    mission_id = kwargs['mission_id']
+def upload_bio_chem(request, database, mission_id, upload_function):
 
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
