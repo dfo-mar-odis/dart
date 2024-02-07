@@ -58,7 +58,7 @@ class TestElogParser(DartTestCase):
 
         logger.info("Parsing sample file")
         stream = io.StringIO(sample_file_pointer.read())
-        mid_dictionary = elog.parse(stream)
+        mid_dictionary = elog.parse("good.log", stream)
 
         # returned dictionary should not be empty
         self.assertIsNotNone(mid_dictionary)
@@ -79,7 +79,7 @@ class TestElogParser(DartTestCase):
         logger.info("Parsing sample file")
         stream = io.StringIO(sample_file_pointer.read())
         try:
-            elog.parse(stream)
+            elog.parse('missing_mid_bad.log', stream)
             self.fail("A lookup error should have been thrown")
         except LookupError as e:
             logger.info("Received the expected exception")
@@ -99,7 +99,7 @@ class TestElogParser(DartTestCase):
         sample_file_pointer = open(r'core/tests/sample_data/bad.log', mode='r')
 
         stream = io.StringIO(sample_file_pointer.read())
-        mid_dictionary = elog.parse(stream)
+        mid_dictionary = elog.parse("bad.log", stream)
 
         self.assertIn(elog.ParserType.ERRORS, mid_dictionary)
         self.assertIn('1', mid_dictionary[elog.ParserType.ERRORS])
@@ -346,7 +346,11 @@ class TestElogParser(DartTestCase):
         station = core_factory.StationFactory(name=expected_station)
         event = core_factory.CTDEventFactory(mission=self.mission, event_id=expected_event_id, station=station)
 
-        errors = elog.process_attachments_actions(event.trip, buffer, expected_file_name)
+        parse_buffer = {
+            elog.ParserType.FILE: {expected_file_name: [1, 2, 3]},
+            elog.ParserType.MID: buffer
+        }
+        errors = elog.process_attachments_actions(event.trip, parse_buffer)
         self.assertEquals(len(errors), 0)
 
         event = core_models.Event.objects.using('default').get(event_id=expected_event_id)

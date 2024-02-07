@@ -60,6 +60,7 @@ def get_or_create_file_config() -> QuerySet[FileConfiguration]:
 
 
 class ParserType(Enum):
+    FILE = 'file'
     MID = 'mid'
     STATIONS = 'stations'
     INSTRUMENTS = 'Instruments'
@@ -88,7 +89,7 @@ def validate_message_object(elog_configuration: QuerySet[FileConfiguration], buf
     for field in elog_configuration:
         if field.mapped_field not in buffer.keys():
             err = KeyError({'message': _('Message object missing key'),
-                      'key': field.required_field, 'expected': field.mapped_field})
+                            'key': field.required_field, 'expected': field.mapped_field})
             errors.append(err)
 
     return errors
@@ -131,10 +132,11 @@ def update_attributes(obj, attributes: dict, update_dictionary: dict) -> None:
 
 
 # parse an elog stream pulling out the mid events, stations, and instruments and report missing required key errors
-def parse(stream: io.StringIO) -> dict:
+def parse(file_name: str, stream: io.StringIO) -> dict:
     elog_configuration = get_or_create_file_config()
 
-    mids = {}
+    message_object_buffer = {}
+    file_mid_buffer = {file_name: []}
     errors = {}
 
     stations = set()
@@ -167,15 +169,130 @@ def parse(stream: io.StringIO) -> dict:
             errors[mid_obj] = mid_errors
             continue
 
-        mids[mid_obj] = buffer
+        message_object_buffer[mid_obj] = buffer
+        file_mid_buffer[file_name].append(mid_obj)
 
         stations.add(buffer[elog_configuration.get(required_field='station').mapped_field])
         instruments.add(buffer[elog_configuration.get(required_field='instrument').mapped_field])
 
-    message_objects = {ParserType.MID: mids, ParserType.STATIONS: list(stations),
-                       ParserType.INSTRUMENTS: list(instruments), ParserType.ERRORS: errors}
+    message_objects = {
+        # the file buffer says what objects belong to what file
+        ParserType.FILE: file_mid_buffer,
+        # the mid buffer contains the list of key, value pairs needed later for parsing data
+        ParserType.MID: message_object_buffer,
+        # the stations buffer has a set of stations
+        ParserType.STATIONS: set(stations),
+        # the instruments buffer has a set of instruments
+        ParserType.INSTRUMENTS: set(instruments),
+        # the error buffer is a dictionary with errors[mid]
+        ParserType.ERRORS: errors
+    }
 
     return message_objects
+
+
+# parse multiple files for a given trip by parsing them individually and compressing their buffer dictionaries into one
+# then run the algorithm to parse each section of the buffer dictionaries
+def parse_files(trip, files):
+    database = trip._state.db
+    file_count = len(files)
+    message_objects = {
+        ParserType.FILE: dict(),
+        ParserType.MID: dict(),
+        ParserType.STATIONS: set(),
+        ParserType.INSTRUMENTS: set(),
+        ParserType.ERRORS: dict()
+    }
+    file_errors: [core_models.FileError] = []
+    for index, file in enumerate(files):
+        file_name = file.name
+        # let the user know that we're about to start processing a file
+        # send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
+        logger_notifications.info(_("Processing File") + " : %d/%d", (index + 1), file_count)
+
+        # remove any existing errors for a log file of this name and update the interface
+        trip.mission.file_errors.filter(file_name=file_name).delete()
+
+        try:
+            data = file.read()
+            file_message_objects = parse(file_name, io.StringIO(data.decode('utf-8')))
+
+            # make note of missing required field errors in this file
+            for mid, error_buffer in file_message_objects[ParserType.ERRORS].items():
+                # Report errors to the user if there are any, otherwise process the message objects you can
+                for error in error_buffer:
+                    err = core_models.FileError(mission=trip.mission, file_name=file_name, line=int(mid),
+                                                type=core_models.ErrorType.missing_value,
+                                                message=f'Elog message object ($@MID@$: {mid}) missing required '
+                                                        f'field [{error.args[0]["expected"]}]')
+                    file_errors.append(err)
+
+                    if mid in file_message_objects[ParserType.MID]:
+                        file_message_objects[ParserType.MID].pop(mid)
+
+            # merge the file_message_object buffer together
+
+            message_objects[ParserType.FILE].update(file_message_objects[ParserType.FILE])
+            message_objects[ParserType.MID].update(file_message_objects[ParserType.MID])
+            message_objects[ParserType.STATIONS].update(file_message_objects[ParserType.STATIONS])
+            message_objects[ParserType.INSTRUMENTS].update(file_message_objects[ParserType.INSTRUMENTS])
+            message_objects[ParserType.ERRORS].update(file_message_objects[ParserType.ERRORS])
+
+        except Exception as ex:
+            if type(ex) is LookupError:
+                logger.error(ex)
+                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.missing_id,
+                                            file_name=file_name,
+                                            message=ex.args[0]['message'] + ", " + _("see error.log for details"))
+            else:
+                # Something is really wrong with this file
+                logger.exception(ex)
+                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.unknown,
+                                            file_name=file_name,
+                                            message=_("Unknown error :") + f"{str(ex)}, " + _(
+                                                "see error.log for details"))
+            err.save()
+            logger_notifications.info(_("File Error"))
+
+            continue
+
+    errors: [tuple] = []
+    # send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
+    process_stations(trip, message_objects[ParserType.STATIONS])
+
+    # send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
+    process_instruments(trip, message_objects[ParserType.INSTRUMENTS])
+
+    # send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
+    errors += process_events(trip, message_objects[ParserType.MID])
+
+    # send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
+    errors += process_attachments_actions(trip, message_objects)
+
+    # send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
+    errors += process_variables(trip, message_objects[ParserType.MID])
+
+    error_count = len(errors)
+    for err, error in enumerate(errors):
+
+        file_buffer: dict = message_objects[ParserType.FILE]
+        file_name = None
+        for file in file_buffer.keys():
+            if error[0] in file_buffer[file]:
+                file_name = file
+                break
+
+        logger_notifications.info(_("Recording Errors") + f" {file_name} : %d/%d", (err + 1), error_count)
+        file_error = core_models.FileError(mission=trip.mission, file_name=file_name, line=error[0], message=error[1])
+        if isinstance(error[2], KeyError):
+            file_error.type = core_models.ErrorType.missing_id
+        elif isinstance(error[2], ValueError):
+            file_error.type = core_models.ErrorType.missing_value
+        else:
+            file_error.type = core_models.ErrorType.unknown
+        file_errors.append(file_error)
+
+    core_models.FileError.objects.using(database).bulk_create(file_errors)
 
 
 def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
@@ -406,7 +523,7 @@ def map_action_text(text: str) -> str:
     return text
 
 
-def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {}, file_name: str) -> [tuple]:
+def process_attachments_actions(trip: core_models.Trip, dictionary_buffer: {}) -> [tuple]:
     database = trip._state.db
     errors = []
 
@@ -420,6 +537,7 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
 
     elog_configuration = get_or_create_file_config()
 
+    mid_dictionary_buffer = dictionary_buffer[ParserType.MID]
     mid_list = list(mid_dictionary_buffer.keys())
     mid_count = len(mid_list)
 
@@ -506,6 +624,12 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
                 update_attributes(action, attrs, update_actions)
 
             else:
+                file_buffer: dict[list] = dictionary_buffer[ParserType.FILE]
+                file_name = None
+                for file in file_buffer.keys():
+                    if mid in file_buffer[file]:
+                        file_name = file
+                        break
                 action = core_models.Action(file=file_name, event=event, date_time=date_time, mid=mid,
                                             latitude=lat, longitude=lon, type=action_type)
 

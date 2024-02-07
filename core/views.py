@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
@@ -10,6 +11,7 @@ from dart.views import GenericCreateView, GenericUpdateView, GenericDetailView
 from dart import utils
 
 from core import forms, models
+from core.parsers import elog
 
 import logging
 
@@ -59,9 +61,6 @@ class ElogDetails(GenericDetailView):
     model = models.Mission
 
     def get_context_data(self, **kwargs):
-        if not hasattr(self.object, 'elogconfig'):
-            models.ElogConfig.get_default_config(self.object)
-
         context = super().get_context_data(**kwargs)
         return context
 
@@ -71,25 +70,10 @@ def hx_update_elog_config(request, database, mission_id):
         dict_vals = request.POST.copy()
         mission = models.Mission.objects.using(database).get(pk=mission_id)
 
-        config = models.ElogConfig.get_default_config(mission)
-        update_models = {'fields': set(), 'models': []}
-        for field_name, map_value in dict_vals.items():
-            mapping = config.mappings.filter(field=field_name)
-            if mapping.exists():
-                mapping = mapping[0]
-                updated = utils.updated_value(mapping, 'mapped_to', map_value)
-                if updated:
-                    update_models['models'].append(mapping)
+        config = elog.get_or_create_file_config()
 
-        if len(update_models['models']) > 0:
-            models.FileConfigurationMapping.objects.bulk_update(update_models['models'], ['mapped_to'])
-
-        config.save()
         context = {'object': mission}
         html = render_to_string(template_name='core/mission_elog.html', context=context)
         soup = BeautifulSoup(html, 'html.parser')
-        for mapping in update_models['models']:
-            mapping_input = soup.find(id=f'mapping_{mapping.id}')
-            mapping_input.attrs['class'].append("bg-success-subtle")
 
         return HttpResponse(soup)
