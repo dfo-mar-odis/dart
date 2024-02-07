@@ -132,3 +132,15 @@ class BcDatabaseConnection(models.Model):
         }
 
         return biochem_db
+
+
+# File configuration should be used by parsers that will create entries for what fields they require
+class FileConfiguration(models.Model):
+
+    file_type = models.CharField(max_length=20)
+    required_field = models.CharField(max_length=50, verbose_name=_("Required Field"),
+                                      help_text=_("This is a field the parser will require to set DART table values"))
+    mapped_field = models.CharField(max_length=50, verbose_name=_("Mapped Field"),
+                                    help_text=_("This is the field as it appears in the file being parsed"))
+    description = models.TextField(verbose_name=_("Description"),
+                                   help_text=_("Description of the purpose of the mapped field"))

@@ -12,7 +12,7 @@ from dart.utils import updated_value
 import logging
 
 logger = logging.getLogger('dart')
-logger_notifications = logging.getLogger('dart.sampleparser')
+logger_notifications = logging.getLogger('dart.user.sampleparser')
 
 # popular excel extensions
 excel_extensions = ['xls', 'xlsx', 'xlsm']

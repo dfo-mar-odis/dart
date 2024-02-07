@@ -4,8 +4,11 @@ import re
 
 from enum import Enum
 
+from django.db.models import QuerySet
+
 import dart.utils
-from bio_tables import models as local_biochem_models
+from settingsdb.models import FileConfiguration
+
 from core import models as core_models
 
 from django.utils.translation import gettext_lazy as _
@@ -15,7 +18,45 @@ import logging
 from dart.utils import convertDMS_degs
 
 logger = logging.getLogger('dart')
-logger_notifications = logging.getLogger('dart.elog')
+logger_notifications = logging.getLogger('dart.user.elog')
+
+
+def get_or_create_file_config() -> QuerySet[FileConfiguration]:
+    file_type = 'elog'
+    fields = [("event", "Event", _("Label identifying the elog event number")),
+              ("time_position", "Time|Position", _("Label identifying the time|position string of an action")),
+              ("station", "Station", _("Label identifying the station of the event")),
+              ("action", "Action", _("Label identifying an elog action")),
+              ("instrument", "Instrument", _("Label identifying the instrument of the event")),
+              ('lead_scientist', 'PI', _("Label identifying the lead scientists of the mission")),
+              ('protocol', "Protocol", _("Label identifying the protocol of the mission")),
+              ('cruise', "Cruise", _("Label identifying the cruse name of the mission")),
+              ("platform", "Platform", _("Label identifying the ship name used for the mission")),
+              ("attached", "Attached", _("Label identifying accessories attached to equipment")),
+              ("start_sample_id", "Sample ID", _("Label identifying a lone bottle, or starting bottle in a sequence")),
+              ("end_sample_id", "End_Sample_ID", _("Label identifying the ending bottle in a sequence")),
+              ("comment", "Comment", _("Label identifying an action comment")),
+              ("data_collector", "Author", _("Label identifying who logged the elog action")),
+              ("sounding", "Sounding", _("Label identifying the sounding depth of the action")),
+              ("wire_out", "Wire out", _("Label identifying how much wire was unspooled for a net event")),
+              ("flow_start", "Flowmeter Start", _("Label for the starting value of a flowmeter for a net event")),
+              ("flow_end", "Flowmeter End", _("Label for the ending value of a flowmeter for a net event")),
+              ]
+
+    existing_mappings = FileConfiguration.objects.filter(file_type=file_type)
+    create_mapping = []
+    for field in fields:
+        if not existing_mappings.filter(required_field=field[0]).exists():
+            mapping = FileConfiguration(file_type=file_type)
+            mapping.required_field = field[0]
+            mapping.mapped_field = field[1]
+            mapping.description = field[2]
+            create_mapping.append(mapping)
+
+    if len(create_mapping) > 0:
+        FileConfiguration.objects.bulk_create(create_mapping)
+
+    return existing_mappings
 
 
 class ParserType(Enum):
@@ -25,50 +66,30 @@ class ParserType(Enum):
     ERRORS = 'Errors'
 
 
-# Validates that a field exists in a mid object's buffer and either raises an error or returns the mapped field
-# from the elog configuration
-def get_field(elog_configuration: core_models.ElogConfig, field: str, buffer: [str]) -> str:
-    try:
-        mapped_field = elog_configuration.mappings.get(field=field)
-    except core_models.FileConfigurationMapping.DoesNotExist as e:
-        required = False
+def validate_buffer_fields(required_fields: list, mapped_fields: dict, mid, buffer: dict) -> list:
+    field_errors = []
+    keys = buffer.keys()
+    for field in required_fields:
+        if mapped_fields[field] in keys:
+            continue
 
-        # if a mapping hasn't been set then create it from the default, this shouldn't happen unless a new field
-        # was added and a user is using an existing deployment that was just updated from the git repo
-        required_fields = {f[0]: (f[1], f[2]) for f in core_models.ElogConfig.required_fields}
-        optional_fields = {f[0]: (f[1], f[2]) for f in core_models.ElogConfig.fields}
-        if field in required_fields.keys():
-            mapped_field = required_fields[field][0]
-            purpose = required_fields[field][1]
-            required = True
-        elif field in optional_fields.keys():
-            mapped_field = optional_fields[field][0]
-            purpose = optional_fields[field][1]
-        else:
-            logger.exception(e)
-            logger.error("Mapping for field does not exist in core.models.ElogConfig")
-            raise e
-
-        new_mapping = core_models.FileConfigurationMapping(
-            field=field, mapped_to=mapped_field, required=required, purpose=purpose
-        )
-        elog_configuration.mappings.add(new_mapping)
-
-    if mapped_field.required and mapped_field.mapped_to not in buffer:
-        raise KeyError({'message': _('Message object missing key'), 'key': field, 'expected': mapped_field.mapped_to})
-
-    return mapped_field.mapped_to
+        ex = KeyError({'message': _('Message object missing key'),
+                       'key': field, 'expected': mapped_fields[field]})
+        logger.error(ex)
+        field_errors.append((mid, ex.args[0]["message"], ex,))
+    return field_errors
 
 
 # Validate a message object ensuring it has all the required keys
-def validate_message_object(elog_configuration: core_models.ElogConfig, buffer: dict) -> [Exception]:
+# the queryset should be settingsdb.models.FileConfiguration.objects.filter(file_type='elog')
+# loop over the queryset making sure the mapped_fields all exist in the buffer
+def validate_message_object(elog_configuration: QuerySet[FileConfiguration], buffer: dict) -> [Exception]:
     errors = []
-    required_fields = elog_configuration.mappings.filter(required=True)
-    for field in required_fields:
-        try:
-            get_field(elog_configuration, field.field, buffer)
-        except KeyError as ex:
-            errors.append(ex)
+    for field in elog_configuration:
+        if field.mapped_field not in buffer.keys():
+            err = KeyError({'message': _('Message object missing key'),
+                      'key': field.required_field, 'expected': field.mapped_field})
+            errors.append(err)
 
     return errors
 
@@ -110,7 +131,9 @@ def update_attributes(obj, attributes: dict, update_dictionary: dict) -> None:
 
 
 # parse an elog stream pulling out the mid events, stations, and instruments and report missing required key errors
-def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> dict:
+def parse(stream: io.StringIO) -> dict:
+    elog_configuration = get_or_create_file_config()
+
     mids = {}
     errors = {}
 
@@ -146,8 +169,8 @@ def parse(stream: io.StringIO, elog_configuration: core_models.ElogConfig) -> di
 
         mids[mid_obj] = buffer
 
-        stations.add(buffer[elog_configuration.get_mapping('station')])
-        instruments.add(buffer[elog_configuration.get_mapping('instrument')])
+        stations.add(buffer[elog_configuration.get(required_field='station').mapped_field])
+        instruments.add(buffer[elog_configuration.get(required_field='instrument').mapped_field])
 
     message_objects = {ParserType.MID: mids, ParserType.STATIONS: list(stations),
                        ParserType.INSTRUMENTS: list(instruments), ParserType.ERRORS: errors}
@@ -228,7 +251,7 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
     database = trip._state.db
     errors = []
 
-    elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
+    elog_configuration = get_or_create_file_config()
 
     existing_events = trip.events.all()
 
@@ -244,6 +267,11 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
     update_events = []
     update_fields = set()
 
+    required_fields = ['event', 'station', 'instrument', 'start_sample_id', 'end_sample_id', 'wire_out', 'flow_start',
+                       'flow_end']
+    mapped_fields = {field.required_field: field.mapped_field for field in
+                     elog_configuration.filter(required_field__in=required_fields)}
+
     mid_list = list(mid_dictionary_buffer.keys())
     mid_count = len(mid_list)
     for mid, buffer in mid_dictionary_buffer.items():
@@ -251,30 +279,27 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
         logger_notifications.info(_("Processing Event for Elog Message") + f" : %d/%d", index, mid_count)
         update_fields.add("")
         try:
-            event_field = get_field(elog_configuration, 'event', buffer)
-            station_field = get_field(elog_configuration, 'station', buffer)
-            instrument_field = get_field(elog_configuration, 'instrument', buffer)
-            sample_id_field = get_field(elog_configuration, 'start_sample_id', buffer)
-            end_sample_id_field = get_field(elog_configuration, 'end_sample_id', buffer)
-            wire_out_field = get_field(elog_configuration, 'wire_out', buffer)
-            flow_start_field = get_field(elog_configuration, 'flow_start', buffer)
-            flow_end_field = get_field(elog_configuration, 'flow_end', buffer)
+            field_errors = validate_buffer_fields(required_fields, mapped_fields, mid, buffer)
+            if len(field_errors) > 0:
+                # if there are missing fields report the errors and move on to the next message
+                errors += field_errors
+                continue
 
-            event_id = int(buffer[event_field])
+            event_id = int(buffer[mapped_fields['event']])
 
-            station = stations.get(name__iexact=buffer.pop(station_field), mission=trip.mission)
-            instrument = instruments.get(name__iexact=buffer.pop(instrument_field), mission=trip.mission)
-            sample_id: str = buffer.pop(sample_id_field)
-            end_sample_id: str = buffer.pop(end_sample_id_field)
+            station = stations.get(name__iexact=buffer.pop(mapped_fields['station']), mission=trip.mission)
+            instrument = instruments.get(name__iexact=buffer.pop(mapped_fields['instrument']), mission=trip.mission)
+            sample_id: str = buffer.pop(mapped_fields['start_sample_id'])
+            end_sample_id: str = buffer.pop(mapped_fields['end_sample_id'])
 
-            wire_out: str = buffer.pop(wire_out_field) if wire_out_field in buffer else None
-            flow_start: str = buffer.pop(flow_start_field) if flow_start_field in buffer else None
-            flow_end: str = buffer.pop(flow_end_field) if flow_end_field in buffer else None
+            wire_out: str = buffer.pop(mapped_fields['wire_out']) if mapped_fields['wire_out'] in buffer else None
+            flow_start: str = buffer.pop(mapped_fields['flow_start']) if mapped_fields['flow_start'] in buffer else None
+            flow_end: str = buffer.pop(mapped_fields['flow_end']) if mapped_fields['flow_end'] in buffer else None
 
             if valid_sample_id(sample_id):
                 sample_id = sample_id if sample_id.strip() else None
             else:
-                message = _("Sample id is not valid")
+                message = _("Sample id is not valid") + f" - {sample_id}"
                 errors.append((mid, message, ValueError({"message": message}),))
                 sample_id = None
 
@@ -294,12 +319,14 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
                 errors.append((mid, message, ValueError({"message": message}),))
                 wire_out = None
 
-            if flow_start is not None and flow_start != '' and ((stripped := flow_start.strip()) == '' or not stripped.isdigit()):
+            if flow_start is not None and flow_start != '' and (
+                    (stripped := flow_start.strip()) == '' or not stripped.isdigit()):
                 message = _("Invalid flow meter start")
                 errors.append((mid, message, ValueError({"message": message}),))
                 flow_start = None
 
-            if flow_end is not None and flow_end != '' and ((stripped := flow_end.strip()) == '' or not stripped.isdigit()):
+            if flow_end is not None and flow_end != '' and (
+                    (stripped := flow_end.strip()) == '' or not stripped.isdigit()):
                 message = _("Invalid flow meter end")
                 errors.append((mid, message, ValueError({"message": message}),))
                 flow_end = None
@@ -362,10 +389,10 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
 
     return errors
 
+
 # Some labels for actions in Elog are free text, so a user could use 'Deploy' instead of 'Deployed'
 # this function will map common variations of actions to expected values
 def map_action_text(text: str) -> str:
-
     if text is None:
         return text
 
@@ -383,7 +410,7 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
     database = trip._state.db
     errors = []
 
-    existing_events = trip.events.all()
+    existing_events = {event.event_id: event for event in trip.events.all()}
 
     create_attachments = []
     create_actions = []
@@ -391,46 +418,52 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
 
     cur_event = None
 
-    elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
+    elog_configuration = get_or_create_file_config()
 
     mid_list = list(mid_dictionary_buffer.keys())
     mid_count = len(mid_list)
+
+    required_fields = ['event', 'attached', 'time_position', 'comment', 'action', 'data_collector', 'sounding']
+    mapped_fields = {field.required_field: field.mapped_field for field in
+                     elog_configuration.filter(required_field__in=required_fields)}
+
     for mid, buffer in mid_dictionary_buffer.items():
         index = mid_list.index(mid) + 1
         logger_notifications.info(_("Processing Attachments/Actions for Elog Message") + f" : %d/%d", index, mid_count)
         try:
-            event_field = get_field(elog_configuration, 'event', buffer)
-            attached_field = get_field(elog_configuration, 'attached', buffer)
-            time_position_field = get_field(elog_configuration, 'time_position', buffer)
-            comment_field = get_field(elog_configuration, 'comment', buffer)
-            action_field = get_field(elog_configuration, 'action', buffer)
-            data_collector_field = get_field(elog_configuration, 'data_collector', buffer)
-            sounding_field = get_field(elog_configuration, 'sounding', buffer)
+            field_errors = validate_buffer_fields(required_fields, mapped_fields, mid, buffer)
+            if len(field_errors) > 0:
+                # if there are missing fields report the errors and move on to the next message
+                errors += field_errors
+                continue
 
-            event_id = buffer[event_field]
-            action_type_text: str = map_action_text(buffer[action_field])
+            event_id = buffer[mapped_fields['event']]
+            if event_id.isnumeric():
+                event_id = int(event_id)
+
+            action_type_text: str = map_action_text(buffer[mapped_fields['action']])
             action_type = core_models.ActionType.get(action_type_text)
 
-            if not existing_events.filter(event_id=event_id).exists():
-                # if an event doesn't exist there sould already be an error for why it wasn't created
+            if event_id not in existing_events.keys():
+                # if an event doesn't exist there should already be an error for why it wasn't created
                 # if it doesn't exist here skip it.
                 continue
 
             # We're done with these objects so remove them from the buffer
-            attached_str = buffer.pop(attached_field)
+            attached_str = buffer.pop(mapped_fields['attached'])
 
             # if the time|position doesn't exist report the issue to the user, it may not have been set by mistake
-            if re.search(".*\|.*\|.*\|.*", buffer[time_position_field]) is None:
+            if re.search(".*\|.*\|.*\|.*", buffer[mapped_fields['time_position']]) is None:
                 raise ValueError({'message': _("Badly formatted or missing Time|Position") + f"  $@MID@$ {mid}",
                                   'key': 'time_position',
-                                  'expected': time_position_field})
+                                  'expected': mapped_fields['time_position']})
 
-            time_position = buffer.pop(time_position_field).split(" | ")
+            time_position = buffer.pop(mapped_fields['time_position']).split(" | ")
             comment = None
-            if comment_field in buffer:
-                comment = buffer.pop(comment_field)
+            if mapped_fields['comment'] in buffer:
+                comment = buffer.pop(mapped_fields['comment'])
 
-            event = existing_events.get(event_id=event_id)
+            event = existing_events[event_id]
 
             if cur_event != event_id:
                 # if this is a new event, or an event that's seen for the first time, clear it's actions and
@@ -453,8 +486,8 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
             lat = convertDMS_degs(time_position[2])
             lon = convertDMS_degs(time_position[3])
 
-            data_collector = buffer[data_collector_field]
-            sounding = buffer[sounding_field]
+            data_collector = buffer[mapped_fields['data_collector']]
+            sounding = buffer[mapped_fields['sounding']]
 
             # if an event already contains this action, we'll update it
             if event.actions.filter(type=action_type).exists():
@@ -492,9 +525,6 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
                     action.action_type_other = action_type_text
 
                 create_actions.append(action)
-        except KeyError as ex:
-            logger.error(ex)
-            errors.append((mid, ex.args[0]["message"], ex,))
         except ValueError as ex:
             message = _("Missing or improperly set attribute, see error.log for details") + f" $@MID@$ {mid}"
             if 'message' in ex.args[0]:
@@ -510,7 +540,8 @@ def process_attachments_actions(trip: core_models.Trip, mid_dictionary_buffer: {
     core_models.Attachment.objects.using(database).bulk_create(create_attachments)
     core_models.Action.objects.using(database).bulk_create(create_actions)
     if update_actions['fields']:
-        core_models.Action.objects.using(database).bulk_update(objs=update_actions['objects'], fields=update_actions['fields'])
+        core_models.Action.objects.using(database).bulk_update(objs=update_actions['objects'],
+                                                               fields=update_actions['fields'])
 
     return errors
 
@@ -543,9 +574,13 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
     fields_create = []
     fields_update = []
 
-    existing_actions = core_models.Action.objects.using(database).filter(event__trip=trip)
+    existing_actions = {str(action.mid): action for action in
+                        core_models.Action.objects.using(database).filter(event__trip=trip)}
 
-    elog_configuration = core_models.ElogConfig.get_default_config(trip.mission)
+    elog_configuration = get_or_create_file_config()
+    required_fields = ['lead_scientist', 'protocol', 'cruise', 'platform']
+    mapped_fields = {field.required_field: field.mapped_field for field in
+                     elog_configuration.filter(required_field__in=required_fields)}
 
     update_mission = False
     if trip.mission.lead_scientist == 'N/A' or trip.platform == 'N/A' or trip.protocol == 'N/A':
@@ -557,15 +592,20 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
         index = mid_list.index(mid) + 1
         logger_notifications.info(_("Processing Additional Variables for Elog Message") + f" : %d/%d", index, mid_count)
         try:
-            lead_scientists_field = get_field(elog_configuration, 'lead_scientist', buffer)
-            protocol_field = get_field(elog_configuration, 'protocol', buffer)
-            cruise_field = get_field(elog_configuration, 'cruise', buffer)
-            platform_field = get_field(elog_configuration, 'platform', buffer)
+            # lead_scientists_field = get_field(elog_configuration, 'lead_scientist', buffer)
+            # protocol_field = get_field(elog_configuration, 'protocol', buffer)
+            # cruise_field = get_field(elog_configuration, 'cruise', buffer)
+            # platform_field = get_field(elog_configuration, 'platform', buffer)
+            field_errors = validate_buffer_fields(required_fields, mapped_fields, mid, buffer)
+            if len(field_errors) > 0:
+                # if there are missing fields report the errors and move on to the next message
+                errors += field_errors
+                continue
 
-            lead_scientists: str = buffer.pop(lead_scientists_field)
-            protocol: str = buffer.pop(protocol_field)
-            cruise: str = buffer.pop(cruise_field)
-            platform: str = buffer.pop(platform_field)
+            lead_scientists: str = buffer.pop(mapped_fields['lead_scientist'])
+            protocol: str = buffer.pop(mapped_fields['protocol'])
+            cruise: str = buffer.pop(mapped_fields['cruise'])
+            platform: str = buffer.pop(mapped_fields['platform'])
 
             if update_mission:
                 if (lead_scientists and lead_scientists.strip() != '') and trip.mission.lead_scientist == 'N/A':
@@ -594,7 +634,7 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
                 if trip.platform == 'N/A' or trip.protocol == 'N/A':
                     update_mission = True
 
-            action = existing_actions.get(mid=mid)
+            action = existing_actions[mid]
             # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
             variables_arrays = get_create_and_update_variables(trip, action, buffer)
             fields_create += variables_arrays[0]

@@ -347,8 +347,7 @@ def import_elog_events(request, database, **kwargs):
 
         try:
             data = file.read()
-            elog_configuration = models.ElogConfig.get_default_config(mission)
-            message_objects = elog.parse(io.StringIO(data.decode('utf-8')), elog_configuration)
+            message_objects = elog.parse(io.StringIO(data.decode('utf-8')))
 
             file_errors: [models.FileError] = []
             errors: [tuple] = []
