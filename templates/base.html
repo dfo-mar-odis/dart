@@ -88,7 +88,7 @@
 
 <script type="text/javascript" src="{% static 'dart/js/htmx_web_sockets.js' %}"></script>
 <script>
-    {# This is to handle htmx errors so the user doesn't endup staring at an infinite save/load dialog #}
+    {# This is to handle htmx errors so the user doesn't end up staring at an infinite save/load dialog #}
     document.addEventListener('htmx:responseError', function(evt) {
         let element_id = evt.target.id;
         let bad_element = document.getElementById(element_id);
@@ -97,8 +97,9 @@
         replace_with.id = element_id;
         replace_with.setAttribute('class', 'alert alert-danger mt-2');
         replace_with.append(error_text)
-
-        bad_element.parentNode.replaceChild(replace_with, bad_element);
+        if(bad_element) {
+            bad_element.parentNode.replaceChild(replace_with, bad_element);
+        }
     });
 </script>
 {% block body_js %}{% endblock %}

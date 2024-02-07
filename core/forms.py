@@ -452,52 +452,6 @@ class BottleSelection(forms.Form):
         self.helper.form_show_labels = False
 
 
-class PlanktonForm(forms.Form):
-
-    header = forms.IntegerField(label="Header Line")
-    tab = forms.IntegerField(label="Tab")
-
-    def __init__(self, mission, database, *args, **kwargs):
-        self.mission = mission
-        self.database = database
-
-        super().__init__(*args, **kwargs)
-
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-
-        url = reverse_lazy("core:mission_plankton_load_plankton", args=(database, mission.pk,))
-        tab_field = Field('tab')
-        tab_field.attrs['hx-post'] = url
-        tab_field.attrs['hx-swap'] = "none"
-        tab_field.attrs['class'] = "form-control form-control-sm"
-
-        header_field = Field('header')
-        header_field.attrs['hx-post'] = url
-        header_field.attrs['hx-swap'] = "none"
-        header_field.attrs['class'] = "form-control form-control-sm"
-
-        importurl = reverse_lazy("core:mission_plankton_import_plankton", args=(database, mission.pk,))
-        button_attrs = {
-            'title': _('Import'),
-            'name': 'import',
-            'hx_get': importurl,
-            'hx_swap': 'none'
-        }
-
-        icon = load_svg('arrow-down-square')
-        submit = StrictButton(icon, css_class="btn btn-sm btn-primary", **button_attrs)
-
-        self.helper.layout = Layout(
-            Row(
-                Column(tab_field, css_class='col-auto'),
-                Column(header_field, css_class='col-auto'),
-                Column(submit, css_class="align-self-end mb-3"),
-                css_class='input-group input-group-sm'
-            )
-        )
-
-
 def blank_alert(component_id, message, **kwargs):
     alert_type = kwargs.pop('alert_type') if 'alert_type' in kwargs else 'info'
 

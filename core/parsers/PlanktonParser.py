@@ -101,8 +101,8 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
 
         stage = life_history if not np.isnan(life_history) else None
 
-        if (taxa := bio_models.BCNatnlTaxonCode.objects.filter(aphiaid=aphiaid,
-                                                               taxonomic_name__iexact=name)).exists():
+        if (taxa := bio_models.BCNatnlTaxonCode.objects.using(database).filter(aphiaid=aphiaid,
+                                                                               taxonomic_name__iexact=name)).exists():
             taxa = taxa[0].national_taxonomic_seq
             logger.debug(taxa)
         else:
@@ -215,7 +215,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     # events = events.exclude(actions__type=core_models.ActionType.aborted)
     ringnet_bottles = core_models.Bottle.objects.using(database).filter(event__in=events)
 
-    core_models.FileError.objects.filter(mission=mission, file_name=filename).delete()
+    mission.file_errors.filter(file_name=filename).delete()
 
     create_plankton = {}
     create_bottles = {}
@@ -224,7 +224,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     for line, row in dataframe.iterrows():
         updated_fields = set("")
 
-        # both the line and dataframe start start at zero, but should start at 1 for human readability
+        # both the line and dataframe start at zero, but should start at 1 for human readability
         line_number = (line + 1) + (dataframe.index.start + 1)
 
         user_logger.info(_("Creating plankton sample") + "%d/%d", line_number, total_rows)
@@ -253,7 +253,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         split_fraction = get_split_fraction(proc_code=proc_code, split=split)
 
         try:
-            taxa = bio_models.BCNatnlTaxonCode.objects.get(pk=taxa_id)
+            taxa = bio_models.BCNatnlTaxonCode.objects.using(database).get(pk=taxa_id)
         except bio_models.BCNatnlTaxonCode.DoesNotExist as ex:
             message = _("Could not find Biochem Taxa with code") + f" : {taxa_id}"
             error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
