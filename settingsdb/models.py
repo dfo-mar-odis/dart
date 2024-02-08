@@ -144,3 +144,13 @@ class FileConfiguration(models.Model):
                                     help_text=_("This is the field as it appears in the file being parsed"))
     description = models.TextField(verbose_name=_("Description"),
                                    help_text=_("Description of the purpose of the mapped field"))
+
+
+class GlobalStation(models.Model):
+
+    name = models.CharField(verbose_name=_("Station Name"), max_length=20, unique=True)
+
+
+class GlobalGeographicRegion(models.Model):
+
+    name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=50, unique=True)
