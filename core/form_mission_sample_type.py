@@ -221,7 +221,7 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
 def list_samples(request, database, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.using(database).get(pk=mission_sample_type_id)
 
-    page = int(request.GET['page'] if 'page' in request.GET else 0)
+    page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
     page_start = page_limit * page
 

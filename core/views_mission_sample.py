@@ -276,7 +276,7 @@ def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
 
 
 def list_samples(request, database, mission_id):
-    page = int(request.GET['page'] if 'page' in request.GET else 0)
+    page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
     page_start = page_limit * page
 
