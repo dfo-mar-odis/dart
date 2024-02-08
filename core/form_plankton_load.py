@@ -130,10 +130,10 @@ def load_plankton(request, database, mission_id):
 
         # because this is an excel format, we now need to know what tab and line the header
         # appears on to figure out if this is zooplankton or phytoplankton
-        tab = int(request.POST['tab'] if 'tab' in request.POST else 1)
+        tab = int(request.POST.get('tab', 1) or 1)
         tab = 1 if tab <= 0 else tab
 
-        header = int(request.POST['header'] if 'header' in request.POST else -1)
+        header = int(request.POST.get('header', -1) or -1)
         dict_vals = request.POST.copy()
         dict_vals['tab'] = tab
         dict_vals['header'] = header
@@ -238,8 +238,8 @@ def import_plankton(request, database, mission_id):
 
     # because this is an excel format, we now need to know what tab and line the header
     # appears on to figure out if this is zoo or phyto plankton
-    tab = int(request.POST['tab'])
-    header = int(request.POST['header'])
+    tab = int(request.POST.get('tab', 1) or 1)
+    header = int(request.POST.get('header', 1) or 1)
 
     try:
         dataframe = get_excel_dataframe(stream=data, sheet_number=(tab - 1), header_row=(header - 1))
@@ -314,7 +314,7 @@ def list_plankton(request, database, mission_id):
     div.attrs['hx-swap-oob'] = 'true'
     soup.append(div)
 
-    page = int(request.GET['page'] if 'page' in request.GET else 0)
+    page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
     page_start = page_limit * page
 

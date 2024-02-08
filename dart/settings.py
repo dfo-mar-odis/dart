@@ -256,7 +256,12 @@ LOGGERS = (
             "level": "DEBUG",
             "propagate": True
         },
-        "dart.user": {  # use this logger to notify the user using status updates sent to the web browser
+        # use this logger to notify the user using status updates sent to the web browser
+        # anytime you want to use a websocket the process creating log messages for the socket should use
+        # a 'logger_notifications' object that extends the dart.user logger to prevent massive notifications
+        # from being printed to the error or info log files potentially deadlocking them
+        "dart.user": {
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": False
         }

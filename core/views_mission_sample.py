@@ -133,7 +133,8 @@ class SampleDetails(GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['reports'] = {key: reverse_lazy(views.reports[key], args=(self.object.pk,)) for key in
+        database = context['database']
+        context['reports'] = {key: reverse_lazy(views.reports[key], args=(database, self.object.pk,)) for key in
                               views.reports.keys()}
 
         context['mission'] = self.object
@@ -158,7 +159,7 @@ def get_file_error_card(request, database, mission_id):
         card_div = error_card.find("div")
 
         card_body = card_div.find(id=error_card_form.get_card_body_id())
-        card_body.attrs['class'].append('vertical-scrollbar-sm')
+        card_body['class'] = card_body.get('class', []) + ['vertical-scrollbar-sm']
 
         ul = soup.new_tag("ul")
         card_body.append(ul)
@@ -173,8 +174,6 @@ def get_file_error_card(request, database, mission_id):
 
 def load_samples(request, database):
     # Either delete a file configuration or load the samples from the sample file
-
-    load_block = "loaded_sample_list_block"
 
     if request.method == "GET":
 
@@ -264,7 +263,7 @@ def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
     if 'colspan' in column.attrs and int(column.attrs['colspan']) > 1:
         label = column.string
         col_count = int(column.attrs['colspan'])
-        column.attrs['colspan'] = 1
+        column.attrs['colspan'] = "1"
         column.string = f'{label}-1'
         for i in range(1, col_count):
             new_th = soup.new_tag('th')
@@ -277,7 +276,7 @@ def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
 
 
 def list_samples(request, database, mission_id):
-    page = int(request.GET['page'] if 'page' in request.GET else 0)
+    page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
     page_start = page_limit * page
 
@@ -404,7 +403,7 @@ def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission)
 
     # the first column of the table will have the 'Sample' and 'Pressure' lables under it so it spans two columns
     upload_row_title = soup.new_tag('th')
-    upload_row_title.attrs['colspan'] = 2
+    upload_row_title.attrs['colspan'] = "2"
     upload_row_title.string = _("Biochem upload")
     upload_row.append(upload_row_title)
 
@@ -415,7 +414,7 @@ def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission)
     while column:
         column['class'] = 'text-center text-nowrap'
 
-        sampletype_id = column.string
+        sampletype_id = int(column.string)
 
         button = get_sensor_table_button(soup, database, mission, sampletype_id)
 

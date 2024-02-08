@@ -19,7 +19,7 @@ import logging
 from dart.utils import updated_value
 
 logger = logging.getLogger("dart")
-logger_notifications = logging.getLogger('dart.ctd')
+logger_notifications = logging.getLogger('dart.user.ctd')
 
 
 def get_event_number(data_frame: pandas.DataFrame) -> int:

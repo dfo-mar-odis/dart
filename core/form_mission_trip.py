@@ -333,83 +333,9 @@ def import_elog_events(request, database, **kwargs):
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
     files = request.FILES.getlist('event')
-    group_name = 'mission_events'
 
-    file_count = len(files)
-    for index, file in enumerate(files):
-        file_name = file.name
-        # let the user know that we're about to start processing a file
-        # send_user_notification_elog(group_name, mission, f'Processing file {process_message}')
-        elog.logger_notifications.info(_("Processing File") + " : %d/%d", (index+1), file_count)
-
-        # remove any existing errors for a log file of this name and update the interface
-        mission.file_errors.filter(file_name=file_name).delete()
-
-        try:
-            data = file.read()
-            elog_configuration = models.ElogConfig.get_default_config(mission)
-            message_objects = elog.parse(io.StringIO(data.decode('utf-8')), elog_configuration)
-
-            file_errors: [models.FileError] = []
-            errors: [tuple] = []
-            # make note of missing required field errors in this file
-            for mid, error_buffer in message_objects[elog.ParserType.ERRORS].items():
-                # Report errors to the user if there are any, otherwise process the message objects you can
-                for error in error_buffer:
-                    err = models.FileError(mission=mission, file_name=file_name, line=int(mid),
-                                           type=models.ErrorType.missing_value,
-                                           message=f'Elog message object ($@MID@$: {mid}) missing required '
-                                                   f'field [{error.args[0]["expected"]}]')
-                    file_errors.append(err)
-
-                    if mid in message_objects[elog.ParserType.MID]:
-                        message_objects[elog.ParserType.MID].pop(mid)
-
-            # send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
-            elog.process_stations(trip, message_objects[elog.ParserType.STATIONS])
-
-            # send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
-            elog.process_instruments(trip, message_objects[elog.ParserType.INSTRUMENTS])
-
-            # send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
-            errors += elog.process_events(trip, message_objects[elog.ParserType.MID])
-
-            # send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
-            errors += elog.process_attachments_actions(trip, message_objects[elog.ParserType.MID], file_name)
-
-            # send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
-            errors += elog.process_variables(trip, message_objects[elog.ParserType.MID])
-
-            error_count = len(errors)
-            for err, error in enumerate(errors):
-                elog.logger_notifications.info(_("Recording Errors") + f" {file_name} : %d/%d", (err+1), error_count)
-                file_error = models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
-                if isinstance(error[2], KeyError):
-                    file_error.type = models.ErrorType.missing_id
-                elif isinstance(error[2], ValueError):
-                    file_error.type = models.ErrorType.missing_value
-                else:
-                    file_error.type = models.ErrorType.unknown
-                file_errors.append(file_error)
-
-            models.FileError.objects.using(database).bulk_create(file_errors)
-
-        except Exception as ex:
-            if type(ex) is LookupError:
-                logger.error(ex)
-                err = models.FileError(mission=mission, type=models.ErrorType.missing_id, file_name=file_name,
-                                       message=ex.args[0]['message'] + ", " + _("see error.log for details"))
-            else:
-                # Something is really wrong with this file
-                logger.exception(ex)
-                err = models.FileError(mission=mission, type=models.ErrorType.unknown, file_name=file_name,
-                                       message=_("Unknown error :") + f"{str(ex)}, " + _("see error.log for details"))
-            err.save()
-            send_user_notification_elog(group_name, mission, "File Error")
-
-            continue
-
-        validation.validate_trip(trip)
+    elog.parse_files(trip, files)
+    validation.validate_trip(trip)
 
     # When a file is first loaded it triggers a 'selection changed' event for the forms "input" element.
     # If we don't clear the input element here and the user tries to reload the same file, nothing will happen
@@ -417,7 +343,7 @@ def import_elog_events(request, database, **kwargs):
     event_form = render_block_to_string('core/partials/card_event_row.html', 'event_import_form',
                                         context={'database': database, 'trip': trip})
 
-    soup = BeautifulSoup()
+    soup = BeautifulSoup('', 'html.parser')
     trip_form = get_mision_trip_form(mission, trip)
     trip_form.attrs['hx-swap-oob'] = 'true'
 
