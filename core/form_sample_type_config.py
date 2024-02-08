@@ -290,8 +290,8 @@ def save_sample_config(request, database, **kwargs):
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
-        tab = int(request.POST['tab']) if 'tab' in request.POST else 0
-        skip = int(request.POST['skip']) if 'skip' in request.POST else 0
+        tab = int(request.POST.get('tab', 0) or 0)
+        skip = int(request.POST.get('skip', 0) or 0)
 
         tab, skip, field_choices = SampleParser.get_headers(data, file_type, tab, skip)
 
@@ -336,7 +336,7 @@ def new_sample_config(request, database, **kwargs):
     if request.method == "GET":
 
         if 'sample_type' in request.GET:
-            sample_type = int(request.GET['sample_type']) if request.GET['sample_type'] else 0
+            sample_type = int(request.GET.get('sample_type', 0) or 0)
             soup = get_sample_config_form(database, sample_type, **kwargs)
             return HttpResponse(soup)
 
@@ -375,8 +375,8 @@ def new_sample_config(request, database, **kwargs):
             sample_config_form = SampleTypeConfigForm(database, file_type=file_type, field_choices=field_choices,
                                                       instance=config)
         else:
-            tab = int(request.POST['tab']) if 'tab' in request.POST else 0
-            skip = int(request.POST['skip']) if 'skip' in request.POST else -1
+            tab = int(request.POST.get('tab', 0) or 0)
+            skip = int(request.POST.get('skip', 0) or -1)
             field_choices = []
 
             try:
