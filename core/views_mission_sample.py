@@ -133,7 +133,8 @@ class SampleDetails(GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['reports'] = {key: reverse_lazy(views.reports[key], args=(self.object.pk,)) for key in
+        database = context['database']
+        context['reports'] = {key: reverse_lazy(views.reports[key], args=(database, self.object.pk,)) for key in
                               views.reports.keys()}
 
         context['mission'] = self.object
