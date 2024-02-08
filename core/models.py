@@ -134,8 +134,6 @@ class InstrumentType(models.IntegerChoices):
 
 
 class Instrument(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='instruments', blank=True, null=True,
-                                verbose_name=_("Mission"))
     name = models.CharField(max_length=50, verbose_name=_("Instrument"))
     type = models.IntegerField(verbose_name=_("Instrument Type"), default=999, choices=InstrumentType.choices)
 
@@ -143,19 +141,16 @@ class Instrument(models.Model):
         return f"{self.get_type_display()} - {self.name}"
 
     class Meta:
-        unique_together = ('mission', 'name',)
         ordering = ('type', 'name',)
 
 
 class Station(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='stations', verbose_name=_("Mission"), blank=True, null=True,)
     name = models.CharField(max_length=20, verbose_name=_("Station"))
 
     def __str__(self):
         return self.name
 
     class Meta:
-        unique_together = ('mission', 'name',)
         ordering = ('name',)
 
 
@@ -370,10 +365,8 @@ class Attachment(models.Model):
 # later on to add bilingual support
 class VariableName(models.Model):
     name = models.CharField(verbose_name=_("Field Name"), max_length=50)
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='variables', verbose_name=_("Mission"), blank=True, null=True,)
 
     class Meta:
-        unique_together = ('mission', 'name')
         ordering = (Lower('name'),)
 
 
@@ -391,7 +384,7 @@ class VariableField(models.Model):
 # Bottles keep track of CTD bottles that sensor and sample data will later be attached to.
 class Bottle(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="bottles", on_delete=models.CASCADE)
-    date_time = models.DateTimeField(verbose_name=_("Fired Date/Time"))
+    closed = models.DateTimeField(verbose_name=_("Fired Date/Time"))
 
     # the bottle number is its order from 1 to N in a series of bottles as opposed tot he bottle ID which is the
     # label placed on the bottle linking it to all samples that come from that bottle.
@@ -466,8 +459,8 @@ class Sample(models.Model):
 
     file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
 
-    last_modified_date = models.DateTimeField(verbose_name=_("Sample Modified"),
-                                              help_text=_("Date sample was last updated"), auto_now=True)
+    last_modified = models.DateTimeField(verbose_name=_("Sample Modified"),
+                                         help_text=_("Date sample was last updated"), auto_now=True)
 
     def __str__(self):
         return f'{self.type}: {self.bottle.bottle_id}'

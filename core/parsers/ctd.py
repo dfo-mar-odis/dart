@@ -304,7 +304,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
                 b_update['fields'] = b_update['fields'].union(updated_fields)
         elif len(valid) <= 0:
             # only create a new bottle if the bottle id is in a valid range.
-            new_bottle = core_models.Bottle(event=event, pressure=pressure, bottle_number=bottle_number, date_time=date,
+            new_bottle = core_models.Bottle(event=event, pressure=pressure, bottle_number=bottle_number, closed=date,
                                             bottle_id=bottle_id, latitude=latitude, longitude=longitude)
             b_create.append(new_bottle)
 

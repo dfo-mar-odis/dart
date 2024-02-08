@@ -163,14 +163,14 @@ def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.using(database).filter(mission=trip.mission)
+    existing_stations = core_models.Station.objects.using(database).filter(events__trip__mission=trip.mission)
     station_count = len(station_queue)
     for index, station in enumerate(station_queue):
         logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
         stn = station.upper()
         if stn not in added_stations and not existing_stations.filter(name__iexact=stn).exists():
             added_stations.add(stn)
-            stations.append(core_models.Station(mission=trip.mission, name=stn))
+            stations.append(core_models.Station(name=stn))
 
     core_models.Station.objects.using(database).bulk_create(stations)
 
@@ -211,14 +211,14 @@ def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.using(database).filter(mission=trip.mission)
+    existing_instruments = core_models.Instrument.objects.using(database).filter(events__trip__mission=trip.mission)
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
         if instrument.upper() not in added_instruments and \
                 not existing_instruments.filter(name__iexact=instrument).exists():
             instrument_type = get_instrument_type(instrument_name=instrument)
-            instruments.append(core_models.Instrument(mission=trip.mission, name=instrument, type=instrument_type))
+            instruments.append(core_models.Instrument(name=instrument, type=instrument_type))
             added_instruments.add(instrument.upper())
 
     core_models.Instrument.objects.using(database).bulk_create(instruments)
@@ -262,8 +262,8 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
 
             event_id = int(buffer[event_field])
 
-            station = stations.get(name__iexact=buffer.pop(station_field), mission=trip.mission)
-            instrument = instruments.get(name__iexact=buffer.pop(instrument_field), mission=trip.mission)
+            station = stations.get(name__iexact=buffer.pop(station_field))
+            instrument = instruments.get(name__iexact=buffer.pop(instrument_field))
             sample_id: str = buffer.pop(sample_id_field)
             end_sample_id: str = buffer.pop(end_sample_id_field)
 

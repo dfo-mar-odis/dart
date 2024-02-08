@@ -42,7 +42,6 @@ class StationFactory(DjangoModelFactory):
     class Meta:
         model = models.Station
 
-    mission = factory.SubFactory(MissionFactory)
     name = factory.lazy_attribute(lambda o: faker.bothify(text='??_##'))
 
 
@@ -50,7 +49,6 @@ class InstrumentFactory(DjangoModelFactory):
     class Meta:
         model = models.Instrument
 
-    mission = factory.SubFactory(MissionFactory)
     name = factory.lazy_attribute(lambda o: faker.name())
     type = factory.lazy_attribute(lambda o: faker.random.choice(models.InstrumentType.choices)[0])
 
@@ -75,9 +73,8 @@ class EventFactory(DjangoModelFactory):
 
     event_id = factory.lazy_attribute(lambda o: faker.random_number(digits=3))
     trip = factory.SubFactory(TripFactory, mission=mission)
-    station = factory.SubFactory(StationFactory, mission=mission)
-    instrument = factory.SubFactory(InstrumentFactory, name="other", instrument_type=models.InstrumentType.other,
-                                    mission=mission)
+    station = factory.SubFactory(StationFactory)
+    instrument = factory.SubFactory(InstrumentFactory, name="other", instrument_type=models.InstrumentType.other)
 
 
 class CTDEventFactoryBlank(EventFactory):
@@ -159,7 +156,7 @@ class BottleFactory(DjangoModelFactory):
         model = models.Bottle
 
     event = factory.SubFactory(CTDEventFactory)
-    date_time = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
+    closed = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
     bottle_id = factory.sequence(lambda n: n)
     pressure = factory.lazy_attribute(lambda o: faker.pyfloat(left_digits=4, right_digits=3))
 

@@ -175,8 +175,8 @@ class TestElogParser(DartTestCase):
                 "End_Sample_ID": str(expected_end_sample_id)
             }
         }
-        core_factory.StationFactory(name=expected_station, mission=self.mission)
-        core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type, mission=self.mission)
+        core_factory.StationFactory(name=expected_station)
+        core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type)
 
         events = core_models.Event.objects.using('default').filter(trip=self.trip)
         self.assertFalse(events.exists())
@@ -236,7 +236,7 @@ class TestElogParser(DartTestCase):
             }
         }
 
-        core_factory.StationFactory(name=expected_station, mission=self.mission)
+        core_factory.StationFactory(name=expected_station)
 
         errors = elog.process_events(self.trip, buffer)
         self.assertEquals(len(errors), 1)
