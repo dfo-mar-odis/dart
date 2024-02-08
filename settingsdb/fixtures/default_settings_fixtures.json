@@ -1,5 +1,13 @@
 [
 {
+    "model": "settingsdb.localsetting",
+    "pk": 1,
+    "fields": {
+        "database_location": "./missions",
+        "connected": true
+    }
+},
+{
     "model": "settingsdb.globalsampletype",
     "pk": 1,
     "fields": {
@@ -439,7 +447,7 @@
         "is_sensor": false
     }
 },
-    {
+{
     "model": "settingsdb.globalsampletype",
     "pk": 41,
     "fields": {
@@ -448,6 +456,237 @@
         "priority": 1,
         "datatype": 90000330,
         "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 42,
+    "fields": {
+        "short_name": "prDM",
+        "long_name": "Pressure, Digiquartz [db]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 43,
+    "fields": {
+        "short_name": "t090C",
+        "long_name": "Temperature [ITS-90, deg C]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 44,
+    "fields": {
+        "short_name": "c0S/m",
+        "long_name": "Conductivity [S/m]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 45,
+    "fields": {
+        "short_name": "t190C",
+        "long_name": "Temperature [ITS-90, deg C]",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 46,
+    "fields": {
+        "short_name": "c1S/m",
+        "long_name": "Conductivity [S/m]",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 47,
+    "fields": {
+        "short_name": "altM",
+        "long_name": "Altimeter [m]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 48,
+    "fields": {
+        "short_name": "par/log",
+        "long_name": "PAR/Logarithmic, Satlantic [umol photons/m2/s]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 49,
+    "fields": {
+        "short_name": "sbeox0V",
+        "long_name": "Oxygen raw, SBE 43 [V]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 50,
+    "fields": {
+        "short_name": "sbeox1V",
+        "long_name": "Oxygen raw, SBE 43 [V]",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 51,
+    "fields": {
+        "short_name": "flSPuv0",
+        "long_name": "Fluorescence, Seapoint Ultraviolet",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 52,
+    "fields": {
+        "short_name": "flSP",
+        "long_name": "Fluorescence, Seapoint",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 53,
+    "fields": {
+        "short_name": "ph",
+        "long_name": "pH",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 54,
+    "fields": {
+        "short_name": "turbWETbb0",
+        "long_name": "Turbidity, WET Labs ECO BB [m^-1/sr]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 55,
+    "fields": {
+        "short_name": "sbeox0ml/l",
+        "long_name": "ml/l",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 56,
+    "fields": {
+        "short_name": "sbeox1ml/l",
+        "long_name": "ml/l",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 57,
+    "fields": {
+        "short_name": "sal00",
+        "long_name": null,
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 58,
+    "fields": {
+        "short_name": "sal11",
+        "long_name": null,
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 59,
+    "fields": {
+        "short_name": "potemp090c",
+        "long_name": "90c",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 60,
+    "fields": {
+        "short_name": "potemp190c",
+        "long_name": "90c",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 61,
+    "fields": {
+        "short_name": "sigma-é00",
+        "long_name": null,
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 62,
+    "fields": {
+        "short_name": "sigma-é11",
+        "long_name": null,
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
     }
 },
 {
@@ -1670,38 +1909,6 @@
     "model": "settingsdb.sampletypeconfig",
     "pk": 77,
     "fields": {
-        "sample_type": 38,
-        "file_type": "xlsx",
-        "skip": 1,
-        "sample_field": "id",
-        "value_field": "zea",
-        "tab": 0,
-        "flag_field": "",
-        "comment_field": "",
-        "allow_blank": false,
-        "allow_replicate": true
-    }
-},
-{
-    "model": "settingsdb.sampletypeconfig",
-    "pk": 77,
-    "fields": {
-        "sample_type": 39,
-        "file_type": "csv",
-        "skip": 1,
-        "sample_field": "id",
-        "value_field": "f12_pmol_L",
-        "tab": 0,
-        "flag_field": "",
-        "comment_field": "",
-        "allow_blank": false,
-        "allow_replicate": true
-    }
-},
-{
-    "model": "settingsdb.sampletypeconfig",
-    "pk": 77,
-    "fields": {
         "sample_type": 40,
         "file_type": "csv",
         "skip": 1,
@@ -1713,6 +1920,697 @@
         "allow_blank": false,
         "allow_replicate": true
     }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 78,
+    "fields": {
+        "sample_type": 3,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "chl.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 79,
+    "fields": {
+        "sample_type": 4,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "phae.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 80,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 81,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 1,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "event",
+        "mapped_field": "Event",
+        "description": "Label identifying the elog event number"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 2,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "time_position",
+        "mapped_field": "Time|Position",
+        "description": "Label identifying the time|position string of an action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 3,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "station",
+        "mapped_field": "Station",
+        "description": "Label identifying the station of the event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 4,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "action",
+        "mapped_field": "Action",
+        "description": "Label identifying an elog action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 5,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "instrument",
+        "mapped_field": "Instrument",
+        "description": "Label identifying the instrument of the event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 6,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "lead_scientist",
+        "mapped_field": "PI",
+        "description": "Label identifying the lead scientists of the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 7,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "protocol",
+        "mapped_field": "Protocol",
+        "description": "Label identifying the protocol of the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 8,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "cruise",
+        "mapped_field": "Cruise",
+        "description": "Label identifying the cruse name of the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 9,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "platform",
+        "mapped_field": "Platform",
+        "description": "Label identifying the ship name used for the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 10,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "attached",
+        "mapped_field": "Attached",
+        "description": "Label identifying accessories attached to equipment"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 11,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "start_sample_id",
+        "mapped_field": "Sample ID",
+        "description": "Label identifying a lone bottle, or starting bottle in a sequence"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 12,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "end_sample_id",
+        "mapped_field": "End_Sample_ID",
+        "description": "Label identifying the ending bottle in a sequence"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 13,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "comment",
+        "mapped_field": "Comment",
+        "description": "Label identifying an action comment"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 14,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "data_collector",
+        "mapped_field": "Author",
+        "description": "Label identifying who logged the elog action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 15,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "sounding",
+        "mapped_field": "Sounding",
+        "description": "Label identifying the sounding depth of the action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 16,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "wire_out",
+        "mapped_field": "Wire out",
+        "description": "Label identifying how much wire was unspooled for a net event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 17,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "flow_start",
+        "mapped_field": "Flowmeter Start",
+        "description": "Label for the starting value of a flowmeter for a net event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 18,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "flow_end",
+        "mapped_field": "Flowmeter End",
+        "description": "Label for the ending value of a flowmeter for a net event"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 1,
+    "fields": {
+        "name": "NEC_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 2,
+    "fields": {
+        "name": "NEC_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 3,
+    "fields": {
+        "name": "NEC_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 4,
+    "fields": {
+        "name": "NEC_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 5,
+    "fields": {
+        "name": "NEC_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 6,
+    "fields": {
+        "name": "NEC_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 7,
+    "fields": {
+        "name": "NEC_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 8,
+    "fields": {
+        "name": "NEC_08"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 9,
+    "fields": {
+        "name": "NEC_09"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 10,
+    "fields": {
+        "name": "NEC_10"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 11,
+    "fields": {
+        "name": "BBL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 12,
+    "fields": {
+        "name": "BBL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 13,
+    "fields": {
+        "name": "BBL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 14,
+    "fields": {
+        "name": "BBL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 15,
+    "fields": {
+        "name": "BBL_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 16,
+    "fields": {
+        "name": "BBL_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 17,
+    "fields": {
+        "name": "BBL_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 18,
+    "fields": {
+        "name": "HL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 19,
+    "fields": {
+        "name": "HL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 20,
+    "fields": {
+        "name": "HL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 21,
+    "fields": {
+        "name": "HL_03.3"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 22,
+    "fields": {
+        "name": "HL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 23,
+    "fields": {
+        "name": "HL_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 24,
+    "fields": {
+        "name": "HL_05.5"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 25,
+    "fields": {
+        "name": "HL_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 26,
+    "fields": {
+        "name": "HL_06.3"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 27,
+    "fields": {
+        "name": "HL_06.7"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 28,
+    "fields": {
+        "name": "HL_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 29,
+    "fields": {
+        "name": "GUL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 30,
+    "fields": {
+        "name": "GUL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 31,
+    "fields": {
+        "name": "GUL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 32,
+    "fields": {
+        "name": "GUL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 33,
+    "fields": {
+        "name": "GULD_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 34,
+    "fields": {
+        "name": "LCM_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 35,
+    "fields": {
+        "name": "LCM_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 36,
+    "fields": {
+        "name": "LCM_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 37,
+    "fields": {
+        "name": "LCM_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 38,
+    "fields": {
+        "name": "LCM_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 39,
+    "fields": {
+        "name": "LCM_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 40,
+    "fields": {
+        "name": "LCM_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 41,
+    "fields": {
+        "name": "LCM_08"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 42,
+    "fields": {
+        "name": "LCM_09"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 43,
+    "fields": {
+        "name": "LCM_10"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 44,
+    "fields": {
+        "name": "LL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 45,
+    "fields": {
+        "name": "LL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 46,
+    "fields": {
+        "name": "LL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 47,
+    "fields": {
+        "name": "LL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 48,
+    "fields": {
+        "name": "LL_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 49,
+    "fields": {
+        "name": "LL_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 50,
+    "fields": {
+        "name": "LL_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 51,
+    "fields": {
+        "name": "LL_08"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 52,
+    "fields": {
+        "name": "LL_09"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 53,
+    "fields": {
+        "name": "CSL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 54,
+    "fields": {
+        "name": "CSL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 55,
+    "fields": {
+        "name": "CSL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 56,
+    "fields": {
+        "name": "CSL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 57,
+    "fields": {
+        "name": "CSL_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 58,
+    "fields": {
+        "name": "CSL_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 59,
+    "fields": {
+        "name": "STAB_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 60,
+    "fields": {
+        "name": "STAB_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 61,
+    "fields": {
+        "name": "STAB_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 62,
+    "fields": {
+        "name": "STAB_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 63,
+    "fields": {
+        "name": "STAB_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 64,
+    "fields": {
+        "name": "STAB_06"
+    }
 }
-
 ]

@@ -28,7 +28,7 @@ class SettingsdbConfig(AppConfig):
                 if not models.GlobalSampleType.objects.all().exists():
                     logger.info("Loading sample type fixtures, this may take a moment")
                     call_command('loaddata', 'biochem_fixtures')
-                    call_command('loaddata', 'sample_type_fixtures')
+                    call_command('loaddata', 'default_settings_fixtures')
 
         except Exception as ex:
             logger.error('Could not load biochem fixtures')
