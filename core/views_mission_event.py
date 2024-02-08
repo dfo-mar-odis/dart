@@ -1,6 +1,3 @@
-import os
-import time
-
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Div, HTML, Row, Column
@@ -10,7 +7,6 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
-from settingsdb import utils
 from core import models, forms, validation, form_event_details, form_mission_trip
 from core.views import MissionMixin, reports
 from dart.utils import load_svg
@@ -29,6 +25,7 @@ class EventDetails(MissionMixin, GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        database = context['database']
 
         if caches['default'].touch('selected_event'):
             caches['default'].delete('selected_event')
@@ -40,7 +37,8 @@ class EventDetails(MissionMixin, GenericDetailView):
         elif self.object.trips.last():
             context['trip_id'] = self.object.trips.last().pk
 
-        context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,)) for key in reports.keys()}
+        context['reports'] = {key: reverse_lazy(reports[key], args=(database, self.object.pk,))
+                              for key in reports.keys()}
 
         return context
 
@@ -155,7 +153,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         buttons = Column(css_class="col-auto align-self-end")
         header.fields[0].fields.append(buttons)
 
-        issue_count = self.mission.file_errors.count()
+        issue_count = self.mission.file_errors.filter(file_name__iendswith=".log").count()
         if issue_count > 0:
             issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
             buttons.fields.append(issue_count_col)
@@ -166,7 +164,8 @@ class ValidateFileCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        files = self.mission.file_errors.all().values_list('file_name', flat=True).distinct()
+        files = self.mission.file_errors.filter(file_name__iendswith=".log").values_list('file_name',
+                                                                                         flat=True).distinct()
         for index, file in enumerate(files):
             event_card = ValidationFileCard(self.mission, file, index)
             div = Div(event_card.helper.layout, css_class="mb-2")
@@ -175,7 +174,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         return body
 
     def __init__(self, mission, *args, **kwargs):
-        self.mission = mission
+        self.mission: models.Mission = mission
         super().__init__(card_name="file_validation", card_title=_("File Issues"), *args, **kwargs)
 
 

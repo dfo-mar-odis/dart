@@ -23,8 +23,7 @@ def convert_timedelta_to_string(delta: timedelta) -> str:
     return elapsed
 
 
-def elog(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def elog(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     header = ['Mission', 'Event', 'Station', 'INSTRUMENT', 'AVG_SOUNDING', 'MIN_LAT', 'MIN_LON', 'MAX_LAT', 'MAX_LON',
@@ -95,24 +94,23 @@ def elog(request, **kwargs):
     return response
 
 
-def error_report(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def error_report(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     header = ['MISSION', "FILE", "LINE/OBJECT", 'ERROR_TYPE', 'MESSAGE']
     data = ",".join(header) + '\n'
 
-    file_errs = core_models.FileError.objects.filter(mission=mission)
+    file_errs = mission.file_errors.all()
     for error in file_errs:
         row = [mission.name, error.file_name, error.line, error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
-    validation_errs = core_models.ValidationError.objects.filter(event__trip__mission=mission)
+    validation_errs = core_models.ValidationError.objects.using(database).filter(event__trip__mission=mission)
     for error in validation_errs:
         row = [mission.name, "", f"Event: {error.event.event_id}", error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
-    general_errs = core_models.Error.objects.filter(mission=mission)
+    general_errs = mission.errors.all()
     for error in general_errs:
         row = [mission.name, "", "", error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
@@ -126,8 +124,7 @@ def error_report(request, **kwargs):
     return response
 
 
-def profile_summary(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def profile_summary(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     exclude = []
@@ -170,8 +167,7 @@ def profile_summary(request, **kwargs):
     return response
 
 
-def std_sample_report(request, **kwargs):
-    mission_id = kwargs['mission_id']
+def std_sample_report(request, database, mission_id, **kwargs):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     data = ",".join(kwargs['headers']) + '\n'
@@ -206,48 +202,48 @@ def std_sample_report(request, **kwargs):
 
 # The problem with this report is it depends on there being a SampleType with a short name 'oxy'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
-def oxygen_report(request, **kwargs):
+def oxygen_report(request, database, mission_id):
     sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
     samples = ['oxy']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S', 'Oxy_W_Rep1', 'Oxy_W_Rep2']
 
-    return std_sample_report(request, report_name='Oxygen_Rpt', headers=header,
-                             sensors=sensors, samples=samples, **kwargs)
+    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Oxygen_Rpt', headers=header,
+                             sensors=sensors, samples=samples)
 
 
 # The problem with this report is it depends on there being a SampleType with a short name 'sal'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
-def salt_report(request, **kwargs):
+def salt_report(request, database, mission_id):
     sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
     samples = ['salts']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
               'Sal_CTD_P', 'Sal_CTD_S', 'Sal_Rep1', 'Sal_Rep2']
 
-    return std_sample_report(request, report_name='Salinity_Summary', headers=header,
-                             sensors=sensors, samples=samples, **kwargs)
+    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Salinity_Summary', headers=header,
+                             sensors=sensors, samples=samples)
 
 
 # The problem with this report is it depends on there being a SampleType with a short name 'chl'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
-def chl_report(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    sensors = [s.name for s in core_models.MissionSampleType.objects.filter(mission_id=mission_id,
-                                                                            long_name__icontains='fluorescence')]
+def chl_report(request, database, mission_id):
+    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    sensors = [s.name for s in mission.mission_sample_types.filter(long_name__icontains='fluorescence')]
 
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID"]
     header += sensors
     header += ['Chl_Rep1', 'Chl_Rep2']
     samples = ['chl']
 
-    return std_sample_report(request, report_name='Chl_Summary', headers=header,
-                             sensors=sensors, samples=samples, **kwargs)
+    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Chl_Summary', headers=header,
+                             sensors=sensors, samples=samples)
 
 
+url_prefix = "<str:database>/report"
 report_urls = [
-    path('mission/report/elog/<int:mission_id>/', elog, name="hx_report_elog"),
-    path('mission/report/error/<int:mission_id>/', error_report, name="hx_report_error"),
-    path('mission/report/profile_sumamry/<int:mission_id>/', profile_summary, name="hx_report_profile"),
-    path('mission/report/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
-    path('mission/report/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
-    path('mission/report/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),
+    path(f'{url_prefix}/elog/<int:mission_id>/', elog, name="hx_report_elog"),
+    path(f'{url_prefix}/error/<int:mission_id>/', error_report, name="hx_report_error"),
+    path(f'{url_prefix}/profile_sumamry/<int:mission_id>/', profile_summary, name="hx_report_profile"),
+    path(f'{url_prefix}/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
+    path(f'{url_prefix}/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
+    path(f'{url_prefix}/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),
 ]

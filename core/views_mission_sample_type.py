@@ -25,9 +25,6 @@ class SampleTypeDetails(GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['reports'] = {key: reverse_lazy(views.reports[key], args=(self.object.mission.pk,)) for key in
-                              views.reports.keys()}
-
         context['mission_sample_type'] = self.object
         data_type_seq = self.object.datatype
 
@@ -37,6 +34,9 @@ class SampleTypeDetails(GenericDetailView):
             initial['data_type_code'] = data_type_seq.data_type_seq
 
         context['biochem_form'] = BioChemDataType(database=database, mission_sample_type=self.object)
+
+        context['reports'] = {key: reverse_lazy(views.reports[key], args=(database, self.object.mission.pk,)) for key in
+                              views.reports.keys()}
 
         return context
 

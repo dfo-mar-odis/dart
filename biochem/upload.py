@@ -208,10 +208,10 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
 
         updated_fields.add(updated_value(bcs_row, 'dis_headr_responsible_group', trip.protocol))
 
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_sdate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_edate', datetime.strftime(bottle.date_time, "%Y-%m-%d")))
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_stime', datetime.strftime(bottle.date_time, "%H%M")))
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_etime', datetime.strftime(bottle.date_time, "%H%M")))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_sdate', datetime.strftime(bottle.closed, "%Y-%m-%d")))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_edate', datetime.strftime(bottle.closed, "%Y-%m-%d")))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_stime', datetime.strftime(bottle.closed, "%H%M")))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_etime', datetime.strftime(bottle.closed, "%H%M")))
 
         if bottle.latitude:
             updated_fields.add(updated_value(bcs_row, 'dis_headr_slat', bottle.latitude))  # Maybe required to use
@@ -358,9 +358,9 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
             updated_fields.add(updated_value(bcd_row, 'dis_header_slat', location[0]))
             updated_fields.add(updated_value(bcd_row, 'dis_header_slon', location[1]))
 
-        if bottle.date_time:
-            updated_fields.add(updated_value(bcd_row, 'dis_header_sdate', bottle.date_time.strftime("%Y-%m-%d")))
-            updated_fields.add(updated_value(bcd_row, 'dis_header_stime', bottle.date_time.strftime("%H%M")))
+        if bottle.closed:
+            updated_fields.add(updated_value(bcd_row, 'dis_header_sdate', bottle.closed.strftime("%Y-%m-%d")))
+            updated_fields.add(updated_value(bcd_row, 'dis_header_stime', bottle.closed.strftime("%H%M")))
         else:
             event_date = event.start_date
             updated_fields.add(updated_value(bcd_row, 'dis_header_sdate', event_date.strftime("%Y-%m-%d")))
