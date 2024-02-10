@@ -17,6 +17,8 @@ from render_block import render_block_to_string
 from core import forms as core_forms, models
 from dart.utils import load_svg
 
+from settingsdb import models as settings_models
+
 
 class EventDetails(core_forms.CardForm):
 
@@ -120,19 +122,21 @@ class EventDetails(core_forms.CardForm):
 
 class EventForm(forms.ModelForm):
 
+    global_station = forms.ChoiceField(label=_("Station"))
+
     class Meta:
         model = models.Event
         fields = ['trip', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id']
 
-    def __init__(self, trip, database=None, *args, **kwargs):
+    # def __init__(self, trip, database=None, *args, **kwargs):
+    def __init__(self, database=None, *args, **kwargs):
 
-        event = trip.events.order_by('event_id').last()
-        self.database = database if database else trip.mission.name
+        self.database = database
 
         super().__init__(*args, **kwargs)
 
-        self.fields['event_id'].initial = event.event_id + 1 if event else 1
-        self.fields['trip'].queryset = trip.mission.trips.all()
+        self.fields['station'].required = False
+        self.fields['trip'].queryset = models.Trip.objects.using(self.database).all()
         self.helper = FormHelper(self)
 
         # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
@@ -140,17 +144,27 @@ class EventForm(forms.ModelForm):
         # the form tag has to surround the {% crispy <form name> %} tag and have an id matching the hx_target
         self.helper.form_tag = False
 
+        stations = settings_models.GlobalStation.objects.all().order_by("name")
+        self.fields['global_station'].queryset = stations
+
+        self.fields['global_station'].choices = [(None, '--------')]
+        self.fields['global_station'].choices += [(st.id, st) for st in settings_models.GlobalStation.objects.all()]
+        self.fields['global_station'].choices.append((-1, '-- New --'))
+
         apply_attrs = {
             'name': 'add_event',
             'title': _('Submit'),
             'hx-swap': 'none'
         }
+
         if self.instance.pk:
             submit_url = reverse_lazy('core:form_event_edit_event', args=(self.database, self.instance.pk,))
             apply_attrs['hx-post'] = submit_url
-        else:
+            gl_station = settings_models.GlobalStation.objects.get_or_create(name=self.instance.station.name.upper())[0]
+            self.fields['global_station'].initial = gl_station.pk
+        elif 'trip' in self.initial:
             # When adding an event we'll swap the whole card the form appears on.
-            submit_url = reverse_lazy('core:form_event_add_event', args=(self.database, trip.pk,))
+            submit_url = reverse_lazy('core:form_event_add_event', args=(self.database, self.initial['trip'],))
             apply_attrs['hx-post'] = submit_url
             apply_attrs['hx-swap'] = "outerHTML"
             apply_attrs['hx-target'] = "#div_id_card_event_details"
@@ -162,17 +176,10 @@ class EventForm(forms.ModelForm):
         submit_button = StrictButton(load_svg('plus-square'), css_class="btn btn-primary btn-sm ms-2",
                                      **apply_attrs)
 
-        stations = models.Station.objects.using(self.database).all().order_by("name")
-        self.fields['station'].queryset = stations
-
-        self.fields['station'].choices = [(None, '--------')]
-        self.fields['station'].choices += [(st.id, st) for st in stations]
-        self.fields['station'].choices.append((-1, '-- New --'))
-
-        self.fields['station'].widget.attrs["hx-swap"] = 'outerHTML'
-        self.fields['station'].widget.attrs["hx-trigger"] = 'change'
-        self.fields['station'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_stations',
-                                                                     args=(self.database,))
+        self.fields['global_station'].widget.attrs["hx-swap"] = 'outerHTML'
+        self.fields['global_station'].widget.attrs["hx-trigger"] = 'change'
+        self.fields['global_station'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_stations',
+                                                                            args=(self.database,))
 
         instruments = models.Instrument.objects.using(self.database).all().order_by("name")
         self.fields['instrument'].queryset = instruments
@@ -187,10 +194,10 @@ class EventForm(forms.ModelForm):
                                                                         args=(self.database,))
 
         self.helper.layout = Layout(
-            Hidden('trip', trip.pk),
+            Hidden('trip', self.initial.get('trip', '0') or '0'),
             Row(
                 event_element,
-                Column(Field('station', css_class='form-control form-select-sm', id="id_event_station_field"),
+                Column(Field('global_station', css_class='form-control form-select-sm', id="id_event_station_field"),
                        css_class='col-sm-12 col-md-6'),
                 Column(Field('instrument', css_class='form-control form-select-sm', id="id_event_instrument_field"),
                        css_class='col-sm-12 col-md-6'),
@@ -204,9 +211,19 @@ class EventForm(forms.ModelForm):
         )
 
     def save(self, commit=True):
-        instance = super().save(False)
-        instance.save(using=self.database)
 
+        instance = super().save(False)
+
+        gl_station_id = self.cleaned_data['global_station']
+        gl_station = settings_models.GlobalStation.objects.get(pk=gl_station_id)
+        if (n_station := models.Station.objects.using(self.database).filter(name__iexact=gl_station.name)).exists():
+            instance.station = n_station.first()
+        else:
+            n_station = models.Station(name=gl_station.name)
+            n_station.save(using=self.database)
+            instance.station = n_station
+
+        instance.save(using=self.database)
         return instance
 
 
@@ -362,11 +379,10 @@ class AttachmentForm(forms.ModelForm):
 
 
 def update_stations(request, database):
-    mission = models.Mission.objects.using(database).first()
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "GET":
-        if 'station' in request.GET and request.GET['station'] == '-1':
+        if request.GET.get('global_station', '-1') == '-1':
 
             row = soup.new_tag('div')
             row.attrs['class'] = 'container-fluid row'
@@ -380,8 +396,8 @@ def update_stations(request, database):
             submit = soup.new_tag('button')
             submit.attrs['class'] = 'btn btn-primary btn-sm ms-2 col-auto'
             submit.attrs['hx-post'] = request.path
-            submit.attrs['hx-target'] = '#div_id_station'
-            submit.attrs['hx-select'] = '#div_id_station'
+            submit.attrs['hx-target'] = '#div_id_global_station'
+            submit.attrs['hx-select'] = '#div_id_global_station'
             submit.attrs['hx-swap'] = 'outerHTML'
             submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
 
@@ -392,7 +408,7 @@ def update_stations(request, database):
 
             return HttpResponse(soup)
 
-        event_form = EventForm(trip=mission.trips.first(), data=request.GET)
+        event_form = EventForm(database=database, data=request.GET)
         html = render_crispy_form(event_form)
         form_soup = BeautifulSoup(html, "html.parser")
         station_soup = form_soup.find(id="id_event_station_field")
@@ -403,26 +419,24 @@ def update_stations(request, database):
     elif request.method == "POST":
         mission_dict = request.POST.copy()
         if 'station' in request.POST and (new_station_name := request.POST['station'].strip()):
-            if (station := models.Station.objects.using(database).filter(mission=mission, name=new_station_name)).exists():
-                mission_dict['station'] = station[0].id
+            if (station := settings_models.GlobalStation.objects.filter(name__iexact=new_station_name)).exists():
+                mission_dict['global_station'] = station[0].id
             else:
-                new_station = models.Station(mission=mission, name=new_station_name)
-                new_station.save(using=database)
-                mission_dict['station'] = models.Station.objects.using(database).get(mission=mission,
-                                                                                     name=new_station_name)
+                new_station = settings_models.GlobalStation(name=new_station_name.upper())
+                new_station.save()
+                mission_dict['global_station'] = new_station.pk
 
-        mission_form = EventForm(trip=mission.trips.first(), data=mission_dict)
+        mission_form = EventForm(database=database, data=mission_dict)
         html = render_crispy_form(mission_form)
 
         form_soup = BeautifulSoup(html, 'html.parser')
-        station_select = form_soup.find(id="div_id_station")
+        station_select = form_soup.find(id="div_id_global_station")
 
         soup.append(station_select)
         return HttpResponse(soup)
 
 
 def update_instruments(request, database):
-    mission = models.Mission.objects.using(database).first()
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "GET":
@@ -431,22 +445,22 @@ def update_instruments(request, database):
             row = soup.new_tag('div')
             row.attrs['class'] = 'container-fluid row'
 
-            station_input = soup.new_tag('input')
-            station_input.attrs['name'] = 'instrument'
-            station_input.attrs['id'] = 'id_instrument'
-            station_input.attrs['type'] = 'text'
-            station_input.attrs['class'] = 'textinput form-control form-control-sm col'
+            instrument_input = soup.new_tag('input')
+            instrument_input.attrs['name'] = 'instrument'
+            instrument_input.attrs['id'] = 'id_instrument'
+            instrument_input.attrs['type'] = 'text'
+            instrument_input.attrs['class'] = 'textinput form-control form-control-sm col'
 
-            station_type_select = soup.new_tag('select')
-            station_type_select.attrs['name'] = 'instrument_type'
-            station_type_select.attrs['id'] = 'id_instrument_type'
-            station_type_select.attrs['class'] = 'form-select form-select-sm col'
+            instrument_type_select = soup.new_tag('select')
+            instrument_type_select.attrs['name'] = 'instrument_type'
+            instrument_type_select.attrs['id'] = 'id_instrument_type'
+            instrument_type_select.attrs['class'] = 'form-select form-select-sm col'
 
-            for type in models.InstrumentType:
-                station_type_option = soup.new_tag('option')
-                station_type_option.attrs['value'] = type
-                station_type_option.string = type.label
-                station_type_select.append(station_type_option)
+            for instrument_type in models.InstrumentType:
+                instrument_type_option = soup.new_tag('option')
+                instrument_type_option.attrs['value'] = str(instrument_type)
+                instrument_type_option.string = instrument_type.label
+                instrument_type_select.append(instrument_type_option)
 
             submit = soup.new_tag('button')
             submit.attrs['class'] = 'btn btn-primary btn-sm ms-2 col-auto'
@@ -456,15 +470,15 @@ def update_instruments(request, database):
             submit.attrs['hx-swap'] = 'outerHTML'
             submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
 
-            row.append(station_input)
-            row.append(station_type_select)
+            row.append(instrument_input)
+            row.append(instrument_type_select)
             row.append(submit)
 
             soup.append(row)
 
             return HttpResponse(soup)
 
-        event_form = EventForm(trip=mission.trips.first(), data=request.GET)
+        event_form = EventForm(database=database, data=request.GET)
         html = render_crispy_form(event_form)
         form_soup = BeautifulSoup(html, "html.parser")
         instrument_soup = form_soup.find(id="id_event_instrument_field")
@@ -484,22 +498,20 @@ def update_instruments(request, database):
 
         if instrument_name and instrument_type > 0:
             instruments = models.Instrument.objects.using(database).filter(
-                mission=mission,
                 name=instrument_name,
                 type=instrument_type
             )
             if instruments.exists():
                 mission_dict['instrument'] = instruments[0].id
             else:
-                new_instrument = models.Instrument(mission=mission, name=instrument_name, type=instrument_type)
+                new_instrument = models.Instrument(name=instrument_name, type=instrument_type)
                 new_instrument.save(using=database)
                 mission_dict['instrument'] = models.Instrument.objects.using(database).get(
-                    mission=mission,
                     name=instrument_name,
                     type=instrument_type
                 )
 
-        mission_form = EventForm(trip=mission.trips.first(), data=mission_dict)
+        mission_form = EventForm(database=database, data=mission_dict)
         html = render_crispy_form(mission_form)
 
         form_soup = BeautifulSoup(html, 'html.parser')
@@ -560,15 +572,15 @@ def add_event(request, database, trip_id):
     context = {"database": database}
 
     if request.method == "POST":
-        event_form = EventForm(trip=trip, database=database, data=request.POST)
+        event_form = EventForm(database=database, data=request.POST)
 
         if event_form.is_valid():
             # if the form is valid create the new event and return blank Action, Attachment *and* Event forms
-            # otherwise return the event form with it's issues
+            # otherwise return the event form with its issues
             event = event_form.save()
             action_form = ActionForm(event=event)
             attachments_form = AttachmentForm(event=event)
-            event_form = EventForm(trip=trip, database=database, instance=event)
+            event_form = EventForm(database=database, instance=event)
             context = {
                 "database": database,
                 "event": event,
@@ -588,7 +600,9 @@ def add_event(request, database, trip_id):
     else:
         # return a new Event card with a blank Event form
         # called with no event id to create a blank instance of the event_edit_form
-        event_form = EventForm(trip=trip, database=database)
+        last_event = trip.events.last()
+        event_id = last_event.event_id + 1 if last_event else 1
+        event_form = EventForm(database=database, initial={'event_id': event_id, 'trip': trip.pk})
 
     context['event_form'] = event_form
     form_html = render_to_string('core/partials/event_edit_form.html', context=context)
@@ -613,9 +627,9 @@ def edit_event(request, database, event_id):
 
     event_form = None
     if request.method == "GET":
-        event_form = EventForm(trip=event.trip, database=database, instance=event)
+        event_form = EventForm(database=database, instance=event)
     elif request.method == "POST":
-        event_form = EventForm(trip=event.trip, database=database, instance=event, data=request.POST)
+        event_form = EventForm(database=database, instance=event, data=request.POST)
         if event_form.is_valid():
             event_form.save()
 

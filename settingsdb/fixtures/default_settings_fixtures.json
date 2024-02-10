@@ -2169,448 +2169,1043 @@
     "model": "settingsdb.globalstation",
     "pk": 1,
     "fields": {
-        "name": "NEC_01"
+        "name": "AR7W_02"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 2,
     "fields": {
-        "name": "NEC_02"
+        "name": "AR7W_03"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 3,
     "fields": {
-        "name": "NEC_03"
+        "name": "AR7W_04"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 4,
     "fields": {
-        "name": "NEC_04"
+        "name": "AR7W_05"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 5,
     "fields": {
-        "name": "NEC_05"
+        "name": "AR7W_06"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 6,
     "fields": {
-        "name": "NEC_06"
+        "name": "AR7W_07"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 7,
     "fields": {
-        "name": "NEC_07"
+        "name": "AR7W_07.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 8,
     "fields": {
-        "name": "NEC_08"
+        "name": "AR7W_08"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 9,
     "fields": {
-        "name": "NEC_09"
+        "name": "AR7W_09"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 10,
     "fields": {
-        "name": "NEC_10"
+        "name": "AR7W_09.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 11,
     "fields": {
-        "name": "BBL_01"
+        "name": "AR7W_10"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 12,
     "fields": {
-        "name": "BBL_02"
+        "name": "AR7W_10.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 13,
     "fields": {
-        "name": "BBL_03"
+        "name": "AR7W_11"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 14,
     "fields": {
-        "name": "BBL_04"
+        "name": "AR7W_11.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 15,
     "fields": {
-        "name": "BBL_05"
+        "name": "AR7W_12"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 16,
     "fields": {
-        "name": "BBL_06"
+        "name": "AR7W_12.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 17,
     "fields": {
-        "name": "BBL_07"
+        "name": "AR7W_13"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 18,
     "fields": {
-        "name": "HL_01"
+        "name": "AR7W_13.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 19,
     "fields": {
-        "name": "HL_02"
+        "name": "AR7W_14"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 20,
     "fields": {
-        "name": "HL_03"
+        "name": "AR7W_14.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 21,
     "fields": {
-        "name": "HL_03.3"
+        "name": "AR7W_15"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 22,
     "fields": {
-        "name": "HL_04"
+        "name": "AR7W_15.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 23,
     "fields": {
-        "name": "HL_05"
+        "name": "AR7W_16"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 24,
     "fields": {
-        "name": "HL_05.5"
+        "name": "AR7W_16.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 25,
     "fields": {
-        "name": "HL_06"
+        "name": "AR7W_17"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 26,
     "fields": {
-        "name": "HL_06.3"
+        "name": "AR7W_17.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 27,
     "fields": {
-        "name": "HL_06.7"
+        "name": "AR7W_18"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 28,
     "fields": {
-        "name": "HL_07"
+        "name": "AR7W_18.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 29,
     "fields": {
-        "name": "GUL_01"
+        "name": "AR7W_19"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 30,
     "fields": {
-        "name": "GUL_02"
+        "name": "AR7W_19.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 31,
     "fields": {
-        "name": "GUL_03"
+        "name": "AR7W_20"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 32,
     "fields": {
-        "name": "GUL_04"
+        "name": "AR7W_20.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 33,
     "fields": {
-        "name": "GULD_03"
+        "name": "AR7W_21"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 34,
     "fields": {
-        "name": "LCM_01"
+        "name": "AR7W_21.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 35,
     "fields": {
-        "name": "LCM_02"
+        "name": "AR7W_22"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 36,
     "fields": {
-        "name": "LCM_03"
+        "name": "AR7W_22.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 37,
     "fields": {
-        "name": "LCM_04"
+        "name": "AR7W_23"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 38,
     "fields": {
-        "name": "LCM_05"
+        "name": "AR7W_23.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 39,
     "fields": {
-        "name": "LCM_06"
+        "name": "AR7W_24"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 40,
     "fields": {
-        "name": "LCM_07"
+        "name": "AR7W_24.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 41,
     "fields": {
-        "name": "LCM_08"
+        "name": "AR7W_25"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 42,
     "fields": {
-        "name": "LCM_09"
+        "name": "AR7W_25.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 43,
     "fields": {
-        "name": "LCM_10"
+        "name": "AR7W_26"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 44,
     "fields": {
-        "name": "LL_01"
+        "name": "AR7W_26.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 45,
     "fields": {
-        "name": "LL_02"
+        "name": "AR7W_27"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 46,
     "fields": {
-        "name": "LL_03"
+        "name": "AR7W_27.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 47,
     "fields": {
-        "name": "LL_04"
+        "name": "AR7W_28"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 48,
     "fields": {
-        "name": "LL_05"
+        "name": "AR7W_28.5"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 49,
     "fields": {
-        "name": "LL_06"
+        "name": "BBL_01"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 50,
     "fields": {
-        "name": "LL_07"
+        "name": "BBL_02"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 51,
     "fields": {
-        "name": "LL_08"
+        "name": "BBL_03"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 52,
     "fields": {
-        "name": "LL_09"
+        "name": "BBL_04"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 53,
     "fields": {
-        "name": "CSL_01"
+        "name": "BBL_05"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 54,
     "fields": {
-        "name": "CSL_02"
+        "name": "BBL_06"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 55,
     "fields": {
-        "name": "CSL_03"
+        "name": "BBL_07"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 56,
     "fields": {
-        "name": "CSL_04"
+        "name": "CSL_01"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 57,
     "fields": {
-        "name": "CSL_05"
+        "name": "CSL_02"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 58,
     "fields": {
-        "name": "CSL_06"
+        "name": "CSL_03"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 59,
     "fields": {
-        "name": "STAB_01"
+        "name": "CSL_04"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 60,
     "fields": {
-        "name": "STAB_02"
+        "name": "CSL_05"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 61,
     "fields": {
-        "name": "STAB_03"
+        "name": "CSL_06"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 62,
     "fields": {
-        "name": "STAB_04"
+        "name": "GULD_03"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 63,
     "fields": {
-        "name": "STAB_05"
+        "name": "GUL_01"
     }
 },
 {
     "model": "settingsdb.globalstation",
     "pk": 64,
     "fields": {
+        "name": "GUL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 65,
+    "fields": {
+        "name": "GUL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 66,
+    "fields": {
+        "name": "GUL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 67,
+    "fields": {
+        "name": "HL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 68,
+    "fields": {
+        "name": "HL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 69,
+    "fields": {
+        "name": "HL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 70,
+    "fields": {
+        "name": "HL_03.3"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 71,
+    "fields": {
+        "name": "HL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 72,
+    "fields": {
+        "name": "HL_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 73,
+    "fields": {
+        "name": "HL_05.5"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 74,
+    "fields": {
+        "name": "HL_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 75,
+    "fields": {
+        "name": "HL_06.3"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 76,
+    "fields": {
+        "name": "HL_06.7"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 77,
+    "fields": {
+        "name": "HL_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 78,
+    "fields": {
+        "name": "LCM_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 79,
+    "fields": {
+        "name": "LCM_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 80,
+    "fields": {
+        "name": "LCM_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 81,
+    "fields": {
+        "name": "LCM_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 82,
+    "fields": {
+        "name": "LCM_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 83,
+    "fields": {
+        "name": "LCM_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 84,
+    "fields": {
+        "name": "LCM_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 85,
+    "fields": {
+        "name": "LCM_08"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 86,
+    "fields": {
+        "name": "LCM_09"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 87,
+    "fields": {
+        "name": "LCM_10"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 88,
+    "fields": {
+        "name": "LL_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 89,
+    "fields": {
+        "name": "LL_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 90,
+    "fields": {
+        "name": "LL_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 91,
+    "fields": {
+        "name": "LL_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 92,
+    "fields": {
+        "name": "LL_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 93,
+    "fields": {
+        "name": "LL_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 94,
+    "fields": {
+        "name": "LL_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 95,
+    "fields": {
+        "name": "LL_08"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 96,
+    "fields": {
+        "name": "LL_09"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 97,
+    "fields": {
+        "name": "NEC_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 98,
+    "fields": {
+        "name": "NEC_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 99,
+    "fields": {
+        "name": "NEC_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 100,
+    "fields": {
+        "name": "NEC_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 101,
+    "fields": {
+        "name": "NEC_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 102,
+    "fields": {
+        "name": "NEC_06"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 103,
+    "fields": {
+        "name": "NEC_07"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 104,
+    "fields": {
+        "name": "NEC_08"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 105,
+    "fields": {
+        "name": "NEC_09"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 106,
+    "fields": {
+        "name": "NEC_10"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 107,
+    "fields": {
+        "name": "STAB_01"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 108,
+    "fields": {
+        "name": "STAB_02"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 109,
+    "fields": {
+        "name": "STAB_03"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 110,
+    "fields": {
+        "name": "STAB_04"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 111,
+    "fields": {
+        "name": "STAB_05"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 112,
+    "fields": {
         "name": "STAB_06"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 1,
+    "fields": {
+        "name": "Banqereau Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 2,
+    "fields": {
+        "name": "Barrow Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 3,
+    "fields": {
+        "name": "Bay of Fundy"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 4,
+    "fields": {
+        "name": "Bras d’Or Lakes"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 5,
+    "fields": {
+        "name": "Brown’s Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 6,
+    "fields": {
+        "name": "Cabot Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 7,
+    "fields": {
+        "name": "Chaleur Bay"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 8,
+    "fields": {
+        "name": "Chedabucto Bay"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 9,
+    "fields": {
+        "name": "Continental Slope"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 10,
+    "fields": {
+        "name": "Davis Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 11,
+    "fields": {
+        "name": "Emerald Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 12,
+    "fields": {
+        "name": "Emerald Basin"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 13,
+    "fields": {
+        "name": "Flemish Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 14,
+    "fields": {
+        "name": "Flemish Cap"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 15,
+    "fields": {
+        "name": "Flemish Pass"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 16,
+    "fields": {
+        "name": "Georges Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 17,
+    "fields": {
+        "name": "Grand Banks"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 18,
+    "fields": {
+        "name": "Gulf of Maine"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 19,
+    "fields": {
+        "name": "Hudson Bay"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 20,
+    "fields": {
+        "name": "LaHave Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 21,
+    "fields": {
+        "name": "Labrador Shelf"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 22,
+    "fields": {
+        "name": "Laurentian Fan"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 23,
+    "fields": {
+        "name": "Laurentian Trough"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 24,
+    "fields": {
+        "name": "Magdalen Shelf"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 25,
+    "fields": {
+        "name": "Northumberland Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 26,
+    "fields": {
+        "name": "Orphan Basin"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 27,
+    "fields": {
+        "name": "Orphan Knoll"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 28,
+    "fields": {
+        "name": "Sable Island"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 29,
+    "fields": {
+        "name": "Scotian Shelf"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 30,
+    "fields": {
+        "name": "Shediac Valley"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 31,
+    "fields": {
+        "name": "St. Anne’s Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 32,
+    "fields": {
+        "name": "St. Lawrence Estuary"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 33,
+    "fields": {
+        "name": "Sydney Bight"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 34,
+    "fields": {
+        "name": "The Gulf of St. Lawrence"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 35,
+    "fields": {
+        "name": "The Gully"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 36,
+    "fields": {
+        "name": "West Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 37,
+    "fields": {
+        "name": "Whycocomagh Bay"
     }
 }
 ]

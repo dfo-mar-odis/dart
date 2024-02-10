@@ -2,13 +2,16 @@ from bs4 import BeautifulSoup
 from django.test import tag, Client
 from django.urls import reverse
 
+import settingsdb.models
 from core import models
+from core.form_event_details import EventForm
 from core.tests import CoreFactoryFloor as core_factory
 from dart.tests.DartTestCase import DartTestCase
 
 
 @tag('forms', 'form_trip_event')
 class TestTripEventForm(DartTestCase):
+    fixtures = ['biochem_fixtures', 'default_settings_fixtures']
 
     def setUp(self) -> None:
         self.client = Client()
@@ -36,12 +39,12 @@ class TestTripEventForm(DartTestCase):
         # and pass back the event edit form and the Action and Attachment creation forms
         # as defined in the 'core/partials/event_edit_form.html' template
 
-        station = core_factory.StationFactory()
+        station = settingsdb.models.GlobalStation.objects.get_or_create(name="HL_02")[0]
         instrument = core_factory.CTDInstrumentFactory()
         kwargs = {
             'trip': self.trip.pk,
             'event_id': 1,
-            'station': station.pk,
+            'global_station': station.pk,
             'instrument': instrument.pk,
             'sample_id': 1,
             'end_sample_id': 10
@@ -53,7 +56,8 @@ class TestTripEventForm(DartTestCase):
         # make sure the event was created
         # using *.get(event_id=1) will throw a DoesNotExist exception if it wasn't created
         new_event = models.Event.objects.using('default').get(trip=self.trip, event_id=1)
-        self.assertEquals(new_event.station.pk, station.pk)
+        new_station = models.Station.objects.using('default').get(name__iexact=station.name)
+        self.assertEquals(new_event.station.pk, new_station.pk)
         self.assertEquals(new_event.instrument.pk, instrument.pk)
         self.assertEquals(new_event.sample_id, kwargs['sample_id'])
         self.assertEquals(new_event.end_sample_id, kwargs['end_sample_id'])
@@ -77,11 +81,11 @@ class TestTripEventForm(DartTestCase):
         # provided an existing event the edit event url and a set of changed args should update the event
 
         event = core_factory.CTDEventFactory(sample_id=1, end_sample_id=10)
-        station = core_factory.StationFactory(name="HL_001")
+        station = settingsdb.models.GlobalStation.objects.get_or_create(name="HL_02")[0]
         kwargs = {
             'trip': event.trip.pk,
             'event_id': event.event_id,
-            'station': station.pk,
+            'global_station': station.pk,
             'instrument': event.instrument.pk,
             'sample_id': 20,
             'end_sample_id': 400
@@ -93,7 +97,8 @@ class TestTripEventForm(DartTestCase):
 
         self.assertEquals(edited_event.sample_id, kwargs['sample_id'])
         self.assertEquals(edited_event.end_sample_id, kwargs['end_sample_id'])
-        self.assertEquals(edited_event.station.pk, station.pk)
+        new_station = models.Station.objects.using('default').get(name__iexact=station.name)
+        self.assertEquals(edited_event.station.pk, new_station.pk)
 
     @tag('form_trip_event_test_delete_event_post')
     def test_delete_event_post(self):
@@ -453,3 +458,46 @@ class TestTripEventForm(DartTestCase):
             button = tr.find('button', attrs={'name': 'delete_attachment'})
             self.assertIn('hx-delete', button.attrs)
             self.assertEquals(button.attrs['hx-delete'], delete_url)
+
+    @tag("form_trip_event_test_global_stations")
+    def test_global_stations(self):
+        # when creating a new event the stations dropdown should be populated with stations from
+        # the GlobalStation model
+
+        trip = core_factory.TripFactory()
+        event_form = EventForm(database='default', initial={'trip': trip.pk})
+        # we have to chop off the first and last element of the choice list which will be 'none' and the 'new'
+        stations = event_form.fields['global_station'].choices[1:-1]
+        station_names = [station[1] for station in stations]
+        global_stations = settingsdb.models.GlobalStation.objects.all()
+
+        for station in global_stations:
+            self.assertIn(station, station_names)
+
+    @tag("form_trip_event_test_global_stations_save")
+    def test_global_stations_save(self):
+        # when saving an Event form the selected station will be a global station, the station should be copied to
+        # the core.models.station table if it doesn't already exist and then referenced from the event
+
+        global_station = settingsdb.models.GlobalStation.objects.get(name__iexact='hl_02')
+
+        trip = core_factory.TripFactory()
+        instrument = core_factory.InstrumentFactory(type=models.InstrumentType.ctd)
+        event_data = {
+            'trip': trip.pk,
+            'event_id': 1,
+            'global_station': global_station.pk,
+            'instrument': instrument.pk,
+            'sample_id': 1,
+            'end_sample_id': 5,
+        }
+        event_form = EventForm(database='default', data=event_data)
+
+        self.assertFalse(models.Station.objects.using('default').filter(name=global_station.name).exists())
+        self.assertTrue(event_form.is_valid())
+        event_form.save()
+        self.assertTrue(models.Station.objects.using('default').filter(name=global_station.name).exists())
+
+    @tag("form_trip_event_test_global_stations_delete")
+    def test_add_station_get(self):
+        pass

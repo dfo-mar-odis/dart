@@ -125,7 +125,7 @@ class TestMissionTripForm(DartTestCase):
 
         # Once processed the post request should return a new Trip form, because some details might have been updated,
         # and a new alert area that calls the url to update the event selection and event detail cards
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, 'html.parser')
         trip_card = soup.find(id="form_id_mission_trips")
         self.assertIsNotNone(trip_card)
 

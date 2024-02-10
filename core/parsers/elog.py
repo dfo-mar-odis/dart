@@ -675,7 +675,7 @@ def get_create_and_update_variables(trip: core_models.Trip, action: core_models.
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.using(database).get_or_create(mission=trip.mission, name=key)[0]
+        variable = core_models.VariableName.objects.using(database).get_or_create(name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)

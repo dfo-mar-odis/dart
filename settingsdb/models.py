@@ -150,7 +150,13 @@ class GlobalStation(models.Model):
 
     name = models.CharField(verbose_name=_("Station Name"), max_length=20, unique=True)
 
+    def __str__(self):
+        return self.name
+
 
 class GlobalGeographicRegion(models.Model):
 
     name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=50, unique=True)
+
+    def __str__(self):
+        return self.name
