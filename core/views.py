@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 
 from django.http import HttpResponse
-from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 from render_block import render_block_to_string
@@ -9,7 +8,6 @@ from render_block import render_block_to_string
 from biochem import models
 
 from dart.views import GenericCreateView, GenericUpdateView, GenericDetailView
-from dart import utils
 
 from core import forms, models
 from core.parsers import elog
