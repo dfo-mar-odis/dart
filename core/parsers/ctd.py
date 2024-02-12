@@ -355,7 +355,8 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
             global_sampletype = settings_models.GlobalSampleType.objects.get(short_name__iexact=name)
             new_sampletype = core_models.MissionSampleType(mission=mission, name=name, is_sensor=True,
                                                            long_name=global_sampletype.long_name,
-                                                           datatype=global_sampletype.datatype)
+                                                           datatype=global_sampletype.datatype,
+                                                           priority=global_sampletype.priority)
             new_sampletype.save()
 
     sample_types = {

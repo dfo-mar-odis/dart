@@ -318,7 +318,7 @@ def list_samples(request, database, mission_id):
                         # if the replicate column doesn't currently have any values, insert a nan as a placeholder
                         df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
-        df = df.reindex(sorted(df.columns), axis=1)
+        df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensors.order_by('is_sensor', 'priority', 'pk')]]
         table_soup = format_all_sensor_table(df, database, mission)
     except Exception as ex:
         logger.exception(ex)
