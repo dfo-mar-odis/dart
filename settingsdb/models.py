@@ -156,7 +156,7 @@ class GlobalStation(models.Model):
 
 class GlobalGeographicRegion(models.Model):
 
-    name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=50, unique=True)
+    name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=100, unique=True)
 
     def __str__(self):
         return self.name

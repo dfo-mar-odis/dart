@@ -14,7 +14,6 @@ urlpatterns = [
     # ###### Mission details and setting ###### #
     path('mission/new/', views.MissionCreateView.as_view(), name="mission_new"),
     path('mission/<str:database>/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
-    path('mission/delete/<int:mission_id>/', htmx.mission_delete, name="mission_delete"),
 
     # ###### Elog configuration ###### #
     path(f'{url_prefix}/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),

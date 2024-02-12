@@ -1,10 +1,7 @@
 from asgiref.sync import async_to_sync
 from bs4 import BeautifulSoup
 from channels.generic.websocket import WebsocketConsumer
-from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
-
-from core.htmx import get_mission_elog_errors, get_mission_validation_errors
 
 import logging
 

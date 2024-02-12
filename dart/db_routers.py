@@ -28,6 +28,8 @@ class BioChemRouter:
 
     def allow_relation(self, obj1, obj2, **hints):
 
-        if obj1._meta.app_label in self.defult_db_labels or obj2._meta.app_label in self.defult_db_labels:
+        obj1_label = obj1._meta.app_label
+        obj2_label = obj2._meta.app_label
+        if obj1_label == obj2_label or obj1_label in self.defult_db_labels or obj2_label in self.defult_db_labels:
             return True
         return None

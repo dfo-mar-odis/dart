@@ -12,13 +12,13 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
-import settingsdb
 from dart.utils import load_svg
 
 from . import models
 
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
+from settingsdb import utils as settings_utils
 
 
 class NoWhiteSpaceCharField(forms.CharField):
@@ -167,6 +167,7 @@ class MissionSettingsForm(forms.ModelForm):
     # bottle_dir = forms.CharField(max_length=255, label="CTD Bottle Directory", required=False,
     #                              help_text="Folder location of Elog *.BTL files")
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
+    global_geographic_region = forms.ChoiceField(label=_("Geographic Region"))
 
     class Meta:
         model = models.Mission
@@ -176,15 +177,21 @@ class MissionSettingsForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_show_labels = True
-        self.fields['geographic_region'].label = False
-        self.fields['geographic_region'].widget.attrs["hx-target"] = '#id_geographic_region'
-        self.fields['geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
-        self.fields['geographic_region'].widget.attrs["hx-trigger"] = 'change'
-        self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
+        self.fields['global_geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
+        self.fields['global_geographic_region'].widget.attrs["hx-trigger"] = 'change'
+        self.fields['global_geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
+        self.fields['global_geographic_region'].choices = [(None, '------')]
+        self.fields['global_geographic_region'].choices += [(gr.id, gr) for gr in
+                                                            settings_models.GlobalGeographicRegion.objects.all()]
+        self.fields['global_geographic_region'].choices += [(-2, _('')), (-1, _('New Region'))]
+        self.fields['global_geographic_region'].initial = None
+        self.fields['global_geographic_region'].required = False
 
-        self.fields['geographic_region'].choices = [(None, '------'), (-1, _('New Region')), (-2, _(''))]
-        self.fields['geographic_region'].choices += [(gr.id, gr) for gr in models.GeographicRegion.objects.all()]
-        self.fields['geographic_region'].initial = None
+        if self.instance.pk:
+            gl_region = settings_models.GlobalGeographicRegion.objects.get_or_create(
+                name=self.instance.geographic_region.name)[0]
+            self.fields['global_geographic_region'].initial = gl_region.pk
+
         self.fields['mission_descriptor'].required = False
         self.fields['biochem_table'].required = False
         self.fields['lead_scientist'].required = False
@@ -207,11 +214,7 @@ class MissionSettingsForm(forms.ModelForm):
             Row(
                 Column(
                     Row(
-                        HTML(f'<label for="id_geographic_region" class=form-label">{_("Geographic Region")}</label>'),
-                        css_class="mb-2"
-                    ),
-                    Row(
-                        Column(Field('geographic_region'), css_class="col"),
+                        Column(Field('global_geographic_region'), id="id_global_region_field", css_class="col"),
                     )
                 )
             ),
@@ -247,10 +250,6 @@ class MissionSettingsForm(forms.ModelForm):
             )
         )
 
-    def geographic_region_choices(form):
-        regions = models.GeographicRegion.objects.all()
-        return regions
-
     def clean_name(self):
 
         mission_name = self.cleaned_data['name']
@@ -276,10 +275,23 @@ class MissionSettingsForm(forms.ModelForm):
 
     def save(self, commit=True):
         mission_name = self.cleaned_data['name']
-        if mission_name not in settings.DATABASES:
-            settingsdb.utils.add_database(mission_name)
 
-        instance = super().save(commit=False)
+        if mission_name not in settings.DATABASES:
+            settings_utils.add_database(mission_name)
+
+        instance: models.Mission = super().save(commit=False)
+
+        gl_region_id = [self.cleaned_data['global_geographic_region']]
+        gl_regions = settings_models.GlobalGeographicRegion.objects.filter(pk__in=gl_region_id)
+        for gl_region in gl_regions:
+            if (n_region := models.GeographicRegion.objects.using(mission_name).filter(
+                    name__iexact=gl_region.name)).exists():
+                instance.geographic_region = n_region.first()
+            else:
+                n_region = models.GeographicRegion(name=gl_region.name)
+                n_region.save(using=mission_name)
+                instance.geographic_region = n_region
+
         instance.save(using=mission_name)
 
         return instance
@@ -357,9 +369,9 @@ class SampleTypeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if 'initial' in kwargs and 'datatype_filter' in kwargs['initial']:
-            filter = kwargs['initial']['datatype_filter'].split(" ")
+            data_type_filter = kwargs['initial']['datatype_filter'].split(" ")
             queryset = bio_models.BCDataType.objects.all()
-            for term in filter:
+            for term in data_type_filter:
                 queryset = queryset.filter(description__icontains=term)
 
             self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in queryset]
