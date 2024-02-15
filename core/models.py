@@ -3,6 +3,7 @@ import datetime
 from pandas import DataFrame
 
 import bio_tables.models
+import settingsdb.utils
 from core.utils import distance
 
 from django.db.models.functions import Lower
@@ -29,19 +30,15 @@ class SimpleLookupName(models.Model):
         return self.name
 
 
-class GeographicRegion(SimpleLookupName):
-    pass
-
-
 class Mission(models.Model):
     name = models.CharField(verbose_name=_("Mission Name"), max_length=50,
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
     mission_descriptor = models.CharField(verbose_name=_("Mission Descriptor"), max_length=50, blank=True, null=True,
                                           help_text=_("Code assigned by OSD, ensures national coordination"))
 
-    geographic_region = models.ForeignKey(GeographicRegion, verbose_name=_("Geographic Region"),
-                                          max_length=100, blank=True, null=True, on_delete=models.DO_NOTHING,
-                                          help_text=_("Examples: Scotian Shelf, lower St. Lawrence Estuary"))
+    geographic_region = models.CharField(verbose_name=_("Geographic Region"), max_length=100,
+                                         help_text=_("Terms describing the geographic region where "
+                                                     "the mission took place"))
 
     # default=20 is BIO
     data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
@@ -386,7 +383,7 @@ class Bottle(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="bottles", on_delete=models.CASCADE)
     closed = models.DateTimeField(verbose_name=_("Fired Date/Time"))
 
-    # the bottle number is its order from 1 to N in a series of bottles as opposed tot he bottle ID which is the
+    # the bottle number is its order from 1 to N in a series of bottles as opposed to the bottle ID which is the
     # label placed on the bottle linking it to all samples that come from that bottle.
     bottle_id = models.IntegerField(verbose_name=_("Bottle ID"))
 
