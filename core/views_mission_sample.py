@@ -449,7 +449,7 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
         if 'add_sensor' in request.POST:
             if not upload_sensors.filter(type_id=sensor_id).exists():
                 add_sensor = models.BioChemUpload(type_id=sensor_id)
-                add_sensor.save()
+                add_sensor.save(using=database)
         else:
             upload_sensors.filter(type_id=sensor_id).delete()
 

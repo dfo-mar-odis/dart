@@ -23,7 +23,7 @@ from core import forms as core_forms
 from core.forms import get_crispy_element_attributes
 from dart.utils import load_svg
 
-from settingsdb import models
+from settingsdb import models as settings_models
 
 import logging
 
@@ -40,16 +40,26 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
     # used in a card title
     field_template = os.path.join(settings.TEMPLATE_DIR, "field.html")
 
-    # the download url can be set when constructing the card if it's desired to have a button to create/download
-    # database table rows instead of writing the rows to the database
+    # the upload and download urls can be set when constructing the card to point the upload/download buttons to
+    # the functions that will be used to create BCS/BCD tables and/or download a csv representation of the tables
+    upload_url = None
     download_url = None
 
     class Meta:
-        model = models.BcDatabaseConnection
+        model = settings_models.BcDatabaseConnection
         fields = ['account_name', 'uploader', 'name', 'host', 'port', 'engine', 'selected_database', 'db_password']
 
+    def get_host_field_id(self):
+        return f'input_id_host_{self.card_name}'
+
+    def get_port_field_id(self):
+        return f'input_id_port_{self.card_name}'
+
+    def get_name_field_id(self):
+        return f'input_id_name_{self.card_name}'
+
     def get_db_select(self):
-        url = reverse_lazy('core:form_biochem_validate_database_connection', args=(self.database, self.mission.pk,))
+        url = reverse_lazy('core:form_biochem_database_update_db_selection')
 
         title_id = f"control_id_database_select_{self.card_name}"
 
@@ -58,7 +68,8 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
             'class': 'form-select form-select-sm mt-1',
             'name': 'selected_database',
             'hx-get': url,
-            'hx-swap': 'none'
+            'hx-target': '#div_id_biochem_db_details_input',
+            'hx-swap': 'outerHTML'
         }
         db_select = Column(
             Field('selected_database', template=self.field_template, **db_select_attributes,
@@ -73,7 +84,7 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
         connect_button_icon = load_svg('plug')
 
         connect_button_id = f'btn_id_connect_{self.card_name}'
-        url = reverse_lazy('core:form_biochem_validate_database_connection', args=(self.database, self.mission.pk,))
+        url = reverse_lazy('core:form_biochem_validate_database_connection')
 
         connect_button_class = "btn btn-primary btn-sm"
         if 'selected_database' in self.initial and self.initial['selected_database']:
@@ -172,31 +183,53 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         header.fields[0].fields.append(self.get_db_select())
         header.fields[0].fields.append(self.get_db_password())
-        header.fields[0].fields.append(self.get_upload())
 
-        if self.get_download_url():
-            header.fields[0].fields.append(self.get_download())
+        if upload_url := self.get_upload():
+            header.fields[0].fields.append(upload_url)
+
+        if download_url := self.get_download_url():
+            header.fields[0].fields.append(download_url)
 
         header.fields.append(self.get_alert_area())
         return header
+
+    def get_tns_name_field(self):
+        tns_details_url = reverse_lazy("core:form_biochem_database_get_database")
+        return Field('name', id=self.get_name_field_id(), **{
+            'hx-get': tns_details_url,
+            'hx-trigger': 'keyup changed delay:500ms',
+            'hx-swap': 'none'
+        })
 
     def get_card_body(self):
         body = super().get_card_body()
 
         button_column = Column(css_class='align-self-center mb-1')
 
-        url = reverse_lazy('core:form_biochem_validate_database_connection', args=(self.database, self.mission.pk,))
+        host_field = Field('host', id=self.get_host_field_id())
+        port_field = Field('port', id=self.get_port_field_id())
+
+        update_db_selection_url = reverse_lazy('core:form_biochem_database_update_db_selection')
+        hx_attrs = {
+            'hx-trigger': 'database_selection_changed from:body',
+            'hx-get': update_db_selection_url,
+            'hx-target': "#div_id_biochem_db_details_input",
+            'hx-swap': 'outerHTML'
+        }
 
         input_row = Row(
             Column(Field('account_name')),
             Column(Field('uploader')),
-            Column(Field('name')),
-            Column(Field('host')),
-            Column(Field('port')),
+            Column(self.get_tns_name_field()),
+            Column(host_field),
+            Column(port_field),
             Column(Field('engine')),
             button_column,
-            id="div_id_biochem_db_details_input"
+            id="div_id_biochem_db_details_input",
+            **hx_attrs
         )
+
+        add_db_url = reverse_lazy('core:form_biochem_database_add_database')
 
         if self.instance and self.instance.pk:
             update_attrs = {
@@ -204,19 +237,36 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
                 'title': _('Update'),
                 'name': 'update_db',
                 'value': self.instance.pk,
-                'hx_get': url,
-                'hx_swap': 'none'
+                'hx_post': add_db_url,
+                'hx-target': '#div_id_card_biochem_db_details',
+                'hx_swap': 'outerHTML'
             }
             icon = load_svg('arrow-clockwise')
             update_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **update_attrs)
             button_column.append(update_button)
+
+            delete_db_url = reverse_lazy('core:form_biochem_database_remove_database')
+            delete_attrs = {
+                'id': 'btn_id_db_details_delete',
+                'title': _('Delete'),
+                'name': 'delete_db',
+                'value': self.instance.pk,
+                'hx_post': delete_db_url,
+                'hx-target': '#div_id_card_biochem_db_details',
+                'hx_swap': 'outerHTML',
+                'hx-confirm': _("Are you sure?")
+            }
+            icon = load_svg('dash-square')
+            delete_button = StrictButton(icon, css_class="btn btn-danger btn-sm", **delete_attrs)
+            button_column.append(delete_button)
         else:
             add_attrs = {
                 'id': 'btn_id_db_details_add',
                 'title': _('Add'),
                 'name': 'add_db',
-                'hx_get': url,
-                'hx_swap': 'none'
+                'hx_post': add_db_url,
+                'hx-target': '#div_id_card_biochem_db_details',
+                'hx_swap': 'outerHTML'
             }
             icon = load_svg('plus-square')
             add_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **add_attrs)
@@ -227,26 +277,20 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
         return body
 
     # at a minimum a mission_id and what happens when the upload button are pressed must be supplied in
-    def __init__(self, database, mission, upload_url, *args, **kwargs):
-        if not mission:
-            raise KeyError("missing mission for database connection card")
-
-        if not upload_url:
-            raise KeyError("missing upload url for database connection card")
-
-        self.mission = mission
-        self.database = database
-        self.upload_url = upload_url
+    def __init__(self, *args, **kwargs):
 
         if 'download_url' in kwargs:
             self.download_url = kwargs.pop('download_url')
+
+        if 'upload_url' in kwargs:
+            self.upload_url = kwargs.pop('upload_url')
 
         super().__init__(*args, **kwargs, card_name="biochem_db_details", card_title=_("Biochem Database"))
 
         self.fields['selected_database'].label = False
         self.fields['db_password'].label = False
 
-        databases = models.BcDatabaseConnection.objects.all()
+        databases = settings_models.BcDatabaseConnection.objects.all()
         self.fields['selected_database'].choices = [(db.id, db) for db in databases]
         self.fields['selected_database'].choices.insert(0, (None, '--- New ---'))
 
@@ -262,7 +306,6 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 # an issue connecting to the data base. It's used in multiple methods when actions are preformed to change
 # the status of the button.
 def update_connection_button(database, mission: core_models.Mission, post: bool = False, error: bool = False):
-
     url = reverse_lazy('core:form_biochem_validate_database_connection', args=(database, mission.pk,))
 
     icon = BeautifulSoup(load_svg('plug'), 'html.parser').svg
@@ -343,7 +386,7 @@ def validate_database(request, database, mission_id):
                     password = caches['biochem_keys'].get('pwd', version=database_id)
 
             if database_id:
-                bc_database = models.BcDatabaseConnection.objects.get(pk=database_id)
+                bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
                 db_form = BiochemUploadForm(database, mission, url, instance=bc_database)
                 caches['biochem_keys'].set('database_id', bc_database.pk, 3600)
             else:
@@ -400,7 +443,7 @@ def validate_database(request, database, mission_id):
             database_id = request.POST['selected_database']
             password = request.POST['db_password']
 
-            bc_database = models.BcDatabaseConnection.objects.get(pk=database_id)
+            bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
             settings.DATABASES['biochem'] = bc_database.connect(password=password)
             connection_success = False
 
@@ -461,7 +504,7 @@ def validate_database(request, database, mission_id):
             soup.append(update_connection_button(database, mission))
 
             if 'selected_database' in request.POST and request.POST['selected_database']:
-                bc_database = models.BcDatabaseConnection.objects.get(pk=request.POST['selected_database'])
+                bc_database = settings_models.BcDatabaseConnection.objects.get(pk=request.POST['selected_database'])
                 db_form = BiochemUploadForm(database, mission, url, data=request.POST, instance=bc_database)
             else:
                 db_form = BiochemUploadForm(database, mission, url, data=request.POST)
@@ -495,7 +538,7 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcs_d)
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
-    ctd_events = core_models.Event.objects.using(database).filter(trip__mission=mission, 
+    ctd_events = core_models.Event.objects.using(database).filter(trip__mission=mission,
                                                                   instrument__type=core_models.InstrumentType.ctd)
     bottles = core_models.Bottle.objects.using(database).filter(event__in=ctd_events)
     # bottles = models.Bottle.objects.using(database).filter(event__trip__mission=mission)
@@ -552,7 +595,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
 
 def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
-    
+
     # 1) get bottles from BCS_P table
     bcs_p = biochem.upload.get_bcs_p_model(mission.get_biochem_table_name)
     exists = biochem.upload.check_and_create_model('biochem', bcs_p)
@@ -632,7 +675,7 @@ def get_biochem_errors(request, database, **kwargs):
 
 def get_database_connection_form(request, database, mission_id, upload_url, download_url):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
-    database_connections = models.BcDatabaseConnection.objects.all()
+    database_connections = settings_models.BcDatabaseConnection.objects.all()
     if database_connections.exists():
         selected_db = database_connections.first()
         sentinel = object()
@@ -640,10 +683,10 @@ def get_database_connection_form(request, database, mission_id, upload_url, down
         if db_id is sentinel:
             db_id = selected_db.pk
         initial = {'selected_database': db_id}
-        database_form_crispy = BiochemUploadForm(database, mission, upload_url, download_url=download_url,
+        database_form_crispy = BiochemUploadForm(upload_url=upload_url, download_url=download_url,
                                                  instance=selected_db, initial=initial)
     else:
-        database_form_crispy = BiochemUploadForm(database, mission, upload_url, download_url=download_url)
+        database_form_crispy = BiochemUploadForm(upload_url=upload_url, download_url=download_url)
 
     context = {}
     context.update(csrf(request))
@@ -660,7 +703,6 @@ def get_database_connection_form(request, database, mission_id, upload_url, down
 # supply the upload_function that gathers data and sends it to the database.
 # It will receive a core.core_models.Mission and core.models.BcDatabaseConnection
 def upload_bio_chem(request, database, mission_id, upload_function):
-
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
     div.attrs = {
@@ -684,7 +726,7 @@ def upload_bio_chem(request, database, mission_id, upload_function):
 
         return HttpResponse(soup)
 
-    bc_database = models.BcDatabaseConnection.objects.get(pk=database_id)
+    bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
     if request.method == "GET":
 
         message_component_id = 'div_id_upload_biochem'
@@ -768,8 +810,89 @@ def upload_bio_chem(request, database, mission_id, upload_function):
     return HttpResponse(soup)
 
 
+def get_tns_details(request):
+    if request.method == 'GET':
+        tns_name = request.GET.get('name', None)
+    else:
+        tns_name = request.POST.get('name', None)
+
+    tns = settings.TNS_NAMES.get(tns_name.upper(), None)
+    if tns:
+        form = BiochemUploadForm(initial={'name': tns_name, 'host': tns['HOST'], 'port': tns['PORT']})
+    else:
+        form = BiochemUploadForm()
+
+    html = render_crispy_form(form)
+    form_soup = BeautifulSoup(html, 'html.parser')
+    soup = BeautifulSoup('', 'html.parser')
+
+    host_field = form_soup.find(id=form.get_host_field_id())
+    host_field.attrs['hx-swap-oob'] = 'true'
+    soup.append(host_field)
+
+    port_field = form_soup.find(id=form.get_port_field_id())
+    port_field.attrs['hx-swap-oob'] = 'true'
+    soup.append(port_field)
+
+    return HttpResponse(soup)
+
+
+def add_database(request):
+    if request.POST:
+        if request.POST.get('selected_database'):
+            selected_database = int(request.POST.get('selected_database'))
+            instance = settings_models.BcDatabaseConnection.objects.get(pk=selected_database)
+            form = BiochemUploadForm(instance=instance, data=request.POST)
+        else:
+            form = BiochemUploadForm(data=request.POST)
+
+        if form.is_valid():
+            db_connnection = form.save()
+
+            form = BiochemUploadForm(instance=db_connnection, initial={'selected_database': db_connnection.pk},
+                                     collapsed=False)
+            response = HttpResponse(render_crispy_form(form))
+            response['Hx-Trigger'] = "database_selection_changed"
+            return response
+
+        return HttpResponse(render_crispy_form(form))
+
+    # a get request just returns a blank form
+    return HttpResponse(render_crispy_form(BiochemUploadForm(collapsed=False)))
+
+
+def remove_database(request):
+    if request.POST:
+        selected_database = int(request.POST.get('selected_database', -1) or -1)
+        if selected_database > 0:
+            settings_models.BcDatabaseConnection.objects.get(pk=selected_database).delete()
+
+    return HttpResponse(render_crispy_form(BiochemUploadForm(collapsed=False)))
+
+
+def select_database(request):
+    soup = BeautifulSoup('', 'html.parser')
+    form = BiochemUploadForm()
+    if request.GET:
+        database_id = int(request.GET.get('selected_database', -1) or -1)
+        if database_id > 0:
+            database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
+            form = BiochemUploadForm(instance=database, initial={'selected_database': database_id})
+
+    html = render_crispy_form(form)
+    form_soup = BeautifulSoup(html, 'html.parser')
+    details = form_soup.find(id='div_id_biochem_db_details_input')
+
+    # calls to this method should already target #div_id_biochem_db_details_input
+    soup.append(details)
+    return HttpResponse(soup)
+
+
 database_urls = [
     path('<str:database>/sample/errors/biochem/<int:mission_id>/', get_biochem_errors, name="form_biochem_errors"),
-    path('<str:database>/database/validate/<int:mission_id>', validate_database,
-         name='form_biochem_validate_database_connection'),
+    path('database/validate/', validate_database, name='form_biochem_validate_database_connection'),
+    path('database/details/', get_tns_details, name='form_biochem_database_get_database'),
+    path('database/add/', add_database, name='form_biochem_database_add_database'),
+    path('database/remove/', remove_database, name='form_biochem_database_remove_database'),
+    path('database/select/', select_database, name='form_biochem_database_update_db_selection'),
 ]

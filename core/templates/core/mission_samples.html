@@ -29,13 +29,13 @@
     </div>
 
     <div id="div_id_data_display" class="container-fluid mb-2" hx-swap-oob="#div_id_data_display">
-        <div class="card" id="div_ctd_id">
+        <div class="card mb-2" id="div_ctd_id">
             <div class="card-header">
                 <div class="row">
                     <div class="card-title col-auto align-self-end h6">{% trans "Sensor and Sample Data" %}</div>
                 </div>
             </div>
-            <div class="card-body">
+            <div class="card-body" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
                 <div class="vertical-scrollbar" hx-swap="none" hx-trigger="load, update_samples from:body" hx-get="{% url 'core:mission_samples_sample_list' database mission.pk %}">
                     <table id="table_id_sample_table" class="table table-striped">
 
