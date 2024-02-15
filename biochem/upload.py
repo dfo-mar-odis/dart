@@ -482,8 +482,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
             row_update.add(updated_value(bcs_row, 'mission_institute', institute.description if institute else "Not Specified"))
             row_update.add(updated_value(bcs_row, 'mission_platform', trip.platform))
             row_update.add(updated_value(bcs_row, 'mission_protocol', trip.protocol))
-            row_update.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region.name
-                                   if mission.geographic_region else ""))
+            row_update.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region))
             row_update.add(updated_value(bcs_row, 'mission_collector_comment', trip.collector_comments))
             row_update.add(updated_value(bcs_row, 'mission_more_comment', trip.more_comments))
             row_update.add(updated_value(bcs_row, 'mission_data_manager_comment', trip.data_manager_comments))
