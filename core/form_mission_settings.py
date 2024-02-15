@@ -55,7 +55,7 @@ class MissionSettingsForm(forms.ModelForm):
 
         icon = load_svg('plus-square')
         btn_attrs = {
-            'hx-post': reverse_lazy("core:add_global_region"),
+            'hx-post': reverse_lazy("core:form_mission_settings_add_region"),
             'hx-target': "#div_id_geographic_region_field"
         }
         add_region_btn = StrictButton(BeautifulSoup(icon, 'html.parser').svg, css_class="btn btn-primary",
@@ -80,7 +80,7 @@ class MissionSettingsForm(forms.ModelForm):
             for region in regions:
                 global_region = settings_models.GlobalGeographicRegion.objects.get_or_create(name=region)[0]
                 btn_attrs = {
-                    'hx-post': reverse_lazy("core:remove_global_region", args=(global_region.pk,)),
+                    'hx-post': reverse_lazy("core:form_mission_settings_remove_region", args=(global_region.pk,)),
                     'hx-target': "#div_id_geographic_region_field"
                 }
                 button = Div(HTML("-"), name="remove_geographic_region", value=f"{global_region.pk}",
@@ -232,7 +232,7 @@ def update_geographic_regions(request):
 
         form_soup = BeautifulSoup(html, 'html.parser')
         geographic_select = form_soup.find(id="id_global_region_field")
-        geographic_select.attrs['hx-post'] = reverse_lazy("core:add_global_region")
+        geographic_select.attrs['hx-post'] = reverse_lazy("core:form_mission_settings_add_region")
         geographic_select.attrs['hx-trigger'] = "load"
         geographic_select.attrs['hx-target'] = "#div_id_geographic_region_field"
 
@@ -289,7 +289,7 @@ def add_geographic_region(request):
 
 
 mission_urls = [
-    path(f'add_region/', add_geographic_region, name="add_global_region"),
-    path(f'remove_region/<int:region_id>/', remove_geographic_region, name="remove_global_region"),
+    path(f'add_region/', add_geographic_region, name="form_mission_settings_add_region"),
+    path(f'remove_region/<int:region_id>/', remove_geographic_region, name="form_mission_settings_remove_region"),
     path('update_regions/', update_geographic_regions, name="form_mission_settings_update_regions"),
 ]

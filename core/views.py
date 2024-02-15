@@ -5,6 +5,7 @@ from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
 from render_block import render_block_to_string
 
+import core.form_mission_settings
 from biochem import models
 
 from dart.views import GenericCreateView, GenericUpdateView, GenericDetailView
@@ -37,7 +38,7 @@ class EventMixin:
 
 
 class MissionCreateView(MissionMixin, GenericCreateView):
-    form_class = forms.MissionSettingsForm
+    form_class = core.form_mission_settings.MissionSettingsForm
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):

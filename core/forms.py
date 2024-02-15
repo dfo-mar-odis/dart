@@ -1,13 +1,11 @@
-import os.path
 import re
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
+from crispy_forms.layout import Layout, Hidden, Row, Column, Field, Div, HTML
 
 from django import forms
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -18,7 +16,6 @@ from . import models
 
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
-from settingsdb import utils as settings_utils
 
 
 class NoWhiteSpaceCharField(forms.CharField):
@@ -158,143 +155,6 @@ class CollapsableCardForm(CardForm):
         self.collapsed = collapsed
 
         super().__init__(*args, **kwargs)
-
-
-class MissionSettingsForm(forms.ModelForm):
-    name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
-    # elog_dir = forms.CharField(max_length=255, label="Elog Directory", required=False,
-    #                            help_text="Folder location of Elog *.log files")
-    # bottle_dir = forms.CharField(max_length=255, label="CTD Bottle Directory", required=False,
-    #                              help_text="Folder location of Elog *.BTL files")
-    mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
-    global_geographic_region = forms.ChoiceField(label=_("Geographic Region"))
-
-    class Meta:
-        model = models.Mission
-        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center', 'lead_scientist']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_show_labels = True
-        self.fields['global_geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
-        self.fields['global_geographic_region'].widget.attrs["hx-trigger"] = 'change'
-        self.fields['global_geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
-        self.fields['global_geographic_region'].choices = [(None, '------')]
-        self.fields['global_geographic_region'].choices += [(gr.id, gr) for gr in
-                                                            settings_models.GlobalGeographicRegion.objects.all()]
-        self.fields['global_geographic_region'].choices += [(-2, _('')), (-1, _('New Region'))]
-        self.fields['global_geographic_region'].initial = None
-        self.fields['global_geographic_region'].required = False
-
-        if self.instance.pk:
-            gl_region = settings_models.GlobalGeographicRegion.objects.get_or_create(
-                name=self.instance.geographic_region.name)[0]
-            self.fields['global_geographic_region'].initial = gl_region.pk
-
-        self.fields['mission_descriptor'].required = False
-        self.fields['biochem_table'].required = False
-        self.fields['lead_scientist'].required = False
-        self.fields['data_center'].required = False
-        self.fields['geographic_region'].required = False
-
-        if self.instance.pk:
-            name_column = Column(
-                HTML(f"<h2>{self.instance.name}</h2>"),
-                Hidden('name', self.instance.name)
-            )
-        else:
-            name_column = Column(Field('name', autocomplete='true'))
-
-        submit = Submit('submit', 'Submit')
-        self.helper.layout = Layout(
-            Row(
-                Column(name_column),
-            ),
-            Row(
-                Column(
-                    Row(
-                        Column(Field('global_geographic_region'), id="id_global_region_field", css_class="col"),
-                    )
-                )
-            ),
-            Div(
-                Div(
-                    Div(
-                        HTML(f"<h4>{_('Optional')}</h4>"),
-                        css_class="card-title"
-                    ),
-                    css_class="card-header"
-                ),
-                Div(
-                    Row(
-                        HTML(f"{_('The following can be automatically acquired from elog files or entered later')}"),
-                        css_class="alert alert-info ms-1 me-1"
-                    ),
-                    Row(
-                        Column(Field('mission_descriptor')),
-                        Column(Field('lead_scientist')),
-                        Column(Field('data_center')),
-                        Column(Field('biochem_table')),
-                    ),
-                    css_class="card-body"
-                ),
-                css_class="card"
-            ),
-            Row(
-                Column(
-                    submit,
-                    css_class='col-auto mt-2'
-                ),
-                css_class='justify-content-end'
-            )
-        )
-
-    def clean_name(self):
-
-        mission_name = self.cleaned_data['name']
-        db_name = mission_name + '.sqlite3'
-        db_settings: settings_models.LocalSetting = settings_models.LocalSetting.objects.first()
-        location = db_settings.database_location
-        if location.startswith("./"):
-            location = os.path.join(settings.BASE_DIR, location.replace("./", ""))
-
-        if self.instance.pk:
-            # if there's an instance with this object we're updating an existing database
-            # allow the name within the database to be changed
-            return mission_name
-
-        # if there's no database, do not allow a name of an existing database to be used
-        database_location = os.path.join(location, db_name)
-        if os.path.exists(database_location):
-            message = _("A Mission Database with this name already exists in the mission directory")
-            message += f" : '{location}'"
-            raise forms.ValidationError(message)
-
-        return mission_name
-
-    def save(self, commit=True):
-        mission_name = self.cleaned_data['name']
-
-        if mission_name not in settings.DATABASES:
-            settings_utils.add_database(mission_name)
-
-        instance: models.Mission = super().save(commit=False)
-
-        gl_region_id = [self.cleaned_data['global_geographic_region']]
-        gl_regions = settings_models.GlobalGeographicRegion.objects.filter(pk__in=gl_region_id)
-        for gl_region in gl_regions:
-            if (n_region := models.GeographicRegion.objects.using(mission_name).filter(
-                    name__iexact=gl_region.name)).exists():
-                instance.geographic_region = n_region.first()
-            else:
-                n_region = models.GeographicRegion(name=gl_region.name)
-                n_region.save(using=mission_name)
-                instance.geographic_region = n_region
-
-        instance.save(using=mission_name)
-
-        return instance
 
 
 class MissionSearchForm(forms.Form):
