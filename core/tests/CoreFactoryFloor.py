@@ -20,6 +20,7 @@ class MissionFactory(DjangoModelFactory):
         model = models.Mission
 
     name = factory.lazy_attribute(lambda o: faker.word())
+    geographic_region = factory.lazy_attribute(lambda o: faker.word())
 
 
 class TripFactory(DjangoModelFactory):
@@ -27,14 +28,6 @@ class TripFactory(DjangoModelFactory):
         model = models.Trip
 
     mission = factory.SubFactory(MissionFactory)
-
-
-class GeographicRegionFactory(DjangoModelFactory):
-
-    class Meta:
-        model = models.GeographicRegion
-
-    name = factory.lazy_attribute(lambda o: faker.name())
 
 
 class StationFactory(DjangoModelFactory):
