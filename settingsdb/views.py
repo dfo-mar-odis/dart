@@ -9,13 +9,15 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.db import connections
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
-from django.utils.translation import gettext_lazy as _
+from django.utils.translation import gettext as _
 from django.conf import settings
 from django.core.cache import caches
 
 from render_block import render_block_to_string
 
+import settingsdb.utils
 from dart.utils import load_svg
 from settingsdb import models as setting_models
 from core import models
@@ -37,7 +39,11 @@ def get_mission_dictionary(db_dir):
         databases[database] = databases['default'].copy()
         databases[database]['NAME'] = os.path.join(db_dir, f'{database}.sqlite3')
         if models.Mission.objects.using(database).exists():
-            missions[database] = models.Mission.objects.using(database).first()
+            if not settingsdb.utils.is_database_synchronized(database):
+                missions[database] = {'name': database, 'biochem_table': '', 'requires_migration': 'true'}
+            else:
+                mission = models.Mission.objects.using(database).first()
+                missions[database] = mission
 
     for connection in connections.all():
         if connection.alias != 'default':
@@ -191,3 +197,38 @@ def add_mission_dir(request):
         response = HttpResponse(mission_html)
         response['Hx-Trigger'] = "db_dir_changed"
         return response
+
+
+def migrate_database(request, database):
+    if request.method == 'GET':
+        soup = BeautifulSoup('', 'html.parser')
+        soup.append(spinner := soup.new_tag('div', attrs={'id': "div_id_spinner",
+                                                          'class': 'spinner-border',
+                                                          'role': 'status'}))
+
+        spinner.attrs['hx-post'] = request.path
+        spinner.attrs['hx-trigger'] = "load"
+        spinner.attrs['hx-target'] = f"#tr_id_mission_{ database }"
+        spinner.attrs['hx-select'] = f"#tr_id_mission_{ database }"
+        spinner.attrs['hx-swap'] = "outerHTML"
+
+        spinner.append(status := soup.new_tag('span', attrs={'class': "visually-hidden"}))
+        status.string = _("Migrating...")
+
+        return HttpResponse(soup)
+
+    missions = {}
+    settingsdb.utils.connect_database(database)
+    settingsdb.utils.migrate(database)
+
+    if models.Mission.objects.using(database).exists():
+        mission = models.Mission.objects.using(database).first()
+        missions[database] = mission
+
+    context = {
+        'missions': missions
+    }
+    html = render_block_to_string('settingsdb/mission_filter.html', "mission_table_block", context)
+    soup = BeautifulSoup(html, 'html.parser')
+
+    return HttpResponse(soup)
