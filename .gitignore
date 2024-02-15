@@ -33,7 +33,7 @@
 
 # OS generated files #
 ######################
-~$*.xls*
+~$*
 .DS_Store
 .DS_Store?
 ._*
