@@ -67,4 +67,5 @@ test_*
 /reports/*
 
 !core/tests/sample_data/*
+core/tests/sample_data/~$*
 /missions/*
