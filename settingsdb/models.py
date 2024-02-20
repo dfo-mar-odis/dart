@@ -150,6 +150,10 @@ class GlobalStation(models.Model):
 
     name = models.CharField(verbose_name=_("Station Name"), max_length=20, unique=True)
 
+    latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
+    longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
+    sounding = models.FloatField(verbose_name=_("Sounding"), blank=True, null=True)
+
     def __str__(self):
         return self.name
 

@@ -13,7 +13,7 @@
         <th>{% trans 'Latitude' %}</th>
         <th>{% trans 'Longitude' %}</th>
         <th>{% trans 'Distance(m)' %}</th>
-        <th>{% trans 'Comment' %}</th>
+        <th>{% trans 'Sounding' %}</th>
         {% if editable %}<th>{# space for the edit button #}</th><th>{# space for the delete button #}</th>{% endif %}
     </tr>
     </thead>
@@ -27,7 +27,7 @@
             <td>{{ action.latitude|floatformat:4 }}</td>
             <td>{{ action.longitude|floatformat:4 }}</td>
             <td>{{ action.drift_distance|floatformat:2 }}</td>
-            <td>{{ action.comment }}</td>
+            <td>{{ action.sounding|floatformat:2 }}</td>
             {% if editable %}
             <td>
                 <button name="edit_action" class="btn" hx-swap="none" hx-get="{% url 'core:form_event_edit_action' database action.pk %}">
@@ -38,6 +38,12 @@
             </td>
             {% endif %}
         </tr>
+        {% if action.comment %}
+            <tr>
+            <td></td>
+                <td colspan="{% if editable %}8{% else %}6{% endif %}"><span class="fw-bold">{% trans "Comment" %} : </span>{{ action.comment }}</td>
+            </tr>
+        {% endif %}
         {% endblock %}
     {% endfor %}
     </tbody>

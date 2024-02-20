@@ -77,14 +77,14 @@ class CardForm(forms.Form):
     def get_card_id(self):
         return f'div_id_card_{self.card_name}'
 
-    def get_card(self):
-        card = Div(
-            self.get_card_header(),
-            self.get_card_body(),
-            css_class='card',
-            id=self.get_card_id()
-        )
+    def get_card(self, attrs: dict = None) -> Div:
 
+        card = Div(css_class='card', id=self.get_card_id())
+        if attrs:
+            card = Div(css_class='card', id=self.get_card_id(), **attrs)
+
+        card.fields.append(self.get_card_header())
+        card.fields.append(self.get_card_body())
         return card
 
     def __init__(self, *args, **kwargs):
@@ -379,6 +379,14 @@ def save_load_component(component_id, message, **kwargs):
     return soup
 
 
+# attrs = {
+#     'alert_area_id': "",
+#     # make sure not to use _ as gettext*_lazy*, only use _ as django.utils.translation.gettext
+#     'message': '',
+#     'logger': '',
+#     'hx-post': url,
+#     'hx-trigger': 'load'
+# }
 def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
     component_id = f"{alert_area_id}_alert"
     soup = BeautifulSoup("", 'html.parser')

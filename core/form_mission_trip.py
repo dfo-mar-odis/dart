@@ -1,5 +1,4 @@
 import datetime
-import io
 import os
 
 from bs4 import BeautifulSoup
@@ -19,8 +18,6 @@ from core import forms as core_forms, validation, form_event_details
 from core import models
 from core.parsers import elog
 from dart.utils import load_svg
-
-from settingsdb import models as settings_models
 
 import logging
 logger = logging.getLogger("dart")
