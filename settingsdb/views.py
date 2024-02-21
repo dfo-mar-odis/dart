@@ -1,3 +1,4 @@
+import datetime
 import os
 from os import listdir
 
@@ -7,23 +8,30 @@ from crispy_forms.layout import Layout, Div, Field
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
+from django.core.files.base import ContentFile
 from django.db import connections
 from django.http import HttpResponse
-from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 from django.conf import settings
-from django.core.cache import caches
 
 from render_block import render_block_to_string
 
-import settingsdb.utils
 from dart.utils import load_svg
 from settingsdb import models as setting_models
 from core import models
-from settingsdb import filters
+from settingsdb import filters, utils
 
 from dart.views import GenericTemplateView
+
+import logging
+
+logger = logging.getLogger('dart')
+
+reports = {
+    f"Fix Station {station.name}": reverse_lazy('settingsdb:fixstation', args=(station.pk,))
+    for station in setting_models.GlobalStation.objects.filter(fixstation=True).order_by('name')
+}
 
 
 def get_mission_dictionary(db_dir):
@@ -39,7 +47,7 @@ def get_mission_dictionary(db_dir):
         databases[database] = databases['default'].copy()
         databases[database]['NAME'] = os.path.join(db_dir, f'{database}.sqlite3')
         if models.Mission.objects.using(database).exists():
-            if not settingsdb.utils.is_database_synchronized(database):
+            if not utils.is_database_synchronized(database):
                 missions[database] = {'name': database, 'biochem_table': '', 'requires_migration': 'true'}
             else:
                 mission = models.Mission.objects.using(database).first()
@@ -116,6 +124,7 @@ class MissionFilterView(GenericTemplateView):
         context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
         context['missions'] = get_mission_dictionary(initial.database_location)
 
+        context['reports'] = reports
         return context
 
 
@@ -218,8 +227,8 @@ def migrate_database(request, database):
         return HttpResponse(soup)
 
     missions = {}
-    settingsdb.utils.connect_database(database)
-    settingsdb.utils.migrate(database)
+    utils.connect_database(database)
+    utils.migrate(database)
 
     if models.Mission.objects.using(database).exists():
         mission = models.Mission.objects.using(database).first()
@@ -232,3 +241,48 @@ def migrate_database(request, database):
     soup = BeautifulSoup(html, 'html.parser')
 
     return HttpResponse(soup)
+
+
+def fixstation(request, station_id):
+    connected = init_connection()
+    station = setting_models.GlobalStation.objects.get(pk=station_id)
+
+    sample_types = {"Oxygen": "oxy", "Salinity": "salts"}
+    sample_type_order = [sample_type for sample_type in sample_types.keys()]
+
+    headings = ['Mission', 'Event', 'Date', 'Bottom_id']
+    headings += sample_type_order
+    headings.append("Comments")
+    data = ",".join(headings) + "\n"
+
+    missions = get_mission_dictionary(connected.database_location)
+    keys = missions.keys()
+    for key in keys:
+        utils.connect_database(key)
+        events = models.Event.objects.using(key).filter(station__name__iexact=station,
+                                                        instrument__type=models.InstrumentType.ctd)
+        logger.info(f"Mission: {key} - Events found: {events.count()}")
+        for event in events:
+            mission = event.trip.mission
+            event_id = f"{event.event_id:03d}"
+            date = event.start_date if event.start_date else event.trip.start_date
+            sample_id = f"{event.sample_id}"
+            data += ",".join([mission.name, event_id, date.strftime("%Y-%m-%d") if date else "----", sample_id])
+
+            for sample_type in sample_type_order:
+                data += ","
+                if mission.mission_sample_types.filter(name=sample_types[sample_type]).exists():
+                    data += "x"
+
+            comment = ""
+            if (action := event.actions.filter(type=models.ActionType.deployed)).exists():
+                comment = action.first().comment
+            data += f",{comment}\n"
+
+    file_to_send = ContentFile(data)
+
+    response = HttpResponse(file_to_send, content_type="text/csv")
+    response['Content-Length'] = file_to_send.size
+    response['Content-Disposition'] = f'attachment; filename="FixStation_{station}.csv"'
+
+    return response

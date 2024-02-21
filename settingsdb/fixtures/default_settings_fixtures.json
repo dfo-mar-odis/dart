@@ -1986,6 +1986,30 @@
     }
 },
 {
+    "model": "settingsdb.bcdatabaseconnection",
+    "pk": 1,
+    "fields": {
+        "engine": 1,
+        "host": "VSNSBIOD78.ENT.DFO-MPO.CA",
+        "name": "TTRAN",
+        "port": 1521,
+        "account_name": "upsonp",
+        "uploader": "UpsonP"
+    }
+},
+{
+    "model": "settingsdb.bcdatabaseconnection",
+    "pk": 2,
+    "fields": {
+        "engine": 1,
+        "host": "VSNSBIOXP74.ENT.DFO-MPO.CA",
+        "name": "PTRAN",
+        "port": 1521,
+        "account_name": "biochem",
+        "uploader": "Upsonp"
+    }
+},
+{
     "model": "settingsdb.fileconfiguration",
     "pk": 1,
     "fields": {
@@ -2166,787 +2190,1348 @@
     }
 },
 {
-    "model": "settingsdb.globalstation",
-    "pk": 1,
-    "fields": {
-        "name": "AR7W_02"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 2,
-    "fields": {
-        "name": "AR7W_03"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 3,
-    "fields": {
-        "name": "AR7W_04"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 4,
-    "fields": {
-        "name": "AR7W_05"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 5,
-    "fields": {
-        "name": "AR7W_06"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 6,
-    "fields": {
-        "name": "AR7W_07"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 7,
-    "fields": {
-        "name": "AR7W_07.5"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 8,
-    "fields": {
-        "name": "AR7W_08"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 9,
-    "fields": {
-        "name": "AR7W_09"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 10,
-    "fields": {
-        "name": "AR7W_09.5"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 11,
-    "fields": {
-        "name": "AR7W_10"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 12,
-    "fields": {
-        "name": "AR7W_10.5"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 13,
-    "fields": {
-        "name": "AR7W_11"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 14,
-    "fields": {
-        "name": "AR7W_11.5"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 15,
-    "fields": {
-        "name": "AR7W_12"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 16,
-    "fields": {
-        "name": "AR7W_12.5"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 17,
-    "fields": {
-        "name": "AR7W_13"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
-    "pk": 18,
-    "fields": {
-        "name": "AR7W_13.5"
-    }
-},
-{
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 19,
     "fields": {
-        "name": "AR7W_14"
+        "file_type": "filterlog",
+        "required_field": "('bottles', 'Bottle ID', 'Label identifying the Bottle ID')",
+        "mapped_field": "('pressure', 'Depth', 'Label identifying the column with the nominal pressure')",
+        "description": "('Oxygen', 'Oxygen', 'Label identifying the column specifying if there will be an oxygen sample')"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 20,
     "fields": {
-        "name": "AR7W_14.5"
+        "file_type": "filterlog",
+        "required_field": "bottles",
+        "mapped_field": "Bottle ID",
+        "description": "Label identifying the Bottle ID"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 21,
     "fields": {
-        "name": "AR7W_15"
+        "file_type": "filterlog",
+        "required_field": "pressure",
+        "mapped_field": "Depth",
+        "description": "Label identifying the column with the nominal pressure"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 22,
     "fields": {
-        "name": "AR7W_15.5"
+        "file_type": "filterlog",
+        "required_field": "oxygen",
+        "mapped_field": "Oxygen",
+        "description": "Label identifying the column specifying if there will be an oxygen sample"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 23,
     "fields": {
-        "name": "AR7W_16"
+        "file_type": "filterlog",
+        "required_field": "nutrient",
+        "mapped_field": "Nutrients",
+        "description": "Label identifying the column specifying if there will be nutrient samples"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 24,
     "fields": {
-        "name": "AR7W_16.5"
+        "file_type": "filterlog",
+        "required_field": "salt",
+        "mapped_field": "Salinity",
+        "description": "Label identifying the column specifying if there will be salt samples"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 25,
     "fields": {
-        "name": "AR7W_17"
+        "file_type": "filterlog",
+        "required_field": "chl",
+        "mapped_field": "Chlorophyll",
+        "description": "Label identifying the column specifying if there will be chl samples"
     }
 },
 {
-    "model": "settingsdb.globalstation",
+    "model": "settingsdb.fileconfiguration",
     "pk": 26,
     "fields": {
-        "name": "AR7W_17.5"
+        "file_type": "filterlog",
+        "required_field": "hplc",
+        "mapped_field": "HPLC",
+        "description": "Label identifying the column specifying if there will be HPLC samples"
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 27,
+    "pk": 231,
     "fields": {
-        "name": "AR7W_18"
+        "name": "AR7W_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 28,
+    "pk": 232,
     "fields": {
-        "name": "AR7W_18.5"
+        "name": "AR7W_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 29,
+    "pk": 233,
     "fields": {
-        "name": "AR7W_19"
+        "name": "AR7W_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 30,
+    "pk": 234,
     "fields": {
-        "name": "AR7W_19.5"
+        "name": "AR7W_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 31,
+    "pk": 235,
     "fields": {
-        "name": "AR7W_20"
+        "name": "AR7W_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 32,
+    "pk": 236,
     "fields": {
-        "name": "AR7W_20.5"
+        "name": "AR7W_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 33,
+    "pk": 237,
     "fields": {
-        "name": "AR7W_21"
+        "name": "AR7W_07.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 34,
+    "pk": 238,
     "fields": {
-        "name": "AR7W_21.5"
+        "name": "AR7W_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 35,
+    "pk": 239,
     "fields": {
-        "name": "AR7W_22"
+        "name": "AR7W_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 36,
+    "pk": 240,
     "fields": {
-        "name": "AR7W_22.5"
+        "name": "AR7W_09.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 37,
+    "pk": 241,
     "fields": {
-        "name": "AR7W_23"
+        "name": "AR7W_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 38,
+    "pk": 242,
     "fields": {
-        "name": "AR7W_23.5"
+        "name": "AR7W_10.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 39,
+    "pk": 243,
     "fields": {
-        "name": "AR7W_24"
+        "name": "AR7W_11",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 40,
+    "pk": 244,
     "fields": {
-        "name": "AR7W_24.5"
+        "name": "AR7W_11.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 41,
+    "pk": 245,
     "fields": {
-        "name": "AR7W_25"
+        "name": "AR7W_12",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 42,
+    "pk": 246,
     "fields": {
-        "name": "AR7W_25.5"
+        "name": "AR7W_12.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 43,
+    "pk": 247,
     "fields": {
-        "name": "AR7W_26"
+        "name": "AR7W_13",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 44,
+    "pk": 248,
     "fields": {
-        "name": "AR7W_26.5"
+        "name": "AR7W_13.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 45,
+    "pk": 249,
     "fields": {
-        "name": "AR7W_27"
+        "name": "AR7W_14",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 46,
+    "pk": 250,
     "fields": {
-        "name": "AR7W_27.5"
+        "name": "AR7W_14.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 47,
+    "pk": 251,
     "fields": {
-        "name": "AR7W_28"
+        "name": "AR7W_15",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 48,
+    "pk": 252,
     "fields": {
-        "name": "AR7W_28.5"
+        "name": "AR7W_15.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 49,
+    "pk": 253,
     "fields": {
-        "name": "BBL_01"
+        "name": "AR7W_16",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 50,
+    "pk": 254,
     "fields": {
-        "name": "BBL_02"
+        "name": "AR7W_16.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 51,
+    "pk": 255,
     "fields": {
-        "name": "BBL_03"
+        "name": "AR7W_17",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 52,
+    "pk": 256,
     "fields": {
-        "name": "BBL_04"
+        "name": "AR7W_17.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 53,
+    "pk": 257,
     "fields": {
-        "name": "BBL_05"
+        "name": "AR7W_18",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 54,
+    "pk": 258,
     "fields": {
-        "name": "BBL_06"
+        "name": "AR7W_18.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 55,
+    "pk": 259,
     "fields": {
-        "name": "BBL_07"
+        "name": "AR7W_19",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 56,
+    "pk": 260,
     "fields": {
-        "name": "CSL_01"
+        "name": "AR7W_19.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 57,
+    "pk": 261,
     "fields": {
-        "name": "CSL_02"
+        "name": "AR7W_20",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 58,
+    "pk": 262,
     "fields": {
-        "name": "CSL_03"
+        "name": "AR7W_20.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 59,
+    "pk": 263,
     "fields": {
-        "name": "CSL_04"
+        "name": "AR7W_21",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 60,
+    "pk": 264,
     "fields": {
-        "name": "CSL_05"
+        "name": "AR7W_21.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 61,
+    "pk": 265,
     "fields": {
-        "name": "CSL_06"
+        "name": "AR7W_22",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 62,
+    "pk": 266,
     "fields": {
-        "name": "GULD_03"
+        "name": "AR7W_22.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 63,
+    "pk": 267,
     "fields": {
-        "name": "GUL_01"
+        "name": "AR7W_23",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 64,
+    "pk": 268,
     "fields": {
-        "name": "GUL_02"
+        "name": "AR7W_23.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 65,
+    "pk": 269,
     "fields": {
-        "name": "GUL_03"
+        "name": "AR7W_24",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 66,
+    "pk": 270,
     "fields": {
-        "name": "GUL_04"
+        "name": "AR7W_24.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 67,
+    "pk": 271,
     "fields": {
-        "name": "HL_01"
+        "name": "AR7W_25",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 68,
+    "pk": 272,
     "fields": {
-        "name": "HL_02"
+        "name": "AR7W_25.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 69,
+    "pk": 273,
     "fields": {
-        "name": "HL_03"
+        "name": "AR7W_26",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 70,
+    "pk": 274,
     "fields": {
-        "name": "HL_03.3"
+        "name": "AR7W_26.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 71,
+    "pk": 275,
     "fields": {
-        "name": "HL_04"
+        "name": "AR7W_27",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 72,
+    "pk": 276,
     "fields": {
-        "name": "HL_05"
+        "name": "AR7W_27.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 73,
+    "pk": 277,
     "fields": {
-        "name": "HL_05.5"
+        "name": "AR7W_28",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 74,
+    "pk": 278,
     "fields": {
-        "name": "HL_06"
+        "name": "AR7W_28.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 75,
+    "pk": 279,
     "fields": {
-        "name": "HL_06.3"
+        "name": "BBL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 76,
+    "pk": 280,
     "fields": {
-        "name": "HL_06.7"
+        "name": "BBL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 77,
+    "pk": 281,
     "fields": {
-        "name": "HL_07"
+        "name": "BBL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 78,
+    "pk": 282,
     "fields": {
-        "name": "LCM_01"
+        "name": "BBL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 79,
+    "pk": 283,
     "fields": {
-        "name": "LCM_02"
+        "name": "BBL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 80,
+    "pk": 284,
     "fields": {
-        "name": "LCM_03"
+        "name": "BBL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 81,
+    "pk": 285,
     "fields": {
-        "name": "LCM_04"
+        "name": "BBL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 82,
+    "pk": 286,
     "fields": {
-        "name": "LCM_05"
+        "name": "CSL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 83,
+    "pk": 287,
     "fields": {
-        "name": "LCM_06"
+        "name": "CSL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 84,
+    "pk": 288,
     "fields": {
-        "name": "LCM_07"
+        "name": "CSL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 85,
+    "pk": 289,
     "fields": {
-        "name": "LCM_08"
+        "name": "CSL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 86,
+    "pk": 290,
     "fields": {
-        "name": "LCM_09"
+        "name": "CSL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 87,
+    "pk": 291,
     "fields": {
-        "name": "LCM_10"
+        "name": "CSL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 88,
+    "pk": 292,
     "fields": {
-        "name": "LL_01"
+        "name": "GULD_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 89,
+    "pk": 293,
     "fields": {
-        "name": "LL_02"
+        "name": "GUL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 90,
+    "pk": 294,
     "fields": {
-        "name": "LL_03"
+        "name": "GUL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 91,
+    "pk": 295,
     "fields": {
-        "name": "LL_04"
+        "name": "GUL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 92,
+    "pk": 296,
     "fields": {
-        "name": "LL_05"
+        "name": "GUL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 93,
+    "pk": 297,
     "fields": {
-        "name": "LL_06"
+        "name": "HL_0",
+        "latitude": 44.6937,
+        "longitude": -63.6403,
+        "sounding": null,
+        "fixstation": true
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 94,
+    "pk": 298,
     "fields": {
-        "name": "LL_07"
+        "name": "HL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 95,
+    "pk": 299,
     "fields": {
-        "name": "LL_08"
+        "name": "HL_02",
+        "latitude": 44.2675,
+        "longitude": -63.3175,
+        "sounding": null,
+        "fixstation": true
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 96,
+    "pk": 300,
     "fields": {
-        "name": "LL_09"
+        "name": "HL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 97,
+    "pk": 301,
     "fields": {
-        "name": "NEC_01"
+        "name": "HL_03.3",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 98,
+    "pk": 302,
     "fields": {
-        "name": "NEC_02"
+        "name": "HL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 99,
+    "pk": 303,
     "fields": {
-        "name": "NEC_03"
+        "name": "HL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 100,
+    "pk": 304,
     "fields": {
-        "name": "NEC_04"
+        "name": "HL_05.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 101,
+    "pk": 305,
     "fields": {
-        "name": "NEC_05"
+        "name": "HL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 102,
+    "pk": 306,
     "fields": {
-        "name": "NEC_06"
+        "name": "HL_06.3",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 103,
+    "pk": 307,
     "fields": {
-        "name": "NEC_07"
+        "name": "HL_06.7",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 104,
+    "pk": 308,
     "fields": {
-        "name": "NEC_08"
+        "name": "HL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 105,
+    "pk": 309,
     "fields": {
-        "name": "NEC_09"
+        "name": "LCM_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 106,
+    "pk": 310,
     "fields": {
-        "name": "NEC_10"
+        "name": "LCM_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 107,
+    "pk": 311,
     "fields": {
-        "name": "STAB_01"
+        "name": "LCM_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 108,
+    "pk": 312,
     "fields": {
-        "name": "STAB_02"
+        "name": "LCM_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 109,
+    "pk": 313,
     "fields": {
-        "name": "STAB_03"
+        "name": "LCM_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 110,
+    "pk": 314,
     "fields": {
-        "name": "STAB_04"
+        "name": "LCM_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 111,
+    "pk": 315,
     "fields": {
-        "name": "STAB_05"
+        "name": "LCM_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
     }
 },
 {
     "model": "settingsdb.globalstation",
-    "pk": 112,
+    "pk": 316,
     "fields": {
-        "name": "STAB_06"
+        "name": "LCM_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 317,
+    "fields": {
+        "name": "LCM_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 318,
+    "fields": {
+        "name": "LCM_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 319,
+    "fields": {
+        "name": "LL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 320,
+    "fields": {
+        "name": "LL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 321,
+    "fields": {
+        "name": "LL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 322,
+    "fields": {
+        "name": "LL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 323,
+    "fields": {
+        "name": "LL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 324,
+    "fields": {
+        "name": "LL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 325,
+    "fields": {
+        "name": "LL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 326,
+    "fields": {
+        "name": "LL_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 327,
+    "fields": {
+        "name": "LL_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 328,
+    "fields": {
+        "name": "NEC_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 329,
+    "fields": {
+        "name": "NEC_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 330,
+    "fields": {
+        "name": "NEC_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 331,
+    "fields": {
+        "name": "NEC_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 332,
+    "fields": {
+        "name": "NEC_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 333,
+    "fields": {
+        "name": "NEC_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 334,
+    "fields": {
+        "name": "NEC_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 335,
+    "fields": {
+        "name": "NEC_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 336,
+    "fields": {
+        "name": "NEC_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 337,
+    "fields": {
+        "name": "NEC_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 338,
+    "fields": {
+        "name": "P5",
+        "latitude": 44.9307,
+        "longitude": -66.8500,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 339,
+    "fields": {
+        "name": "STAB_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 340,
+    "fields": {
+        "name": "STAB_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 341,
+    "fields": {
+        "name": "STAB_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 342,
+    "fields": {
+        "name": "STAB_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 343,
+    "fields": {
+        "name": "STAB_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 344,
+    "fields": {
+        "name": "STAB_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 345,
+    "fields": {
+        "name": "Shediac Valley",
+        "latitude": 47.7833,
+        "longitude": -64.0333,
+        "sounding": null,
+        "fixstation": true
     }
 },
 {

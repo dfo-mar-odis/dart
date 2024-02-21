@@ -153,6 +153,7 @@ class GlobalStation(models.Model):
     latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
     longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
     sounding = models.FloatField(verbose_name=_("Sounding"), blank=True, null=True)
+    fixstation = models.BooleanField(verbose_name=_("Fix Station"), default=False)
 
     def __str__(self):
         return self.name

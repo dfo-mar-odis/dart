@@ -162,7 +162,9 @@ class Event(models.Model):
     sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
     end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
+    # net specific attributes
     wire_out = models.FloatField(verbose_name=_("Wire Out"), null=True, blank=True)
+    wire_angle = models.FloatField(verbose_name=_("Wire Angle"), null=True, blank=True)
     flow_start = models.IntegerField(verbose_name=_("Flow Meter Start"), null=True, blank=True)
     flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
 
@@ -589,6 +591,9 @@ class ErrorType(models.IntegerChoices):
     validation = 3, "Validation Error"
     bottle = 4, "Bottle Error"
     biochem = 5, "Biochem Error"
+    event = 6, "Event Error"
+    sample = 7, "Sample Error"
+    plankton = 8, "Plankton Error"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least

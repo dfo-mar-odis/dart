@@ -10,4 +10,5 @@ urlpatterns = [
     path('mission/dir/new/', views.add_mission_dir, name="update_mission_directory"),
 
     path('<str:database>/migrate/', views.migrate_database, name="migrate_database"),
+    path('<int:station_id>/report/fixstation/', views.fixstation, name="fixstation"),
 ]

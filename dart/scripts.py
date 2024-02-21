@@ -30,7 +30,8 @@ def get_tns_file() -> dict:
 
     tns_ora_file = os.path.join(ora_path, 'cli', 'network', 'admin', 'tnsnames.ora')
 
-    file = open(tns_ora_file, 'r')
+    # likely on a windows machine this file will be in the ANSI encoding
+    file = open(tns_ora_file, 'r', encoding='ansi')
     data = file.read()
 
     # remove comments and blank lines

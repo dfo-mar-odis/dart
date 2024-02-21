@@ -222,7 +222,7 @@ def parse_files(trip, files):
                 # Report errors to the user if there are any, otherwise process the message objects you can
                 for error in error_buffer:
                     err = core_models.FileError(mission=trip.mission, file_name=file_name, line=int(mid),
-                                                type=core_models.ErrorType.missing_value,
+                                                type=core_models.ErrorType.event,
                                                 message=f'Elog message object ($@MID@$: {mid}) missing required '
                                                         f'field [{error.args[0]["expected"]}]')
                     file_errors.append(err)
@@ -241,13 +241,13 @@ def parse_files(trip, files):
         except Exception as ex:
             if type(ex) is LookupError:
                 logger.error(ex)
-                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.missing_id,
+                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.event,
                                             file_name=file_name,
                                             message=ex.args[0]['message'] + ", " + _("see error.log for details"))
             else:
                 # Something is really wrong with this file
                 logger.exception(ex)
-                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.unknown,
+                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.event,
                                             file_name=file_name,
                                             message=_("Unknown error :") + f"{str(ex)}, " + _(
                                                 "see error.log for details"))
@@ -284,12 +284,7 @@ def parse_files(trip, files):
 
         logger_notifications.info(_("Recording Errors") + f" {file_name} : %d/%d", (err + 1), error_count)
         file_error = core_models.FileError(mission=trip.mission, file_name=file_name, line=error[0], message=error[1])
-        if isinstance(error[2], KeyError):
-            file_error.type = core_models.ErrorType.missing_id
-        elif isinstance(error[2], ValueError):
-            file_error.type = core_models.ErrorType.missing_value
-        else:
-            file_error.type = core_models.ErrorType.unknown
+        file_error.type = core_models.ErrorType.event
         file_errors.append(file_error)
 
     core_models.FileError.objects.using(database).bulk_create(file_errors)

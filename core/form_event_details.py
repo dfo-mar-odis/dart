@@ -174,7 +174,7 @@ class EventForm(forms.ModelForm):
     class Meta:
         model = models.Event
         fields = ['trip', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id',
-                  'flow_start', 'flow_end', 'wire_out']
+                  'flow_start', 'flow_end', 'wire_out', 'wire_angle']
 
     @staticmethod
     def get_instrument_input_id():
@@ -269,6 +269,8 @@ class EventForm(forms.ModelForm):
                              id="id_event_flow_end_id_field"), css_class='col-sm-6 col-md-6'),
                 Column(Field('wire_out', css_class='form-control form-control-sm',
                              id="id_event_wire_out_id_field"), css_class='col-sm-6 col-md-6'),
+                Column(Field('wire_angle', css_class='form-control form-control-sm',
+                             id="id_event_wire_angle_id_field"), css_class='col-sm-6 col-md-6'),
                 css_class="input-group input-group-sm"
             )
         )
@@ -658,15 +660,18 @@ def add_event(request, database, trip_id):
 
     soup = BeautifulSoup("", "html.parser")
 
-    class NoAddEventDetails(EventDetails):
+    # we don't need the edit and delete buttons on the EventDetail card if we're editing
+    class NoDeleteEditEventDetails(EventDetails):
         def get_add_button(self):
             return None
 
-    card_form = NoAddEventDetails(trip=trip)
-    card_html = render_crispy_form(card_form)
-    card_soup = BeautifulSoup(card_html, 'html.parser')
+        def get_edit_button(self):
+            return None
 
-    content = card_soup.find(id=card_form.get_card_content_id())
+        def get_delete_button(self):
+            return None
+
+    card_form = NoDeleteEditEventDetails(trip=trip)
 
     context = {"database": database}
 
@@ -677,6 +682,8 @@ def add_event(request, database, trip_id):
             # if the form is valid create the new event and return blank Action, Attachment *and* Event forms
             # otherwise return the event form with its issues
             event = event_form.save()
+            card_form = NoDeleteEditEventDetails(event=event)
+
             action_form = ActionForm(event=event)
             attachments_form = AttachmentForm(event=event)
             event_form = EventForm(database=database, instance=event)
@@ -703,9 +710,15 @@ def add_event(request, database, trip_id):
         event_id = last_event.event_id + 1 if last_event else 1
         event_form = EventForm(database=database, initial={'event_id': event_id, 'trip': trip.pk})
 
+    card_html = render_crispy_form(card_form)
+    card_soup = BeautifulSoup(card_html, 'html.parser')
+
+    content = card_soup.find(id=card_form.get_card_content_id())
+
     context['event_form'] = event_form
     form_html = render_to_string('core/partials/event_edit_form.html', context=context)
     form_soup = BeautifulSoup(form_html, 'html.parser')
+
     content.append(form_soup)
     soup.append(card_soup)
 
@@ -994,7 +1007,14 @@ def load_filter_log(request, database, event_id):
     FilterLogParser.parse(event, file.name, file)
 
     soup = BeautifulSoup('', 'html.parser')
-    soup.append(soup.new_tag("div", id="div_id_card_message_area_event_details"))
+    soup.append(msg_area := soup.new_tag("div", id="div_id_card_message_area_event_details"))
+    if models.FileError.objects.using(database).filter(file_name=file.name).exists():
+        attrs = {
+            'component_id': "div_id_card_message_area_event_details_alert",
+            'message': _("Issues Processing File"),
+            'alert_type': 'danger'
+        }
+        msg_area.append(core_forms.blank_alert(**attrs))
 
     # we have to clear the file input or when the user clicks the button to load the same file, nothing will happen
     input_html = (f'<input id="btn_id_filter_log_event_details" type="file" name="filter_log" accept=".xlsx" '
