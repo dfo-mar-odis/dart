@@ -147,7 +147,11 @@ class MissionSettingsForm(forms.ModelForm):
 
         mission_name = self.cleaned_data['name']
         db_name = mission_name + '.sqlite3'
-        db_settings: settings_models.LocalSetting = settings_models.LocalSetting.objects.first()
+        if settings_models.LocalSetting.objects.filter(connected=True).exists():
+            db_settings = settings_models.LocalSetting.objects.filter(connected=True).first()
+        else:
+            db_settings = settings_models.LocalSetting.objects.first()
+
         location = db_settings.database_location
         if location.startswith("./"):
             location = os.path.join(settings.BASE_DIR, location.replace("./", ""))
