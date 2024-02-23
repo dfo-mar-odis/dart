@@ -1,4 +1,5 @@
 import datetime
+import io
 import time
 
 from bs4 import BeautifulSoup
@@ -17,6 +18,7 @@ from render_block import render_block_to_string
 
 from core import forms as core_forms, models
 from core.parsers import FilterLogParser
+from core.parsers.FixStationParser import FixStationParser
 from dart.utils import load_svg
 
 from settingsdb import models as settings_models
@@ -92,6 +94,22 @@ class EventDetails(core_forms.CardForm):
 
         return button
 
+    def get_bottle_file_button(self):
+        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        button_icon = load_svg('arrow-down-square')
+        button_id = f'btn_id_bottle_file_{self.card_name}'
+        url = reverse_lazy("core:form_event_fix_station_bottle", args=(self.database, self.event.pk,))
+        button = HTML(
+            f'<span>'
+            f'<label for="{button_id}" class ="btn btn-primary btn-sm" title="{_("Load Bottle File")}">'
+            f'{button_icon}</label>'
+            f'<input id="{button_id}" type="file" name="bottle_files" accept=".ros, .btl" multiple="true" '
+            f'hx-get="{url}" hx-trigger="change" hx-swap="none" class="invisible"/>'
+            f'</span>'
+        )
+
+        return button
+
     def get_card_message_area_id(self):
         return f"div_id_card_message_area_{self.card_name}"
 
@@ -110,11 +128,15 @@ class EventDetails(core_forms.CardForm):
             del_btn = self.get_delete_button()
             edit_btn = self.get_edit_button()
             filter_btn = self.get_filter_log_button()
+            bottle_btn = self.get_bottle_file_button()
             if del_btn:
                 button_column.fields.append(del_btn)
 
             if filter_btn:
                 spacer.fields.append(filter_btn)
+
+            if bottle_btn:
+                spacer.fields.append(bottle_btn)
 
             if edit_btn:
                 spacer.fields.append(edit_btn)
@@ -1022,7 +1044,58 @@ def load_filter_log(request, database, event_id):
                   f'hx-swap-oob="true" class="invisible"/>')
     soup.append(BeautifulSoup(input_html))
 
-    return HttpResponse(soup)
+    response = HttpResponse(soup)
+    response['Hx-Trigger'] = "event_selected"
+    return response
+
+
+def load_bottle_file(request, database, event_id):
+    soup = BeautifulSoup('', 'html.parser')
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': "div_id_card_message_area_event_details",
+            # make sure not to use _ as gettext*_lazy*, only use _ as django.utils.translation.gettext
+            'message': _("Loading"),
+            'logger': FilterLogParser.logger_notifications.name,
+            'hx-post': request.path,
+            'hx-trigger': 'load',
+            'hx-target': "#div_id_card_message_area_event_details"
+        }
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
+
+    event = models.Event.objects.using(database).get(pk=event_id)
+    time.sleep(2)
+    files = request.FILES.getlist('bottle_files')
+
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(msg_area := soup.new_tag("div", id="div_id_card_message_area_event_details"))
+    if len(files) != 2:
+        attrs = {
+            'component_id': "div_id_card_message_area_event_details_alert",
+            'message': _("Must select two files, one being the BTL file and the other being the ROS file"),
+            'alert_type': 'danger'
+        }
+        msg_area.append(core_forms.blank_alert(**attrs))
+    else:
+        btl_file = files[0] if files[0].name.lower().endswith('.btl') else files[1]
+        ros_file = files[0] if files[0].name.lower().endswith('.ros') else files[1]
+
+        btl_input = io.StringIO(btl_file.read().decode('cp1252'))
+        ros_input = io.StringIO(ros_file.read().decode('cp1252'))
+        parser = FixStationParser(event=event, btl_filename=btl_file.name,
+                                  btl_stream=btl_input, ros_stream=ros_input)
+        parser.parse()
+
+    # we have to clear the file input or when the user clicks the button to load the same file, nothing will happen
+    input_html = (f'<input id="btn_id_filter_log_event_details" type="file" name="filter_log" accept=".xlsx" '
+                  f'multiple="false" hx-get="{request.path}" hx-trigger="change" hx-swap="none" '
+                  f'hx-swap-oob="true" class="invisible"/>')
+    soup.append(BeautifulSoup(input_html))
+
+    response = HttpResponse(soup)
+    response['Hx-Trigger'] = "event_selected"
+    return response
 
 
 url_prefix = "<str:database>/event"
@@ -1050,4 +1123,5 @@ event_detail_urls = [
     path(f'{url_prefix}/attachment/delete/<int:attachment_id>/', delete_attachment, name="form_event_delete_attachment"),
 
     path(f'{url_prefix}/fixstation/<int:event_id>/', load_filter_log, name="form_event_fix_station_filter_log"),
+    path(f'{url_prefix}/fixstation/btl/<int:event_id>/', load_bottle_file, name="form_event_fix_station_bottle"),
 ]

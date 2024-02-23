@@ -52,8 +52,8 @@ def get_mapping(label):
 
 
 def add_sample_type(bottle: core_models.Bottle, short_name: str, samples: list, values: list, value=np.inf):
-    pressure = settings_models.GlobalSampleType.objects.get(short_name=short_name)
-    mission_type: core_models.MissionSampleType = pressure.get_mission_sample_type(bottle.event.trip.mission)
+    global_sample_type = settings_models.GlobalSampleType.objects.get(short_name=short_name)
+    mission_type: core_models.MissionSampleType = global_sample_type.get_mission_sample_type(bottle.event.trip.mission)
     if not mission_type.samples.filter(bottle=bottle).exists():
         sample = core_models.Sample(bottle=bottle, type=mission_type)
         samples.append(sample)
@@ -117,7 +117,8 @@ def parse(event: core_models.Event, filename: str, stream: io.BytesIO):
         core_models.Bottle.objects.using(database).bulk_create(bottles)
 
     bottle_ids = station_tab[get_mapping('bottles')].to_list()
-    core_models.DiscreteSampleValue.objects.using(database).filter(sample__bottle__bottle_id__in=bottle_ids).delete()
+    core_models.DiscreteSampleValue.objects.using(database).filter(sample__bottle__bottle_id__in=bottle_ids,
+                                                                   sample__type__is_sensor=False).delete()
     count = station_tab.shape[0]
     for row, data in station_tab.iterrows():
         logger_notifications.info(_("Processing Adding Sample Types") + " : %d/%d", row, count)

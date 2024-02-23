@@ -473,7 +473,7 @@ def read_btl(mission: core_models.Mission, btl_file: str):
 
     # These are columns we either have no use for or we will specifically call and use later
     # The Bottle column is the rosette number of the bottle
-    # the Bottle_ column, if present, is the bottle.bottle_id for a bottle.
+    # The Bottle_ column, if present, is the bottle.bottle_id for a bottle.
     exclude = ['bottle', 'bottle_', 'date', 'scan', 'times', 'statistic',
                'longitude', 'latitude', 'nbf', 'flag']
     col_headers = [instrument.lower() for instrument in data_frame.columns if instrument.lower() not in exclude]
