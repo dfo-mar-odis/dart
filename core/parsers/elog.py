@@ -298,7 +298,7 @@ def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.using(database).filter(events__trip__mission=trip.mission)
+    existing_stations = core_models.Station.objects.using(database).all()
     station_count = len(station_queue)
     for index, station in enumerate(station_queue):
         logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
@@ -346,7 +346,7 @@ def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.using(database).filter(events__trip__mission=trip.mission)
+    existing_instruments = core_models.Instrument.objects.using(database).all()
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
@@ -753,11 +753,12 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
                 if trip.platform == 'N/A' or trip.protocol == 'N/A':
                     update_mission = True
 
-            action = existing_actions[mid]
-            # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-            variables_arrays = get_create_and_update_variables(trip, action, buffer)
-            fields_create += variables_arrays[0]
-            fields_update += variables_arrays[1]
+            if mid in existing_actions.keys():
+                action = existing_actions[mid]
+                # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
+                variables_arrays = get_create_and_update_variables(trip, action, buffer)
+                fields_create += variables_arrays[0]
+                fields_update += variables_arrays[1]
         except KeyError as ex:
             logger.error(ex)
             errors.append((mid, ex.args[0]["message"], ex,))

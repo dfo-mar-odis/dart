@@ -456,12 +456,25 @@ def read_btl(mission: core_models.Mission, btl_file: str):
         # Because missions can have multiple trips that have events with
         date = data_frame._metadata['time']
         trip = mission.trips.filter(start_date__lte=date, end_date__gte=date).last()
-        event = get_elog_event_bio(trip=trip, event_number=event_number)
+        if not trip:
+            events = core_models.Event.objects.using(database).filter(trip__mission=mission)
+            if events.filter(event_id=event_number).count() == 1:
+                trip = events.get(event_id=event_number).trip
+
+        if trip:
+            event = get_elog_event_bio(trip=trip, event_number=event_number)
+        else:
+            message = _("multiple or not events with a matching event ID were found, check that the trip start and end "
+                        "dates were set correctly.") + f" : {event_number}"
+            err = core_models.FileError(mission=mission, message=message, line=-1, file_name=btl_file,
+                                        type=core_models.ErrorType.validation)
+            err.save(using=database)
+
     except core_models.Event.DoesNotExist as ex:
         message = _("Could not find matching event for event number") + f" : {event_number}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
                                     file_name=btl_file)
-        err.save()
+        err.save(using=database)
         raise ex
 
     if event.instrument.type != core_models.InstrumentType.ctd:
