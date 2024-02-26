@@ -28,10 +28,13 @@ import logging
 
 logger = logging.getLogger('dart')
 
-reports = {
-    f"Fix Station {station.name}": reverse_lazy('settingsdb:fixstation', args=(station.pk,))
-    for station in setting_models.GlobalStation.objects.filter(fixstation=True).order_by('name')
-}
+
+if 'settingsdb_globalstation' in connections['default'].introspection.table_names():
+    # if running migrations this will cause an issue if the global stations table hasn't been created yet
+    reports = {
+        f"Fix Station {station.name}": reverse_lazy('settingsdb:fixstation', args=(station.pk,))
+        for station in setting_models.GlobalStation.objects.filter(fixstation=True).order_by('name')
+    }
 
 
 def get_mission_dictionary(db_dir):
