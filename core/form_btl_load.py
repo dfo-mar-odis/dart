@@ -192,7 +192,7 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
     bottle_load_html = render_crispy_form(bottle_load_form, context=context)
     bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
 
-    if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name__icontains='BTL')).exists():
+    if (errors := mission.file_errors.filter(file_name__icontains='BTL')).exists():
         dir_input = bottle_load_soup.find(id=bottle_load_form.get_card_header_id())
         dir_input.attrs['class'].append("text-bg-warning")
 

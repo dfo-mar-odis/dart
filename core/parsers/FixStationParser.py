@@ -362,19 +362,23 @@ class FixStationParser:
         if not longitude:
             raise KeyError(_("Could not find longitude label to create actions: ") + longitude)
 
-        sounding = sounding[0].strip()
-        lat_array = latitude[0].strip().split(" ")
-        lon_array = longitude[0].strip().split(" ")
-        lat = self._convert_to_decimal_deg(*lat_array)
-        lon = self._convert_to_decimal_deg(*lon_array)
+        try:
+            sounding = sounding[0].strip()
+            lat_array = latitude[0].strip().split(" ")
+            lon_array = longitude[0].strip().split(" ")
+            lat = self._convert_to_decimal_deg(*lat_array)
+            lon = self._convert_to_decimal_deg(*lon_array)
+        except Exception as e:
+            message = f"Invalid decimal degree Lat/Lon provided ({latitude[0].strip()}, {longitude[0].strip()})"
+            raise ValueError(message) from e
 
-        bottom_bottle = self.event.bottles.order_by('pressure').last()
-        surface_bottle = self.event.bottles.order_by('pressure').first()
+        bottom_bottle = self.event.bottles.order_by('pressure').first()
+        surface_bottle = self.event.bottles.order_by('pressure').last()
         self._create_update_action(core_models.ActionType.bottom, bottom_bottle, sounding, lat, lon)
         self._create_update_action(core_models.ActionType.recovered, surface_bottle, sounding, lat, lon)
 
-        self.event.sample_id = bottom_bottle.bottle_id
-        self.event.end_sample_id = surface_bottle.bottle_id
+        self.event.sample_id = surface_bottle.bottle_id
+        self.event.end_sample_id = bottom_bottle.bottle_id
 
         self.event.save()
 

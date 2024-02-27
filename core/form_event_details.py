@@ -16,12 +16,17 @@ from django.utils.translation import gettext as _
 
 from render_block import render_block_to_string
 
+import core.models
 from core import forms as core_forms, models
 from core.parsers import FilterLogParser
 from core.parsers.FixStationParser import FixStationParser
 from dart.utils import load_svg
 
 from settingsdb import models as settings_models
+
+import logging
+
+logger = logging.getLogger('dart')
 
 
 class EventDetails(core_forms.CardForm):
@@ -1068,6 +1073,7 @@ def load_bottle_file(request, database, event_id):
     time.sleep(2)
     files = request.FILES.getlist('bottle_files')
 
+    trigger = None
     soup = BeautifulSoup('', 'html.parser')
     soup.append(msg_area := soup.new_tag("div", id="div_id_card_message_area_event_details"))
     if len(files) != 2:
@@ -1081,11 +1087,26 @@ def load_bottle_file(request, database, event_id):
         btl_file = files[0] if files[0].name.lower().endswith('.btl') else files[1]
         ros_file = files[0] if files[0].name.lower().endswith('.ros') else files[1]
 
-        btl_input = io.StringIO(btl_file.read().decode('cp1252'))
-        ros_input = io.StringIO(ros_file.read().decode('cp1252'))
-        parser = FixStationParser(event=event, btl_filename=btl_file.name,
-                                  btl_stream=btl_input, ros_stream=ros_input)
-        parser.parse()
+        try:
+            btl_input = io.StringIO(btl_file.read().decode('cp1252'))
+            ros_input = io.StringIO(ros_file.read().decode('cp1252'))
+            parser = FixStationParser(event=event, btl_filename=btl_file.name,
+                                      btl_stream=btl_input, ros_stream=ros_input)
+            parser.parse()
+            trigger = "event_selected"
+        except Exception as ex:
+            logger.exception(ex)
+            message = _("There was an issue reading the file") + f" : '{btl_file.name}' - {str(ex)}"
+            attrs = {
+                'component_id': "div_id_card_message_area_event_details_alert",
+                'message': message,
+                'alert_type': 'danger'
+            }
+            msg_area.append(core_forms.blank_alert(**attrs))
+            err = core.models.FileError(mission=event.trip.mission, file_name=btl_file, line=-1, message=message,
+                                        type=core.models.ErrorType.event)
+            err.save(using=database)
+            trigger = "event_updated"
 
     # we have to clear the file input or when the user clicks the button to load the same file, nothing will happen
     input_html = (f'<input id="btn_id_filter_log_event_details" type="file" name="filter_log" accept=".xlsx" '
@@ -1094,7 +1115,7 @@ def load_bottle_file(request, database, event_id):
     soup.append(BeautifulSoup(input_html))
 
     response = HttpResponse(soup)
-    response['Hx-Trigger'] = "event_selected"
+    response['Hx-Trigger'] = trigger
     return response
 
 
