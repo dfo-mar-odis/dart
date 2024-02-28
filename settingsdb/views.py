@@ -4,7 +4,7 @@ from os import listdir
 
 from bs4 import BeautifulSoup
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Div, Field
+from crispy_forms.layout import Layout, Div, Field, Column, Row, Hidden
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
@@ -20,6 +20,7 @@ from render_block import render_block_to_string
 from dart.utils import load_svg
 from settingsdb import models as setting_models
 from core import models
+from core import forms as core_forms
 from settingsdb import filters, utils
 
 from dart.views import GenericTemplateView
@@ -35,6 +36,55 @@ if 'settingsdb_globalstation' in connections['default'].introspection.table_name
         f"Fix Station {station.name}": reverse_lazy('settingsdb:fixstation', args=(station.pk,))
         for station in setting_models.GlobalStation.objects.filter(fixstation=True).order_by('name')
     }
+
+
+class MissionFilterForm(forms.Form):
+    before_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'max': "9999-12-31"}))
+    after_date = forms.DateField(
+        widget=forms.DateInput(attrs={'type': 'date', 'max': "9999-12-31"}))
+    hidden_change = forms.HiddenInput()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+        url = reverse_lazy('settingsdb:mission_filter_list_missions')
+        attrs = {'hx-trigger': "keyup delay:500ms, change", 'hx-post': url, 'hx-target': "#mission_table"}
+        hidden_attrs = {'hx-trigger': "db_dir_changed from:body", 'hx-post': url, 'hx-target': "#mission_table"}
+
+        self.helper.layout = Layout(
+            Row(
+                Hidden('hidden_change', '', **hidden_attrs),
+                Column(Field('after_date', **attrs), css_class=''),
+                Column(Field('before_date', **attrs), css_class=''),
+            )
+        )
+
+
+class MissionDirForm(forms.Form):
+    directory = forms.ChoiceField(label="Mission Databases Directory")
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['directory'].choices = [(db.pk, db.database_location) for db in
+                                            setting_models.LocalSetting.objects.using('default').all()]
+        self.fields['directory'].choices.append((-1, '--- New ---'))
+
+        self.helper = FormHelper(self)
+        self.helper.form_tag = False
+
+        selection_attrs = {
+            'hx-trigger': 'change',
+            'hx-get': reverse_lazy("settingsdb:update_mission_directory"),
+            'hx-swap': "outerHTML"
+        }
+        self.helper.layout = Layout(
+            Div(Field('directory', css_class="form-select-sm", id="select_id_mission_directory", **selection_attrs))
+        )
 
 
 def get_mission_dictionary(db_dir):
@@ -62,29 +112,6 @@ def get_mission_dictionary(db_dir):
             settings.DATABASES.pop(connection.alias)
 
     return missions
-
-
-class MissionDirForm(forms.Form):
-    directory = forms.ChoiceField(label="Mission Databases Directory")
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields['directory'].choices = [(db.pk, db.database_location) for db in
-                                            setting_models.LocalSetting.objects.using('default').all()]
-        self.fields['directory'].choices.append((-1, '--- New ---'))
-
-        self.helper = FormHelper(self)
-        self.helper.form_tag = False
-
-        selection_attrs = {
-            'hx-trigger': 'change',
-            'hx-get': reverse_lazy("settingsdb:update_mission_directory"),
-            'hx-swap': "outerHTML"
-        }
-        self.helper.layout = Layout(
-            Div(Field('directory', css_class="form-select-sm", id="select_id_mission_directory", **selection_attrs))
-        )
 
 
 def init_connection():
@@ -125,19 +152,91 @@ class MissionFilterView(GenericTemplateView):
         initial = init_connection()
         context['new_url'] = self.new_url
         context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
+        context['mission_filter_form'] = MissionFilterForm()
         context['missions'] = get_mission_dictionary(initial.database_location)
 
         context['reports'] = reports
         return context
 
 
-def list_missions(request):
+def get_filter_dates(array: dict):
+    before_date = array.get('before_date', '')
+    if before_date:
+        try:
+            before_date = datetime.datetime.strptime(before_date, "%Y-%m-%d").date()
+        except ValueError:
+            before_date = None
+
+    after_date = array.get('after_date', '')
+    if after_date:
+        try:
+            after_date = datetime.datetime.strptime(after_date, "%Y-%m-%d").date()
+        except ValueError:
+            after_date = None
+
+    return after_date, before_date
+
+
+def filter_missions(after_date, before_date) -> list[dict]:
     connected = init_connection()
+    missions_dict = get_mission_dictionary(connected.database_location)
+    missions = []
+    for database, mission in missions_dict.items():
+        if before_date:
+            if mission.end_date and mission.end_date > before_date:
+                continue
+        if after_date:
+            if mission.start_date and mission.start_date < after_date:
+                continue
 
-    context = {'missions': get_mission_dictionary(connected.database_location)}
-    html = render_block_to_string('settingsdb/mission_filter.html', 'mission_table_block', context)
-    response = HttpResponse(html)
+        missions.append({'database':database, 'mission':mission})
 
+    return missions
+
+
+def list_missions(request):
+
+    report_filter = []
+
+    before_date = None
+    after_date = None
+    if request.method == 'POST':
+        after_date, before_date = get_filter_dates(request.POST)
+
+    if before_date:
+        report_filter.append(f'before_date={before_date}')
+    if after_date:
+        report_filter.append(f'after_date={after_date}')
+
+    missions = filter_missions(after_date, before_date)
+
+    def sort_key(m):
+        start_date = m['mission'].start_date
+        return start_date if start_date else datetime.datetime.strptime('1900-01-01', '%Y-%m-%d').date()
+
+    missions = sorted(missions, key=sort_key, reverse=True)
+
+    context = {'missions': missions}
+    html = render_block_to_string('settingsdb/partials/mission_table.html', 'mission_table_block', context)
+    soup = BeautifulSoup('', 'html.parser')
+    table_soup = BeautifulSoup(html, 'html.parser')
+
+    # update the report dropdown to use the after/before dates in the fixstation report call
+    soup.append(ul_reports := soup.new_tag('ul', id="ul_id_fixstation_reports"))
+    ul_reports.attrs['class'] = "dropdown-menu"
+    ul_reports.attrs['hx-swap-oob'] = 'innerHTML'
+
+    stations = setting_models.GlobalStation.objects.filter(fixstation=True).order_by('name')
+    r_filters = ("?" + '&'.join(report_filter)) if len(report_filter) > 0 else ''
+    for station in stations:
+        ul_reports.append(li := soup.new_tag("li"))
+        li.append(a := soup.new_tag('a'))
+        a.string = f"Fix Station {station.name}"
+        a.attrs['href'] = reverse_lazy('settingsdb:fixstation', args=(station.pk,)) + r_filters
+        a.attrs['class'] = "dropdown-item"
+
+    soup.append(table_soup)
+    response = HttpResponse(soup)
     return response
 
 
@@ -247,7 +346,12 @@ def migrate_database(request, database):
 
 
 def fixstation(request, station_id):
-    connected = init_connection()
+    before_date = None
+    after_date = None
+    if request.method == 'GET':
+        after_date, before_date = get_filter_dates(request.GET)
+
+    missions = filter_missions(after_date, before_date)
     station = setting_models.GlobalStation.objects.get(pk=station_id)
 
     sample_types = {"Oxygen": "oxy", "Salinity": "salts"}
@@ -258,9 +362,8 @@ def fixstation(request, station_id):
     headings.append("Comments")
     data = ",".join(headings) + "\n"
 
-    missions = get_mission_dictionary(connected.database_location)
-    keys = missions.keys()
-    for key in keys:
+    for mission in missions:
+        key = mission['database']
         utils.connect_database(key)
         events = models.Event.objects.using(key).filter(station__name__iexact=station,
                                                         instrument__type=models.InstrumentType.ctd)
@@ -287,5 +390,4 @@ def fixstation(request, station_id):
     response = HttpResponse(file_to_send, content_type="text/csv")
     response['Content-Length'] = file_to_send.size
     response['Content-Disposition'] = f'attachment; filename="FixStation_{station}.csv"'
-
     return response

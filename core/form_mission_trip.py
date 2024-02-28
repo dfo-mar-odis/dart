@@ -28,9 +28,11 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
     select_trip = forms.ChoiceField(required=False)
 
     start_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+        widget=forms.DateInput(attrs={'type': 'date', 'max': "9999-12-31",
+                                      'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
     end_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+        widget=forms.DateInput(attrs={'type': 'date', 'max': "9999-12-31",
+                                      'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
 
     # I had to override the default Bootstrap template for fields, because someone thought putting 'mb-3'
     # as a default for field wrappers was a good idea and it creates a massive gap under the inputs when
@@ -143,10 +145,12 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         if self.instance:
             start_date = self.instance.start_date.strftime("%Y-%m-%d")
-            self.fields['start_date'].widget = forms.DateInput({'type': 'date', 'value': start_date})
+            self.fields['start_date'].widget = forms.DateInput({'type': 'date', 'max': "9999-12-31",
+                                                                'value': start_date})
 
             end_date = self.instance.end_date.strftime("%Y-%m-%d")
-            self.fields['end_date'].widget = forms.DateInput({'type': 'date', 'value': end_date})
+            self.fields['end_date'].widget = forms.DateInput({'type': 'date', 'max': "9999-12-31",
+                                                              'value': end_date})
 
         self.fields['select_trip'].label = False
 

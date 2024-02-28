@@ -21,6 +21,8 @@ class GlobalSampleType(models.Model):
                                               "used for the sample"), unique=True)
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
                                  help_text=_("Short descriptive name for this type of sample/sensor"))
+
+    # priority will eventually allow a user to sort their sample types on the Mission Sample form
     priority = models.IntegerField(verbose_name=_("Priority"), default=1)
 
     # Datatype may not be known by the user at the time they need to create this sensor, but it will

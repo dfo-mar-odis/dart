@@ -10,6 +10,14 @@
     </li>
 {% endblock %}
 
+{% block report %}
+  <ul class="dropdown-menu" id="ul_id_fixstation_reports">
+      {% for key,report in reports.items %}
+          <li><a class="dropdown-item" href="{{ report }}">{{ key }}</a></li>
+      {% endfor %}
+  </ul>
+{% endblock %}
+
 {% block title %}
     {{ block.super }}
     {% if new_url %}
@@ -19,54 +27,12 @@
 
 {% block content %}
 <div>
-    {% block filter %}
-        <form id="filter-form" class="form" hx-target="#mission_table" hx-get="{% url 'settingsdb:mission_filter_list_missions' %}">
-{# The filter will have to be rewritten as it doesn't work with external databases #}
-        </form>
-    {% endblock %}
+    <form id="form_id_mission_directory" class="form-control" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% if dir_select_form %}
-        <form id="form_id_mission_directory" class="form-control" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {% crispy dir_select_form %}
-        </form>
     {% endif %}
-    <table class="table table-sm" hx-target="#mission_table" hx-trigger="load, db_dir_changed from:body" hx-get="{% url 'settingsdb:mission_filter_list_missions' %}">
-        <thead>
-        <tr>
-            <th class="col">Name</th>
-            <th class="col">Start Date</th>
-            <th class="col">End Date</th>
-            <th class="col">Biochem Table</th>
-            <th class="col-auto">{# mission details #}</th>
-        </tr>
-        </thead>
+    </form>
 
-        <tbody id="mission_table" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-        {% block mission_table_block %}
-        {% for database, mission in missions.items %}
-            <tr class="table-row" id="tr_id_mission_{{ database }}">
-                <td>{{ mission.name }}</td>
-                <td>{% if mission.start_date %}{{ mission.start_date }}{% endif %}</td>
-                <td>{% if mission.end_date %}{{ mission.end_date }}{% endif %}</td>
-                <td>{{ mission.biochem_table }}</td>
-
-                {% if mission.requires_migration %}
-                <td>
-                    <button id="btn_id_migrate_{{ mission.name }}" type="button" class="btn btn-danger" title="{% trans "Database requires migrations before it can be read" %}"
-                            hx-target="#btn_id_migrate_{{ mission.name }}" hx-swap="outerHTML" hx-get="{% url 'settingsdb:migrate_database' mission.name %}"
-                            hx-confirm="{% trans 'Make sure the database is backed up before running migrations to update the database model' %}">{% custom_icon 'arrow-clockwise' %}</button>
-                </td>
-                {% else %}
-                <td>
-                    <a id="a_id_edit_mission" class="btn btn-primary" href="{% url 'core:mission_edit' database mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
-                    <a id="a_id_edit_mission_events" class="btn btn-primary" href="{% url 'core:mission_events_details' database mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
-                    <a class="btn btn-primary" href="{% url 'core:mission_samples_sample_details' database mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
-                    <a class="btn btn-primary" href="{% url 'core:mission_plankton_plankton_details' database mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
-                </td>
-                {% endif %}
-            </tr>
-        {% endfor %}
-        {% endblock %}
-        </tbody>
-    </table>
+    {% include 'settingsdb/partials/mission_table.html' %}
 </div>
 {% endblock %}

@@ -101,7 +101,7 @@ class EventDetails(core_forms.CardForm):
 
     def get_bottle_file_button(self):
         # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
-        button_icon = load_svg('arrow-down-square')
+        button_icon = load_svg('plastic-bottle-icon')
         button_id = f'btn_id_bottle_file_{self.card_name}'
         url = reverse_lazy("core:form_event_fix_station_bottle", args=(self.database, self.event.pk,))
         button = HTML(
@@ -333,7 +333,8 @@ class EventForm(forms.ModelForm):
 
 class ActionForm(forms.ModelForm):
     date_time = forms.DateTimeField(widget=forms.DateTimeInput(
-        attrs={'type': 'datetime-local', 'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
+        attrs={'type': 'datetime-local', 'max': "9999-12-31 12:59:59",
+               'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
 
     class Meta:
         model = models.Action
