@@ -23,12 +23,12 @@ class MissionSettingsForm(forms.ModelForm):
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
     global_geographic_region = forms.ChoiceField(label=_("Geographic Region"))
 
-    start_date = forms.DateTimeField(widget=forms.DateTimeInput(
+    start_date = forms.DateField(widget=forms.DateInput(
         attrs={'type': 'date', 'max': "9999-12-31",
-               'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
-    end_date = forms.DateTimeField(widget=forms.DateTimeInput(
+               'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+    end_date = forms.DateField(widget=forms.DateInput(
         attrs={'type': 'date', 'max': "9999-12-31",
-               'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
+               'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
 
     class Meta:
         model = models.Mission
@@ -54,19 +54,21 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['lead_scientist'].required = False
         self.fields['data_center'].required = False
 
-        if (start_date := self.initial.get("start_date", -1)) != -1:
-            self.fields['start_date'].widget.attrs['value'] = start_date.strftime("%Y-%m-%d")
-
-        if (end_date := self.initial.get("end_date", -1)) != -1:
-            self.fields['end_date'].widget.attrs['value'] = end_date.strftime("%Y-%m-%d")
-
         if self.instance.pk:
             name_column = Column(
                 HTML(f"<h2>{self.instance.name}</h2>"),
                 Hidden('name', self.instance.name)
             )
+            self.fields['start_date'].widget.attrs['value'] = self.instance.start_date.strftime("%Y-%m-%d")
+            self.fields['end_date'].widget.attrs['value'] = self.instance.end_date.strftime("%Y-%m-%d")
         else:
             name_column = Column(Field('name', autocomplete='true'))
+
+        if (start_date := self.initial.get("start_date", -1)) != -1:
+            self.fields['start_date'].widget.attrs['value'] = start_date.strftime("%Y-%m-%d")
+
+        if (end_date := self.initial.get("end_date", -1)) != -1:
+            self.fields['end_date'].widget.attrs['value'] = end_date.strftime("%Y-%m-%d")
 
         icon = load_svg('plus-square')
         btn_attrs = {
