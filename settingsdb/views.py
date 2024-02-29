@@ -371,9 +371,9 @@ def fixstation(request, station_id):
                                                         instrument__type=models.InstrumentType.ctd)
         logger.info(f"Mission: {key} - Events found: {events.count()}")
         for event in events:
-            mission = event.trip.mission
+            mission = event.mission
             event_id = f"{event.event_id:03d}"
-            date = event.start_date if event.start_date else event.trip.start_date
+            date = event.start_date if event.start_date else event.start_date
             sample_id = f"{event.sample_id}"
             data += ",".join([mission.name, event_id, date.strftime("%Y-%m-%d") if date else "----", sample_id])
 
