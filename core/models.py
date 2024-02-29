@@ -3,6 +3,7 @@ import datetime
 from pandas import DataFrame
 
 import bio_tables.models
+import settingsdb.utils
 from core.utils import distance
 
 from django.db.models.functions import Lower
@@ -29,19 +30,15 @@ class SimpleLookupName(models.Model):
         return self.name
 
 
-class GeographicRegion(SimpleLookupName):
-    pass
-
-
 class Mission(models.Model):
     name = models.CharField(verbose_name=_("Mission Name"), max_length=50,
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
     mission_descriptor = models.CharField(verbose_name=_("Mission Descriptor"), max_length=50, blank=True, null=True,
                                           help_text=_("Code assigned by OSD, ensures national coordination"))
 
-    geographic_region = models.ForeignKey(GeographicRegion, verbose_name=_("Geographic Region"),
-                                          max_length=100, blank=True, null=True, on_delete=models.DO_NOTHING,
-                                          help_text=_("Examples: Scotian Shelf, lower St. Lawrence Estuary"))
+    geographic_region = models.CharField(verbose_name=_("Geographic Region"), max_length=100,
+                                         help_text=_("Terms describing the geographic region where "
+                                                     "the mission took place"))
 
     # default=20 is BIO
     data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
@@ -59,31 +56,6 @@ class Mission(models.Model):
 
     lead_scientist = models.CharField(verbose_name=_("Lead Scientist"), max_length=50, default="N/A",
                                       help_text=_("Chief scientist / principal investigator; LASTNAME,FIRSTNAME"))
-
-    @property
-    def start_date(self):
-        start = self.trips.order_by('start_date').first()
-        return start.start_date if start else None
-
-    @property
-    def end_date(self):
-        end = self.trips.order_by('start_date').last()
-        return end.end_date if end else None
-
-    @property
-    def get_biochem_table_name(self):
-        if not self.biochem_table:
-            self.biochem_table = f'bio_upload_{self.name}'
-            self.save()
-
-        return self.biochem_table
-
-    def __str__(self):
-        return f'{self.name}'
-
-
-class Trip(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, verbose_name=_("Mission"), related_name='trips')
 
     start_date = models.DateField(verbose_name=_("Cruise Start Date"), default=timezone.now)
     end_date = models.DateField(verbose_name=_("Cruise End Date"), default=timezone.now)
@@ -108,8 +80,16 @@ class Trip(models.Model):
                                                          "history (processing steps, edits, special warnings)"),
                                              blank=True, null=True)
 
+    @property
+    def get_biochem_table_name(self):
+        if not self.biochem_table:
+            self.biochem_table = f'bio_upload_{self.name}'
+            self.save()
+
+        return self.biochem_table
+
     def __str__(self):
-        return f"{self.start_date} - {self.end_date}"
+        return f'{self.name}'
 
 
 class InstrumentType(models.IntegerChoices):
@@ -155,7 +135,7 @@ class Station(models.Model):
 
 
 class Event(models.Model):
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='events', verbose_name=_("Trip"))
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='events', verbose_name=_("Mission"))
 
     event_id = models.IntegerField(verbose_name=_("Event ID"))
     station = models.ForeignKey(Station, on_delete=models.DO_NOTHING, verbose_name=_("Station"), related_name="events")
@@ -165,7 +145,9 @@ class Event(models.Model):
     sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
     end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
+    # net specific attributes
     wire_out = models.FloatField(verbose_name=_("Wire Out"), null=True, blank=True)
+    wire_angle = models.FloatField(verbose_name=_("Wire Angle"), null=True, blank=True)
     flow_start = models.IntegerField(verbose_name=_("Flow Meter Start"), null=True, blank=True)
     flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
 
@@ -253,11 +235,11 @@ class Event(models.Model):
         return " ".join(comments)
 
     class Meta:
-        unique_together = ("event_id", "trip")
+        unique_together = ("event_id", "instrument")
         ordering = ("event_id",)
 
     def __str__(self):
-        return f"{self.event_id} - {self.station.name}"
+        return f"{self.event_id} - {self.station.name} - {self.instrument.name}"
 
 
 class ActionType(models.IntegerChoices):
@@ -386,7 +368,7 @@ class Bottle(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="bottles", on_delete=models.CASCADE)
     closed = models.DateTimeField(verbose_name=_("Fired Date/Time"))
 
-    # the bottle number is its order from 1 to N in a series of bottles as opposed tot he bottle ID which is the
+    # the bottle number is its order from 1 to N in a series of bottles as opposed to the bottle ID which is the
     # label placed on the bottle linking it to all samples that come from that bottle.
     bottle_id = models.IntegerField(verbose_name=_("Bottle ID"))
 
@@ -563,7 +545,7 @@ class PlanktonSample(models.Model):
     @property
     def plank_sample_key_value(self):
         event = self.bottle.event
-        mission = event.trip.mission
+        mission = event.mission
         return f'{mission.mission_descriptor}_{event.event_id:03d}_{self.bottle.bottle_id}_{self.gear_type.gear_seq}'
 
     @property
@@ -592,6 +574,9 @@ class ErrorType(models.IntegerChoices):
     validation = 3, "Validation Error"
     bottle = 4, "Bottle Error"
     biochem = 5, "Biochem Error"
+    event = 6, "Event Error"
+    sample = 7, "Sample Error"
+    plankton = 8, "Plankton Error"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least

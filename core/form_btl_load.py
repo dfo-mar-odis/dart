@@ -170,7 +170,7 @@ class BottleLoadForm(CollapsableCardForm):
             if 'hide_loaded' in self.initial:
                 loaded_files = [f.upper() for f in models.Sample.objects.using(self.database).filter(
                     type__is_sensor=True,
-                    bottle__event__trip__mission=self.mission).values_list('file', flat=True).distinct()]
+                    bottle__event__mission=self.mission).values_list('file', flat=True).distinct()]
                 files = [f for f in files if f.upper() not in loaded_files]
 
             files.sort(key=lambda fn: os.path.getmtime(os.path.join(mission.bottle_directory, fn)))
@@ -192,7 +192,7 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
     bottle_load_html = render_crispy_form(bottle_load_form, context=context)
     bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
 
-    if (errors := models.FileError.objects.filter(mission_id=mission_id, file_name__icontains='BTL')).exists():
+    if (errors := mission.file_errors.filter(file_name__icontains='BTL')).exists():
         dir_input = bottle_load_soup.find(id=bottle_load_form.get_card_header_id())
         dir_input.attrs['class'].append("text-bg-warning")
 
@@ -377,11 +377,12 @@ def upload_btl_files(request, database, mission_id, **kwargs):
 
         soup = get_bottle_load_card(request, database, mission_id, collapsed=False, **kwargs)
 
+        reload_url = reverse_lazy('core:form_btl_reload_files', args=(database, mission_id)) + "?hide_loaded=true"
         alert = core.forms.blank_alert(component_id="div_id_alert_bottle_load", message="Done", alert_type="success")
         div = soup.new_tag("div", id="div_id_alert_bottle_load", attrs={'hx-swap-oob': 'true'})
         div.attrs['hx-target'] = "#div_id_card_bottle_load"
         div.attrs['hx-trigger'] = 'load'
-        div.attrs['hx-get'] = reverse_lazy('core:form_btl_reload_files', args=(database, mission_id))
+        div.attrs['hx-get'] = reload_url
         div.append(alert)
 
         soup.insert(0, div)

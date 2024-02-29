@@ -29,7 +29,7 @@ class TestMissionView(DartTestCase):
 
     @classmethod
     def setUpClass(cls):
-        (settingsdb := settings_models.LocalSetting(database_location=fake_location)).save()
+        (settingsdb := settings_models.LocalSetting(database_location=fake_location, connected=True)).save()
         utils.add_database(fake_db_name)
 
         core_models.Mission(name=fake_db_name).save(using=fake_db_name)
@@ -64,14 +64,15 @@ class TestMissionView(DartTestCase):
         url = reverse("settingsdb:mission_filter_list_missions")
         response = self.client.get(url)
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, 'html.parser')
 
         # we're using a hx-target/hx-swap in the mission_filter.html template so we're just returning what will
-        # be swapped onto the page under the tables.
+        # be swapped onto the page under the tables. There should be 2 table rows, one for the headings, one for the
+        # mission
         trs = soup.find_all('tr')
-        self.assertEquals(len(trs), 1)
+        self.assertEquals(len(trs), 2)
 
-        mission_row = soup.find(id=f"tr_id_mission_{self.mission.pk}")
+        mission_row = soup.find(id=f"tr_id_mission_{self.mission.name}")
         self.assertIsNotNone(mission_row)
 
         edit_mission_url = reverse("core:mission_edit", args=(fake_db_name, self.mission.pk))

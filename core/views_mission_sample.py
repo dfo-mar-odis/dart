@@ -47,7 +47,7 @@ def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Missi
     sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
     dc_samples = models.DiscreteSampleValue.objects.using(database).filter(
-        sample__bottle__event__trip__mission_id=mission.pk, sample__type_id=sampletype_id)
+        sample__bottle__event__mission_id=mission.pk, sample__type_id=sampletype_id)
 
     row_datatype = dc_samples.values_list("datatype", flat=True).distinct().first()
     datatype = sampletype.datatype if sampletype.datatype else None
@@ -283,7 +283,7 @@ def list_samples(request, database, mission_id):
     table_soup = BeautifulSoup('', 'html.parser')
 
     mission = models.Mission.objects.using(database).get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.using(database).filter(event__trip__mission=mission).order_by('bottle_id')[
+    bottle_limit = models.Bottle.objects.using(database).filter(event__mission=mission).order_by('bottle_id')[
                    page_start:(page_start + page_limit)]
 
     if not bottle_limit.exists():
@@ -318,7 +318,7 @@ def list_samples(request, database, mission_id):
                         # if the replicate column doesn't currently have any values, insert a nan as a placeholder
                         df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
-        df = df.reindex(sorted(df.columns), axis=1)
+        df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensors.order_by('is_sensor', 'priority', 'pk')]]
         table_soup = format_all_sensor_table(df, database, mission)
     except Exception as ex:
         logger.exception(ex)
@@ -449,7 +449,7 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
         if 'add_sensor' in request.POST:
             if not upload_sensors.filter(type_id=sensor_id).exists():
                 add_sensor = models.BioChemUpload(type_id=sensor_id)
-                add_sensor.save()
+                add_sensor.save(using=database)
         else:
             upload_sensors.filter(type_id=sensor_id).delete()
 
@@ -617,8 +617,7 @@ def download_samples(request, database, mission_id):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     mission = models.Mission.objects.using(database).get(pk=mission_id)
-    events = models.Event.objects.using(database).filter(trip__mission=mission, 
-                                                         instrument__type=models.InstrumentType.ctd)
+    events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
     bottles = models.Bottle.objects.using(database).filter(event__in=events)
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
@@ -659,7 +658,7 @@ def download_samples(request, database, mission_id):
         type__mission=mission).values_list('type', flat=True).distinct()
 
     discrete_samples = models.DiscreteSampleValue.objects.using(database).filter(
-        sample__bottle__event__trip__mission=mission)
+        sample__bottle__event__mission=mission)
     discrete_samples = discrete_samples.filter(sample__type_id__in=data_types)
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields

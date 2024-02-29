@@ -312,13 +312,14 @@ def list_plankton(request, database, mission_id):
     div.attrs['hx-trigger'] = 'update_samples from:body'
     div.attrs['hx-get'] = reverse_lazy('core:form_plankton_list_plankton', args=(database, mission.pk,))
     div.attrs['hx-swap-oob'] = 'true'
+    div.attrs['class'] = 'vertical-scrollbar'
     soup.append(div)
 
     page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
     page_start = page_limit * page
 
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission=mission).order_by(
+    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission).order_by(
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():
@@ -344,12 +345,13 @@ def list_plankton(request, database, mission_id):
         table = table_soup.find('table')
 
         table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
-
-        url = reverse_lazy('core:form_plankton_list_plankton', args=(database, mission.pk,))
-        last_tr = table.find('tbody').find_all('tr')[-1]
-        last_tr.attrs['hx-trigger'] = 'intersect once'
-        last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
-        last_tr.attrs['hx-swap'] = "afterend"
+        trs = table.find('tbody').find_all('tr')
+        if len(trs) > 0:
+            url = reverse_lazy('core:form_plankton_list_plankton', args=(database, mission.pk,))
+            last_tr = trs[-1]
+            last_tr.attrs['hx-trigger'] = 'intersect once'
+            last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
+            last_tr.attrs['hx-swap'] = "afterend"
 
         div.append(table)
         if page > 0:

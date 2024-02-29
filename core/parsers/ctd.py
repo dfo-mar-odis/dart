@@ -130,7 +130,8 @@ def process_ros_sensors(sensors: [str], ros_file: str):
         if sensor_mapping[0] in existing_sensors:
             continue
 
-        sensor_type = settings_models.GlobalSampleType(short_name=sensor_mapping[0], long_name=long_name, is_sensor=True)
+        sensor_type = settings_models.GlobalSampleType(short_name=sensor_mapping[0], long_name=long_name,
+                                                       is_sensor=True)
         sensor_type.name = sensor_type_string
         sensor_type.priority = priority if priority else 1
         sensor_type.units = units if units else None
@@ -255,7 +256,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
     # clear out the bottle validation errors
     event.validation_errors.filter(type=core_models.ErrorType.bottle).delete()
-    # end_sample_id-sample_id is includes so it's one less that the bottles in the file
+    # end_sample_id-sample_id is inclusive so it's one less that the bottles in the file
     if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)[dataframe_dict['bottle_number']] - 1:
         message = _("Mismatch bottle count for event")
         validation_err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
@@ -291,7 +292,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         errors += valid
 
         if core_models.Bottle.objects.using(database).filter(event=event, bottle_number=bottle_number).exists():
-            # If a bottle already exists for this event then we'll update it's fields rather than
+            # If a bottle already exists for this event then we'll update its fields rather than
             # creating a whole new bottle. Reason being there may be samples attached to bottles that are
             # being reloaded from a calibrated bottle file post mission.
             b = core_models.Bottle.objects.using(database).get(event=event, bottle_number=bottle_number)
@@ -317,7 +318,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
-    mission = event.trip.mission
+    mission = event.mission
     database = mission._state.db
 
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
@@ -355,7 +356,8 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
             global_sampletype = settings_models.GlobalSampleType.objects.get(short_name__iexact=name)
             new_sampletype = core_models.MissionSampleType(mission=mission, name=name, is_sensor=True,
                                                            long_name=global_sampletype.long_name,
-                                                           datatype=global_sampletype.datatype)
+                                                           datatype=global_sampletype.datatype,
+                                                           priority=global_sampletype.priority)
             new_sampletype.save()
 
     sample_types = {
@@ -416,16 +418,15 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
 
     database = mission._state.db
-    events = core_models.Event.objects.using(database).filter(trip__mission=mission,
-                                                              instrument__type=core_models.InstrumentType.ctd)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
     event = events[event_number-1]
 
     return event
 
 
-def get_elog_event_bio(trip: core_models.Trip, event_number: int) -> core_models.Event:
+def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_models.Event:
     try:
-        event = trip.events.get(event_id=event_number)
+        event = mission.events.get(event_id=event_number, instrument__type=core_models.InstrumentType.ctd)
     except core_models.Event.DoesNotExist as ex:
         raise core_models.Event.DoesNotExist(event_number) from ex
     return event
@@ -445,34 +446,32 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     if file_name not in btl_file:
         message = _("Name of bottle file does not match name in the bottle file. Check the .hdr file and reprocess.")
         message += f" {btl_file} =/= {file_name}"
-        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
         err.save(using=database)
         raise ValueError(message)
 
     event_number = get_event_number_bio(data_frame=data_frame)
     try:
-        # Because missions can have multiple trips that have events with
-        date = data_frame._metadata['time']
-        trip = mission.trips.filter(start_date__lte=date, end_date__gte=date).last()
-        event = get_elog_event_bio(trip=trip, event_number=event_number)
+        event = get_elog_event_bio(mission=mission, event_number=event_number)
+
     except core_models.Event.DoesNotExist as ex:
         message = _("Could not find matching event for event number") + f" : {event_number}"
-        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save()
+        err.save(using=database)
         raise ex
 
     if event.instrument.type != core_models.InstrumentType.ctd:
         message = "Event_Number" + f" : {event_number} - " + _("not a CTD event, check the event number in the BTL file is correct.")
-        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.validation,
+        err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save()
+        err.save(using=database)
         raise ValueError("Bad Event number")
 
     # These are columns we either have no use for or we will specifically call and use later
     # The Bottle column is the rosette number of the bottle
-    # the Bottle_ column, if present, is the bottle.bottle_id for a bottle.
+    # The Bottle_ column, if present, is the bottle.bottle_id for a bottle.
     exclude = ['bottle', 'bottle_', 'date', 'scan', 'times', 'statistic',
                'longitude', 'latitude', 'nbf', 'flag']
     col_headers = [instrument.lower() for instrument in data_frame.columns if instrument.lower() not in exclude]

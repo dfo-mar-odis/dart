@@ -16,6 +16,9 @@ import sys
 
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
+from django.conf import settings
+
+from . import scripts
 
 # read setup data from the environment file
 env = environ.Env()
@@ -51,6 +54,8 @@ DEBUG = env.bool('DEBUG', default=True)
 ALLOWED_HOSTS = ['*']
 
 ASGI_APPLICATION = 'dart.asgi.application'
+
+TNS_NAMES = scripts.get_tns_file()
 
 # These apps are part of the core functionality for DART
 # --- Please do not modify unless you know what you're doing ---

@@ -1,18 +1,15 @@
-import os.path
 import re
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Submit, Field, Div, HTML
+from crispy_forms.layout import Layout, Hidden, Row, Column, Field, Div, HTML
 
 from django import forms
-from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
-import settingsdb
 from dart.utils import load_svg
 
 from . import models
@@ -80,14 +77,14 @@ class CardForm(forms.Form):
     def get_card_id(self):
         return f'div_id_card_{self.card_name}'
 
-    def get_card(self):
-        card = Div(
-            self.get_card_header(),
-            self.get_card_body(),
-            css_class='card',
-            id=self.get_card_id()
-        )
+    def get_card(self, attrs: dict = None) -> Div:
 
+        card = Div(css_class='card', id=self.get_card_id())
+        if attrs:
+            card = Div(css_class='card', id=self.get_card_id(), **attrs)
+
+        card.fields.append(self.get_card_header())
+        card.fields.append(self.get_card_body())
         return card
 
     def __init__(self, *args, **kwargs):
@@ -158,131 +155,6 @@ class CollapsableCardForm(CardForm):
         self.collapsed = collapsed
 
         super().__init__(*args, **kwargs)
-
-
-class MissionSettingsForm(forms.ModelForm):
-    name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
-    # elog_dir = forms.CharField(max_length=255, label="Elog Directory", required=False,
-    #                            help_text="Folder location of Elog *.log files")
-    # bottle_dir = forms.CharField(max_length=255, label="CTD Bottle Directory", required=False,
-    #                              help_text="Folder location of Elog *.BTL files")
-    mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
-
-    class Meta:
-        model = models.Mission
-        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center', 'lead_scientist']
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.helper = FormHelper()
-        self.helper.form_show_labels = True
-        self.fields['geographic_region'].label = False
-        self.fields['geographic_region'].widget.attrs["hx-target"] = '#id_geographic_region'
-        self.fields['geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
-        self.fields['geographic_region'].widget.attrs["hx-trigger"] = 'change'
-        self.fields['geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:hx_update_regions')
-
-        self.fields['geographic_region'].choices = [(None, '------'), (-1, _('New Region')), (-2, _(''))]
-        self.fields['geographic_region'].choices += [(gr.id, gr) for gr in models.GeographicRegion.objects.all()]
-        self.fields['geographic_region'].initial = None
-        self.fields['mission_descriptor'].required = False
-        self.fields['biochem_table'].required = False
-        self.fields['lead_scientist'].required = False
-        self.fields['data_center'].required = False
-        self.fields['geographic_region'].required = False
-
-        if self.instance.pk:
-            name_column = Column(
-                HTML(f"<h2>{self.instance.name}</h2>"),
-                Hidden('name', self.instance.name)
-            )
-        else:
-            name_column = Column(Field('name', autocomplete='true'))
-
-        submit = Submit('submit', 'Submit')
-        self.helper.layout = Layout(
-            Row(
-                Column(name_column),
-            ),
-            Row(
-                Column(
-                    Row(
-                        HTML(f'<label for="id_geographic_region" class=form-label">{_("Geographic Region")}</label>'),
-                        css_class="mb-2"
-                    ),
-                    Row(
-                        Column(Field('geographic_region'), css_class="col"),
-                    )
-                )
-            ),
-            Div(
-                Div(
-                    Div(
-                        HTML(f"<h4>{_('Optional')}</h4>"),
-                        css_class="card-title"
-                    ),
-                    css_class="card-header"
-                ),
-                Div(
-                    Row(
-                        HTML(f"{_('The following can be automatically acquired from elog files or entered later')}"),
-                        css_class="alert alert-info ms-1 me-1"
-                    ),
-                    Row(
-                        Column(Field('mission_descriptor')),
-                        Column(Field('lead_scientist')),
-                        Column(Field('data_center')),
-                        Column(Field('biochem_table')),
-                    ),
-                    css_class="card-body"
-                ),
-                css_class="card"
-            ),
-            Row(
-                Column(
-                    submit,
-                    css_class='col-auto mt-2'
-                ),
-                css_class='justify-content-end'
-            )
-        )
-
-    def geographic_region_choices(form):
-        regions = models.GeographicRegion.objects.all()
-        return regions
-
-    def clean_name(self):
-
-        mission_name = self.cleaned_data['name']
-        db_name = mission_name + '.sqlite3'
-        db_settings: settings_models.LocalSetting = settings_models.LocalSetting.objects.first()
-        location = db_settings.database_location
-        if location.startswith("./"):
-            location = os.path.join(settings.BASE_DIR, location.replace("./", ""))
-
-        if self.instance.pk:
-            # if there's an instance with this object we're updating an existing database
-            # allow the name within the database to be changed
-            return mission_name
-
-        # if there's no database, do not allow a name of an existing database to be used
-        database_location = os.path.join(location, db_name)
-        if os.path.exists(database_location):
-            message = _("A Mission Database with this name already exists in the mission directory")
-            message += f" : '{location}'"
-            raise forms.ValidationError(message)
-
-        return mission_name
-
-    def save(self, commit=True):
-        mission_name = self.cleaned_data['name']
-        if mission_name not in settings.DATABASES:
-            settingsdb.utils.add_database(mission_name)
-
-        instance = super().save(commit=False)
-        instance.save(using=mission_name)
-
-        return instance
 
 
 class MissionSearchForm(forms.Form):
@@ -357,9 +229,9 @@ class SampleTypeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         if 'initial' in kwargs and 'datatype_filter' in kwargs['initial']:
-            filter = kwargs['initial']['datatype_filter'].split(" ")
+            data_type_filter = kwargs['initial']['datatype_filter'].split(" ")
             queryset = bio_models.BCDataType.objects.all()
-            for term in filter:
+            for term in data_type_filter:
                 queryset = queryset.filter(description__icontains=term)
 
             self.fields['datatype'].choices = [(dt.data_type_seq, dt) for dt in queryset]
@@ -507,6 +379,14 @@ def save_load_component(component_id, message, **kwargs):
     return soup
 
 
+# attrs = {
+#     'alert_area_id': "",
+#     # make sure not to use _ as gettext*_lazy*, only use _ as django.utils.translation.gettext
+#     'message': '',
+#     'logger': '',
+#     'hx-post': url,
+#     'hx-trigger': 'load'
+# }
 def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
     component_id = f"{alert_area_id}_alert"
     soup = BeautifulSoup("", 'html.parser')

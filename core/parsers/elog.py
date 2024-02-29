@@ -191,10 +191,10 @@ def parse(file_name: str, stream: io.StringIO) -> dict:
     return message_objects
 
 
-# parse multiple files for a given trip by parsing them individually and compressing their buffer dictionaries into one
-# then run the algorithm to parse each section of the buffer dictionaries
-def parse_files(trip, files):
-    database = trip._state.db
+# parse multiple files for a given mission by parsing them individually and compressing their buffer
+# dictionaries into one then run the algorithm to parse each section of the buffer dictionaries
+def parse_files(mission, files):
+    database = mission._state.db
     file_count = len(files)
     message_objects = {
         ParserType.FILE: dict(),
@@ -211,7 +211,7 @@ def parse_files(trip, files):
         logger_notifications.info(_("Processing File") + " : %d/%d", (index + 1), file_count)
 
         # remove any existing errors for a log file of this name and update the interface
-        trip.mission.file_errors.filter(file_name=file_name).delete()
+        mission.file_errors.filter(file_name=file_name).delete()
 
         try:
             data = file.read()
@@ -221,8 +221,8 @@ def parse_files(trip, files):
             for mid, error_buffer in file_message_objects[ParserType.ERRORS].items():
                 # Report errors to the user if there are any, otherwise process the message objects you can
                 for error in error_buffer:
-                    err = core_models.FileError(mission=trip.mission, file_name=file_name, line=int(mid),
-                                                type=core_models.ErrorType.missing_value,
+                    err = core_models.FileError(mission=mission, file_name=file_name, line=int(mid),
+                                                type=core_models.ErrorType.event,
                                                 message=f'Elog message object ($@MID@$: {mid}) missing required '
                                                         f'field [{error.args[0]["expected"]}]')
                     file_errors.append(err)
@@ -241,13 +241,13 @@ def parse_files(trip, files):
         except Exception as ex:
             if type(ex) is LookupError:
                 logger.error(ex)
-                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.missing_id,
+                err = core_models.FileError(mission=mission, type=core_models.ErrorType.event,
                                             file_name=file_name,
                                             message=ex.args[0]['message'] + ", " + _("see error.log for details"))
             else:
                 # Something is really wrong with this file
                 logger.exception(ex)
-                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.unknown,
+                err = core_models.FileError(mission=mission, type=core_models.ErrorType.event,
                                             file_name=file_name,
                                             message=_("Unknown error :") + f"{str(ex)}, " + _(
                                                 "see error.log for details"))
@@ -258,19 +258,19 @@ def parse_files(trip, files):
 
     errors: [tuple] = []
     # send_user_notification_elog(group_name, mission, f"Process Stations {process_message}")
-    process_stations(trip, message_objects[ParserType.STATIONS])
+    process_stations(mission, message_objects[ParserType.STATIONS])
 
     # send_user_notification_elog(group_name, mission, f"Process Instruments {process_message}")
-    process_instruments(trip, message_objects[ParserType.INSTRUMENTS])
+    process_instruments(mission, message_objects[ParserType.INSTRUMENTS])
 
     # send_user_notification_elog(group_name, mission, f"Process Events {process_message}")
-    errors += process_events(trip, message_objects[ParserType.MID])
+    errors += process_events(mission, message_objects[ParserType.MID])
 
     # send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
-    errors += process_attachments_actions(trip, message_objects)
+    errors += process_attachments_actions(mission, message_objects)
 
     # send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
-    errors += process_variables(trip, message_objects[ParserType.MID])
+    errors += process_variables(mission, message_objects[ParserType.MID])
 
     error_count = len(errors)
     for err, error in enumerate(errors):
@@ -283,27 +283,22 @@ def parse_files(trip, files):
                 break
 
         logger_notifications.info(_("Recording Errors") + f" {file_name} : %d/%d", (err + 1), error_count)
-        file_error = core_models.FileError(mission=trip.mission, file_name=file_name, line=error[0], message=error[1])
-        if isinstance(error[2], KeyError):
-            file_error.type = core_models.ErrorType.missing_id
-        elif isinstance(error[2], ValueError):
-            file_error.type = core_models.ErrorType.missing_value
-        else:
-            file_error.type = core_models.ErrorType.unknown
+        file_error = core_models.FileError(mission=mission, file_name=file_name, line=error[0], message=error[1])
+        file_error.type = core_models.ErrorType.event
         file_errors.append(file_error)
 
     core_models.FileError.objects.using(database).bulk_create(file_errors)
 
 
-def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
+def process_stations(mission: core_models.Mission, station_queue: [str]) -> None:
     # create any stations on the stations queue that don't exist in the DB
     stations = []
-    database = trip._state.db
+    database = mission._state.db
 
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.using(database).filter(events__trip__mission=trip.mission)
+    existing_stations = core_models.Station.objects.using(database).all()
     station_count = len(station_queue)
     for index, station in enumerate(station_queue):
         logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
@@ -344,14 +339,14 @@ def valid_sample_id(sample_id):
     return True
 
 
-def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None:
+def process_instruments(mission: core_models.Mission, instrument_queue: [str]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
-    database = trip._state.db
+    database = mission._state.db
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.using(database).filter(events__trip__mission=trip.mission)
+    existing_instruments = core_models.Instrument.objects.using(database).all()
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
@@ -364,13 +359,13 @@ def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None
     core_models.Instrument.objects.using(database).bulk_create(instruments)
 
 
-def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]:
-    database = trip._state.db
+def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
+    database = mission._state.db
     errors = []
 
     elog_configuration = get_or_create_file_config()
 
-    existing_events = trip.events.all()
+    existing_events = mission.events.all()
 
     # hopefully stations and instruments were created in bulk before hand
     stations = core_models.Station.objects.using(database).all()
@@ -458,7 +453,7 @@ def process_events(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]
             elif event_id in create_events.keys():
                 event = create_events[event_id]
             else:
-                event = core_models.Event(trip=trip, event_id=event_id)
+                event = core_models.Event(mission=mission, event_id=event_id)
                 create_events[event_id] = event
 
             # only override values if the new value is not none. If a value was set as part of a previous action
@@ -523,11 +518,11 @@ def map_action_text(text: str) -> str:
     return text
 
 
-def process_attachments_actions(trip: core_models.Trip, dictionary_buffer: {}) -> [tuple]:
-    database = trip._state.db
+def process_attachments_actions(mission: core_models.Mission, dictionary_buffer: {}) -> [tuple]:
+    database = mission._state.db
     errors = []
 
-    existing_events = {event.event_id: event for event in trip.events.all()}
+    existing_events = {event.event_id: event for event in mission.events.all()}
 
     create_attachments = []
     create_actions = []
@@ -670,12 +665,12 @@ def process_attachments_actions(trip: core_models.Trip, dictionary_buffer: {}) -
     return errors
 
 
-def get_create_and_update_variables(trip: core_models.Trip, action: core_models.Action, buffer) -> [[], []]:
-    database = trip._state.db
+def get_create_and_update_variables(mission: core_models.Mission, action: core_models.Action, buffer) -> [[], []]:
+    database = mission._state.db
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.using(database).get_or_create(mission=trip.mission, name=key)[0]
+        variable = core_models.VariableName.objects.using(database).get_or_create(name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)
@@ -691,15 +686,15 @@ def get_create_and_update_variables(trip: core_models.Trip, action: core_models.
 # Anything that wasn't consumed by the other process methods will be considered a variable and attached to
 # the action it falls under. This way users can still query an action for a variable even if DART doesn't do
 # anything with it.
-def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tuple]:
-    database = trip._state.db
+def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
+    database = mission._state.db
     errors = []
 
     fields_create = []
     fields_update = []
 
     existing_actions = {str(action.mid): action for action in
-                        core_models.Action.objects.using(database).filter(event__trip=trip)}
+                        core_models.Action.objects.using(database).filter(event__mission=mission)}
 
     elog_configuration = get_or_create_file_config()
     required_fields = ['lead_scientist', 'protocol', 'cruise', 'platform']
@@ -707,7 +702,7 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
                      elog_configuration.filter(required_field__in=required_fields)}
 
     update_mission = False
-    if trip.mission.lead_scientist == 'N/A' or trip.platform == 'N/A' or trip.protocol == 'N/A':
+    if mission.lead_scientist == 'N/A' or mission.platform == 'N/A' or mission.protocol == 'N/A':
         update_mission = True
 
     mid_list = list(mid_dictionary_buffer.keys())
@@ -732,37 +727,38 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
             platform: str = buffer.pop(mapped_fields['platform'])
 
             if update_mission:
-                if (lead_scientists and lead_scientists.strip() != '') and trip.mission.lead_scientist == 'N/A':
-                    trip.mission.lead_scientist = lead_scientists
-                    trip.mission.save(using=database)
+                if (lead_scientists and lead_scientists.strip() != '') and mission.lead_scientist == 'N/A':
+                    mission.lead_scientist = lead_scientists
+                    mission.save(using=database)
 
-                if (protocol and protocol.strip() != '') and trip.protocol == 'N/A':
+                if (protocol and protocol.strip() != '') and mission.protocol == 'N/A':
                     # make sure the protocal isn't more than 50 characters if it's not 'AZMP' or 'AZOMP'
-                    trip.protocol = protocol[:50]
+                    mission.protocol = protocol[:50]
 
                     proto = re.search('azmp', protocol, re.IGNORECASE)
                     if proto:
-                        trip.protocol = 'AZMP'
+                        mission.protocol = 'AZMP'
 
                     proto = re.search('azomp', protocol, re.IGNORECASE)
                     if proto:
-                        trip.protocol = 'AZOMP'
+                        mission.protocol = 'AZOMP'
 
-                if (platform and platform.strip() != '') and trip.platform == 'N/A':
-                    trip.platform = platform
+                if (platform and platform.strip() != '') and mission.platform == 'N/A':
+                    mission.platform = platform
 
                 if update_mission:
-                    trip.save(using=database)
+                    mission.save(using=database)
 
                 update_mission = False
-                if trip.platform == 'N/A' or trip.protocol == 'N/A':
+                if mission.platform == 'N/A' or mission.protocol == 'N/A':
                     update_mission = True
 
-            action = existing_actions[mid]
-            # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-            variables_arrays = get_create_and_update_variables(trip, action, buffer)
-            fields_create += variables_arrays[0]
-            fields_update += variables_arrays[1]
+            if mid in existing_actions.keys():
+                action = existing_actions[mid]
+                # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
+                variables_arrays = get_create_and_update_variables(mission, action, buffer)
+                fields_create += variables_arrays[0]
+                fields_update += variables_arrays[1]
         except KeyError as ex:
             logger.error(ex)
             errors.append((mid, ex.args[0]["message"], ex,))

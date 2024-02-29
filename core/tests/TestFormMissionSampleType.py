@@ -15,8 +15,7 @@ class AbstractTestMissionSampleType(DartTestCase):
     def setUp(self) -> None:
         self.mission_sample_type = core_factory.MissionSampleTypeFactory()
 
-        trip = core_factory.TripFactory(mission=self.mission_sample_type.mission)
-        event = core_factory.CTDEventFactory(trip=trip)
+        event = core_factory.CTDEventFactory(mission=self.mission_sample_type.mission)
 
         number_of_bottles = 20
         self.start_bottle = 400000

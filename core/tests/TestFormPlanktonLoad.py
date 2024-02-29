@@ -130,9 +130,8 @@ class TestFormPlanktonLoad(DartTestCase):
         file = os.path.join(file_location, file_name)
 
         # the events will have to exist for this to load, the numbers come from the 'event' column of the sample file
-        trip = core_factory.TripFactory(mission=self.mission)
-        core_factory.NetEventFactory(trip=trip, event_id=2)
-        core_factory.NetEventFactory(trip=trip, event_id=88)
+        core_factory.NetEventFactory(mission=self.mission, event_id=2)
+        core_factory.NetEventFactory(mission=self.mission, event_id=88)
 
         url = reverse(self.import_plankton_url, args=('default', self.mission.pk))
         with open(file, 'rb') as fp:
@@ -170,13 +169,11 @@ class TestFormPlanktonLoad(DartTestCase):
         file = os.path.join(file_location, file_name)
 
         # the events will have to exist for this to load, the numbers come from the 'event' column of the sample file
-        trip = core_factory.TripFactory(mission=self.mission)
-
         # phytoplankton comes from CTD events not Net events, and the bottles have to exist
-        event = core_factory.CTDEventFactory(trip=trip, event_id=7)
+        event = core_factory.CTDEventFactory(mission=self.mission, event_id=7)
         core_factory.BottleFactory(event=event, bottle_id=488275)
 
-        event = core_factory.CTDEventFactory(trip=trip, event_id=92)
+        event = core_factory.CTDEventFactory(mission=self.mission, event_id=92)
         core_factory.BottleFactory(event=event, bottle_id=488685)
 
         url = reverse(self.import_plankton_url, args=('default', self.mission.pk))
@@ -229,8 +226,7 @@ class TestFormPlanktonLoad(DartTestCase):
     @tag('form_plankton_test_clear_plankton_post')
     def test_clear_plankton_post(self):
         # provided a database and mission_id, the clear plankton url should remove existing plankton data
-        trip = core_factory.TripFactory(mission=self.mission)
-        event = core_factory.CTDEventFactory(trip=trip)
+        event = core_factory.CTDEventFactory(mission=self.mission)
         bottles = core_factory.BottleFactory.create_batch(10, event=event)
         for bottle in bottles:
             core_factory.PhytoplanktonSampleFactory(bottle=bottle)

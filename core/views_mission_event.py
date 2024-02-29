@@ -7,7 +7,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
-from core import models, forms, validation, form_event_details, form_mission_trip
+from core import models, forms, validation, form_event_details
 from core.views import MissionMixin, reports
 from dart.utils import load_svg
 from dart.views import GenericDetailView
@@ -31,11 +31,9 @@ class EventDetails(MissionMixin, GenericDetailView):
             caches['default'].delete('selected_event')
 
         context['search_form'] = forms.MissionSearchForm(initial={'mission': self.object.pk})
+        context['details_form'] = form_event_details.EventDetails(mission=self.object)
 
-        if 'trip_id' in self.kwargs:
-            context['trip_id'] = self.kwargs['trip_id']
-        elif self.object.trips.last():
-            context['trip_id'] = self.object.trips.last().pk
+        context['mission_id'] = self.object.pk
 
         context['reports'] = {key: reverse_lazy(reports[key], args=(database, self.object.pk,))
                               for key in reports.keys()}
@@ -62,7 +60,7 @@ class ValidationEventCard(forms.CardForm):
     def __init__(self, event, database=None, *args, **kwargs):
         self.event = event
         self.database = database if database else event._state.db
-        title = _("Event") + f" {event.event_id} : {event.trip.start_date} - {event.trip.end_date}"
+        title = _("Event") + f" {event.event_id} : {event.mission.start_date} - {event.mission.end_date}"
         super().__init__(card_name=f"event_validation_{event.pk}", card_title=title, *args, **kwargs)
 
 
@@ -87,7 +85,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
         spacer_col.fields.append(revalidate)
 
-        issue_count = models.ValidationError.objects.using(self.database).filter(event__trip__mission=self.mission).count()
+        issue_count = models.ValidationError.objects.using(self.database).filter(event__mission=self.mission).count()
         issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
         buttons.fields.append(issue_count_col)
 
@@ -100,7 +98,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         body.css_class += " vertical-scrollbar"
 
         events_ids = models.ValidationError.objects.using(self.database).filter(
-            event__trip__mission=self.mission
+            event__mission=self.mission
         ).values_list('event', flat=True)
         events = models.Event.objects.using(self.database).filter(pk__in=events_ids)
         for event in events:
@@ -153,7 +151,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         buttons = Column(css_class="col-auto align-self-end")
         header.fields[0].fields.append(buttons)
 
-        issue_count = self.mission.file_errors.filter(file_name__iendswith=".log").count()
+        issue_count = self.mission.file_errors.filter(type=models.ErrorType.event).count()
         if issue_count > 0:
             issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
             buttons.fields.append(issue_count_col)
@@ -164,7 +162,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        files = self.mission.file_errors.filter(file_name__iendswith=".log").values_list('file_name',
+        files = self.mission.file_errors.filter(type=models.ErrorType.event).values_list('file_name',
                                                                                          flat=True).distinct()
         for index, file in enumerate(files):
             event_card = ValidationFileCard(self.mission, file, index)
@@ -225,10 +223,10 @@ def revalidate_events(request, database, mission_id):
 path_prefix = '<str:database>/mission'
 mission_event_urls = [
     path(f'{path_prefix}/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
-    path(f'{path_prefix}/event/<int:pk>/<int:trip_id>/', EventDetails.as_view(), name="mission_events_details"),
+    path(f'{path_prefix}/event/<int:pk>/<int:mission_id>/', EventDetails.as_view(), name="mission_events_details"),
     path(f'{path_prefix}/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
     path(f'{path_prefix}/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
     path(f'{path_prefix}/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
 ]
 
-mission_event_urls += form_mission_trip.trip_load_urls + form_event_details.event_detail_urls
+mission_event_urls += form_event_details.event_detail_urls
