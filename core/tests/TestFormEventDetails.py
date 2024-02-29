@@ -9,8 +9,8 @@ from core.tests import CoreFactoryFloor as core_factory
 from dart.tests.DartTestCase import DartTestCase
 
 
-@tag('forms', 'form_trip_event')
-class TestTripEventForm(DartTestCase):
+@tag('forms', 'form_mission_event')
+class TestMissionEventForm(DartTestCase):
     fixtures = ['biochem_fixtures', 'default_settings_fixtures']
 
     add_event_url = "core:form_event_add_event"
@@ -25,15 +25,15 @@ class TestTripEventForm(DartTestCase):
 
     def setUp(self) -> None:
         self.client = Client()
-        self.trip = core_factory.TripFactory()
+        self.mission = core_factory.MissionFactory()
 
-    @tag('form_trip_event_test_entry_point_get')
+    @tag('form_mission_event_test_entry_point_get')
     def test_entry_point_get(self):
-        # provided a trip the add button on the Event Detail card should return a form to be swapped
+        # provided a mission the add button on the Event Detail card should return a form to be swapped
         # on to the card body.
         # The add button points to the event card using hx-target, so the response to the add event
         # url should be a full card
-        url = reverse(self.add_event_url, args=('default', self.trip.pk))
+        url = reverse(self.add_event_url, args=('default', self.mission.pk))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -43,7 +43,7 @@ class TestTripEventForm(DartTestCase):
         form = soup.find(id="div_event_event_details_content_id")
         self.assertIsNotNone(form.find("form"))
 
-    @tag('form_trip_event_test_entry_point_post')
+    @tag('form_mission_event_test_entry_point_post')
     def test_entry_point_post(self):
         # provided details for an event using the add event url should create and event
         # and pass back the event edit form and the Action and Attachment creation forms
@@ -52,7 +52,7 @@ class TestTripEventForm(DartTestCase):
         station = settingsdb.models.GlobalStation.objects.get_or_create(name="HL_02")[0]
         instrument = core_factory.CTDInstrumentFactory()
         kwargs = {
-            'trip': self.trip.pk,
+            'mission': self.mission.pk,
             'event_id': 1,
             'global_station': station.pk,
             'instrument': instrument.pk,
@@ -60,12 +60,12 @@ class TestTripEventForm(DartTestCase):
             'end_sample_id': 10
         }
 
-        url = reverse(self.add_event_url, args=('default', self.trip.pk))
+        url = reverse(self.add_event_url, args=('default', self.mission.pk))
         response = self.client.post(url, kwargs)
 
         # make sure the event was created
         # using *.get(event_id=1) will throw a DoesNotExist exception if it wasn't created
-        new_event = models.Event.objects.using('default').get(trip=self.trip, event_id=1)
+        new_event = models.Event.objects.using('default').get(mission=self.mission, event_id=1)
         new_station = models.Station.objects.using('default').get(name__iexact=station.name)
         self.assertEquals(new_event.station.pk, new_station.pk)
         self.assertEquals(new_event.instrument.pk, instrument.pk)
@@ -86,14 +86,14 @@ class TestTripEventForm(DartTestCase):
         self.assertIsNotNone(attachment_form)
         self.assertEquals(attachment_form.name, 'form')
 
-    @tag('form_trip_event_test_edit_event_post')
+    @tag('form_mission_event_test_edit_event_post')
     def test_edit_event_post(self):
         # provided an existing event the edit event url and a set of changed args should update the event
 
         event = core_factory.CTDEventFactory(sample_id=1, end_sample_id=10)
         station = settingsdb.models.GlobalStation.objects.get_or_create(name="HL_02")[0]
         kwargs = {
-            'trip': event.trip.pk,
+            'mission': event.mission.pk,
             'event_id': event.event_id,
             'global_station': station.pk,
             'instrument': event.instrument.pk,
@@ -110,13 +110,13 @@ class TestTripEventForm(DartTestCase):
         new_station = models.Station.objects.using('default').get(name__iexact=station.name)
         self.assertEquals(edited_event.station.pk, new_station.pk)
 
-    @tag('form_trip_event_test_delete_event_post')
+    @tag('form_mission_event_test_delete_event_post')
     def test_delete_event_post(self):
         # provided an event id the delete event url should remove an event from the database, return an empty
         # EventDetail card and contain an Hx-Trigger: event_updated action to notify listening objects they
         # should update their event lists.
-        trip = core_factory.TripFactory()
-        event = core_factory.CTDEventFactory(trip=trip)
+        mission = core_factory.MissionFactory()
+        event = core_factory.CTDEventFactory(mission=mission)
 
         self.assertTrue(models.Event.objects.using('default').filter(pk=event.pk).exists())
 
@@ -138,7 +138,7 @@ class TestTripEventForm(DartTestCase):
         self.assertIn('hx-swap', event_row.attrs)
         self.assertEquals(event_row.attrs['hx-swap'], 'delete')
 
-    @tag('form_trip_event_test_add_action_post')
+    @tag('form_mission_event_test_add_action_post')
     def test_add_action_post(self):
         # provided an existing event and args the add action url should add an action to the event
         # and return an empty action form with a table containing the new action as defined in the
@@ -176,7 +176,7 @@ class TestTripEventForm(DartTestCase):
         tr_tags = action_table.find_all('tr')
         self.assertEquals(len(tr_tags), 1)
 
-    @tag('form_trip_event_test_edit_action_get')
+    @tag('form_mission_event_test_edit_action_get')
     def test_edit_action_get(self):
         # the 'core/partials/table_action.html' template defines several buttons for an action row
         # the edit button calls the edit action using the get method which populates the action form
@@ -205,7 +205,7 @@ class TestTripEventForm(DartTestCase):
         self.assertIn("hx-post", submit.attrs)
         self.assertEquals(submit.attrs['hx-post'], url)
 
-    @tag('form_trip_event_test_edit_action_post')
+    @tag('form_mission_event_test_edit_action_post')
     def test_edit_action_post(self):
         # provided an existing action and updated arguments calling the edit action url using the post method
         # should update the action in the database and return a blank Action form and a new table to replace
@@ -246,7 +246,7 @@ class TestTripEventForm(DartTestCase):
         self.assertEquals(replacement_row.name, 'tr')
         self.assertIn('hx-swap-oob', replacement_row.attrs)
 
-    @tag('form_trip_event_test_delete_action_post')
+    @tag('form_mission_event_test_delete_action_post')
     def test_delete_action_post(self):
         # provided an event and an action id, a posted delete action url should remove the action from the database
         # the intent is for the 'core/partials/table_action.html' template to use the hx-delete method
@@ -263,7 +263,7 @@ class TestTripEventForm(DartTestCase):
         soup = BeautifulSoup(response.content, "html.parser")
         self.assertEquals(soup.prettify(), '')
 
-    @tag('form_trip_event_test_form_event_list_action_get')
+    @tag('form_mission_event_test_form_event_list_action_get')
     def test_form_event_list_action_get(self):
         # calling the list actions url with an event id should return table tr elements containing details for
         # the actions attached to the provided event
@@ -281,7 +281,7 @@ class TestTripEventForm(DartTestCase):
         trs = action_table_body.find_all('tr')
         self.assertEquals(len(trs), event.actions.count())
 
-    @tag('form_trip_event_test_form_event_list_action_get_editable')
+    @tag('form_mission_event_test_form_event_list_action_get_editable')
     def test_form_event_list_action_get_editable(self):
         # calling the list actions url with an event id should return table tr elements containing details for
         # the actions attached to the provided event. In the case where an event was manually created, as opposed
@@ -314,7 +314,7 @@ class TestTripEventForm(DartTestCase):
             self.assertIn('hx-delete', button.attrs)
             self.assertEquals(button.attrs['hx-delete'], delete_url)
 
-    @tag('form_trip_event_test_add_attachment_post')
+    @tag('form_mission_event_test_add_attachment_post')
     def test_add_attachment_post(self):
         # provided an existing event and args the add attachment url should add an attachment to the event
         # and return an empty attachment form with a table containing the new attachment as defined in the
@@ -336,7 +336,7 @@ class TestTripEventForm(DartTestCase):
         attachment_text = attachment_form.find(id="id_attachment_name_field")
         self.assertEquals(attachment_text.text, "")
 
-    @tag('form_trip_event_test_edit_attachment_get')
+    @tag('form_mission_event_test_edit_attachment_get')
     def test_edit_attachment_get(self):
         # the 'core/partials/table_attachments.html' template defines several buttons for an attachment row
         # the edit button calls the edit attachment url using the get method which populates the attachment form
@@ -363,7 +363,7 @@ class TestTripEventForm(DartTestCase):
         self.assertIn("hx-post", submit.attrs)
         self.assertEquals(submit.attrs['hx-post'], url)
 
-    @tag('form_trip_event_test_edit_attachment_post')
+    @tag('form_mission_event_test_edit_attachment_post')
     def test_edit_attachment_post(self):
         # provided an existing attachment and updated arguments calling the edit attachment url using the post method
         # should update the attachment in the database and return a blank Attachment form and a new table to replace
@@ -397,7 +397,7 @@ class TestTripEventForm(DartTestCase):
         self.assertEquals(replacement_row.name, 'tr')
         self.assertIn('hx-swap-oob', replacement_row.attrs)
 
-    @tag('form_trip_event_test_delete_attachment_post')
+    @tag('form_mission_event_test_delete_attachment_post')
     def test_delete_attachment_post(self):
         # provided an attachment belonging to an event the delete attachment url should remove the attachment from
         # the database. The intention is for the 'core/partials/table_attachment.html' to call the url with
@@ -415,7 +415,7 @@ class TestTripEventForm(DartTestCase):
         soup = BeautifulSoup(response.content, "html.parser")
         self.assertEquals(soup.prettify(), '')
 
-    @tag('form_trip_event_list_attachment_get')
+    @tag('form_mission_event_list_attachment_get')
     def test_list_attachment_get(self):
         # provided and event the get request using the list attachments url should return a table as outlined
         # in the 'core/partials/table_attachments.html' template
@@ -435,7 +435,7 @@ class TestTripEventForm(DartTestCase):
         trs = att_table_body.find_all('tr')
         self.assertEquals(len(trs), event.attachments.count())
 
-    @tag('form_trip_event_list_attachment_get_editable')
+    @tag('form_mission_event_list_attachment_get_editable')
     def test_list_attachment_get_editable(self):
         # provided and event the get request using the list attachments url should return a table as outlined
         # in the 'core/partials/table_attachments.html' template. If editable, the table rows should contain
@@ -469,13 +469,13 @@ class TestTripEventForm(DartTestCase):
             self.assertIn('hx-delete', button.attrs)
             self.assertEquals(button.attrs['hx-delete'], delete_url)
 
-    @tag("form_trip_event_test_global_stations")
+    @tag("form_mission_event_test_global_stations")
     def test_global_stations(self):
         # when creating a new event the stations dropdown should be populated with stations from
         # the GlobalStation model
 
-        trip = core_factory.TripFactory()
-        event_form = EventForm(database='default', initial={'trip': trip.pk})
+        mission = core_factory.MissionFactory()
+        event_form = EventForm(database='default', initial={'mission': mission.pk})
         # we have to chop off the first and last element of the choice list which will be 'none' and the 'new'
         stations = event_form.fields['global_station'].choices[1:-1]
         station_names = [station[1] for station in stations]
@@ -484,17 +484,17 @@ class TestTripEventForm(DartTestCase):
         for station in global_stations:
             self.assertIn(station, station_names)
 
-    @tag("form_trip_event_test_global_stations_save")
+    @tag("form_mission_event_test_global_stations_save")
     def test_global_stations_save(self):
         # when saving an Event form the selected station will be a global station, the station should be copied to
         # the core.models.station table if it doesn't already exist and then referenced from the event
 
         global_station = settingsdb.models.GlobalStation.objects.get(name__iexact='hl_02')
 
-        trip = core_factory.TripFactory()
+        mission = core_factory.MissionFactory()
         instrument = core_factory.InstrumentFactory(type=models.InstrumentType.ctd)
         event_data = {
-            'trip': trip.pk,
+            'mission': mission.pk,
             'event_id': 1,
             'global_station': global_station.pk,
             'instrument': instrument.pk,
@@ -508,7 +508,7 @@ class TestTripEventForm(DartTestCase):
         event_form.save()
         self.assertTrue(models.Station.objects.using('default').filter(name=global_station.name).exists())
 
-    @tag("form_trip_event_test_load_filter_log")
+    @tag("form_mission_event_test_load_filter_log")
     def test_load_filter_log(self):
         # provided a database and event_id a get request to the load filter log url should return
         # an alert dialog to be swapped into the EventDetail card's message area.

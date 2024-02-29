@@ -1,5 +1,5 @@
 {% block event_table %}
-<table id="event_table" class="col table table-striped" hx-swap="outerHTML" hx-trigger="event_updated from:body" hx-get="{% url 'core:form_trip_get_events' database trip.pk %}">
+<table id="event_table" class="col table table-striped" hx-swap="outerHTML" hx-trigger="event_updated from:body" hx-get="{% url 'core:form_event_get_events' database mission.pk %}">
     <thead>
         <tr>
             <th>Event</th>
@@ -8,7 +8,7 @@
         </tr>
     </thead>
     <tbody id="event_table_body">
-    {% for event in trip.events.all %}
+    {% for event in mission.events.all %}
         {% block event_table_row %}
         <tr id="event-{{ event.pk }}" class="{% if event.validation_errors.exists %}eventErr{% endif %} {% if selected %}selectedBg{% endif %}" hx-trigger="click" hx-swap="outerHTML" hx-select="#event-{{ event.pk }}" hx-target="#event-{{ event.pk }}" hx-get="{% url "core:form_event_selected_event" database event.pk %}">
             <td>{{ event.event_id }}</td>

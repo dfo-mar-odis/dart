@@ -9,7 +9,7 @@
                 <div class="row">
                     <div class="card-title col">{% trans "Events" %}</div>
                     <div class="col-auto">
-                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' database trip.mission.pk %}"
+                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' database mission.pk %}"
                            title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>
 
                         <label for="event_file_input_id" class="btn btn-primary btn-sm"
@@ -20,7 +20,7 @@
                 <div id="div_id_event_message_area" class="row">
                     <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
                           hx-encoding="multipart/form-data"
-                          hx-get="{% url "core:form_trip_import_events_elog" database trip.pk %}"
+                          hx-get="{% url "core:form_event_import_events_elog" database mission.pk %}"
                           hx-trigger="change"
                           hx-swap="none"
                     >

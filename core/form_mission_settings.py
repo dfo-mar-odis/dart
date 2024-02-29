@@ -1,3 +1,4 @@
+import datetime
 import os
 
 from bs4 import BeautifulSoup
@@ -22,9 +23,17 @@ class MissionSettingsForm(forms.ModelForm):
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
     global_geographic_region = forms.ChoiceField(label=_("Geographic Region"))
 
+    start_date = forms.DateTimeField(widget=forms.DateTimeInput(
+        attrs={'type': 'date', 'max': "9999-12-31",
+               'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
+    end_date = forms.DateTimeField(widget=forms.DateTimeInput(
+        attrs={'type': 'date', 'max': "9999-12-31",
+               'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
+
     class Meta:
         model = models.Mission
-        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center', 'lead_scientist']
+        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center', 'lead_scientist',
+                  'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments']
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,6 +53,12 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['biochem_table'].required = False
         self.fields['lead_scientist'].required = False
         self.fields['data_center'].required = False
+
+        if (start_date := self.initial.get("start_date", -1)) != -1:
+            self.fields['start_date'].widget.attrs['value'] = start_date.strftime("%Y-%m-%d")
+
+        if (end_date := self.initial.get("end_date", -1)) != -1:
+            self.fields['end_date'].widget.attrs['value'] = end_date.strftime("%Y-%m-%d")
 
         if self.instance.pk:
             name_column = Column(
@@ -97,6 +112,14 @@ class MissionSettingsForm(forms.ModelForm):
             ),
             Row(
                 Column(
+                    Field('start_date')
+                ),
+                Column(
+                    Field('end_date')
+                )
+            ),
+            Row(
+                Column(
                     Row(
                         Column(
                             Field('global_geographic_region')
@@ -127,9 +150,17 @@ class MissionSettingsForm(forms.ModelForm):
                     Row(
                         Column(Field('mission_descriptor')),
                         Column(Field('lead_scientist')),
+                    ),
+                    Row(
+                        Column(Field('platform')),
+                        Column(Field('protocol')),
+                    ),
+                    Row(
                         Column(Field('data_center')),
                         Column(Field('biochem_table')),
                     ),
+                    Row(Field('collector_comments')),
+                    Row(Field('data_manager_comments')),
                     css_class="card-body"
                 ),
                 css_class="card"

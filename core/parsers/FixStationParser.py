@@ -241,7 +241,7 @@ class FixStationParser:
         self.process_common_sensors(sensors=columns)
 
     def process_data(self, file_name: str, data_frame: pd.DataFrame, column_headers: list[str]):
-        mission = self.event.trip.mission
+        mission = self.event.mission
 
         # we only want to use rows in the BTL file marked as 'avg' in the statistics column
         skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
@@ -383,7 +383,7 @@ class FixStationParser:
         self.event.save()
 
     def parse(self):
-        self.event.trip.mission.file_errors.filter(file_name=self.btl_filename).delete()
+        self.event.mission.file_errors.filter(file_name=self.btl_filename).delete()
 
         data: pd.DataFrame = ctd.read.from_btl(self.btl_stream)
 

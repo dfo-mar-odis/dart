@@ -16,10 +16,10 @@ from django.utils.translation import gettext as _
 
 from render_block import render_block_to_string
 
-import core.models
-from core import forms as core_forms, models
-from core.parsers import FilterLogParser
+from core import forms as core_forms, models, validation
+from core.parsers import FilterLogParser, elog
 from core.parsers.FixStationParser import FixStationParser
+
 from dart.utils import load_svg
 
 from settingsdb import models as settings_models
@@ -32,8 +32,8 @@ logger = logging.getLogger('dart')
 class EventDetails(core_forms.CardForm):
 
     event = None
-    # when creating a new event a trip is required to attach the event too
-    trip = None
+    # when creating a new event a mission is required to attach the event too
+    mission = None
 
     def get_delete_button(self):
         # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
@@ -75,7 +75,7 @@ class EventDetails(core_forms.CardForm):
             'id': button_id,
             'name': 'new_event',
             'title': _("New Event"),
-            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.database, self.trip.pk,)),
+            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.database, self.mission.pk,)),
             'hx-swap': 'outerHTML',
             'hx-target': f"#{self.get_card_id()}"
         }
@@ -147,7 +147,7 @@ class EventDetails(core_forms.CardForm):
                 spacer.fields.append(edit_btn)
 
         add_btn = self.get_add_button()
-        if add_btn and self.trip:
+        if add_btn and self.mission:
             spacer.fields.append(self.get_add_button())
 
         button_row.fields.append(button_column)
@@ -184,12 +184,12 @@ class EventDetails(core_forms.CardForm):
         })
         return card
 
-    def __init__(self, event=None, trip=None, database=None, editing=False, *args, **kwargs):
+    def __init__(self, event=None, mission=None, database=None, editing=False, *args, **kwargs):
         self.event = event
-        self.trip = trip if trip else event.trip
+        self.mission = mission if mission else event.mission
         self.editing = editing
 
-        self.database = database if database else self.trip.mission.name
+        self.database = database if database else self.mission.name
 
         super().__init__(card_name='event_details', card_title=_("Event Details"), *args, **kwargs)
 
@@ -200,7 +200,7 @@ class EventForm(forms.ModelForm):
 
     class Meta:
         model = models.Event
-        fields = ['trip', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id',
+        fields = ['mission', 'event_id', 'station', 'instrument', 'sample_id', 'end_sample_id',
                   'flow_start', 'flow_end', 'wire_out', 'wire_angle']
 
     @staticmethod
@@ -211,7 +211,6 @@ class EventForm(forms.ModelForm):
     def get_station_input_id():
         return "id_event_station_field"
 
-    # def __init__(self, trip, database=None, *args, **kwargs):
     def __init__(self, database=None, *args, **kwargs):
 
         self.database = database
@@ -219,7 +218,6 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields['station'].required = False
-        self.fields['trip'].queryset = models.Trip.objects.using(self.database).all()
         self.helper = FormHelper(self)
 
         # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
@@ -243,9 +241,9 @@ class EventForm(forms.ModelForm):
         if self.instance.pk:
             gl_station = settings_models.GlobalStation.objects.get_or_create(name=self.instance.station.name.upper())[0]
             self.fields['global_station'].initial = gl_station.pk
-        elif 'trip' in self.initial:
+        elif 'mission' in self.initial:
             # When adding an event we'll swap the whole card the form appears on.
-            submit_url = reverse_lazy('core:form_event_add_event', args=(self.database, self.initial['trip'],))
+            submit_url = reverse_lazy('core:form_event_add_event', args=(self.database, self.initial['mission'],))
             apply_attrs['hx-post'] = submit_url
             apply_attrs['hx-swap'] = "outerHTML"
             apply_attrs['hx-target'] = "#div_id_card_event_details"
@@ -277,7 +275,7 @@ class EventForm(forms.ModelForm):
                                                                         args=(self.database,))
 
         self.helper.layout = Layout(
-            Hidden('trip', self.initial.get('trip', '0') or '0'),
+            Hidden('mission_id', self.initial.get('mission', '0') or '0'),
             Row(
                 Column(Field('global_station', css_class='form-control form-select-sm', id=self.get_station_input_id()),
                        css_class='col-sm-12 col-md-6'),
@@ -344,12 +342,12 @@ class ActionForm(forms.ModelForm):
         }
 
     def __init__(self, event, database=None, *args, **kwargs):
-        self.database = database if database else event.trip.mission.name
+        self.database = database if database else event.mission.name
 
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
-        self.fields['event'].queryset = event.trip.events.all()
+        self.fields['event'].queryset = event.mission.events.all()
 
         # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
         # that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #
@@ -443,11 +441,11 @@ class AttachmentForm(forms.ModelForm):
 
     def __init__(self, event, database=None, *args, **kwargs):
 
-        self.database = database if database else event.trip.mission.name
+        self.database = database if database else event.mission.name
 
         super().__init__(*args, **kwargs)
 
-        self.fields['event'].queryset = event.trip.events.all()
+        self.fields['event'].queryset = event.mission.events.all()
 
         self.helper = FormHelper(self)
 
@@ -683,8 +681,8 @@ def deselect_event(soup, database):
         soup.append(table)
 
 
-def add_event(request, database, trip_id):
-    trip = models.Trip.objects.using(database).get(pk=trip_id)
+def add_event(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     soup = BeautifulSoup("", "html.parser")
 
@@ -699,7 +697,7 @@ def add_event(request, database, trip_id):
         def get_delete_button(self):
             return None
 
-    card_form = NoDeleteEditEventDetails(trip=trip)
+    card_form = NoDeleteEditEventDetails(mission=mission)
 
     context = {"database": database}
 
@@ -734,9 +732,9 @@ def add_event(request, database, trip_id):
     else:
         # return a new Event card with a blank Event form
         # called with no event id to create a blank instance of the event_edit_form
-        last_event = trip.events.last()
+        last_event = mission.events.last()
         event_id = last_event.event_id + 1 if last_event else 1
-        event_form = EventForm(database=database, initial={'event_id': event_id, 'trip': trip.pk})
+        event_form = EventForm(database=database, initial={'event_id': event_id, 'mission': mission.pk})
 
     card_html = render_crispy_form(card_form)
     card_soup = BeautifulSoup(card_html, 'html.parser')
@@ -842,14 +840,14 @@ def get_selected_event(request, database):
 
 def delete_details(request, database, event_id):
     event = models.Event.objects.using(database).get(pk=event_id)
-    trip = event.trip
+    mission = event.mission
 
     if caches['default'].touch('selected_event'):
         caches['default'].delete('selected_event')
 
     event.delete()
 
-    card = EventDetails(trip=trip, database=database)
+    card = EventDetails(mission=mission, database=database)
     html = render_crispy_form(card)
 
     soup = BeautifulSoup(html, 'html.parser')
@@ -1104,8 +1102,8 @@ def load_bottle_file(request, database, event_id):
                 'alert_type': 'danger'
             }
             msg_area.append(core_forms.blank_alert(**attrs))
-            err = core.models.FileError(mission=event.trip.mission, file_name=btl_file, line=-1, message=message,
-                                        type=core.models.ErrorType.event)
+            err = models.FileError(mission=event.mission, file_name=btl_file, line=-1, message=message,
+                                        type=models.models.ErrorType.event)
             err.save(using=database)
             trigger = "event_updated"
 
@@ -1120,6 +1118,56 @@ def load_bottle_file(request, database, event_id):
     return response
 
 
+def import_elog_events(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': "div_id_event_alert",
+            'message': _("Processing Elog"),
+            'logger': elog.logger_notifications.name,
+            'hx-post': request.path,
+            'hx-trigger': 'load'
+        }
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
+
+    files = request.FILES.getlist('event')
+
+    elog.parse_files(mission, files)
+    validation.validate_mission(mission)
+
+    # When a file is first loaded it triggers a 'selection changed' event for the forms "input" element.
+    # If we don't clear the input element here and the user tries to reload the same file, nothing will happen
+    # and the user will be left clicking the button endlessly wondering why it won't load the file
+    event_form = render_block_to_string('core/partials/card_event_row.html', 'event_import_form',
+                                        context={'database': database, 'mission': mission})
+
+    soup = BeautifulSoup('', 'html.parser')
+
+    event_form_soup = BeautifulSoup(event_form, 'html.parser')
+
+    # Now that events are reloaded we should trigger a validation of the events
+    msg_div = event_form_soup.find(id="div_id_event_message_area")
+    alert_area = msg_div.find(id="div_id_event_alert")
+    alert_area.attrs['hx-get'] = reverse_lazy("core:mission_events_revalidate", args=(database, mission.pk,))
+    alert_area.attrs['hx-trigger'] = 'load'
+    msg_div.attrs['hx-swap-oob'] = 'true'
+
+    soup.append(event_form_soup)
+
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'event_updated'
+    return response
+
+
+def list_events(request, database, mission_id, **kwargs):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+
+    tr_html = render_to_string('core/partials/table_event.html', context={'database': database, 'mission': mission})
+
+    return HttpResponse(tr_html)
+
+
 url_prefix = "<str:database>/event"
 event_detail_urls = [
     path(f'{url_prefix}/selected/<int:event_id>/', selected_details, name="form_event_selected_event"),
@@ -1128,7 +1176,9 @@ event_detail_urls = [
     path(f'{url_prefix}/station/new/', update_stations, name="form_event_update_stations"),
     path(f'{url_prefix}/instrument/new/', update_instruments, name="form_event_update_instruments"),
 
-    path(f'{url_prefix}/new/<int:trip_id>/', add_event, name="form_event_add_event"),
+    path(f'{url_prefix}/event/import/<int:mission_id>/', import_elog_events, name="form_event_import_events_elog"),
+    path(f'{url_prefix}/event/list/<int:mission_id>/', list_events, name="form_event_get_events"),
+    path(f'{url_prefix}/new/<int:mission_id>/', add_event, name="form_event_add_event"),
     path(f'{url_prefix}/edit/<int:event_id>/', edit_event, name="form_event_edit_event"),
     path(f'{url_prefix}/delete/<int:event_id>/', delete_details, name="form_event_delete_event"),
 

@@ -14,7 +14,6 @@ class TestElogParser(DartTestCase):
 
     def setUp(self) -> None:
         self.mission = core_factory.MissionFactory(name='test')
-        self.trip = core_factory.TripFactory(mission=self.mission)
 
     def assertElogField(self, queryset, required_field, mapped_field):
         self.assertTrue(queryset.filter(required_field=required_field).exists(),
@@ -148,7 +147,7 @@ class TestElogParser(DartTestCase):
         for station in stations:
             self.assertFalse(core_models.Station.objects.filter(name__iexact=station).exists())
 
-        elog.process_stations(self.trip, stations)
+        elog.process_stations(self.mission, stations)
 
         for station in stations:
             self.assertTrue(core_models.Station.objects.filter(name__iexact=station).exists())
@@ -179,7 +178,7 @@ class TestElogParser(DartTestCase):
         for instrument in instruments:
             self.assertFalse(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
 
-        elog.process_instruments(self.trip, [instrument[0] for instrument in instruments])
+        elog.process_instruments(self.mission, [instrument[0] for instrument in instruments])
 
         for instrument in instruments:
             self.assertTrue(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
@@ -209,13 +208,13 @@ class TestElogParser(DartTestCase):
         core_factory.StationFactory(name=expected_station)
         core_factory.InstrumentFactory(name=expected_instrument, type=expected_instrument_type)
 
-        events = core_models.Event.objects.using('default').filter(trip=self.trip)
+        events = core_models.Event.objects.using('default').filter(mission=self.mission)
         self.assertFalse(events.exists())
-        errors = elog.process_events(self.trip, buffer)
+        errors = elog.process_events(self.mission, buffer)
 
         self.assertEquals(len(errors), 0)
 
-        events = core_models.Event.objects.using('default').filter(trip=self.trip)
+        events = core_models.Event.objects.using('default').filter(mission=self.mission)
         self.assertTrue(events.exists())
         self.assertEquals(len(events), 1)
 
@@ -240,7 +239,7 @@ class TestElogParser(DartTestCase):
             }
         }
 
-        errors = elog.process_events(self.trip, buffer)
+        errors = elog.process_events(self.mission, buffer)
         self.assertEquals(len(errors), 1)
 
         error = errors[0]
@@ -275,7 +274,7 @@ class TestElogParser(DartTestCase):
 
         core_factory.StationFactory(name=expected_station)
 
-        errors = elog.process_events(self.trip, buffer)
+        errors = elog.process_events(self.mission, buffer)
         self.assertEquals(len(errors), 1)
 
         error = errors[0]
@@ -350,7 +349,7 @@ class TestElogParser(DartTestCase):
             elog.ParserType.FILE: {expected_file_name: [1, 2, 3]},
             elog.ParserType.MID: buffer
         }
-        errors = elog.process_attachments_actions(event.trip, parse_buffer)
+        errors = elog.process_attachments_actions(event.mission, parse_buffer)
         self.assertEquals(len(errors), 0)
 
         event = core_models.Event.objects.using('default').get(event_id=expected_event_id)

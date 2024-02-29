@@ -36,7 +36,7 @@ class BioChemDataType(forms.Form):
         super().__init__(*args, **kwargs)
 
         mission = mission_sample_type.mission
-        min_max = core_models.Bottle.objects.using(database).filter(event__trip__mission=mission).aggregate(
+        min_max = core_models.Bottle.objects.using(database).filter(event__mission=mission).aggregate(
             Min('bottle_id'), Max('bottle_id'))
 
         self.fields['start_sample'].initial = min_max['bottle_id__min']

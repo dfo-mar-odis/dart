@@ -38,7 +38,7 @@ class TestFixStationParser(DartTestCase):
 
     def test_errors(self):
         # if errors exist for a file they should be removed the next time a file of the same name is parsed
-        core_models.FileError(mission=self.event.trip.mission, file_name=self.btn_filename, line=0, message=_("test"),
+        core_models.FileError(mission=self.event.mission, file_name=self.btn_filename, line=0, message=_("test"),
                               type=core_models.ErrorType.bottle).save()
 
         self.assertEquals(1, core_models.FileError.objects.using('default').filter(file_name=self.btn_filename).count())

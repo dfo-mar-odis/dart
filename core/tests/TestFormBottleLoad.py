@@ -139,11 +139,10 @@ class TestFormBottleLoad(DartTestCase):
         btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
         btl = os.path.join(btl_directory, btl_file)
 
-        mission = core_factory.MissionFactory(bottle_directory=btl_directory)
-        trip = core_factory.TripFactory(mission=mission,
-                                        start_date=datetime.strptime("2022-10-01", "%Y-%m-%d"),
-                                        end_date=datetime.strptime("2022-10-20", "%Y-%m-%d"))
-        event = core_factory.CTDEventFactory(trip=trip, event_id=1)
+        mission = core_factory.MissionFactory(bottle_directory=btl_directory,
+                                              start_date=datetime.strptime("2022-10-01", "%Y-%m-%d"),
+                                              end_date=datetime.strptime("2022-10-20", "%Y-%m-%d"))
+        event = core_factory.CTDEventFactory(mission=mission, event_id=1)
 
         url = reverse("core:form_btl_upload_bottles", args=('default', mission.pk))
         response = self.client.post(url, {'files': [btl_file]})
@@ -160,7 +159,8 @@ class TestFormBottleLoad(DartTestCase):
         self.assertEquals(root.attrs['hx-trigger'], 'load')
 
         self.assertIn('hx-get', root.attrs)
-        self.assertEquals(root.attrs['hx-get'], reverse('core:form_btl_reload_files', args=('default', mission.pk)))
+        url = reverse('core:form_btl_reload_files', args=('default', mission.pk)) + "?hide_loaded=true"
+        self.assertEquals(root.attrs['hx-get'], url)
 
         self.assertIn('hx-target', root.attrs)
         self.assertEquals(root.attrs['hx-target'], '#div_id_card_bottle_load')
