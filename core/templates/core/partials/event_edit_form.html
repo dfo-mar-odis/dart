@@ -6,18 +6,22 @@
 
 <div id="div_event_content_id">
 {% block event_block %}
-    {% if event %}
-        <div class="row">
-            <div class="col">
-                <h3>{% trans 'Event : ' %}{{ event.event_id }}</h3>
-            </div>
-        </div>
-    {% endif %}
 
 {% block event_form %}
     {# Have to disable the form tag in crispy forms because by default Cirspy will add a method to the form tag #}
     {# that can't be removed and that plays havoc with htmx calls where the post action is on the input buttons #}
     <form id="event_form_id">
+    {% if event %}
+        <input type="hidden" name="event_id" value="{{ event.event_id }}" />
+        <div class="row">
+            <div class="col-auto">
+                <h3>{% trans 'Event : ' %}{{ event.event_id }}</h3>
+            </div>
+            <div class="col">
+                <button class="btn btn-sm btn-primary" name="add_event" title="{% trans "Update" %}" hx-swap="outerHTML" hx-target="#div_id_card_event_details" hx-post="{% url 'core:form_event_edit_event' database event.pk %}">{% custom_icon 'arrow-clockwise' %}</button>
+            </div>
+        </div>
+    {% endif %}
     {% if event_form %}
     {% crispy event_form %}
     {% if event.total_samples %}

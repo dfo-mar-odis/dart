@@ -33,6 +33,7 @@
 
 # OS generated files #
 ######################
+~$*
 .DS_Store
 .DS_Store?
 ._*
@@ -66,4 +67,5 @@ test_*
 /reports/*
 
 !core/tests/sample_data/*
+core/tests/sample_data/~$*
 /missions/*

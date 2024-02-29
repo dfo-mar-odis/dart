@@ -222,7 +222,7 @@ def parse_files(trip, files):
                 # Report errors to the user if there are any, otherwise process the message objects you can
                 for error in error_buffer:
                     err = core_models.FileError(mission=trip.mission, file_name=file_name, line=int(mid),
-                                                type=core_models.ErrorType.missing_value,
+                                                type=core_models.ErrorType.event,
                                                 message=f'Elog message object ($@MID@$: {mid}) missing required '
                                                         f'field [{error.args[0]["expected"]}]')
                     file_errors.append(err)
@@ -241,13 +241,13 @@ def parse_files(trip, files):
         except Exception as ex:
             if type(ex) is LookupError:
                 logger.error(ex)
-                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.missing_id,
+                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.event,
                                             file_name=file_name,
                                             message=ex.args[0]['message'] + ", " + _("see error.log for details"))
             else:
                 # Something is really wrong with this file
                 logger.exception(ex)
-                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.unknown,
+                err = core_models.FileError(mission=trip.mission, type=core_models.ErrorType.event,
                                             file_name=file_name,
                                             message=_("Unknown error :") + f"{str(ex)}, " + _(
                                                 "see error.log for details"))
@@ -284,12 +284,7 @@ def parse_files(trip, files):
 
         logger_notifications.info(_("Recording Errors") + f" {file_name} : %d/%d", (err + 1), error_count)
         file_error = core_models.FileError(mission=trip.mission, file_name=file_name, line=error[0], message=error[1])
-        if isinstance(error[2], KeyError):
-            file_error.type = core_models.ErrorType.missing_id
-        elif isinstance(error[2], ValueError):
-            file_error.type = core_models.ErrorType.missing_value
-        else:
-            file_error.type = core_models.ErrorType.unknown
+        file_error.type = core_models.ErrorType.event
         file_errors.append(file_error)
 
     core_models.FileError.objects.using(database).bulk_create(file_errors)
@@ -303,7 +298,7 @@ def process_stations(trip: core_models.Trip, station_queue: [str]) -> None:
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.using(database).filter(events__trip__mission=trip.mission)
+    existing_stations = core_models.Station.objects.using(database).all()
     station_count = len(station_queue)
     for index, station in enumerate(station_queue):
         logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
@@ -351,7 +346,7 @@ def process_instruments(trip: core_models.Trip, instrument_queue: [str]) -> None
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.using(database).filter(events__trip__mission=trip.mission)
+    existing_instruments = core_models.Instrument.objects.using(database).all()
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
@@ -675,7 +670,7 @@ def get_create_and_update_variables(trip: core_models.Trip, action: core_models.
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.using(database).get_or_create(mission=trip.mission, name=key)[0]
+        variable = core_models.VariableName.objects.using(database).get_or_create(name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)
@@ -758,11 +753,12 @@ def process_variables(trip: core_models.Trip, mid_dictionary_buffer: {}) -> [tup
                 if trip.platform == 'N/A' or trip.protocol == 'N/A':
                     update_mission = True
 
-            action = existing_actions[mid]
-            # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-            variables_arrays = get_create_and_update_variables(trip, action, buffer)
-            fields_create += variables_arrays[0]
-            fields_update += variables_arrays[1]
+            if mid in existing_actions.keys():
+                action = existing_actions[mid]
+                # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
+                variables_arrays = get_create_and_update_variables(trip, action, buffer)
+                fields_create += variables_arrays[0]
+                fields_update += variables_arrays[1]
         except KeyError as ex:
             logger.error(ex)
             errors.append((mid, ex.args[0]["message"], ex,))

@@ -3,6 +3,7 @@ import datetime
 from pandas import DataFrame
 
 import bio_tables.models
+import settingsdb.utils
 from core.utils import distance
 
 from django.db.models.functions import Lower
@@ -29,19 +30,15 @@ class SimpleLookupName(models.Model):
         return self.name
 
 
-class GeographicRegion(SimpleLookupName):
-    pass
-
-
 class Mission(models.Model):
     name = models.CharField(verbose_name=_("Mission Name"), max_length=50,
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
     mission_descriptor = models.CharField(verbose_name=_("Mission Descriptor"), max_length=50, blank=True, null=True,
                                           help_text=_("Code assigned by OSD, ensures national coordination"))
 
-    geographic_region = models.ForeignKey(GeographicRegion, verbose_name=_("Geographic Region"),
-                                          max_length=100, blank=True, null=True, on_delete=models.DO_NOTHING,
-                                          help_text=_("Examples: Scotian Shelf, lower St. Lawrence Estuary"))
+    geographic_region = models.CharField(verbose_name=_("Geographic Region"), max_length=100,
+                                         help_text=_("Terms describing the geographic region where "
+                                                     "the mission took place"))
 
     # default=20 is BIO
     data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
@@ -165,7 +162,9 @@ class Event(models.Model):
     sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
     end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
+    # net specific attributes
     wire_out = models.FloatField(verbose_name=_("Wire Out"), null=True, blank=True)
+    wire_angle = models.FloatField(verbose_name=_("Wire Angle"), null=True, blank=True)
     flow_start = models.IntegerField(verbose_name=_("Flow Meter Start"), null=True, blank=True)
     flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
 
@@ -386,7 +385,7 @@ class Bottle(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="bottles", on_delete=models.CASCADE)
     closed = models.DateTimeField(verbose_name=_("Fired Date/Time"))
 
-    # the bottle number is its order from 1 to N in a series of bottles as opposed tot he bottle ID which is the
+    # the bottle number is its order from 1 to N in a series of bottles as opposed to the bottle ID which is the
     # label placed on the bottle linking it to all samples that come from that bottle.
     bottle_id = models.IntegerField(verbose_name=_("Bottle ID"))
 
@@ -592,6 +591,9 @@ class ErrorType(models.IntegerChoices):
     validation = 3, "Validation Error"
     bottle = 4, "Bottle Error"
     biochem = 5, "Biochem Error"
+    event = 6, "Event Error"
+    sample = 7, "Sample Error"
+    plankton = 8, "Plankton Error"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least

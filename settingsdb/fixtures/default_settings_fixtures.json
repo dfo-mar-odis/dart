@@ -1,0 +1,3796 @@
+[
+{
+    "model": "settingsdb.localsetting",
+    "pk": 1,
+    "fields": {
+        "database_location": "./missions",
+        "connected": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 1,
+    "fields": {
+        "short_name": "oxy",
+        "long_name": "Oxygen",
+        "priority": 1,
+        "datatype": 90000203,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 2,
+    "fields": {
+        "short_name": "salts",
+        "long_name": "Salinity",
+        "priority": 1,
+        "datatype": 90000105,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 3,
+    "fields": {
+        "short_name": "chl",
+        "long_name": "Chlorophyll",
+        "priority": 1,
+        "datatype": 90000243,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 4,
+    "fields": {
+        "short_name": "phae",
+        "long_name": "Phaeophytin",
+        "priority": 1,
+        "datatype": 90000244,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 5,
+    "fields": {
+        "short_name": "chl_mean",
+        "long_name": "Mean Chlorophyll",
+        "priority": 1,
+        "datatype": 90000243,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 6,
+    "fields": {
+        "short_name": "phae_mean",
+        "long_name": "Mean Phaeophytin",
+        "priority": 1,
+        "datatype": 90000244,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 7,
+    "fields": {
+        "short_name": "carb",
+        "long_name": "Carbon",
+        "priority": 1,
+        "datatype": 90000192,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 8,
+    "fields": {
+        "short_name": "nitro",
+        "long_name": "Nitrogen",
+        "priority": 1,
+        "datatype": 90000193,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 9,
+    "fields": {
+        "short_name": "carb_l",
+        "long_name": "Carbon (Micrograms/Litre)",
+        "priority": 1,
+        "datatype": 90000192,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 10,
+    "fields": {
+        "short_name": "nitro_l",
+        "long_name": "Nitrogen (Micrograms/Litre)",
+        "priority": 1,
+        "datatype": 90000193,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 11,
+    "fields": {
+        "short_name": "nitrate",
+        "long_name": "Nitrate",
+        "priority": 1,
+        "datatype": 90000199,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 12,
+    "fields": {
+        "short_name": "nitrite",
+        "long_name": "Nitrite",
+        "priority": 1,
+        "datatype": 90000204,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 13,
+    "fields": {
+        "short_name": "phosphate",
+        "long_name": "Phosphate",
+        "priority": 1,
+        "datatype": 90000198,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 14,
+    "fields": {
+        "short_name": "silicate",
+        "long_name": "Silicate",
+        "priority": 1,
+        "datatype": 90000200,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 15,
+    "fields": {
+        "short_name": "ammonium",
+        "long_name": "Ammonium",
+        "priority": 1,
+        "datatype": 90000367,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 16,
+    "fields": {
+        "short_name": "acarot",
+        "long_name": "HPLC ACAROT",
+        "priority": 1,
+        "datatype": 90000276,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 17,
+    "fields": {
+        "short_name": "allox",
+        "long_name": "HPLC ALLOX",
+        "priority": 1,
+        "datatype": 90000277,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 18,
+    "fields": {
+        "short_name": "astax",
+        "long_name": "HPLC ASTAX",
+        "priority": 1,
+        "datatype": 90000278,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 19,
+    "fields": {
+        "short_name": "bcarot",
+        "long_name": "HPLC BCAROT",
+        "priority": 1,
+        "datatype": 90000279,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 20,
+    "fields": {
+        "short_name": "but19",
+        "long_name": "HPLC BUT19",
+        "priority": 1,
+        "datatype": 90000280,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 21,
+    "fields": {
+        "short_name": "butlike",
+        "long_name": "HPLC BUTLIKE",
+        "priority": 1,
+        "datatype": 90000281,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 22,
+    "fields": {
+        "short_name": "chla",
+        "long_name": "HPLC CHLA",
+        "priority": 1,
+        "datatype": 90000282,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 23,
+    "fields": {
+        "short_name": "chlb",
+        "long_name": "HPLC CHLB",
+        "priority": 1,
+        "datatype": 90000283,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 24,
+    "fields": {
+        "short_name": "chlc12",
+        "long_name": "HPLC CHLC12",
+        "priority": 1,
+        "datatype": 90000284,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 25,
+    "fields": {
+        "short_name": "chlc3",
+        "long_name": "HPLC CHLC3",
+        "priority": 1,
+        "datatype": 90000285,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 26,
+    "fields": {
+        "short_name": "chlidea",
+        "long_name": "HPLC CHLIDEA",
+        "priority": 1,
+        "datatype": 90000286,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 27,
+    "fields": {
+        "short_name": "diadinox",
+        "long_name": "HPLC DIADINOX",
+        "priority": 1,
+        "datatype": 90000287,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 28,
+    "fields": {
+        "short_name": "diatox",
+        "long_name": "HPLC DIATOX",
+        "priority": 1,
+        "datatype": 90000288,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 29,
+    "fields": {
+        "short_name": "fucox",
+        "long_name": "HPLC FUCOX",
+        "priority": 1,
+        "datatype": 90000289,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 30,
+    "fields": {
+        "short_name": "hex19",
+        "long_name": "HPLC HEX19",
+        "priority": 1,
+        "datatype": 90000290,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 31,
+    "fields": {
+        "short_name": "hexlike",
+        "long_name": "HPLC HEXLIKE",
+        "priority": 1,
+        "datatype": 90000291,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 32,
+    "fields": {
+        "short_name": "hexlike2",
+        "long_name": "HPLC HEXLIKE2",
+        "priority": 1,
+        "datatype": 90000292,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 33,
+    "fields": {
+        "short_name": "perid",
+        "long_name": "HPLC PERID",
+        "priority": 1,
+        "datatype": 90000293,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 34,
+    "fields": {
+        "short_name": "phaeo",
+        "long_name": "HPLC PHAEO",
+        "priority": 1,
+        "datatype": 90000294,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 35,
+    "fields": {
+        "short_name": "prasinox",
+        "long_name": "HPLC PRASINOX",
+        "priority": 1,
+        "datatype": 90000295,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 36,
+    "fields": {
+        "short_name": "pyrophae",
+        "long_name": "HPLC PYROPHAE",
+        "priority": 1,
+        "datatype": 90000296,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 37,
+    "fields": {
+        "short_name": "violax",
+        "long_name": "HPLC VIOLAX",
+        "priority": 1,
+        "datatype": 90000297,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 38,
+    "fields": {
+        "short_name": "zea",
+        "long_name": "HPLC ZEA",
+        "priority": 1,
+        "datatype": 90000298,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 39,
+    "fields": {
+        "short_name": "f12",
+        "long_name": "Freon 12",
+        "priority": 1,
+        "datatype": 90001136,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 40,
+    "fields": {
+        "short_name": "sf6",
+        "long_name": "Sulfur Hexafluoride",
+        "priority": 1,
+        "datatype": 90001135,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 41,
+    "fields": {
+        "short_name": "ph_25",
+        "long_name": "pH at 25°C",
+        "priority": 1,
+        "datatype": 90000330,
+        "is_sensor": false
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 42,
+    "fields": {
+        "short_name": "prDM",
+        "long_name": "Pressure, Digiquartz [db]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 43,
+    "fields": {
+        "short_name": "t090C",
+        "long_name": "Temperature [ITS-90, deg C]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 44,
+    "fields": {
+        "short_name": "c0S/m",
+        "long_name": "Conductivity [S/m]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 45,
+    "fields": {
+        "short_name": "t190C",
+        "long_name": "Temperature [ITS-90, deg C]",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 46,
+    "fields": {
+        "short_name": "c1S/m",
+        "long_name": "Conductivity [S/m]",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 47,
+    "fields": {
+        "short_name": "altM",
+        "long_name": "Altimeter [m]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 48,
+    "fields": {
+        "short_name": "par/log",
+        "long_name": "PAR/Logarithmic, Satlantic [umol photons/m2/s]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 49,
+    "fields": {
+        "short_name": "sbeox0V",
+        "long_name": "Oxygen raw, SBE 43 [V]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 50,
+    "fields": {
+        "short_name": "sbeox1V",
+        "long_name": "Oxygen raw, SBE 43 [V]",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 51,
+    "fields": {
+        "short_name": "flSPuv0",
+        "long_name": "Fluorescence, Seapoint Ultraviolet",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 52,
+    "fields": {
+        "short_name": "flSP",
+        "long_name": "Fluorescence, Seapoint",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 53,
+    "fields": {
+        "short_name": "ph",
+        "long_name": "pH",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 54,
+    "fields": {
+        "short_name": "turbWETbb0",
+        "long_name": "Turbidity, WET Labs ECO BB [m^-1/sr]",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 55,
+    "fields": {
+        "short_name": "sbeox0ml/l",
+        "long_name": "ml/l",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 56,
+    "fields": {
+        "short_name": "sbeox1ml/l",
+        "long_name": "ml/l",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 57,
+    "fields": {
+        "short_name": "sal00",
+        "long_name": null,
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 58,
+    "fields": {
+        "short_name": "sal11",
+        "long_name": null,
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 59,
+    "fields": {
+        "short_name": "potemp090c",
+        "long_name": "90c",
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 60,
+    "fields": {
+        "short_name": "potemp190c",
+        "long_name": "90c",
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 61,
+    "fields": {
+        "short_name": "sigma-é00",
+        "long_name": null,
+        "priority": 1,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.globalsampletype",
+    "pk": 62,
+    "fields": {
+        "short_name": "sigma-é11",
+        "long_name": null,
+        "priority": 2,
+        "datatype": null,
+        "is_sensor": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 1,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "csv",
+        "skip": 9,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 2,
+    "fields": {
+        "sample_type": 2,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "bottle label",
+        "value_field": "calculated salinity",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 3,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 19,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 4,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 19,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 5,
+    "fields": {
+        "sample_type": 11,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "nitrate",
+        "tab": 0,
+        "flag_field": "nitrate_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 6,
+    "fields": {
+        "sample_type": 12,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "nitrite",
+        "tab": 0,
+        "flag_field": "nitrite_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 7,
+    "fields": {
+        "sample_type": 13,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "phosphate",
+        "tab": 0,
+        "flag_field": "phosphate_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 8,
+    "fields": {
+        "sample_type": 14,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "silicate",
+        "tab": 0,
+        "flag_field": "silicate_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 9,
+    "fields": {
+        "sample_type": 15,
+        "file_type": "xlsx",
+        "skip": 0,
+        "sample_field": "sample_id",
+        "value_field": "ammonium",
+        "tab": 0,
+        "flag_field": "ammonium_qc",
+        "comment_field": "comment",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 10,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 11,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 12,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 13,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xls",
+        "skip": 3,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 14,
+    "fields": {
+        "sample_type": 16,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "acarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 15,
+    "fields": {
+        "sample_type": 17,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "allox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 16,
+    "fields": {
+        "sample_type": 18,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "astax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 17,
+    "fields": {
+        "sample_type": 19,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "bcarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 18,
+    "fields": {
+        "sample_type": 20,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "but19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 19,
+    "fields": {
+        "sample_type": 21,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "butlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 20,
+    "fields": {
+        "sample_type": 22,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hplchla",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 21,
+    "fields": {
+        "sample_type": 23,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlb",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 22,
+    "fields": {
+        "sample_type": 24,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlc12",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 23,
+    "fields": {
+        "sample_type": 25,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlc3",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 24,
+    "fields": {
+        "sample_type": 26,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "chlidea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 25,
+    "fields": {
+        "sample_type": 27,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "diadinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 26,
+    "fields": {
+        "sample_type": 28,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "diatox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 27,
+    "fields": {
+        "sample_type": 29,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "fucox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 28,
+    "fields": {
+        "sample_type": 30,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hex19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 29,
+    "fields": {
+        "sample_type": 31,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hexlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 30,
+    "fields": {
+        "sample_type": 32,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hexlike2",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 31,
+    "fields": {
+        "sample_type": 33,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "perid",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 32,
+    "fields": {
+        "sample_type": 34,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "hplcphae",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 33,
+    "fields": {
+        "sample_type": 35,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "prasinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 34,
+    "fields": {
+        "sample_type": 37,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "violax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 35,
+    "fields": {
+        "sample_type": 38,
+        "file_type": "xlsm",
+        "skip": 4,
+        "sample_field": "id",
+        "value_field": "zea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 36,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "xlsx",
+        "skip": 9,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 37,
+    "fields": {
+        "sample_type": 2,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "bottle label",
+        "value_field": "calculated salinity",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 38,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 39,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": false
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 40,
+    "fields": {
+        "sample_type": 11,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "nitrate",
+        "tab": 0,
+        "flag_field": "nitrate_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 41,
+    "fields": {
+        "sample_type": 12,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "nitrite",
+        "tab": 0,
+        "flag_field": "nitrite_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 42,
+    "fields": {
+        "sample_type": 13,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "phosphate",
+        "tab": 0,
+        "flag_field": "phosphate_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 43,
+    "fields": {
+        "sample_type": 14,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "silicate",
+        "tab": 0,
+        "flag_field": "silicste_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 44,
+    "fields": {
+        "sample_type": 15,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample_id",
+        "value_field": "ammonium",
+        "tab": 0,
+        "flag_field": "ammonium_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 45,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "poc_qc",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 46,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "pon_qc",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 47,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 48,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xls",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 49,
+    "fields": {
+        "sample_type": 1,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "sample",
+        "value_field": "o2_concentration(ml/l)",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "comments",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 50,
+    "fields": {
+        "sample_type": 3,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "chl.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 51,
+    "fields": {
+        "sample_type": 4,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "phae.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 52,
+    "fields": {
+        "sample_type": 7,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "carbon(micrograms)",
+        "tab": 0,
+        "flag_field": "poc_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 53,
+    "fields": {
+        "sample_type": 8,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "nitrogen(micrograms)",
+        "tab": 0,
+        "flag_field": "pon_qc",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 54,
+    "fields": {
+        "sample_type": 9,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "c/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "poc_qc.1",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 55,
+    "fields": {
+        "sample_type": 10,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "i.d.",
+        "value_field": "n/l(micrograms/litre)",
+        "tab": 0,
+        "flag_field": "pon_qc.1",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 56,
+    "fields": {
+        "sample_type": 16,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "acarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 57,
+    "fields": {
+        "sample_type": 17,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "allox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 58,
+    "fields": {
+        "sample_type": 18,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "astax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 59,
+    "fields": {
+        "sample_type": 19,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "bcarot",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 60,
+    "fields": {
+        "sample_type": 20,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "but19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 61,
+    "fields": {
+        "sample_type": 21,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "butlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 62,
+    "fields": {
+        "sample_type": 22,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hplchla",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 63,
+    "fields": {
+        "sample_type": 23,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlb",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 64,
+    "fields": {
+        "sample_type": 24,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlc12",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 65,
+    "fields": {
+        "sample_type": 25,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlc3",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 66,
+    "fields": {
+        "sample_type": 26,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "chlidea",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 67,
+    "fields": {
+        "sample_type": 27,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "diadinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 68,
+    "fields": {
+        "sample_type": 28,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "diatox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 69,
+    "fields": {
+        "sample_type": 29,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "fucox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 70,
+    "fields": {
+        "sample_type": 30,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hex19",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 71,
+    "fields": {
+        "sample_type": 31,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hexlike",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 72,
+    "fields": {
+        "sample_type": 32,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hexlike2",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 73,
+    "fields": {
+        "sample_type": 33,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "perid",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 74,
+    "fields": {
+        "sample_type": 34,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "hplcphae",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 75,
+    "fields": {
+        "sample_type": 35,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "prasinox",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 76,
+    "fields": {
+        "sample_type": 37,
+        "file_type": "xlsx",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "violax",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 77,
+    "fields": {
+        "sample_type": 40,
+        "file_type": "csv",
+        "skip": 1,
+        "sample_field": "id",
+        "value_field": "sf6_fmol_L",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": false,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 78,
+    "fields": {
+        "sample_type": 3,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "chl.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 79,
+    "fields": {
+        "sample_type": 4,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "phae.",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 80,
+    "fields": {
+        "sample_type": 6,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "mean p",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.sampletypeconfig",
+    "pk": 81,
+    "fields": {
+        "sample_type": 5,
+        "file_type": "xlsx",
+        "skip": 18,
+        "sample_field": "i.d.",
+        "value_field": "mean c",
+        "tab": 0,
+        "flag_field": "",
+        "comment_field": "",
+        "allow_blank": true,
+        "allow_replicate": true
+    }
+},
+{
+    "model": "settingsdb.bcdatabaseconnection",
+    "pk": 1,
+    "fields": {
+        "engine": 1,
+        "host": "VSNSBIOD78.ENT.DFO-MPO.CA",
+        "name": "TTRAN",
+        "port": 1521,
+        "account_name": "upsonp",
+        "uploader": "UpsonP"
+    }
+},
+{
+    "model": "settingsdb.bcdatabaseconnection",
+    "pk": 2,
+    "fields": {
+        "engine": 1,
+        "host": "VSNSBIOXP74.ENT.DFO-MPO.CA",
+        "name": "PTRAN",
+        "port": 1521,
+        "account_name": "biochem",
+        "uploader": "Upsonp"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 1,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "event",
+        "mapped_field": "Event",
+        "description": "Label identifying the elog event number"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 2,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "time_position",
+        "mapped_field": "Time|Position",
+        "description": "Label identifying the time|position string of an action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 3,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "station",
+        "mapped_field": "Station",
+        "description": "Label identifying the station of the event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 4,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "action",
+        "mapped_field": "Action",
+        "description": "Label identifying an elog action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 5,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "instrument",
+        "mapped_field": "Instrument",
+        "description": "Label identifying the instrument of the event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 6,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "lead_scientist",
+        "mapped_field": "PI",
+        "description": "Label identifying the lead scientists of the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 7,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "protocol",
+        "mapped_field": "Protocol",
+        "description": "Label identifying the protocol of the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 8,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "cruise",
+        "mapped_field": "Cruise",
+        "description": "Label identifying the cruse name of the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 9,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "platform",
+        "mapped_field": "Platform",
+        "description": "Label identifying the ship name used for the mission"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 10,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "attached",
+        "mapped_field": "Attached",
+        "description": "Label identifying accessories attached to equipment"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 11,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "start_sample_id",
+        "mapped_field": "Sample ID",
+        "description": "Label identifying a lone bottle, or starting bottle in a sequence"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 12,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "end_sample_id",
+        "mapped_field": "End_Sample_ID",
+        "description": "Label identifying the ending bottle in a sequence"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 13,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "comment",
+        "mapped_field": "Comment",
+        "description": "Label identifying an action comment"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 14,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "data_collector",
+        "mapped_field": "Author",
+        "description": "Label identifying who logged the elog action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 15,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "sounding",
+        "mapped_field": "Sounding",
+        "description": "Label identifying the sounding depth of the action"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 16,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "wire_out",
+        "mapped_field": "Wire out",
+        "description": "Label identifying how much wire was unspooled for a net event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 17,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "flow_start",
+        "mapped_field": "Flowmeter Start",
+        "description": "Label for the starting value of a flowmeter for a net event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 18,
+    "fields": {
+        "file_type": "elog",
+        "required_field": "flow_end",
+        "mapped_field": "Flowmeter End",
+        "description": "Label for the ending value of a flowmeter for a net event"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 19,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "('bottles', 'Bottle ID', 'Label identifying the Bottle ID')",
+        "mapped_field": "('pressure', 'Depth', 'Label identifying the column with the nominal pressure')",
+        "description": "('Oxygen', 'Oxygen', 'Label identifying the column specifying if there will be an oxygen sample')"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 20,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "bottles",
+        "mapped_field": "Bottle ID",
+        "description": "Label identifying the Bottle ID"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 21,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "pressure",
+        "mapped_field": "Depth",
+        "description": "Label identifying the column with the nominal pressure"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 22,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "oxygen",
+        "mapped_field": "Oxygen",
+        "description": "Label identifying the column specifying if there will be an oxygen sample"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 23,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "nutrient",
+        "mapped_field": "Nutrients",
+        "description": "Label identifying the column specifying if there will be nutrient samples"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 24,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "salt",
+        "mapped_field": "Salinity",
+        "description": "Label identifying the column specifying if there will be salt samples"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 25,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "chl",
+        "mapped_field": "Chlorophyll",
+        "description": "Label identifying the column specifying if there will be chl samples"
+    }
+},
+{
+    "model": "settingsdb.fileconfiguration",
+    "pk": 26,
+    "fields": {
+        "file_type": "filterlog",
+        "required_field": "hplc",
+        "mapped_field": "HPLC",
+        "description": "Label identifying the column specifying if there will be HPLC samples"
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 231,
+    "fields": {
+        "name": "AR7W_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 232,
+    "fields": {
+        "name": "AR7W_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 233,
+    "fields": {
+        "name": "AR7W_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 234,
+    "fields": {
+        "name": "AR7W_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 235,
+    "fields": {
+        "name": "AR7W_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 236,
+    "fields": {
+        "name": "AR7W_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 237,
+    "fields": {
+        "name": "AR7W_07.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 238,
+    "fields": {
+        "name": "AR7W_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 239,
+    "fields": {
+        "name": "AR7W_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 240,
+    "fields": {
+        "name": "AR7W_09.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 241,
+    "fields": {
+        "name": "AR7W_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 242,
+    "fields": {
+        "name": "AR7W_10.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 243,
+    "fields": {
+        "name": "AR7W_11",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 244,
+    "fields": {
+        "name": "AR7W_11.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 245,
+    "fields": {
+        "name": "AR7W_12",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 246,
+    "fields": {
+        "name": "AR7W_12.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 247,
+    "fields": {
+        "name": "AR7W_13",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 248,
+    "fields": {
+        "name": "AR7W_13.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 249,
+    "fields": {
+        "name": "AR7W_14",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 250,
+    "fields": {
+        "name": "AR7W_14.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 251,
+    "fields": {
+        "name": "AR7W_15",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 252,
+    "fields": {
+        "name": "AR7W_15.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 253,
+    "fields": {
+        "name": "AR7W_16",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 254,
+    "fields": {
+        "name": "AR7W_16.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 255,
+    "fields": {
+        "name": "AR7W_17",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 256,
+    "fields": {
+        "name": "AR7W_17.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 257,
+    "fields": {
+        "name": "AR7W_18",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 258,
+    "fields": {
+        "name": "AR7W_18.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 259,
+    "fields": {
+        "name": "AR7W_19",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 260,
+    "fields": {
+        "name": "AR7W_19.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 261,
+    "fields": {
+        "name": "AR7W_20",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 262,
+    "fields": {
+        "name": "AR7W_20.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 263,
+    "fields": {
+        "name": "AR7W_21",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 264,
+    "fields": {
+        "name": "AR7W_21.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 265,
+    "fields": {
+        "name": "AR7W_22",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 266,
+    "fields": {
+        "name": "AR7W_22.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 267,
+    "fields": {
+        "name": "AR7W_23",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 268,
+    "fields": {
+        "name": "AR7W_23.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 269,
+    "fields": {
+        "name": "AR7W_24",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 270,
+    "fields": {
+        "name": "AR7W_24.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 271,
+    "fields": {
+        "name": "AR7W_25",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 272,
+    "fields": {
+        "name": "AR7W_25.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 273,
+    "fields": {
+        "name": "AR7W_26",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 274,
+    "fields": {
+        "name": "AR7W_26.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 275,
+    "fields": {
+        "name": "AR7W_27",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 276,
+    "fields": {
+        "name": "AR7W_27.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 277,
+    "fields": {
+        "name": "AR7W_28",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 278,
+    "fields": {
+        "name": "AR7W_28.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 279,
+    "fields": {
+        "name": "BBL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 280,
+    "fields": {
+        "name": "BBL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 281,
+    "fields": {
+        "name": "BBL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 282,
+    "fields": {
+        "name": "BBL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 283,
+    "fields": {
+        "name": "BBL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 284,
+    "fields": {
+        "name": "BBL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 285,
+    "fields": {
+        "name": "BBL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 286,
+    "fields": {
+        "name": "CSL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 287,
+    "fields": {
+        "name": "CSL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 288,
+    "fields": {
+        "name": "CSL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 289,
+    "fields": {
+        "name": "CSL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 290,
+    "fields": {
+        "name": "CSL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 291,
+    "fields": {
+        "name": "CSL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 292,
+    "fields": {
+        "name": "GULD_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 293,
+    "fields": {
+        "name": "GUL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 294,
+    "fields": {
+        "name": "GUL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 295,
+    "fields": {
+        "name": "GUL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 296,
+    "fields": {
+        "name": "GUL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 297,
+    "fields": {
+        "name": "HL_0",
+        "latitude": 44.6937,
+        "longitude": -63.6403,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 298,
+    "fields": {
+        "name": "HL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 299,
+    "fields": {
+        "name": "HL_02",
+        "latitude": 44.2675,
+        "longitude": -63.3175,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 300,
+    "fields": {
+        "name": "HL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 301,
+    "fields": {
+        "name": "HL_03.3",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 302,
+    "fields": {
+        "name": "HL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 303,
+    "fields": {
+        "name": "HL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 304,
+    "fields": {
+        "name": "HL_05.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 305,
+    "fields": {
+        "name": "HL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 306,
+    "fields": {
+        "name": "HL_06.3",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 307,
+    "fields": {
+        "name": "HL_06.7",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 308,
+    "fields": {
+        "name": "HL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 309,
+    "fields": {
+        "name": "LCM_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 310,
+    "fields": {
+        "name": "LCM_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 311,
+    "fields": {
+        "name": "LCM_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 312,
+    "fields": {
+        "name": "LCM_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 313,
+    "fields": {
+        "name": "LCM_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 314,
+    "fields": {
+        "name": "LCM_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 315,
+    "fields": {
+        "name": "LCM_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 316,
+    "fields": {
+        "name": "LCM_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 317,
+    "fields": {
+        "name": "LCM_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 318,
+    "fields": {
+        "name": "LCM_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 319,
+    "fields": {
+        "name": "LL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 320,
+    "fields": {
+        "name": "LL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 321,
+    "fields": {
+        "name": "LL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 322,
+    "fields": {
+        "name": "LL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 323,
+    "fields": {
+        "name": "LL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 324,
+    "fields": {
+        "name": "LL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 325,
+    "fields": {
+        "name": "LL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 326,
+    "fields": {
+        "name": "LL_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 327,
+    "fields": {
+        "name": "LL_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 328,
+    "fields": {
+        "name": "NEC_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 329,
+    "fields": {
+        "name": "NEC_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 330,
+    "fields": {
+        "name": "NEC_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 331,
+    "fields": {
+        "name": "NEC_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 332,
+    "fields": {
+        "name": "NEC_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 333,
+    "fields": {
+        "name": "NEC_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 334,
+    "fields": {
+        "name": "NEC_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 335,
+    "fields": {
+        "name": "NEC_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 336,
+    "fields": {
+        "name": "NEC_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 337,
+    "fields": {
+        "name": "NEC_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 338,
+    "fields": {
+        "name": "P5",
+        "latitude": 44.9307,
+        "longitude": -66.8500,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 339,
+    "fields": {
+        "name": "STAB_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 340,
+    "fields": {
+        "name": "STAB_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 341,
+    "fields": {
+        "name": "STAB_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 342,
+    "fields": {
+        "name": "STAB_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 343,
+    "fields": {
+        "name": "STAB_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 344,
+    "fields": {
+        "name": "STAB_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "settingsdb.globalstation",
+    "pk": 345,
+    "fields": {
+        "name": "Shediac Valley",
+        "latitude": 47.7833,
+        "longitude": -64.0333,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 1,
+    "fields": {
+        "name": "Banqereau Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 2,
+    "fields": {
+        "name": "Barrow Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 3,
+    "fields": {
+        "name": "Bay of Fundy"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 4,
+    "fields": {
+        "name": "Bras d’Or Lakes"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 5,
+    "fields": {
+        "name": "Brown’s Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 6,
+    "fields": {
+        "name": "Cabot Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 7,
+    "fields": {
+        "name": "Chaleur Bay"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 8,
+    "fields": {
+        "name": "Chedabucto Bay"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 9,
+    "fields": {
+        "name": "Continental Slope"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 10,
+    "fields": {
+        "name": "Davis Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 11,
+    "fields": {
+        "name": "Emerald Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 12,
+    "fields": {
+        "name": "Emerald Basin"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 13,
+    "fields": {
+        "name": "Flemish Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 14,
+    "fields": {
+        "name": "Flemish Cap"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 15,
+    "fields": {
+        "name": "Flemish Pass"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 16,
+    "fields": {
+        "name": "Georges Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 17,
+    "fields": {
+        "name": "Grand Banks"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 18,
+    "fields": {
+        "name": "Gulf of Maine"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 19,
+    "fields": {
+        "name": "Hudson Bay"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 20,
+    "fields": {
+        "name": "LaHave Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 21,
+    "fields": {
+        "name": "Labrador Shelf"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 22,
+    "fields": {
+        "name": "Laurentian Fan"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 23,
+    "fields": {
+        "name": "Laurentian Trough"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 24,
+    "fields": {
+        "name": "Magdalen Shelf"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 25,
+    "fields": {
+        "name": "Northumberland Strait"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 26,
+    "fields": {
+        "name": "Orphan Basin"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 27,
+    "fields": {
+        "name": "Orphan Knoll"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 28,
+    "fields": {
+        "name": "Sable Island"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 29,
+    "fields": {
+        "name": "Scotian Shelf"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 30,
+    "fields": {
+        "name": "Shediac Valley"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 31,
+    "fields": {
+        "name": "St. Anne’s Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 32,
+    "fields": {
+        "name": "St. Lawrence Estuary"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 33,
+    "fields": {
+        "name": "Sydney Bight"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 34,
+    "fields": {
+        "name": "The Gulf of St. Lawrence"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 35,
+    "fields": {
+        "name": "The Gully"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 36,
+    "fields": {
+        "name": "West Bank"
+    }
+},
+{
+    "model": "settingsdb.globalgeographicregion",
+    "pk": 37,
+    "fields": {
+        "name": "Whycocomagh Bay"
+    }
+}
+]

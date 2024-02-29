@@ -1,5 +1,4 @@
 import datetime
-import io
 import os
 
 from bs4 import BeautifulSoup
@@ -17,11 +16,8 @@ from render_block import render_block_to_string
 
 from core import forms as core_forms, validation, form_event_details
 from core import models
-from core.htmx import send_user_notification_elog
 from core.parsers import elog
 from dart.utils import load_svg
-
-from settingsdb import models as settings_models
 
 import logging
 logger = logging.getLogger("dart")
@@ -32,9 +28,11 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
     select_trip = forms.ChoiceField(required=False)
 
     start_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+        widget=forms.DateInput(attrs={'type': 'date', 'max': "9999-12-31",
+                                      'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
     end_date = forms.DateField(
-        widget=forms.DateInput(attrs={'type': 'date', 'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
+        widget=forms.DateInput(attrs={'type': 'date', 'max': "9999-12-31",
+                                      'value': datetime.datetime.now().strftime("%Y-%m-%d")}))
 
     # I had to override the default Bootstrap template for fields, because someone thought putting 'mb-3'
     # as a default for field wrappers was a good idea and it creates a massive gap under the inputs when
@@ -147,10 +145,12 @@ class TripForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         if self.instance:
             start_date = self.instance.start_date.strftime("%Y-%m-%d")
-            self.fields['start_date'].widget = forms.DateInput({'type': 'date', 'value': start_date})
+            self.fields['start_date'].widget = forms.DateInput({'type': 'date', 'max': "9999-12-31",
+                                                                'value': start_date})
 
             end_date = self.instance.end_date.strftime("%Y-%m-%d")
-            self.fields['end_date'].widget = forms.DateInput({'type': 'date', 'value': end_date})
+            self.fields['end_date'].widget = forms.DateInput({'type': 'date', 'max': "9999-12-31",
+                                                              'value': end_date})
 
         self.fields['select_trip'].label = False
 

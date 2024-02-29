@@ -153,7 +153,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         buttons = Column(css_class="col-auto align-self-end")
         header.fields[0].fields.append(buttons)
 
-        issue_count = self.mission.file_errors.filter(file_name__iendswith=".log").count()
+        issue_count = self.mission.file_errors.filter(type=models.ErrorType.event).count()
         if issue_count > 0:
             issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
             buttons.fields.append(issue_count_col)
@@ -164,7 +164,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        files = self.mission.file_errors.filter(file_name__iendswith=".log").values_list('file_name',
+        files = self.mission.file_errors.filter(type=models.ErrorType.event).values_list('file_name',
                                                                                          flat=True).distinct()
         for index, file in enumerate(files):
             event_card = ValidationFileCard(self.mission, file, index)

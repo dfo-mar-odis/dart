@@ -5,6 +5,7 @@ import pytz
 from django.conf import settings
 from django.core.management import call_command
 from django.db import connections
+from django.db.migrations.executor import MigrationExecutor
 
 import settingsdb.models
 from settingsdb import models
@@ -75,3 +76,27 @@ def connect_database(database):
         databases = settings.DATABASES
         databases[database] = databases['default'].copy()
         databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
+
+
+def is_database_synchronized(database):
+    connection = connections[database]
+    connection.prepare_database()
+    executor = MigrationExecutor(connection)
+    targets = executor.loader.graph.leaf_nodes('core')
+    return not executor.migration_plan(targets)
+
+
+def migrate(database):
+    if not is_database_synchronized(database):
+        call_command('migrate', 'core', database=database)
+
+
+def test_migration():
+
+    databases = ['CAR2023573', 'CAR2023573-2', 'CAR2023573-3']
+    for db in databases:
+        connect_database(db)
+        try:
+            call_command('migrate', 'core', '0002', database=db)
+        except Exception as ex:
+            print(ex)

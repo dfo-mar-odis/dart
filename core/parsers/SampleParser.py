@@ -258,7 +258,8 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
             if sample_id not in bottle_keys:
                 message = f"Could not find bottle matching id {sample_id} in file {file_name}"
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
+                                              type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
                 continue
@@ -291,7 +292,8 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             if not sample_config.allow_replicate and replicate > 1:
                 message = _("File configuration doesn't allow for multiple replicates. Replicates found for sample ")
                 message += str(sample_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
+                                              type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
                 continue
@@ -299,7 +301,8 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 # we want to alert the user if there's more than 2 replicates. It can happen, but it's not
                 # standard practice so people should be aware in case it is a mistake.
                 message = _("More than two replicates found for sample ") + str(sample_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
+                                              type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
 
@@ -313,7 +316,8 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
             if replicate in replicate_counter[db_sample.bottle_id]:
                 message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
+                                              type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
                 continue
@@ -338,13 +342,15 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         message += " - " + str(ex)
         logger.error(message)
         logger.exception(ex)
-        error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message)
+        error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message,
+                                      type=core_models.ErrorType.sample)
         errors.append(error)
     except Exception as ex:
         message = f"Unknown issue {ex}: see error log"
         logger.error(message)
         logger.exception(ex)
-        error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message)
+        error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message,
+                                      type=core_models.ErrorType.sample)
         errors.append(error)
 
     core_models.FileError.objects.using(database).bulk_create(errors)

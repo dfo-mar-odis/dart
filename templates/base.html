@@ -54,11 +54,13 @@
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             {% trans 'Download Report' %}
           </a>
+        {% block report %}
           <ul class="dropdown-menu">
               {% for key,report in reports.items %}
                   <li><a class="dropdown-item" href="{{ report }}">{{ key }}</a></li>
               {% endfor %}
           </ul>
+        {% endblock %}
         </li>
     </ul>
     {% endif %}

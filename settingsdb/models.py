@@ -21,6 +21,8 @@ class GlobalSampleType(models.Model):
                                               "used for the sample"), unique=True)
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
                                  help_text=_("Short descriptive name for this type of sample/sensor"))
+
+    # priority will eventually allow a user to sort their sample types on the Mission Sample form
     priority = models.IntegerField(verbose_name=_("Priority"), default=1)
 
     # Datatype may not be known by the user at the time they need to create this sensor, but it will
@@ -150,7 +152,18 @@ class GlobalStation(models.Model):
 
     name = models.CharField(verbose_name=_("Station Name"), max_length=20, unique=True)
 
+    latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
+    longitude = models.FloatField(verbose_name=_("Longitude"), blank=True, null=True)
+    sounding = models.FloatField(verbose_name=_("Sounding"), blank=True, null=True)
+    fixstation = models.BooleanField(verbose_name=_("Fix Station"), default=False)
+
+    def __str__(self):
+        return self.name
+
 
 class GlobalGeographicRegion(models.Model):
 
-    name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=50, unique=True)
+    name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=100, unique=True)
+
+    def __str__(self):
+        return self.name
