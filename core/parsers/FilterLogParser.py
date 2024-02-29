@@ -53,7 +53,7 @@ def get_mapping(label):
 
 def add_sample_type(bottle: core_models.Bottle, short_name: str, samples: list, values: list, value=np.inf):
     global_sample_type = settings_models.GlobalSampleType.objects.get(short_name=short_name)
-    mission_type: core_models.MissionSampleType = global_sample_type.get_mission_sample_type(bottle.event.trip.mission)
+    mission_type: core_models.MissionSampleType = global_sample_type.get_mission_sample_type(bottle.event.mission)
     if not mission_type.samples.filter(bottle=bottle).exists():
         sample = core_models.Sample(bottle=bottle, type=mission_type)
         samples.append(sample)
@@ -74,7 +74,7 @@ def parse(event: core_models.Event, filename: str, stream: io.BytesIO):
     station_name = event.station.name
     index = sheet_names.index(station_name.upper())
 
-    mission = event.trip.mission
+    mission = event.mission
     station_tab = pd.read_excel(io=stream, sheet_name=index, header=0, nrows=20)
     station_tab.fillna('', inplace=True)
 

@@ -47,7 +47,7 @@ def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Missi
     sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
     dc_samples = models.DiscreteSampleValue.objects.using(database).filter(
-        sample__bottle__event__trip__mission_id=mission.pk, sample__type_id=sampletype_id)
+        sample__bottle__event__mission_id=mission.pk, sample__type_id=sampletype_id)
 
     row_datatype = dc_samples.values_list("datatype", flat=True).distinct().first()
     datatype = sampletype.datatype if sampletype.datatype else None
@@ -283,7 +283,7 @@ def list_samples(request, database, mission_id):
     table_soup = BeautifulSoup('', 'html.parser')
 
     mission = models.Mission.objects.using(database).get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.using(database).filter(event__trip__mission=mission).order_by('bottle_id')[
+    bottle_limit = models.Bottle.objects.using(database).filter(event__mission=mission).order_by('bottle_id')[
                    page_start:(page_start + page_limit)]
 
     if not bottle_limit.exists():
@@ -617,8 +617,7 @@ def download_samples(request, database, mission_id):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     mission = models.Mission.objects.using(database).get(pk=mission_id)
-    events = models.Event.objects.using(database).filter(trip__mission=mission, 
-                                                         instrument__type=models.InstrumentType.ctd)
+    events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
     bottles = models.Bottle.objects.using(database).filter(event__in=events)
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
@@ -659,7 +658,7 @@ def download_samples(request, database, mission_id):
         type__mission=mission).values_list('type', flat=True).distinct()
 
     discrete_samples = models.DiscreteSampleValue.objects.using(database).filter(
-        sample__bottle__event__trip__mission=mission)
+        sample__bottle__event__mission=mission)
     discrete_samples = discrete_samples.filter(sample__type_id__in=data_types)
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields

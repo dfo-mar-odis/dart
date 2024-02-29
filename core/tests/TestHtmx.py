@@ -16,11 +16,12 @@ logger = logging.getLogger("dart.test")
 @tag('utils', 'utils_elog_upload')
 class TestElogUpload(DartTestCase):
 
+    upload_elog_url = 'core:form_event_import_events_elog'
+
     def setUp(self) -> None:
         self.file_location = r'core/tests/sample_data/'
         self.mission = core_factory.MissionFactory(name="TestMission")
-        self.trip = core_factory.TripFactory(mission=self.mission)
-        self.url = reverse_lazy('core:form_trip_import_events_elog', args=('default', self.trip.pk,))
+        self.url = reverse_lazy(self.upload_elog_url, args=('default', self.mission.pk,))
         self.client = Client()
 
     def test_elog_uplaod_missing_mid(self):

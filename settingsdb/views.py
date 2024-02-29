@@ -116,15 +116,16 @@ def get_mission_dictionary(db_dir):
 
 def init_connection():
     connected = setting_models.LocalSetting.objects.using('default').filter(connected=True)
-    if connected.count() > 1:
-        for connection in connected:
-            connection.connected = False
-            connection.save()
-        initial = connected.first()
-        initial.connected = True
-        initial.save()
-    elif connected.exists():
-        initial = connected.first()
+    if connected.exists():
+        if connected.count() > 1:
+            for connection in connected:
+                connection.connected = False
+                connection.save()
+            initial = connected.first()
+            initial.connected = True
+            initial.save()
+        else:
+            initial = connected.first()
     else:
         if not setting_models.LocalSetting.objects.using('default').filter(pk=1).exists():
             initial = setting_models.LocalSetting(pk=1, database_location="./missions")
@@ -155,7 +156,8 @@ class MissionFilterView(GenericTemplateView):
         context['mission_filter_form'] = MissionFilterForm()
         context['missions'] = get_mission_dictionary(initial.database_location)
 
-        context['reports'] = reports
+        if reports:
+            context['reports'] = reports
         return context
 
 

@@ -238,14 +238,14 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         sample_type = sample_config.sample_type
         mission_sample_type = sample_type.get_mission_sample_type(mission)
         bottles = {bottle.bottle_id: bottle for bottle in
-                   core_models.Bottle.objects.using(database).filter(event__trip__mission=mission)}
+                   core_models.Bottle.objects.using(database).filter(event__mission=mission)}
         bottle_keys = sorted(bottles.keys())
 
         # for speed we'll bulk delete Discrete values form all bottles with the requested sample type, then
         # recreate them.
         sample_ids = [sample_id for sample_id in dataframe[sample_id_field].unique()]
 
-        existing_samples = mission_sample_type.samples.filter(bottle__event__trip__mission=mission)
+        existing_samples = mission_sample_type.samples.filter(bottle__event__mission=mission)
 
         core_models.DiscreteSampleValue.objects.using(database).filter(sample__bottle__bottle_id__in=sample_ids,
                                                                        sample__type=mission_sample_type).delete()

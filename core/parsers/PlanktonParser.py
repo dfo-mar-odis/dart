@@ -58,8 +58,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
     dataframe.columns = map(str.upper, dataframe.columns)
 
     # for phytoplankton bottles are associated with a CTD bottle
-    events = core_models.Event.objects.using(database).filter(trip__mission=mission,
-                                                              instrument__type=core_models.InstrumentType.ctd)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
     events = events.exclude(actions__type=core_models.ActionType.aborted)
     bottles = core_models.Bottle.objects.using(database).filter(event__in=events)
 
@@ -208,8 +207,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     dataframe.columns = map(str.upper, dataframe.columns)
 
     # for zooplankton bottles are associated with a RingNet bottles, which won't exist and will have to be created
-    events = core_models.Event.objects.using(database).filter(trip__mission_id=mission.pk,
-                                              instrument__type=core_models.InstrumentType.net)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.net)
 
     # don't care about aborted events
     # events = events.exclude(actions__type=core_models.ActionType.aborted)

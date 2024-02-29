@@ -369,10 +369,9 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcs_d)
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
-    ctd_events = core_models.Event.objects.using(database).filter(trip__mission=mission,
-                                                                  instrument__type=core_models.InstrumentType.ctd)
+    ctd_events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
     bottles = core_models.Bottle.objects.using(database).filter(event__in=ctd_events)
-    # bottles = models.Bottle.objects.using(database).filter(event__trip__mission=mission)
+    # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
         last_uploaded = bcs_d.objects.all().values_list('created_date', flat=True).distinct().last()
@@ -408,7 +407,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
             type__mission=mission).values_list('type', flat=True).distinct()
 
         discreate_samples = core_models.DiscreteSampleValue.objects.using(database).filter(
-            sample__bottle__event__trip__mission=mission
+            sample__bottle__event__mission=mission
         )
         discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
 
@@ -432,11 +431,11 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcs_p)
 
     # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission=mission)
+    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
     bottle_ids = samples.values_list('bottle_id').distinct()
     bottles = core_models.Bottle.objects.using(database).filter(pk__in=bottle_ids)
 
-    # bottles = models.Bottle.objects.using(database).filter(event__trip__mission=mission)
+    # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
     # if exists:
     #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
     #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
@@ -462,9 +461,9 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
     exists = biochem.upload.check_and_create_model('biochem', bcd_p)
 
     # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission=mission)
+    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
 
-    # bottles = models.Bottle.objects.using(database).filter(event__trip__mission=mission)
+    # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
     # if exists:
     #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
     #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()

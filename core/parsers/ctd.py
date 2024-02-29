@@ -318,7 +318,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
-    mission = event.trip.mission
+    mission = event.mission
     database = mission._state.db
 
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
@@ -418,16 +418,15 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
 
     database = mission._state.db
-    events = core_models.Event.objects.using(database).filter(trip__mission=mission,
-                                                              instrument__type=core_models.InstrumentType.ctd)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
     event = events[event_number-1]
 
     return event
 
 
-def get_elog_event_bio(trip: core_models.Trip, event_number: int) -> core_models.Event:
+def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_models.Event:
     try:
-        event = trip.events.get(event_id=event_number)
+        event = mission.events.get(event_id=event_number, instrument__type=core_models.InstrumentType.ctd)
     except core_models.Event.DoesNotExist as ex:
         raise core_models.Event.DoesNotExist(event_number) from ex
     return event
@@ -454,23 +453,7 @@ def read_btl(mission: core_models.Mission, btl_file: str):
 
     event_number = get_event_number_bio(data_frame=data_frame)
     try:
-        # Because missions can have multiple trips that have events with
-        date = data_frame._metadata['time']
-        trip = mission.trips.filter(start_date__lte=date, end_date__gte=date).last()
-        if not trip:
-            events = core_models.Event.objects.using(database).filter(trip__mission=mission)
-            if events.filter(event_id=event_number).count() == 1:
-                trip = events.get(event_id=event_number).trip
-
-        if trip:
-            event = get_elog_event_bio(trip=trip, event_number=event_number)
-        else:
-            message = _("multiple or not events with a matching event ID were found, check that the trip start and end "
-                        "dates were set correctly.") + f" : {event_number}"
-            err = core_models.FileError(mission=mission, message=message, line=-1, file_name=btl_file,
-                                        type=core_models.ErrorType.bottle)
-            err.save(using=database)
-            return
+        event = get_elog_event_bio(mission=mission, event_number=event_number)
 
     except core_models.Event.DoesNotExist as ex:
         message = _("Could not find matching event for event number") + f" : {event_number}"

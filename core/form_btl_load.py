@@ -170,7 +170,7 @@ class BottleLoadForm(CollapsableCardForm):
             if 'hide_loaded' in self.initial:
                 loaded_files = [f.upper() for f in models.Sample.objects.using(self.database).filter(
                     type__is_sensor=True,
-                    bottle__event__trip__mission=self.mission).values_list('file', flat=True).distinct()]
+                    bottle__event__mission=self.mission).values_list('file', flat=True).distinct()]
                 files = [f for f in files if f.upper() not in loaded_files]
 
             files.sort(key=lambda fn: os.path.getmtime(os.path.join(mission.bottle_directory, fn)))

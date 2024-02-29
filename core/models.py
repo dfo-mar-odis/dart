@@ -57,31 +57,6 @@ class Mission(models.Model):
     lead_scientist = models.CharField(verbose_name=_("Lead Scientist"), max_length=50, default="N/A",
                                       help_text=_("Chief scientist / principal investigator; LASTNAME,FIRSTNAME"))
 
-    @property
-    def start_date(self):
-        start = self.trips.order_by('start_date').first()
-        return start.start_date if start else None
-
-    @property
-    def end_date(self):
-        end = self.trips.order_by('start_date').last()
-        return end.end_date if end else None
-
-    @property
-    def get_biochem_table_name(self):
-        if not self.biochem_table:
-            self.biochem_table = f'bio_upload_{self.name}'
-            self.save()
-
-        return self.biochem_table
-
-    def __str__(self):
-        return f'{self.name}'
-
-
-class Trip(models.Model):
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, verbose_name=_("Mission"), related_name='trips')
-
     start_date = models.DateField(verbose_name=_("Cruise Start Date"), default=timezone.now)
     end_date = models.DateField(verbose_name=_("Cruise End Date"), default=timezone.now)
 
@@ -105,8 +80,16 @@ class Trip(models.Model):
                                                          "history (processing steps, edits, special warnings)"),
                                              blank=True, null=True)
 
+    @property
+    def get_biochem_table_name(self):
+        if not self.biochem_table:
+            self.biochem_table = f'bio_upload_{self.name}'
+            self.save()
+
+        return self.biochem_table
+
     def __str__(self):
-        return f"{self.start_date} - {self.end_date}"
+        return f'{self.name}'
 
 
 class InstrumentType(models.IntegerChoices):
@@ -152,7 +135,7 @@ class Station(models.Model):
 
 
 class Event(models.Model):
-    trip = models.ForeignKey(Trip, on_delete=models.CASCADE, related_name='events', verbose_name=_("Trip"))
+    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='events', verbose_name=_("Mission"))
 
     event_id = models.IntegerField(verbose_name=_("Event ID"))
     station = models.ForeignKey(Station, on_delete=models.DO_NOTHING, verbose_name=_("Station"), related_name="events")
@@ -252,11 +235,11 @@ class Event(models.Model):
         return " ".join(comments)
 
     class Meta:
-        unique_together = ("event_id", "trip")
+        unique_together = ("event_id", "instrument")
         ordering = ("event_id",)
 
     def __str__(self):
-        return f"{self.event_id} - {self.station.name}"
+        return f"{self.event_id} - {self.station.name} - {self.instrument.name}"
 
 
 class ActionType(models.IntegerChoices):
@@ -562,7 +545,7 @@ class PlanktonSample(models.Model):
     @property
     def plank_sample_key_value(self):
         event = self.bottle.event
-        mission = event.trip.mission
+        mission = event.mission
         return f'{mission.mission_descriptor}_{event.event_id:03d}_{self.bottle.bottle_id}_{self.gear_type.gear_seq}'
 
     @property

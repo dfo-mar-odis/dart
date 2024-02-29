@@ -319,7 +319,7 @@ def list_plankton(request, database, mission_id):
     page_limit = 50
     page_start = page_limit * page
 
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__trip__mission=mission).order_by(
+    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission).order_by(
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():

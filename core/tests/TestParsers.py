@@ -37,11 +37,10 @@ class TestPhytoplanktonParser(DartTestCase):
         # this also means that the mission, event, station and bottle id must exist
         # phytoplankton are taken from CTD events
         self.mission = core_factory.MissionFactory(name="HUD2021185")
-        self.trip = core_factory.TripFactory(mission=self.mission)
         self.station = core_factory.StationFactory(name="HL_02")
-        self.event_mission_start = core_factory.CTDEventFactory(trip=self.trip, station=self.station,
+        self.event_mission_start = core_factory.CTDEventFactory(mission=self.mission, station=self.station,
                                                                 sample_id=488275, end_sample_id=488285, event_id=7)
-        self.event_mission_end = core_factory.CTDEventFactory(trip=self.trip, station=self.station,
+        self.event_mission_end = core_factory.CTDEventFactory(mission=self.mission, station=self.station,
                                                               sample_id=488685, end_sample_id=488695, event_id=92)
         self.bottle_mission_start = core_factory.BottleFactory(event=self.event_mission_start, bottle_id=488275)
         self.bottle_mission_end = core_factory.BottleFactory(event=self.event_mission_end, bottle_id=488685)
@@ -82,12 +81,11 @@ class TestZooplanktonParser(DartTestCase):
         # zooplankton needs the mission, event, station and bottle id must exist
         # zooplankton are taken from ringnet events
         self.mission = core_factory.MissionFactory(name="HUD2021185")
-        self.trip = core_factory.TripFactory(mission=self.mission)
         self.station = core_factory.StationFactory(name="HL_02")
 
-        self.event_mission_start = core_factory.NetEventFactory(trip=self.trip, station=self.station,
+        self.event_mission_start = core_factory.NetEventFactory(mission=self.mission, station=self.station,
                                                                 sample_id=488275, event_id=2)
-        self.event_mission_end = core_factory.NetEventFactory(trip=self.trip, station=self.station,
+        self.event_mission_end = core_factory.NetEventFactory(mission=self.mission, station=self.station,
                                                                 sample_id=488685, event_id=88)
 
     def test_create_zooplankton(self):
@@ -331,10 +329,11 @@ class TestCTDParser(DartTestCase):
 
     def test_read_btl(self):
         # this tests the overall result
-        trip = core_factory.TripFactory(start_date=datetime.strptime('2022-10-01', '%Y-%m-%d'),
-                                        end_date=datetime.strptime('2022-10-24', '%Y-%m-%d'))
-        event = core_factory.CTDEventFactory(trip=trip, event_id=1, sample_id=495271, end_sample_id=495289)
-        ctd_parser.read_btl(mission=event.trip.mission,
+        mission = core_factory.MissionFactory(
+            start_date=datetime.strptime('2022-10-01', '%Y-%m-%d'),
+            end_date=datetime.strptime('2022-10-24', '%Y-%m-%d'))
+        event = core_factory.CTDEventFactory(mission=mission, event_id=1, sample_id=495271, end_sample_id=495289)
+        ctd_parser.read_btl(mission=event.mission,
                             btl_file=os.path.join(self.test_file_location, self.test_file_001))
 
         sample_types = settings_models.GlobalSampleType.objects.all()
@@ -354,8 +353,7 @@ class TestSampleCSVParser(DartTestCase):
         # this is a setup for the James Cook 2022 mission JC24301,
         # all bottles are attached to one ctd event for simplicity
         self.mission = core_factory.MissionFactory(name='JC24301')
-        self.trip = core_factory.TripFactory(mission=self.mission)
-        self.ctd_event = core_factory.CTDEventFactory(trip=self.trip)
+        self.ctd_event = core_factory.CTDEventFactory(mission=self.mission)
 
         self.file_name = "sample_oxy.csv"
         self.upload_file = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/', self.file_name)
@@ -379,7 +377,7 @@ class TestSampleCSVParser(DartTestCase):
 
     def test_no_duplicate_samples(self):
         # if a sample already exists the parser should update the discrete value, but not create a new sample
-        bottle = core_factory.BottleFactory(event__trip__mission=self.mission, bottle_id=495271)
+        bottle = core_factory.BottleFactory(event__mission=self.mission, bottle_id=495271)
         self.assertIsNotNone(core_models.Bottle.objects.get(pk=bottle.pk))
 
         sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
