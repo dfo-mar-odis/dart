@@ -173,7 +173,8 @@ def parse(file_name: str, stream: io.StringIO) -> dict:
         file_mid_buffer[file_name].append(mid_obj)
 
         stations.add(buffer[elog_configuration.get(required_field='station').mapped_field])
-        instruments.add(buffer[elog_configuration.get(required_field='instrument').mapped_field])
+        instruments.add((buffer[elog_configuration.get(required_field='instrument').mapped_field],
+                         buffer[elog_configuration.get(required_field='attached').mapped_field]))
 
     message_objects = {
         # the file buffer says what objects belong to what file
@@ -339,7 +340,33 @@ def valid_sample_id(sample_id):
     return True
 
 
-def process_instruments(mission: core_models.Mission, instrument_queue: [str]) -> None:
+# currently nets are *supposed* to have an attachment as either 76um or 202um, but they may have other attachments
+# like a flowmeter. This function is where a developer can adjust how to get a net's mesh size in the future.
+# I'm passing both the instrument name, used to determine the type and the attachments so if in the future they
+# start including the mesh as part of the instrument name that can be used here.
+def get_net_mesh_size(instrument, attachments):
+    # find a number that *is not* preceded by a string character
+    mesh_search = re.search(r'(?<!\w)(\d+)', attachments)
+    if mesh_search:
+        return mesh_search.group()
+
+    return ''
+
+
+def get_instrument(name, attachments):
+    instrument_name = name.upper()
+    instrument_type = get_instrument_type(instrument_name=name)
+    if instrument_type == core_models.InstrumentType.net:
+        instrument_name = get_net_mesh_size(name, attachments)
+
+    instrument = core_models.Instrument(name=instrument_name, type=instrument_type)
+
+    return instrument
+
+
+# The instrument_queue is expected to be a list of tuples where element 1 is the instrument (CTD, RingNet, Buoy, etc.)
+# and element 2 is the event/actions attachments. If this is a net, then element 2 should be 202um or 76um
+def process_instruments(mission: core_models.Mission, instrument_queue: [(str, str)]) -> None:
     # create any instruments on the instruments queue that don't exist in the DB
     instruments = []
     database = mission._state.db
@@ -350,11 +377,13 @@ def process_instruments(mission: core_models.Mission, instrument_queue: [str]) -
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
-        if instrument.upper() not in added_instruments and \
-                not existing_instruments.filter(name__iexact=instrument).exists():
-            instrument_type = get_instrument_type(instrument_name=instrument)
-            instruments.append(core_models.Instrument(name=instrument, type=instrument_type))
-            added_instruments.add(instrument.upper())
+        instrument_tmp = get_instrument(instrument[0], instrument[1])
+
+        key = f'{instrument_tmp.name}_{instrument_tmp.type}'
+        if key not in added_instruments and not existing_instruments.filter(name__iexact=instrument_tmp.name,
+                                                                            type=instrument_tmp.type).exists():
+                instruments.append(instrument_tmp)
+                added_instruments.add(key)
 
     core_models.Instrument.objects.using(database).bulk_create(instruments)
 
@@ -380,7 +409,7 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
     update_fields = set()
 
     required_fields = ['event', 'station', 'instrument', 'start_sample_id', 'end_sample_id', 'wire_out', 'flow_start',
-                       'flow_end']
+                       'flow_end', 'attached']
     mapped_fields = {field.required_field: field.mapped_field for field in
                      elog_configuration.filter(required_field__in=required_fields)}
 
@@ -400,7 +429,12 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
             event_id = int(buffer[mapped_fields['event']])
 
             station = stations.get(name__iexact=buffer.pop(mapped_fields['station']))
-            instrument = instruments.get(name__iexact=buffer.pop(mapped_fields['instrument']))
+
+            instrument_name = buffer.pop(mapped_fields['instrument'])
+            attachment = buffer[mapped_fields['attached']]
+            instrument_tmp = get_instrument(instrument_name, attachment)
+            instrument = instruments.get(type=instrument_tmp.type, name__iexact=instrument_tmp.name)
+
             sample_id: str = buffer.pop(mapped_fields['start_sample_id'])
             end_sample_id: str = buffer.pop(mapped_fields['end_sample_id'])
 

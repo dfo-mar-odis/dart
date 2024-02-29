@@ -218,6 +218,7 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields['station'].required = False
+        self.fields['mission'].queryset = models.Mission.objects.using(self.database).all()
         self.helper = FormHelper(self)
 
         # Have to disable the form tag in crispy forms because by default cirspy will add a method to the form tag #
@@ -275,7 +276,7 @@ class EventForm(forms.ModelForm):
                                                                         args=(self.database,))
 
         self.helper.layout = Layout(
-            Hidden('mission_id', self.initial.get('mission', '0') or '0'),
+            Hidden('mission', self.initial.get('mission', '1')),
             Row(
                 Column(Field('global_station', css_class='form-control form-select-sm', id=self.get_station_input_id()),
                        css_class='col-sm-12 col-md-6'),

@@ -168,10 +168,13 @@ class TestElogParser(DartTestCase):
 
     def test_process_instruments(self):
         instruments = [
-            ('ctd', core_models.InstrumentType.ctd),
-            ('RingNet', core_models.InstrumentType.net),
-            ('Viking Buoy', core_models.InstrumentType.buoy),
-            ('ctd', core_models.InstrumentType.ctd),
+            (('ctd', ''), core_models.InstrumentType.ctd),
+            (('RingNet', '202um'), core_models.InstrumentType.net),
+            (('RingNet', '76um'), core_models.InstrumentType.net),
+            (('Viking Buoy', ''), core_models.InstrumentType.buoy),
+            (('ctd', ''), core_models.InstrumentType.ctd),
+            (('RingNet', '76um'), core_models.InstrumentType.net),
+            (('RingNet', '202um'), core_models.InstrumentType.net),
         ]
 
         # make sure the stations don't currently exist
@@ -180,11 +183,16 @@ class TestElogParser(DartTestCase):
 
         elog.process_instruments(self.mission, [instrument[0] for instrument in instruments])
 
-        for instrument in instruments:
-            self.assertTrue(core_models.Instrument.objects.filter(name__iexact=instrument[0]).exists())
+        # ctd should have only been added once
+        self.assertEquals(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.ctd)), 1)
 
-        # HL_02 should have only been added once
-        self.assertEquals(len(core_models.Instrument.objects.filter(name__iexact='ctd')), 1)
+        # there should be 2 nets
+        self.assertEquals(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.net)), 2)
+        # one named 202um
+        self.assertEquals(len(core_models.Instrument.objects.filter(name__iexact='202')), 1)
+
+        # one named 76um
+        self.assertEquals(len(core_models.Instrument.objects.filter(name__iexact='76')), 1)
 
     def test_process_events(self):
         expected_event_id = 1
@@ -202,7 +210,8 @@ class TestElogParser(DartTestCase):
                 "End_Sample_ID": str(expected_end_sample_id),
                 "Wire out": "",
                 "Flowmeter Start": "",
-                "Flowmeter End": ""
+                "Flowmeter End": "",
+                "Attached": ""
             }
         }
         core_factory.StationFactory(name=expected_station)
@@ -235,7 +244,8 @@ class TestElogParser(DartTestCase):
                 "End_Sample_ID": '',
                 "Wire out": "",
                 "Flowmeter Start": "",
-                "Flowmeter End": ""
+                "Flowmeter End": "",
+                "Attached": ""
             }
         }
 
@@ -268,7 +278,8 @@ class TestElogParser(DartTestCase):
                 "End_Sample_ID": str(expected_end_sample_id),
                 "Wire out": "",
                 "Flowmeter Start": "",
-                "Flowmeter End": ""
+                "Flowmeter End": "",
+                "Attached": ""
             }
         }
 
@@ -355,3 +366,23 @@ class TestElogParser(DartTestCase):
         event = core_models.Event.objects.using('default').get(event_id=expected_event_id)
         self.assertEquals(len(event.attachments.all()), 2)
         self.assertEquals(len(event.actions.all()), 3)
+
+    @tag('parsers_elog_test_get_instrument')
+    def test_get_instrument(self):
+        # provided an instrument like 'RingNet' or 'CTD' and an attachment list like 'ph | SBE34' or
+        # 'flowmeter | 202um', the get_instrument function should return a mock instrument object
+        instrument = elog.get_instrument('ctd', 'ph | SBE34')
+        self.assertEquals(instrument.name, 'CTD')
+        self.assertEquals(instrument.type, core_models.InstrumentType.ctd)
+
+        instrument = elog.get_instrument('RingNet', '202')
+        self.assertEquals(instrument.name, '202')
+        self.assertEquals(instrument.type, core_models.InstrumentType.net)
+
+        instrument = elog.get_instrument('net', 'flowmeter | 202')
+        self.assertEquals(instrument.name, '202')
+        self.assertEquals(instrument.type, core_models.InstrumentType.net)
+
+        instrument = elog.get_instrument('net', '76um | flowmeter')
+        self.assertEquals(instrument.name, '76')
+        self.assertEquals(instrument.type, core_models.InstrumentType.net)
