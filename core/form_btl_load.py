@@ -361,20 +361,6 @@ def upload_btl_files(request, database, mission_id, **kwargs):
             ctd.logger_notifications.info("Processing file %d/%d", item, counts)
             load_ctd_file(mission, file)
 
-        # logger.info(sample_file_queue.empty())
-        # for file in files:
-        #     sample_file_queue.put((mission, file,))
-        #
-        # start = True
-        # for thread in threading.enumerate():
-        #     if thread.name == thread_name:
-        #         start = False
-        #
-        # t = None
-        # if start:
-        #     (t := Thread(target=load_ctd_files, name=thread_name, daemon=True, args=(mission,))).start()
-        #     t.join()
-
         soup = get_bottle_load_card(request, database, mission_id, collapsed=False, **kwargs)
 
         reload_url = reverse_lazy('core:form_btl_reload_files', args=(database, mission_id)) + "?hide_loaded=true"

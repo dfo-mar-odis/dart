@@ -35,7 +35,7 @@ def delete_model(database_name: str, model):
 # a connection or some other database issue.
 def check_and_create_model(database_name: str, upload_model) -> bool:
     try:
-        upload_model.objects.exists()
+        upload_model.objects.using('biochem').exists()
         return True
     except DatabaseError as e:
         # A 942 Oracle error means a table doesn't exist, in this case create the model. Otherwise pass the error along
@@ -105,9 +105,9 @@ def db_write_by_chunk(model, chunk_size, data, fields=None):
         user_logger.info(_("Writing chunk to database") + " : %d/%d", (int(i / chunk_size) + 1), chunks)
         batch = data[i:i + chunk_size]
         if fields:
-            model.objects.bulk_update(batch, fields)
+            model.objects.using('biochem').bulk_update(batch, fields)
         else:
-            model.objects.bulk_create(batch)
+            model.objects.using('biochem').bulk_create(batch)
 
 
 def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.BcsD], bcs_rows_to_update: [models.BcsD],
@@ -134,7 +134,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
     existing_samples = {}
     if bcs_d_model:
         existing_samples = {int(sample.dis_headr_collector_sample_id): sample for sample in
-                            bcs_d_model.objects.all()}
+                            bcs_d_model.objects.using('biochem').all()}
 
     updated_fields = set()
     total_bottles = len(bottles)
@@ -148,8 +148,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         updated_fields.add('')
 
         event = bottle.event
-        trip = event.trip
-        mission = trip.mission
+        mission = event.mission
         primary_data_center = mission.data_center
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:02d}_{bottle.bottle_id}'
@@ -173,13 +172,12 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         updated_fields.add(updated_value(bcs_row, 'mission_leader', mission.lead_scientist))
         updated_fields.add(updated_value(bcs_row, 'mission_sdate', m_start_date))
         updated_fields.add(updated_value(bcs_row, 'mission_edate', m_end_date))
-        updated_fields.add(updated_value(bcs_row, 'mission_platform', trip.platform))
-        updated_fields.add(updated_value(bcs_row, 'mission_protocol', trip.protocol))
-        updated_fields.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region.name
-        if mission.geographic_region else ""))
-        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment1', trip.collector_comments))
-        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment2', trip.more_comments))
-        updated_fields.add(updated_value(bcs_row, 'mission_data_manager_comment', trip.data_manager_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_platform', mission.platform))
+        updated_fields.add(updated_value(bcs_row, 'mission_protocol', mission.protocol))
+        updated_fields.add(updated_value(bcs_row, 'mission_geographic_region', mission.geographic_region))
+        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment1', mission.collector_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_collector_comment2', mission.more_comments))
+        updated_fields.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
         updated_fields.add(updated_value(bcs_row, 'mission_institute',
                                          primary_data_center.name if primary_data_center else "Not Specified"))
 
@@ -206,7 +204,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
             updated_fields.add(updated_value(bcs_row, 'dis_headr_sounding', bottom_action.sounding))
             updated_fields.add(updated_value(bcs_row, 'dis_headr_collector', bottom_action.data_collector))
 
-        updated_fields.add(updated_value(bcs_row, 'dis_headr_responsible_group', trip.protocol))
+        updated_fields.add(updated_value(bcs_row, 'dis_headr_responsible_group', mission.protocol))
 
         updated_fields.add(updated_value(bcs_row, 'dis_headr_sdate', datetime.strftime(bottle.closed, "%Y-%m-%d")))
         updated_fields.add(updated_value(bcs_row, 'dis_headr_edate', datetime.strftime(bottle.closed, "%Y-%m-%d")))
@@ -247,10 +245,9 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
                  bcd_rows_to_create: [models.BcdD], bcd_rows_to_update: [models.BcdD], updated_fields: [str]):
     chunk_size = 100
 
+    # writing thousands of rows at one time is... apparently bad. Break the data up into manageable chunks.
     if len(bcd_rows_to_create) > 0:
         user_logger.info(f"Createing BCD rows: {len(bcd_rows_to_create)}")
-
-        # writing thousands of rows at one time is... apparently bad. Break the data up into manageable chunks.
         db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_create)
 
     if len(bcd_rows_to_update) > 0:
@@ -274,7 +271,7 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
 # the row has been created. So the row will have to be written, the bcd.dis_data_num retrieved and attached
 # to the core.models.DiscreteSampleValue and then updated to fix the dis_detail_collector_samp_id key to be
 # just the bottle_id
-def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue],
+def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue],
                    bcd_d_model: Type[models.BcdD] = None, batch_name: str = None
                    ) -> [[models.BcdD], [models.BcdD], [str]]:
     bcd_objects_to_create = []
@@ -283,7 +280,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
 
     existing_samples = {}
     if bcd_d_model:
-        existing_samples = {sample.dis_data_num: sample for sample in bcd_d_model.objects.all()}
+        existing_samples = {sample.dis_data_num: sample for sample in bcd_d_model.objects.using('biochem').all()}
 
     # if the dis_data_num key changes then this will be used to update the discrete sample dis_data_num
     dis_data_num_updates = []
@@ -299,8 +296,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
-        trip = event.trip
-        mission = trip.mission
+        mission = event.mission
 
         # Use the row level datatype if provided other wise use the mission level datatype
         bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
@@ -400,10 +396,10 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
 
     if len(dis_data_num_updates) > 0:
         user_logger.info("Syncing local keys")
-        core_models.DiscreteSampleValue.objects.bulk_update(dis_data_num_updates, ['dis_data_num'])
+        core_models.DiscreteSampleValue.objects.using(database).bulk_update(dis_data_num_updates, ['dis_data_num'])
 
     if len(errors) > 0:
-        core_models.Error.objects.bulk_create(errors)
+        core_models.Error.objects.using(database).bulk_create(errors)
 
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
 
@@ -424,7 +420,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
     existing_samples = {}
     if bcs_p_model:
         existing_samples = {sample.plank_sample_key_value: sample for sample in
-                            bcs_p_model.objects.all()}
+                            bcs_p_model.objects.using('biochem').all()}
 
     total_bottles = len(bottles)
     for count, bottle in enumerate(bottles):
@@ -617,7 +613,8 @@ def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to
         db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
-def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample], bcd_p_model: Type[models.BcdP] = None,
+def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.PlanktonSample],
+                   bcd_p_model: Type[models.BcdP] = None,
                    batch_name: str = None) -> [[models.BcdP], [models.BcdP], [str]]:
 
     create_bcd_rows: [models.BcdP] = []
@@ -628,7 +625,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     existing_samples = {}
     if bcd_p_model:
-        existing_samples = {sample.plank_data_num: sample for sample in bcd_p_model.objects.all()}
+        existing_samples = {sample.plank_data_num: sample for sample in bcd_p_model.objects.using('biochem').all()}
 
     # if the dis_data_num key changes then this will be used to update the discrete sample dis_data_num
     plank_data_num_updates = []
@@ -757,10 +754,10 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     if len(plank_data_num_updates) > 0:
         user_logger.info("Syncing local keys")
-        core_models.PlanktonSample.objects.bulk_update(plank_data_num_updates, ['plank_data_num'])
+        core_models.PlanktonSample.objects.using(database).bulk_update(plank_data_num_updates, ['plank_data_num'])
 
     if len(errors) > 0:
-        core_models.Error.objects.bulk_create(errors)
+        core_models.Error.objects.using(database).bulk_create(errors)
 
     return create_bcd_rows, update_bcd_rows, updated_fields
 

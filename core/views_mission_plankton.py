@@ -219,7 +219,8 @@ def download_plankton(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = biochem.upload.get_bcd_p_rows(uploader=uploader, samples=plankton_samples)
+    create, update, fields = biochem.upload.get_bcd_p_rows(database=database, uploader=uploader,
+                                                           samples=plankton_samples)
 
     headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
 
