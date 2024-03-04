@@ -108,6 +108,12 @@ class TestFormBioChemDatabase(DartTestCase):
         invalid = soup.find(attrs={'class': "is-invalid"})
         self.assertEqual('account_name', invalid.attrs['name'])
 
+        # when a database is added, removed or updated or anytime the BiochemUploadForm is completely swapped out
+        # the response should contain a 'Hx-Trigger'="biochem_db_update" to let pages using the form know they can
+        # modify the form if addtional buttons are required.
+        self.assertIn('Hx-Trigger', response.headers)
+        self.assertEquals(response['Hx-Trigger'], 'biochem_db_update')
+
     @tag('form_biochem_database_test_add_database_post')
     def test_add_database_post(self):
         # provided variables and calling the add_database_url as a post request should add the database details to
@@ -125,8 +131,12 @@ class TestFormBioChemDatabase(DartTestCase):
         response = self.client.post(url, details)
         # the response should have a database_selection_changed Hx-Trigger in the headers to notify the
         # form that it needs to populate with the selected database variables
+        #
+        # when a database is added, removed or updated or anytime the BiochemUploadForm is completely swapped out
+        # the response should contain a 'Hx-Trigger'="biochem_db_update" to let pages using the form know they can
+        # modify the form if addtional buttons are required.
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response.headers['Hx-Trigger'], 'database_selection_changed')
+        self.assertEquals('database_selection_changed, biochem_db_update', response.headers['Hx-Trigger'])
 
         new_db = settingsdb.models.BcDatabaseConnection.objects.last()
 
@@ -158,6 +168,12 @@ class TestFormBioChemDatabase(DartTestCase):
         # a blank Biochem DB form should be returned
         form = soup.find(id="div_id_card_biochem_db_details")
         self.assertIsNotNone(form)
+
+        # when a database is added, removed or updated or anytime the BiochemUploadForm is completely swapped out
+        # the response should contain a 'Hx-Trigger'="biochem_db_update" to let pages using the form know they can
+        # modify the form if addtional buttons are required.
+        self.assertIn('Hx-Trigger', response.headers)
+        self.assertEquals(response['Hx-Trigger'], 'biochem_db_update')
 
     @tag('form_biochem_database_test_db_selection_changed_get')
     def test_db_selection_changed_get(self):

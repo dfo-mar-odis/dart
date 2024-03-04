@@ -18,6 +18,9 @@ logger = logging.getLogger("dart.test")
 
 class MockObjects:
 
+    def using(self, database):
+        return self
+
     def all(self):
         return []
 
