@@ -84,7 +84,7 @@ class CTDEventFactory(CTDEventFactoryBlank):
 
 class NetEventFactory(EventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
-    instrument = factory.SubFactory(InstrumentFactory, name="RingNet", type=models.InstrumentType.net)
+    instrument = factory.SubFactory(InstrumentFactory, name="202", type=models.InstrumentType.net)
 
     @post_generation
     def add_actions(self, create, extracted, **kwargs):

@@ -266,7 +266,9 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             bottle = create_bottles[bottle_id]
         else:
             try:
-                event = events.get(event_id=row[row_mapping['EVENT']])
+                event = events.get(event_id=row[row_mapping['EVENT']],
+                                   instrument__type=core_models.InstrumentType.net,
+                                   instrument__name__iexact=mesh_size)
             except core.models.Event.DoesNotExist as e:
                 message = _("Event matching ID doesn't exist.")
                 message += " " + _("Bottle ID") + f" : {bottle_id}"

@@ -13,7 +13,7 @@
         <tr id="event-{{ event.pk }}" class="{% if event.validation_errors.exists %}eventErr{% endif %} {% if selected %}selectedBg{% endif %}" hx-trigger="click" hx-swap="outerHTML" hx-select="#event-{{ event.pk }}" hx-target="#event-{{ event.pk }}" hx-get="{% url "core:form_event_selected_event" database event.pk %}">
             <td>{{ event.event_id }}</td>
             <td>{{ event.station.name }}</td>
-            <td>{{ event.instrument.name }}</td>
+            <td>{{ event.instrument }}</td>
         </tr>
         {% endblock %}
     {% endfor %}
