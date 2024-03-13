@@ -213,7 +213,7 @@ def list_missions(request):
     missions = filter_missions(after_date, before_date)
 
     def sort_key(m):
-        start_date = m['mission'].start_date
+        start_date = getattr(m['mission'], 'start_date', None)  # m['mission'].start_date if
         return start_date if start_date else datetime.datetime.strptime('1900-01-01', '%Y-%m-%d').date()
 
     missions = sorted(missions, key=sort_key, reverse=True)
@@ -330,18 +330,18 @@ def migrate_database(request, database):
 
         return HttpResponse(soup)
 
-    missions = {}
+    missions = []
     utils.connect_database(database)
     utils.migrate(database)
 
     if models.Mission.objects.using(database).exists():
         mission = models.Mission.objects.using(database).first()
-        missions[database] = mission
+        missions.append({'mission': mission, 'database': database})
 
     context = {
         'missions': missions
     }
-    html = render_block_to_string('settingsdb/mission_filter.html', "mission_table_block", context)
+    html = render_block_to_string('settingsdb/partials/mission_table.html', "mission_table_block", context)
     soup = BeautifulSoup(html, 'html.parser')
 
     return HttpResponse(soup)

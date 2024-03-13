@@ -26,8 +26,8 @@
 {% endblock %}
 
 {% block content %}
-<div>
-    <form id="form_id_mission_directory" class="form-control" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <form id="form_id_mission_directory" class="form-control">
     {% if dir_select_form %}
         {% crispy dir_select_form %}
     {% endif %}
