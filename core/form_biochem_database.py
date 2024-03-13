@@ -259,6 +259,103 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
                 self.fields['db_password'].initial = password
 
 
+def get_progress_alert(url):
+    soup = BeautifulSoup('', 'html.parser')
+
+    bio_message_component_id = 'div_id_upload_biochem'
+    msg_attrs = {
+        'component_id': bio_message_component_id,
+        'alert_type': 'info',
+        'message': _("Saving to file"),
+        'hx-post': url,
+        'hx-swap': 'none',
+        'hx-trigger': 'load',
+        'hx-target': "#div_id_biochem_alert_biochem_db_details",
+        'hx-ext': "ws",
+        'ws-connect': f"/ws/biochem/notifications/{bio_message_component_id}/"
+    }
+
+    bio_alert_soup = core_forms.save_load_component(**msg_attrs)
+
+    # add a message area for websockets
+    msg_div = bio_alert_soup.find(id="div_id_upload_biochem_message")
+    msg_div.string = ""
+
+    msg_div_status = soup.new_tag('div')
+    msg_div_status['id'] = 'status'
+    msg_div_status.string = _("Loading")
+    msg_div.append(msg_div_status)
+
+    return bio_alert_soup
+
+
+def confirm_uploader(request):
+
+    if request.method == "GET":
+        alert_soup = get_progress_alert(request.path)
+        return alert_soup
+
+    soup = BeautifulSoup('', 'html.parser')
+    has_uploader = 'uploader' in request.POST and request.POST['uploader']
+    if 'uploader2' not in request.POST and not has_uploader:
+        message_component_id = 'div_id_upload_biochem'
+        attrs = {
+            'component_id': message_component_id,
+            'alert_type': 'warning',
+            'message': _("Require Uploader")
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
+
+        input_div = soup.new_tag('div')
+        input_div['class'] = 'form-control input-group'
+
+        uploader_input = soup.new_tag('input')
+        uploader_input.attrs['id'] = 'input_id_uploader'
+        uploader_input.attrs['type'] = "text"
+        uploader_input.attrs['name'] = "uploader2"
+        uploader_input.attrs['class'] = 'textinput form-control'
+        uploader_input.attrs['maxlength'] = '20'
+        uploader_input.attrs['placeholder'] = _("Uploader")
+
+        icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
+
+        submit = soup.new_tag('button')
+        submit.attrs['class'] = 'btn btn-primary'
+        submit.attrs['hx-post'] = request.path
+        submit.attrs['id'] = 'input_id_uploader_btn_submit'
+        submit.attrs['name'] = 'submit'
+        submit.append(icon)
+
+        icon = BeautifulSoup(load_svg('x-square'), 'html.parser').svg
+        cancel = soup.new_tag('button')
+        cancel.attrs['class'] = 'btn btn-danger'
+        cancel.attrs['hx-post'] = request.path
+        cancel.attrs['id'] = 'input_id_uploader_btn_cancel'
+        cancel.attrs['name'] = 'cancel'
+        cancel.append(icon)
+
+        input_div.append(uploader_input)
+        input_div.append(submit)
+        input_div.append(cancel)
+
+        msg = alert_soup.find(id='div_id_upload_biochem_message')
+        msg.string = msg.string + " "
+        msg.append(input_div)
+        return alert_soup
+    elif request.htmx.trigger == 'input_id_uploader_btn_submit':
+        alert_soup = get_progress_alert(request.path)
+        # div_id_upload_biochem_message is the ID given to the component in the get_progress_alert() function
+        message = alert_soup.find(id="div_id_upload_biochem")
+        hidden = soup.new_tag("input")
+        hidden.attrs['type'] = 'hidden'
+        hidden.attrs['name'] = 'uploader2'
+        hidden.attrs['value'] = request.POST['uploader2']
+        message.append(hidden)
+        return alert_soup
+    elif request.htmx.trigger == 'input_id_uploader_btn_cancel':
+        return soup
+
+
 # this button is placed in the title of the Database card to indicate if the user is connected, or if there's
 # an issue connecting to the database. This function is used in multiple methods when actions are preformed to change
 # the status of the button.

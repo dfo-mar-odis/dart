@@ -278,8 +278,8 @@ class Action(models.Model):
     event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="actions", on_delete=models.CASCADE)
 
     date_time = models.DateTimeField(verbose_name=_("Date/Time"))
-    latitude = models.FloatField(verbose_name=_("Latitude"))
-    longitude = models.FloatField(verbose_name=_("Longitude"))
+    latitude = models.DecimalField(verbose_name=_("Latitude"), blank=True, null=True, decimal_places=6, max_digits=8)
+    longitude = models.DecimalField(verbose_name=_("Longitude"), blank=True, null=True, decimal_places=6, max_digits=9)
 
     # The file this action was loaded from. Events can span different files, but they can also be entered
     # manually (comming soon) so this allows us to track an action back to the file it comes from, if it comes
