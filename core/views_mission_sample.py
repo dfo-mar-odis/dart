@@ -233,7 +233,8 @@ def load_samples(request, database):
                 # once loaded apply the default sample type as a mission sample type so that if the default type is ever
                 # changed it won't affect the data type for this mission
                 sample_type = sample_config.sample_type
-                if sample_type.datatype and not mission.mission_sample_types.filter(name=sample_type.short_name).exists():
+                if sample_type.datatype and not mission.mission_sample_types.filter(
+                        name=sample_type.short_name).exists():
                     mst = models.MissionSampleType(mission=mission,
                                                    name=sample_type.short_name,
                                                    long_name=sample_type.long_name,
@@ -241,9 +242,6 @@ def load_samples(request, database):
                                                    is_sensor=sample_type.is_sensor,
                                                    datatype=sample_type.datatype)
                     mst.save(using=database)
-
-                if (mission.file_errors.filter(file_name=file_name)).exists():
-                    button_class = "btn btn-warning btn-sm"
 
             except Exception as ex:
                 logger.error(f"Failed to load file {file_name}")
@@ -488,114 +486,10 @@ def biochem_upload_card(request, database, mission_id):
     return HttpResponse(soup)
 
 
-def get_progress_alert(request, database, mission_id):
-    soup = BeautifulSoup('', 'html.parser')
-    msg_url = request.path
-
-    bio_message_component_id = 'div_id_upload_biochem'
-    msg_attrs = {
-        'component_id': bio_message_component_id,
-        'alert_type': 'info',
-        'message': _("Saving to file"),
-        'hx-post': msg_url,
-        'hx-swap': 'none',
-        'hx-trigger': 'load',
-        'hx-target': "#div_id_biochem_alert_biochem_db_details",
-        'hx-ext': "ws",
-        'ws-connect': f"/ws/biochem/notifications/{bio_message_component_id}/"
-    }
-
-    bio_alert_soup = forms.save_load_component(**msg_attrs)
-
-    # add a message area for websockets
-    msg_div = bio_alert_soup.find(id="div_id_upload_biochem_message")
-    msg_div.string = ""
-
-    msg_div_status = soup.new_tag('div')
-    msg_div_status['id'] = 'status'
-    msg_div_status.string = _("Loading")
-    msg_div.append(msg_div_status)
-
-    return bio_alert_soup
-
-
-def confirm_uploader(request, database, mission_id):
-
-    if request.method == "GET":
-        alert_soup = get_progress_alert(request, database, mission_id)
-        return alert_soup
-
-    soup = BeautifulSoup('', 'html.parser')
-    has_uploader = 'uploader' in request.POST and request.POST['uploader']
-    if 'uploader2' not in request.POST and not has_uploader:
-        message_component_id = 'div_id_upload_biochem'
-        attrs = {
-            'component_id': message_component_id,
-            'alert_type': 'warning',
-            'message': _("Require Uploader")
-        }
-        alert_soup = forms.blank_alert(**attrs)
-
-        input_div = soup.new_tag('div')
-        input_div['class'] = 'form-control input-group'
-
-        uploader_input = soup.new_tag('input')
-        uploader_input.attrs['id'] = 'input_id_uploader'
-        uploader_input.attrs['type'] = "text"
-        uploader_input.attrs['name'] = "uploader2"
-        uploader_input.attrs['class'] = 'textinput form-control'
-        uploader_input.attrs['maxlength'] = '20'
-        uploader_input.attrs['placeholder'] = _("Uploader")
-
-        icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
-
-        submit = soup.new_tag('button')
-        submit.attrs['class'] = 'btn btn-primary'
-        submit.attrs['hx-post'] = request.path
-        submit.attrs['id'] = 'input_id_uploader_btn_submit'
-        submit.attrs['name'] = 'submit'
-        submit.append(icon)
-
-        icon = BeautifulSoup(load_svg('x-square'), 'html.parser').svg
-        cancel = soup.new_tag('button')
-        cancel.attrs['class'] = 'btn btn-danger'
-        cancel.attrs['hx-post'] = request.path
-        cancel.attrs['id'] = 'input_id_uploader_btn_cancel'
-        cancel.attrs['name'] = 'cancel'
-        cancel.append(icon)
-
-        input_div.append(uploader_input)
-        input_div.append(submit)
-        input_div.append(cancel)
-
-        msg = alert_soup.find(id='div_id_upload_biochem_message')
-        msg.string = msg.string + " "
-        msg.append(input_div)
-        return alert_soup
-        # div.append(alert_soup)
-        # return HttpResponse(soup)
-    elif request.htmx.trigger == 'input_id_uploader_btn_submit':
-        alert_soup = get_progress_alert(request, database, mission_id)
-        # div_id_upload_biochem_message is the ID given to the component in the get_progress_alert() function
-        message = alert_soup.find(id="div_id_upload_biochem")
-        hidden = soup.new_tag("input")
-        hidden.attrs['type'] = 'hidden'
-        hidden.attrs['name'] = 'uploader2'
-        hidden.attrs['value'] = request.POST['uploader2']
-        message.append(hidden)
-        return alert_soup
-
-        # div.append(alert_soup)
-        # return HttpResponse(soup)
-    elif request.htmx.trigger == 'input_id_uploader_btn_cancel':
-        return soup
-        # return HttpResponse(soup)
-
-
 def sample_data_upload(database, mission: models.Mission, uploader: str):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=models.ErrorType.biochem).delete()
-    models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
+    models.Error.objects.using(database).filter(mission=mission, type=models.ErrorType.biochem).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
@@ -606,7 +500,7 @@ def sample_data_upload(database, mission: models.Mission, uploader: str):
     if errors:
         # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
         user_logger.info(_("Datatypes missing see errors"))
-        models.Error.objects.bulk_create(errors)
+        models.Error.objects.using(database).bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
     form_biochem_database.upload_bcs_d_data(mission, uploader)
@@ -626,7 +520,7 @@ def upload_samples(request, database, mission_id):
         return HttpResponse(soup)
 
     # do we have an uploader?
-    alert_soup = confirm_uploader(request, database, mission_id)
+    alert_soup = form_biochem_database.confirm_uploader(request)
     if alert_soup:
         div.append(alert_soup)
         return HttpResponse(soup)
@@ -664,7 +558,7 @@ def download_samples(request, database, mission_id):
     }
     soup.append(div)
 
-    alert_soup = confirm_uploader(request, database, mission_id)
+    alert_soup = form_biochem_database.confirm_uploader(request)
     if alert_soup:
         div.append(alert_soup)
         return HttpResponse(soup)
@@ -682,7 +576,7 @@ def download_samples(request, database, mission_id):
     # only the objects being created will be returned.
     create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
 
-    headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
+    bcs_headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
 
     file_name = f'{mission.name}_BCS_D.csv'
     report_path = os.path.join(settings.BASE_DIR, "reports")
@@ -692,10 +586,10 @@ def download_samples(request, database, mission_id):
         with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
 
             writer = csv.writer(f)
-            writer.writerow(headers)
+            writer.writerow(bcs_headers)
 
             for bcs_row in create:
-                row = [getattr(bcs_row, header, '') for header in headers]
+                row = [getattr(bcs_row, header, '') for header in bcs_headers]
                 writer.writerow(row)
     except PermissionError:
         attrs = {
@@ -720,7 +614,7 @@ def download_samples(request, database, mission_id):
     create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
                                                            samples=discrete_samples)
 
-    headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
+    bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
     file_name = f'{mission.name}_BCD_D.csv'
     report_path = os.path.join(settings.BASE_DIR, "reports")
@@ -730,10 +624,11 @@ def download_samples(request, database, mission_id):
         with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
 
             writer = csv.writer(f)
-            writer.writerow(headers)
+            writer.writerow(bcd_headers)
 
             for idx, bcs_row in enumerate(create):
-                row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for header in headers]
+                row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
+                       header in bcd_headers]
                 writer.writerow(row)
     except PermissionError:
         attrs = {
