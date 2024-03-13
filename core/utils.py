@@ -5,9 +5,9 @@ import math
 # compute the distance between two points on earth
 def distance(point1: [float, float], point2: [float, float]) -> float:
 
-    lat1 = point1[0] * math.pi / 180
-    lat2 = point2[0] * math.pi / 180
-    lon = (point2[1] - point1[1]) * math.pi / 180
+    lat1 = float(point1[0]) * math.pi / 180
+    lat2 = float(point2[0]) * math.pi / 180
+    lon = float(point2[1] - point1[1]) * math.pi / 180
     R = 6371e3
 
     inner = math.sin(lat1) * math.sin(lat2) + math.cos(lat1) * math.cos(lat2) * math.cos(lon)
