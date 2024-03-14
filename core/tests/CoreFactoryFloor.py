@@ -1,4 +1,5 @@
 import datetime
+import decimal
 
 import factory
 import random
@@ -108,8 +109,8 @@ class ActionFactory(DjangoModelFactory):
     event = factory.SubFactory(CTDEventFactory)
     date_time = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
     sounding = factory.lazy_attribute(lambda o: faker.pyfloat())
-    latitude = factory.lazy_attribute(lambda o: faker.pyfloat())
-    longitude = factory.lazy_attribute(lambda o: faker.pyfloat())
+    latitude = factory.lazy_attribute(lambda o: decimal.Decimal(random.randint(-89, 89)))
+    longitude = factory.lazy_attribute(lambda o: decimal.Decimal(random.randint(-179, 179)))
     type = factory.lazy_attribute(lambda o: faker.random.choice(models.ActionType.choices)[0])
 
 
