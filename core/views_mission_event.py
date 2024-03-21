@@ -80,6 +80,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         btn_attrs = {
             'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.database, self.mission.pk,)),
             'hx-swap': 'none',
+            'title': _("Re-run event validation")
         }
         icon = load_svg('arrow-clockwise')
         revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)

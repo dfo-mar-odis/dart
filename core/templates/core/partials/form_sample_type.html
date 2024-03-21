@@ -17,6 +17,7 @@
                             hx-get="{% url 'core:sample_type_edit' %}"
                             hx-target="#div_id_sample_type_form"
                             hx-swap="outerHTML"
+                title="{% trans "Clear Form" %}"
         >{% custom_icon 'eraser' %}</button>
     </div>
 </div>
@@ -35,15 +36,17 @@
             hx-select="#div_id_sample_type_form"
             hx-swap="outerHTML"
             hx-select-oob="#div_id_sample_type_{{ sample_type.pk }}"
+                title="{% trans "Update sample type" %}"
         >{% custom_icon 'arrow-clockwise' %}</button>
         {% else %}
             {# if a sample_type isn't provided then we're creating a new sample_type #}
-        <button id="button_id_new_sample_type_submit" name="new_sample" title="{% trans 'Submit' %}" class="btn btn-primary btn-sm"
+        <button id="button_id_new_sample_type_submit" name="new_sample" class="btn btn-primary btn-sm"
             hx-post="{% url 'core:sample_type_save' %}"
             hx-target="#div_id_sample_type_form"
             hx-select="#div_id_sample_type_form"
             hx-swap="outerHTML"
             hx-select-oob="#div_id_loaded_sample_types:afterbegin"
+                title="{% trans "Create New Sample Type" %}"
         >{% custom_icon 'plus-square' %}</button>
         {% endif %}
 

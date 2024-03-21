@@ -14,6 +14,7 @@
                             hx-swap="delete"
                             hx-confirm="{% trans 'Are you sure?' %}"
                             hx-delete="{% url 'core:sample_type_delete' sample_type.pk %}"
+                            title="{% trans "Remove Sample Type and File Configurations" %}"
                     >{% custom_icon 'dash-square' %}</button>
                 </div>
                 <div class="col-auto">
@@ -22,6 +23,7 @@
                             hx-target="#div_id_sample_type_form"
                             hx-swap="outerHTML"
                             hx-on="htmx:afterRequest: window.location.href='#page_title_area';"
+                            title="{% trans "Edit Sample Type" %}"
                     >{% custom_icon 'pencil-square' %}</button>
                 </div>
             </div>
@@ -69,6 +71,7 @@
                                                       hx-delete="{% url "core:mission_sample_type_delete_config" config.id %}"
                                                       hx-swap="delete"
                                                       hx-target="#config_{{ config.id }}"
+                                                      title="{% trans "Remove File Configurations" %}"
                         >{% custom_icon 'dash-square' %}</button></div>
                     </div>
                     <ul class="list-group">

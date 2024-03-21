@@ -666,6 +666,7 @@ def get_biochem_buttons(request, database, mission_id):
     button_area.append(download_button := soup.new_tag('button'))
     download_button.append(icon)
     download_button.attrs['class'] = 'btn btn-sm btn-primary'
+    download_button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
     download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_download_bio_chem",
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'
@@ -674,6 +675,7 @@ def get_biochem_buttons(request, database, mission_id):
     button_area.append(download_button := soup.new_tag('button'))
     download_button.append(icon)
     download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
+    download_button.attrs['title'] = _("Upload selected Sensors/Samples to Database")
     download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_bio_chem",
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'

@@ -90,7 +90,8 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
             'id': connect_button_id,
             'name': 'connect',
             'hx-get': url,
-            'hx-swap': 'none'
+            'hx-swap': 'none',
+            'title': _("Connect to database")
         }
 
         connect_button = StrictButton(connect_button_icon, css_class=connect_button_class, **connect_button_attrs)
