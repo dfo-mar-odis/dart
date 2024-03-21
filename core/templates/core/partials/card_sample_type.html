@@ -58,12 +58,19 @@
                 <ul class="list-group">
                 <li class="list-group-item list-group-item-info">{% trans 'File Configurations' %}</li>
             {% for config in sample_type.configs.all %}
-                <li class="list-group-item">
+                <li class="list-group-item" id="config_{{ config.id }}">
                     <div class="row">
                         <div class="col-auto">{% trans "File Type" %} : {{ config.file_type }}</div>
                         <div class="col-auto">{% trans "Tab #" %} : {{ config.tab }}</div>
                         <div class="col-auto">{% trans "Header Row #" %} : {{ config.skip }}</div>
                         <div class="col-auto">{% trans "Allow Replicate" %} : {{ config.allow_replicate }}</div>
+                        <div class="col"></div>
+                        <div class="col-auto"><button class="btn btn-sm btn-danger mb-1"
+                                                      hx-confirm="{% trans "Are you sure?" %}"
+                                                      hx-delete="{% url "core:mission_sample_type_delete_config" config.id %}"
+                                                      hx-swap="delete"
+                                                      hx-target="#config_{{ config.id }}"
+                        >{% custom_icon 'dash-square' %}</button></div>
                     </div>
                     <ul class="list-group">
                         <li class="list-group-item list-group-item-secondary">{% trans "Column Mappings" %}</li>
