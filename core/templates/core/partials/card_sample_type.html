@@ -10,11 +10,11 @@
                 </div>
                 <div class="col-auto">
                     <button class="btn btn-danger btn-sm" name="div_id_message_{{ sample_type.pk }}"
-                            hx-target="#div_id_message_{{ sample_type.pk }}"
-                            hx-select="#div_id_message_{{ sample_type.pk }}"
-                            hx-swap="outerHTML"
+                            hx-target="#div_id_sample_type_{{ sample_type.pk }}"
+                            hx-swap="delete"
                             hx-confirm="{% trans 'Are you sure?' %}"
-                            hx-post="{% url 'core:sample_type_delete' sample_type.pk %}"
+                            hx-delete="{% url 'core:sample_type_delete' sample_type.pk %}"
+                            title="{% trans "Remove Sample Type and File Configurations" %}"
                     >{% custom_icon 'dash-square' %}</button>
                 </div>
                 <div class="col-auto">
@@ -23,6 +23,7 @@
                             hx-target="#div_id_sample_type_form"
                             hx-swap="outerHTML"
                             hx-on="htmx:afterRequest: window.location.href='#page_title_area';"
+                            title="{% trans "Edit Sample Type" %}"
                     >{% custom_icon 'pencil-square' %}</button>
                 </div>
             </div>
@@ -58,12 +59,20 @@
                 <ul class="list-group">
                 <li class="list-group-item list-group-item-info">{% trans 'File Configurations' %}</li>
             {% for config in sample_type.configs.all %}
-                <li class="list-group-item">
+                <li class="list-group-item" id="config_{{ config.id }}">
                     <div class="row">
                         <div class="col-auto">{% trans "File Type" %} : {{ config.file_type }}</div>
                         <div class="col-auto">{% trans "Tab #" %} : {{ config.tab }}</div>
                         <div class="col-auto">{% trans "Header Row #" %} : {{ config.skip }}</div>
                         <div class="col-auto">{% trans "Allow Replicate" %} : {{ config.allow_replicate }}</div>
+                        <div class="col"></div>
+                        <div class="col-auto"><button class="btn btn-sm btn-danger mb-1"
+                                                      hx-confirm="{% trans "Are you sure?" %}"
+                                                      hx-delete="{% url "core:mission_sample_type_delete_config" config.id %}"
+                                                      hx-swap="delete"
+                                                      hx-target="#config_{{ config.id }}"
+                                                      title="{% trans "Remove File Configurations" %}"
+                        >{% custom_icon 'dash-square' %}</button></div>
                     </div>
                     <ul class="list-group">
                         <li class="list-group-item list-group-item-secondary">{% trans "Column Mappings" %}</li>

@@ -316,7 +316,9 @@ def list_samples(request, database, mission_id):
                         # if the replicate column doesn't currently have any values, insert a nan as a placeholder
                         df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
 
-        df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensors.order_by('is_sensor', 'priority', 'pk')]]
+        available_sensors = [c[0] for c in df.columns.values]
+        sensor_order = sensors.order_by('is_sensor', 'priority', 'pk')
+        df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensor_order if sensor.pk in available_sensors]]
         table_soup = format_all_sensor_table(df, database, mission)
     except Exception as ex:
         logger.exception(ex)
@@ -664,6 +666,7 @@ def get_biochem_buttons(request, database, mission_id):
     button_area.append(download_button := soup.new_tag('button'))
     download_button.append(icon)
     download_button.attrs['class'] = 'btn btn-sm btn-primary'
+    download_button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
     download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_download_bio_chem",
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'
@@ -672,6 +675,7 @@ def get_biochem_buttons(request, database, mission_id):
     button_area.append(download_button := soup.new_tag('button'))
     download_button.append(icon)
     download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
+    download_button.attrs['title'] = _("Upload selected Sensors/Samples to Database")
     download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_bio_chem",
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'

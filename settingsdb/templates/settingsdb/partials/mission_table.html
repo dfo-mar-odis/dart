@@ -46,8 +46,8 @@
             <td>
                 <a id="a_id_edit_mission" class="btn btn-primary" href="{% url 'core:mission_edit' database mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
                 <a id="a_id_edit_mission_events" class="btn btn-primary" href="{% url 'core:mission_events_details' database mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
-                <a class="btn btn-primary" href="{% url 'core:mission_samples_sample_details' database mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'thermometer-half' %}</a>
-                <a class="btn btn-primary" href="{% url 'core:mission_plankton_plankton_details' database mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'bug' %}</a>
+                <a class="btn btn-primary" href="{% url 'core:mission_samples_sample_details' database mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
+                <a class="btn btn-primary" href="{% url 'core:mission_plankton_plankton_details' database mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
             </td>
             {% endif %}
         </tr>

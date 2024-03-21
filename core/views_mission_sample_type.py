@@ -10,6 +10,7 @@ from core import views, models, forms
 from core.form_mission_sample_type import BioChemDataType
 
 from dart.views import GenericDetailView
+from settingsdb import models as settingsdb_models
 
 
 class SampleTypeDetails(GenericDetailView):
@@ -60,10 +61,18 @@ def sample_type_card(request, database, sample_type_id):
     return HttpResponse(form_soup)
 
 
+def delete_config(request, config_id):
+
+    settingsdb_models.SampleTypeConfig.objects.get(pk=config_id).delete()
+    return HttpResponse()
+
+
 # ###### Mission Sample ###### #
 url_prefix = "<str:database>/sampletype"
 mission_sample_type_urls = [
     path(f'{url_prefix}/<int:pk>/', SampleTypeDetails.as_view(), name="mission_sample_type_details"),
 
     path(f'{url_prefix}/card/<int:sample_type_id>/', sample_type_card, name="mission_sample_type_card"),
+    path(f'sampletype/config/<int:config_id>/', delete_config, name="mission_sample_type_delete_config"),
+
 ]

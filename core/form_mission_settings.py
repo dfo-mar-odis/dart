@@ -73,7 +73,8 @@ class MissionSettingsForm(forms.ModelForm):
         icon = load_svg('plus-square')
         btn_attrs = {
             'hx-post': reverse_lazy("core:form_mission_settings_add_region"),
-            'hx-target': "#div_id_geographic_region_field"
+            'hx-target': "#div_id_geographic_region_field",
+            'title': _("Add region to mission")
         }
         add_region_btn = StrictButton(BeautifulSoup(icon, 'html.parser').svg, css_class="btn btn-primary",
                                       **btn_attrs)
@@ -98,7 +99,8 @@ class MissionSettingsForm(forms.ModelForm):
                 global_region = settings_models.GlobalGeographicRegion.objects.get_or_create(name=region)[0]
                 btn_attrs = {
                     'hx-post': reverse_lazy("core:form_mission_settings_remove_region", args=(global_region.pk,)),
-                    'hx-target': "#div_id_geographic_region_field"
+                    'hx-target': "#div_id_geographic_region_field",
+                    'title': _("Remove Region")
                 }
                 button = Div(HTML("-"), name="remove_geographic_region", value=f"{global_region.pk}",
                              css_class="badge bg-danger", **btn_attrs)
