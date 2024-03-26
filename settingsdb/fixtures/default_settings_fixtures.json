@@ -1986,30 +1986,6 @@
     }
 },
 {
-    "model": "settingsdb.bcdatabaseconnection",
-    "pk": 1,
-    "fields": {
-        "engine": 1,
-        "host": "VSNSBIOD78.ENT.DFO-MPO.CA",
-        "name": "TTRAN",
-        "port": 1521,
-        "account_name": "upsonp",
-        "uploader": "UpsonP"
-    }
-},
-{
-    "model": "settingsdb.bcdatabaseconnection",
-    "pk": 2,
-    "fields": {
-        "engine": 1,
-        "host": "VSNSBIOXP74.ENT.DFO-MPO.CA",
-        "name": "PTRAN",
-        "port": 1521,
-        "account_name": "biochem",
-        "uploader": "Upsonp"
-    }
-},
-{
     "model": "settingsdb.fileconfiguration",
     "pk": 1,
     "fields": {

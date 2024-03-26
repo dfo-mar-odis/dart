@@ -556,7 +556,9 @@ def get_database_connection_form(request, database, mission_id):
     database_form_html = render_crispy_form(database_form_crispy, context=context)
     database_form_soup = BeautifulSoup(database_form_html, 'html.parser')
 
-    form_soup = BeautifulSoup('<form id="form_id_db_connect"></form>', 'html.parser')
+    disable_key = "'Enter'"
+    form_soup = BeautifulSoup(f'<form id="form_id_db_connect" onkeydown="return event.key!={disable_key};"></form>', 
+                              'html.parser')
     form = form_soup.find('form')
     form.append(database_form_soup)
 
