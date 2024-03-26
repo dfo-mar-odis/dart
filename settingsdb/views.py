@@ -150,13 +150,14 @@ class MissionFilterView(GenericTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        initial = init_connection()
         try:
-            initial = init_connection()
             context['missions'] = get_mission_dictionary(initial.database_location)
         except Exception as e:
             # if for some reason the get mission directory fails, revert the connected directory to the default
-            initial = init_connection(use_default=True)
-            context['missions'] = get_mission_dictionary(initial.database_location)
+            # initial = init_connection(use_default=True)
+            # context['missions'] = get_mission_dictionary(initial.database_location)
+            pass
 
         context['new_url'] = self.new_url
         context['mission_filter_form'] = MissionFilterForm()
@@ -186,12 +187,12 @@ def get_filter_dates(array: dict):
 
 
 def filter_missions(after_date, before_date) -> list[dict]:
+    connected = init_connection()
+    missions_dict = {}
     try:
-        connected = init_connection()
         missions_dict = get_mission_dictionary(connected.database_location)
     except Exception:
-        connected = init_connection(use_default=True)
-        missions_dict = get_mission_dictionary(connected.database_location)
+        pass
 
     missions = []
     for database, mission in missions_dict.items():
@@ -309,9 +310,14 @@ def add_mission_dir(request):
 
     elif 'directory' in request.POST:
         new_location = request.POST['directory']
-        location = setting_models.LocalSetting(database_location=new_location)
-        location.save(using='default')
-        location = setting_models.LocalSetting.objects.order_by('id').last()
+        if new_location.strip() == '':
+            location = setting_models.LocalSetting.objects.first()
+        elif not (location := setting_models.LocalSetting.objects.filter(database_location=new_location)).exists():
+            location = setting_models.LocalSetting(database_location=new_location)
+            location.save(using='default')
+            location = setting_models.LocalSetting.objects.order_by('id').last()
+        else:
+            location = location.first()
 
         reset_connection(location.pk)
 
