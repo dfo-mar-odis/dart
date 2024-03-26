@@ -114,9 +114,9 @@ def get_mission_dictionary(db_dir):
     return missions
 
 
-def init_connection():
+def init_connection(use_default=False):
     connected = setting_models.LocalSetting.objects.using('default').filter(connected=True)
-    if connected.exists():
+    if connected.exists() and not use_default:
         if connected.count() > 1:
             for connection in connected:
                 connection.connected = False
@@ -150,11 +150,17 @@ class MissionFilterView(GenericTemplateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
-        initial = init_connection()
+        try:
+            initial = init_connection()
+            context['missions'] = get_mission_dictionary(initial.database_location)
+        except Exception as e:
+            # if for some reason the get mission directory fails, revert the connected directory to the default
+            initial = init_connection(use_default=True)
+            context['missions'] = get_mission_dictionary(initial.database_location)
+
         context['new_url'] = self.new_url
-        context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
         context['mission_filter_form'] = MissionFilterForm()
-        context['missions'] = get_mission_dictionary(initial.database_location)
+        context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
 
         if reports:
             context['reports'] = reports
@@ -180,8 +186,13 @@ def get_filter_dates(array: dict):
 
 
 def filter_missions(after_date, before_date) -> list[dict]:
-    connected = init_connection()
-    missions_dict = get_mission_dictionary(connected.database_location)
+    try:
+        connected = init_connection()
+        missions_dict = get_mission_dictionary(connected.database_location)
+    except Exception:
+        connected = init_connection(use_default=True)
+        missions_dict = get_mission_dictionary(connected.database_location)
+
     missions = []
     for database, mission in missions_dict.items():
         if before_date:
