@@ -178,10 +178,11 @@ class TestSampleFileConfiguration(DartTestCase):
     def test_new_blank_form_with_file(self):
         # When the 'add' sample_type button is clicked if a file has been selected
         # the SampleTypeForm should be swapped into the div_id_sample_type_holder tag
-        file_initial = {"skip": 9, "tab": 0}
-        expected_config_form = form_sample_type_config.SampleTypeConfigForm('default', file_type="xlsx",
-                                                                            field_choices=self.expected_headers,
-                                                                            initial=file_initial)
+        file_initial = {"skip": 10, "tab": 0}
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            expected_config_form = form_sample_type_config.SampleTypeConfigForm(
+                'default', file_type="xlsx", file_data=fp, initial=file_initial
+            )
 
         expected_form_html = render_crispy_form(expected_config_form)
 
@@ -225,14 +226,13 @@ class TestSampleFileConfiguration(DartTestCase):
         url = reverse("core:form_sample_config_save", args=('default',))
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
-            response = self.client.post(url, {'sample_file': fp,
-                                              'file_type': file_type, 'skip': header,
+            response = self.client.post(url, {'sample_file': fp, 'file_type': file_type, 'tab': 0, 'skip': header,
                                               'mission_id': self.mission.pk})
 
         soup = BeautifulSoup(response.content, "html.parser")
-        missing_fields = ['id_sample_type', 'id_tab', 'id_sample_field', 'id_value_field']
+        missing_fields = ['id_sample_type', 'id_sample_field', 'id_value_field']
         for field in missing_fields:
-            self.assertIsNotNone(soup.find(id=field, attrs={'class': "is-invalid"}))
+            self.assertIsNotNone(soup.find(id=field, attrs={'class': "is-invalid"}), f'Field "{field}" is missing')
 
     @tag('form_sample_config_test_submit_new_sample_type_post')
     def test_submit_new_sample_type_valid_post(self):
@@ -298,9 +298,10 @@ class TestSampleFileConfiguration(DartTestCase):
 
         url = reverse("core:form_sample_config_new", args=('default', oxy_sample_type.pk,))
 
-        expected_config_form = form_sample_type_config.SampleTypeConfigForm(database='default', file_type=file_type,
-                                                                            field_choices=self.expected_headers,
-                                                                            instance=oxy_sample_type_config)
+        with open(self.sample_oxy_xlsx_file, 'rb') as fp:
+            expected_config_form = form_sample_type_config.SampleTypeConfigForm(
+                database='default', file_type=file_type, file_data=fp, instance=oxy_sample_type_config
+            )
 
         expected_form_html = render_crispy_form(expected_config_form)
 
@@ -374,7 +375,7 @@ class TestSampleFileConfiguration(DartTestCase):
         )
         oxy_sample_type_config = settings_factory.SampleTypeConfigFactory(
             sample_type=oxy_sample_type,
-            tab=1,
+            tab=0,
             skip=9,
             sample_field='sample',
             value_field='o2_concentration(ml/l)',
@@ -390,7 +391,7 @@ class TestSampleFileConfiguration(DartTestCase):
                                         {'sample_file': fp, 'mission_id': self.mission.pk,
                                          'sample_type': oxy_sample_type_config.sample_type.pk,
                                          'file_type': oxy_sample_type_config.file_type,
-                                         'skip': oxy_sample_type_config.skip, 'tab': 0,
+                                         'skip': oxy_sample_type_config.skip, 'tab': oxy_sample_type_config.tab,
                                          'sample_field': oxy_sample_type_config.sample_field,
                                          'value_field': oxy_sample_type_config.value_field, })
 
@@ -446,6 +447,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         self.assertEquals(response.content.decode('utf-8'), expected_html)
 
+    @tag('form_sample_config_test_new_sample_type_on_config')
     def test_new_sample_type_on_config(self):
         # if -1 is passed as the sample_type id to the 'core:form_sample_config_new' url the
         # SampleTypeConfigForm should be returned with the sample_type dropdown replaced

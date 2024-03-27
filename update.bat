@@ -7,7 +7,7 @@ if not exist ".\logs\" (
 REM If this was run from a clone repo we can force an update of the python libraries, collectstatic or a
 REM migration on the database by changing the update version
 
-set update_version=3.1.10
+set update_version=3.1.11
 
 set first_run=0
 set server_path=.\dart_env\Scripts\activate.bat
