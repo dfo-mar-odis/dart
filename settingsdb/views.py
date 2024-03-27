@@ -114,9 +114,9 @@ def get_mission_dictionary(db_dir):
     return missions
 
 
-def init_connection():
+def init_connection(use_default=False):
     connected = setting_models.LocalSetting.objects.using('default').filter(connected=True)
-    if connected.exists():
+    if connected.exists() and not use_default:
         if connected.count() > 1:
             for connection in connected:
                 connection.connected = False
@@ -151,10 +151,17 @@ class MissionFilterView(GenericTemplateView):
         context = super().get_context_data(**kwargs)
 
         initial = init_connection()
+        try:
+            context['missions'] = get_mission_dictionary(initial.database_location)
+        except Exception as e:
+            # if for some reason the get mission directory fails, revert the connected directory to the default
+            # initial = init_connection(use_default=True)
+            # context['missions'] = get_mission_dictionary(initial.database_location)
+            pass
+
         context['new_url'] = self.new_url
-        context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
         context['mission_filter_form'] = MissionFilterForm()
-        context['missions'] = get_mission_dictionary(initial.database_location)
+        context['dir_select_form'] = MissionDirForm(initial={"directory": initial.pk})
 
         if reports:
             context['reports'] = reports
@@ -181,7 +188,12 @@ def get_filter_dates(array: dict):
 
 def filter_missions(after_date, before_date) -> list[dict]:
     connected = init_connection()
-    missions_dict = get_mission_dictionary(connected.database_location)
+    missions_dict = {}
+    try:
+        missions_dict = get_mission_dictionary(connected.database_location)
+    except Exception:
+        pass
+
     missions = []
     for database, mission in missions_dict.items():
         if before_date:
@@ -274,10 +286,22 @@ def add_mission_dir(request):
             submit.attrs['hx-target'] = '#div_id_directory'
             submit.attrs['hx-select'] = '#div_id_directory'
             submit.attrs['hx-swap'] = 'outerHTML'
+            submit.attrs['title'] = _('Add directory')
             submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
+
+            cancel = soup.new_tag('button')
+            cancel.attrs['class'] = 'btn btn-danger btn-sm ms-2 col-auto'
+            cancel.attrs['name'] = "cancel"
+            cancel.attrs['hx-post'] = request.path
+            cancel.attrs['hx-target'] = '#div_id_directory'
+            cancel.attrs['hx-select'] = '#div_id_directory'
+            cancel.attrs['hx-swap'] = 'outerHTML'
+            cancel.attrs['title'] = _('Cancel')
+            cancel.append(BeautifulSoup(load_svg('x-square'), 'html.parser').svg)
 
             row.append(station_input)
             row.append(submit)
+            row.append(cancel)
 
             soup.append(row)
 
@@ -292,24 +316,33 @@ def add_mission_dir(request):
         select_soup = BeautifulSoup(mission_html)
         soup.append(select_soup.find(id="select_id_mission_directory"))
 
-        response = HttpResponse(soup)
-        response['Hx-Trigger'] = "db_dir_changed"
-        return response
+    else:
+        location = setting_models.LocalSetting.objects.first()
+        if 'cancel' in request.POST:
+            if setting_models.LocalSetting.objects.filter(connected=True).exists():
+                location = setting_models.LocalSetting.objects.get(connected=True)
 
-    elif 'directory' in request.POST:
-        new_location = request.POST['directory']
-        location = setting_models.LocalSetting(database_location=new_location)
-        location.save(using='default')
-        location = setting_models.LocalSetting.objects.order_by('id').last()
+        elif 'directory' in request.POST:
+            new_location = request.POST['directory']
+            if new_location.strip() == '':
+                location = setting_models.LocalSetting.objects.first()
+            elif not (location := setting_models.LocalSetting.objects.filter(database_location=new_location)).exists():
+                location = setting_models.LocalSetting(database_location=new_location)
+                location.save(using='default')
+                location = setting_models.LocalSetting.objects.order_by('id').last()
+            else:
+                location = location.first()
 
         reset_connection(location.pk)
 
         mission_form = MissionDirForm(initial={"directory": location.pk})
         mission_html = render_crispy_form(mission_form)
 
-        response = HttpResponse(mission_html)
-        response['Hx-Trigger'] = "db_dir_changed"
-        return response
+        soup = BeautifulSoup(mission_html, 'html.parser')
+
+    response = HttpResponse(soup)
+    response['Hx-Trigger'] = "db_dir_changed"
+    return response
 
 
 def migrate_database(request, database):
