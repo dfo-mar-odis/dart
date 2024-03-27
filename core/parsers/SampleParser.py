@@ -55,8 +55,7 @@ def get_file_configs(data, file_type):
         # the user can load samples from.
         file_configs = sample_configs.filter(
             tab=matching_config.tab, skip=matching_config.skip,
-            sample_field__iexact=matching_config.sample_field,
-            value_field_lower__in=lowercase_fields)
+            sample_type__short_name=matching_config.sample_type.short_name)
         return file_configs
 
     return None
@@ -80,7 +79,7 @@ def get_headers(data, file_type: str, tab: int = 0, skip: int = -1) -> [int, int
 def get_csv_header(file_string: str, header_row: int = -1) -> [int, list]:
     """ takes a file as a stream and uses a csv reader to locate and pull out
         the most likely line to be the header. This will typically be the first
-        line that has a value for every column.
+        line that has a string value for every column.
 
         If a header row is provided that row is returned as the header row"""
     csv_reader = csv.reader(file_string, delimiter=',')

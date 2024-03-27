@@ -1,3 +1,6 @@
+import pandas as pd
+import numpy as np
+
 from bs4 import BeautifulSoup
 
 from crispy_forms.bootstrap import StrictButton
@@ -6,6 +9,7 @@ from crispy_forms.layout import Layout, Field, Column, Hidden, Row, Div
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.http import HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
@@ -45,25 +49,86 @@ class SampleTypeConfigForm(forms.ModelForm):
         model = settings_models.SampleTypeConfig
         fields = "__all__"
 
-    def __init__(self, database, file_type, field_choices: list = None, *args, **kwargs):
+    def find_header(self, data, file_type, tab):
 
-        # To use this form 'field_choices', a list of options the user can select from for the
-        # header row, must be passed in to populate the dropdowns. For some reason after the
-        # form has been created and populated the 'declared_fields' variable maintains the list
-        # of options and can be used when passing a request.GET or request.POST in
-        choice_fields = ['sample_field', 'value_field', 'flag_field', 'comment_field']
-        if field_choices:
-            for field in choice_fields:
-                s_field: forms.CharField = self.base_fields[field]
-                self.base_fields[field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
-                if not self.base_fields[field].required:
-                    self.base_fields[field].choices = self.NONE_CHOICE
-                self.base_fields[field].choices += field_choices
+        # if the initial skip isn't set or is -1 then we'll scan the first 30 lines to see if we can
+        # figure out what the header line is. Then the user can adjust it if it's incorrect.
+        if data and file_type and file_type.startswith('xls'):
+            data_frame = pd.read_excel(data, sheet_name=tab, nrows=30, header=None)
         else:
-            for field in choice_fields:
-                self.base_fields[field] = self.declared_fields[field]
+            data_frame = pd.read_csv(data, nrows=30, header=None)
+
+        column_count = data_frame.shape[1]
+        nan_tolerance = 0.1
+        for line, columns in data_frame.iterrows():
+            if float([c for c in columns].count(np.nan) / column_count) < nan_tolerance:
+                return line + 1
+
+    def get_column_headers(self, data, file_type, tab=0, skip=-1):
+        if skip == -1:
+            self.initial['skip'] = skip = self.find_header(data, file_type, tab)
+
+        # if the initial['skip'] is set then we only need one line from the file
+        header_index = skip - 1
+        if data and file_type and file_type.startswith('xls'):
+            data_frame = pd.read_excel(data, sheet_name=tab, nrows=1, skiprows=header_index, header=None)
+        else:
+            data_frame = pd.read_csv(data, nrows=1, skiprows=header_index, header=None)
+
+        header = data_frame.iloc[0]
+        field_choices = [(str(column).lower(), column) for column in header]
+
+        return field_choices
+
+    def populate_field_choices(self, tab=-1, skip=-1):
+        tab = int(self.initial.get('tab', tab) if tab == -1 else tab)
+        skip = int(self.initial.get('skip', skip) if skip == -1 else skip)
+        field_choices = self.get_column_headers(self.file_data, self.file_type, tab, skip)
+        choice_fields = ['sample_field', 'value_field', 'flag_field', 'comment_field']
+
+        for choice_field in choice_fields:
+            s_field: forms.CharField = self.base_fields[choice_field]
+            self.fields[choice_field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
+            if not self.fields[choice_field].required:
+                self.fields[choice_field].choices = self.NONE_CHOICE
+            self.fields[choice_field].choices += field_choices
+
+    def is_valid(self, *args, **kwargs):
+        super(SampleTypeConfigForm, self).full_clean()
+        tab = self.cleaned_data['tab']
+        skip = self.cleaned_data['skip'] + 1
+        self.populate_field_choices(tab, skip)
+        return super(SampleTypeConfigForm, self).is_valid()
+
+    def clean_skip(self):
+        return self.cleaned_data['skip']-1
+
+    def __init__(self, database, file_type=None, *args, **kwargs):
+
+        tabs = None
+        self.file_data = None
+        self.file_type = file_type
+
+        if 'file_data' in kwargs:
+            self.file_data = kwargs.pop('file_data')
+            if file_type and file_type.startswith('xls'):
+                tabs = pd.ExcelFile(self.file_data).sheet_names
 
         super().__init__(*args, **kwargs)
+
+        if tabs:
+            s_field = self.base_fields['tab']
+            self.fields['tab'] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
+            self.fields['tab'].choices = [(i, tabs[i]) for i in range(0, len(tabs))]
+
+        max_header_rows = 30
+        self.fields['skip'].widget.attrs = {'min': 1, 'max': max_header_rows}
+        if self.file_data:
+            self.initial['tab'] = self.initial.get('tab', 0)
+            if self.instance.pk:
+                self.initial['skip'] = self.initial.get('skip', 0) + 1
+
+            self.populate_field_choices()
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
@@ -85,7 +150,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         }
 
         # if the tab field is updated the form should reload looking for headers on the updated tab index
-        if file_type.startswith('xls'):
+        if file_type and file_type.startswith('xls'):
             tab_field = Field('tab')
             tab_field.attrs = hx_relaod_form_attributes
             tab_col = Column(tab_field)
@@ -188,7 +253,7 @@ def get_upload_button(database):
 
 def get_sample_config_form(database, sample_type, **kwargs):
     if sample_type == -1:
-        config_form = render_crispy_form(SampleTypeConfigForm(database=database, file_type="", field_choices=[]))
+        config_form = render_crispy_form(SampleTypeConfigForm(database=database))
         soup = BeautifulSoup(config_form, 'html.parser')
 
         # Drop the current existing dropdown from the form and replace it with a new sample type form
@@ -231,7 +296,7 @@ def get_sample_config_form(database, sample_type, **kwargs):
         submit_button.attrs['hx-swap'] = 'outerHTML'
         submit_button.attrs['hx-post'] = url
     else:
-        config_form = render_crispy_form(SampleTypeConfigForm(database=database, file_type="", field_choices=[],
+        config_form = render_crispy_form(SampleTypeConfigForm(database=database, file_type="",
                                                               initial={'sample_type': sample_type}))
         soup = BeautifulSoup(config_form, 'html.parser')
 
@@ -286,21 +351,20 @@ def save_sample_config(request, database, **kwargs):
         # mission_id = request.POST['mission_id']
 
         # I don't know how to tell the user what is going on here if no sample_file has been chosen
-        # They shouldn't even be able to view the rest of the form with out it.
+        # They shouldn't even be able to view the rest of the form without it.
         file = request.FILES['sample_file']
         file_name, file_type, data = process_file(file)
 
         tab = int(request.POST.get('tab', 0) or 0)
         skip = int(request.POST.get('skip', 0) or 0)
 
-        tab, skip, field_choices = SampleParser.get_headers(data, file_type, tab, skip)
-
+        initial = {'tab': tab, 'skip': skip}
         if 'config_id' in kwargs:
             config = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, field_choices=field_choices,
+            sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
                                                            data=request.POST, instance=config)
         else:
-            sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, field_choices=field_choices,
+            sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
                                                            data=request.POST)
 
         if sample_type_config_form.is_valid():
@@ -371,26 +435,15 @@ def new_sample_config(request, database, **kwargs):
 
         if 'config_id' in kwargs:
             config = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            tab, skip, field_choices = SampleParser.get_headers(data, config.file_type, config.tab, config.skip)
-            sample_config_form = SampleTypeConfigForm(database, file_type=file_type, field_choices=field_choices,
-                                                      instance=config)
+            sample_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data, instance=config)
         else:
             tab = int(request.POST.get('tab', 0) or 0)
-            skip = int(request.POST.get('skip', 0) or -1)
-            field_choices = []
-
-            try:
-                tab, skip, field_choices = SampleParser.get_headers(data, file_type, tab, skip)
-            except Exception as ex:
-                logger.exception(ex)
-                if isinstance(ex, ValueError):
-                    logger.error("Likely chosen tab or header line is outside of the workbook")
-                pass
-
+            skip = int(request.POST.get('skip', 0) or -1)  # -1 means the header row needs to be auto-located
             file_initial = {"skip": skip, "tab": tab}
+
             if 'sample_type' in kwargs:
                 file_initial['sample_type'] = kwargs['sample_type']
-            sample_config_form = SampleTypeConfigForm(database, file_type=file_type, field_choices=field_choices,
+            sample_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
                                                       initial=file_initial)
 
         html = render_crispy_form(sample_config_form)
@@ -463,7 +516,7 @@ def load_sample_config(request, database, **kwargs):
         if request.htmx:
             # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
             # field after the Datatype_filter has been triggered.
-            sample_config_form = SampleTypeConfigForm(database, file_type="", field_choices=[], initial=request.GET)
+            sample_config_form = SampleTypeConfigForm(database, file_type="", initial=request.GET)
             html = render_crispy_form(sample_config_form)
             return HttpResponse(html)
 
