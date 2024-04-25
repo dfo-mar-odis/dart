@@ -555,7 +555,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
 
             if event.instrument.type == core_models.InstrumentType.net:
                 # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
-                area = np.pi * np.power(0.375, 2)
+                diameter = 0.75
+                area = np.pi * np.power(float(diameter/2), 2)
 
                 if event.flow_start and event.flow_end:
                     # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
