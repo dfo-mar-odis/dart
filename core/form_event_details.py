@@ -1104,7 +1104,7 @@ def load_bottle_file(request, database, event_id):
             }
             msg_area.append(core_forms.blank_alert(**attrs))
             err = models.FileError(mission=event.mission, file_name=btl_file, line=-1, message=message,
-                                        type=models.models.ErrorType.event)
+                                        type=models.ErrorType.event)
             err.save(using=database)
             trigger = "event_updated"
 
