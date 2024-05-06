@@ -121,6 +121,9 @@ class ValidationFileCard(forms.CardForm):
     mission = None
     file_name = None
 
+    def get_card_class(self):
+        return 'card mb-2'
+
     def get_card_body(self) -> Div:
         body = super().get_card_body()
 
@@ -132,6 +135,29 @@ class ValidationFileCard(forms.CardForm):
         html = f"<ul>{html}</ul>"
         body.fields.append(HTML(html))
         return body
+
+    def get_card_header(self) -> Div:
+        header = super().get_card_header()
+
+        spacer_col = Column(css_class="col")
+        header.fields[0].fields.append(spacer_col)
+
+        buttons = Column(css_class="col-auto align-self-end")
+        header.fields[0].fields.append(buttons)
+
+        icon = load_svg('x-square')
+        database = self.mission._state.db
+        attrs = {
+            'title': _("Remove Error"),
+            'hx-delete': reverse_lazy('core:mission_event_delete_log', args=(database, self.file_name,)),
+            'hx-target': f"#{self.get_card_id()}",
+            'hx-confirm': _("Are you Sure?"),
+            'hx-swap': 'delete'
+        }
+        button = StrictButton(icon, css_class="btn btn-danger btn-sm", **attrs)
+        buttons.fields.append(button)
+
+        return header
 
     def __init__(self, mission, file_name, uuid, *args, **kwargs):
         self.mission = mission
@@ -167,8 +193,8 @@ class ValidateFileCard(forms.CollapsableCardForm):
                                                                                          flat=True).distinct()
         for index, file in enumerate(files):
             event_card = ValidationFileCard(self.mission, file, index)
-            div = Div(event_card.helper.layout, css_class="mb-2")
-            body.fields.append(div)
+            # div = Div(event_card.helper.layout, css_class="mb-2")
+            body.fields.append(event_card.helper.layout)
 
         return body
 
@@ -221,6 +247,12 @@ def revalidate_events(request, database, mission_id):
     return response
 
 
+def delete_errors_for_log(request, database, file_name):
+    models.FileError.objects.using(database).filter(file_name__exact=file_name).delete()
+
+    return HttpResponse()
+
+
 path_prefix = '<str:database>/mission'
 mission_event_urls = [
     path(f'{path_prefix}/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
@@ -228,6 +260,8 @@ mission_event_urls = [
     path(f'{path_prefix}/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
     path(f'{path_prefix}/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
     path(f'{path_prefix}/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
+
+    path(f'{path_prefix}/event/<str:file_name>/', delete_errors_for_log, name="mission_event_delete_log"),
 ]
 
 mission_event_urls += form_event_details.event_detail_urls
