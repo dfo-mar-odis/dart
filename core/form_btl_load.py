@@ -162,21 +162,27 @@ class BottleLoadForm(CollapsableCardForm):
         super().__init__(card_name="bottle_load", card_title=_("Load Bottles"), *args, **kwargs)
 
         self.fields['dir_field'].label = False
+        self.fields['files'].label = False
         self.initial['dir_field'] = mission.bottle_directory
 
-        self.fields['files'].label = False
         if mission.bottle_directory:
-            files = [f for f in os.listdir(mission.bottle_directory) if f.upper().endswith('.BTL')]
-            if 'hide_loaded' in self.initial:
-                loaded_files = [f.upper() for f in models.Sample.objects.using(self.database).filter(
-                    type__is_sensor=True,
-                    bottle__event__mission=self.mission).values_list('file', flat=True).distinct()]
-                files = [f for f in files if f.upper() not in loaded_files]
+            try:
+                files = [f for f in os.listdir(mission.bottle_directory) if f.upper().endswith('.BTL')]
+                if 'hide_loaded' in self.initial:
+                    loaded_files = [f.upper() for f in models.Sample.objects.using(self.database).filter(
+                        type__is_sensor=True,
+                        bottle__event__mission=self.mission).values_list('file', flat=True).distinct()]
+                    files = [f for f in files if f.upper() not in loaded_files]
 
-            files.sort(key=lambda fn: os.path.getmtime(os.path.join(mission.bottle_directory, fn)))
+                files.sort(key=lambda fn: os.path.getmtime(os.path.join(mission.bottle_directory, fn)))
 
-            self.fields['files'].choices = [(file, file) for file in files]
-            self.initial['files'] = [file for file in files]
+                self.fields['files'].choices = [(file, file) for file in files]
+                self.initial['files'] = [file for file in files]
+            except FileNotFoundError:
+                logger.warning("directory does not exist")
+                mission.bottle_directory = None
+                mission.save()
+                self.initial['dir_field'] = mission.bottle_directory
 
 
 def get_bottle_load_card(request, database, mission_id, **kwargs):
