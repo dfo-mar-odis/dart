@@ -45,6 +45,31 @@ class ValidationEventCard(forms.CardForm):
 
     event = None
 
+    def get_card_class(self):
+        return "card mb-2"
+    def get_card_header(self) -> Div:
+        header = super().get_card_header()
+
+        spacer_col = Column(css_class="col")
+        header.fields[0].fields.append(spacer_col)
+
+        buttons = Column(css_class="col-auto align-self-end")
+        header.fields[0].fields.append(buttons)
+
+        icon = load_svg('x-square')
+        database = self.event._state.db
+        attrs = {
+            'title': _("Remove Error"),
+            'hx-delete': reverse_lazy('core:mission_event_delete_event_errors', args=(database, self.event.pk,)),
+            'hx-target': f"#{self.get_card_id()}",
+            'hx-confirm': _("Are you Sure?"),
+            'hx-swap': 'delete'
+        }
+        button = StrictButton(icon, css_class="btn btn-danger btn-sm", **attrs)
+        buttons.fields.append(button)
+
+        return header
+
     def get_card_body(self) -> Div:
         body = super().get_card_body()
         validation_errors = models.ValidationError.objects.using(self.database).filter(event=self.event)
@@ -104,8 +129,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         events = models.Event.objects.using(self.database).filter(pk__in=events_ids)
         for event in events:
             event_card = ValidationEventCard(event=event)
-            div = Div(event_card.helper.layout, css_class="mb-2")
-            body.fields.append(div)
+            body.fields.append(event_card.helper.layout)
 
         return body
 
@@ -149,7 +173,7 @@ class ValidationFileCard(forms.CardForm):
         database = self.mission._state.db
         attrs = {
             'title': _("Remove Error"),
-            'hx-delete': reverse_lazy('core:mission_event_delete_log', args=(database, self.file_name,)),
+            'hx-delete': reverse_lazy('core:mission_event_delete_log_file_errors', args=(database, self.file_name,)),
             'hx-target': f"#{self.get_card_id()}",
             'hx-confirm': _("Are you Sure?"),
             'hx-swap': 'delete'
@@ -247,8 +271,14 @@ def revalidate_events(request, database, mission_id):
     return response
 
 
-def delete_errors_for_log(request, database, file_name):
+def delete_log_file_errors(request, database, file_name):
     models.FileError.objects.using(database).filter(file_name__exact=file_name).delete()
+
+    return HttpResponse()
+
+
+def delete_event_errors(request, database, event_id):
+    models.ValidationError.objects.using(database).filter(event_id=event_id).delete()
 
     return HttpResponse()
 
@@ -261,7 +291,9 @@ mission_event_urls = [
     path(f'{path_prefix}/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
     path(f'{path_prefix}/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
 
-    path(f'{path_prefix}/event/<str:file_name>/', delete_errors_for_log, name="mission_event_delete_log"),
+    path(f'{path_prefix}/event/log/<str:file_name>/', delete_log_file_errors,
+         name="mission_event_delete_log_file_errors"),
+    path(f'{path_prefix}/event/event/<int:event_id>/', delete_event_errors, name="mission_event_delete_event_errors"),
 ]
 
 mission_event_urls += form_event_details.event_detail_urls
