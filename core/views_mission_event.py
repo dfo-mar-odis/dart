@@ -74,11 +74,28 @@ class ValidationEventCard(forms.CardForm):
         body = super().get_card_body()
         validation_errors = models.ValidationError.objects.using(self.database).filter(event=self.event)
 
-        html = ""
+        soup = BeautifulSoup("", "html.parser")
+        soup.append(ul := soup.new_tag('ul', attrs={'class': "list-group"}))
+        database = self.event._state.db
         for error in validation_errors:
-            html += f"<li>{error.message}</li>"
+            li_error_id = f'li_error_{error.pk}'
+            ul.append(li := soup.new_tag('li', attrs={'class': "list-group-item", 'id': li_error_id}))
 
-        html = f"<ul>{html}</ul>"
+            li.append(div_row := soup.new_tag('div', attrs={'class': "row"}))
+            div_row.append(div := soup.new_tag('div', attrs={'class': "col"}))
+            div.string = error.message
+
+            button_attrs = {
+                'class': "btn btn-danger btn-sm col-auto",
+                'hx-delete': reverse_lazy('core:mission_event_delete_event_error', args=(database, error.pk,)),
+                'hx-target': f"#{li_error_id}",
+                'hx-confirm': _("Are you Sure?"),
+                'hx-swap': 'delete'
+            }
+            div_row.append(button := soup.new_tag('button', attrs=button_attrs))
+            button.append(BeautifulSoup(load_svg('x-square'), "html.parser").svg)
+
+        html = soup.prettify()
         body.fields.append(HTML(html))
         return body
 
@@ -144,6 +161,7 @@ class ValidationFileCard(forms.CardForm):
 
     mission = None
     file_name = None
+    uuid = None
 
     def get_card_class(self):
         return 'card mb-2'
@@ -152,11 +170,30 @@ class ValidationFileCard(forms.CardForm):
         body = super().get_card_body()
 
         errors = self.mission.file_errors.filter(file_name=self.file_name)
-        html = ""
-        for error in errors:
-            html += f"<li>MID: {error.line} - {error.message}</li>"
 
-        html = f"<ul>{html}</ul>"
+        soup = BeautifulSoup("", "html.parser")
+        soup.append(ul := soup.new_tag('ul', attrs={'class': "list-group"}))
+        database = self.mission._state.db
+        for error in errors:
+            li_error_id = f'li_file_error_{error.pk}'
+            ul.append(li := soup.new_tag('li', attrs={'class': "list-group-item", 'id': li_error_id}))
+
+            li.append(div_row := soup.new_tag('div', attrs={'class': "row"}))
+            div_row.append(div := soup.new_tag('div', attrs={'class': "col"}))
+            div.string = f"MID: {error.line} - {error.message}"
+
+            button_attrs = {
+                'class': "btn btn-danger btn-sm col-auto",
+                'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(database, error.pk,
+                                                                                            self.uuid)),
+                'hx-target': f"#{li_error_id}",
+                'hx-confirm': _("Are you Sure?"),
+                'hx-swap': 'delete'
+            }
+            div_row.append(button := soup.new_tag('button', attrs=button_attrs))
+            button.append(BeautifulSoup(load_svg('x-square'), "html.parser").svg)
+
+        html = soup.prettify()
         body.fields.append(HTML(html))
         return body
 
@@ -186,6 +223,7 @@ class ValidationFileCard(forms.CardForm):
     def __init__(self, mission, file_name, uuid, *args, **kwargs):
         self.mission = mission
         self.file_name = file_name
+        self.uuid = uuid
         title = _("File") + f" : {file_name}"
         super().__init__(card_name=f"file_validation_{uuid}", card_title=title, *args, **kwargs)
 
@@ -272,15 +310,43 @@ def revalidate_events(request, database, mission_id):
 
 
 def delete_log_file_errors(request, database, file_name):
-    models.FileError.objects.using(database).filter(file_name__exact=file_name).delete()
+    models.FileError.objects.using(database).filter(file_name__iexact=file_name).delete()
 
     return HttpResponse()
+
+
+def delete_log_file_error(request, database, error_id, uuid):
+    error = models.FileError.objects.using(database).get(id=error_id)
+    file_name = error.file_name
+    error.delete()
+
+    if models.FileError.objects.using(database).filter(file_name__iexact=file_name).exists():
+        return HttpResponse()
+
+    # if there are no more errors connected to this event, delete the event card from the validation area
+    soup = BeautifulSoup("", "html.parser")
+    div_id = f'div_id_card_file_validation_{uuid}'
+    soup.append(soup.new_tag('div', attrs={'id': div_id, 'hx-swap-oob': 'delete'}))
+    return HttpResponse(soup)
 
 
 def delete_event_errors(request, database, event_id):
     models.ValidationError.objects.using(database).filter(event_id=event_id).delete()
 
-    return HttpResponse()
+
+def delete_event_error(request, database, error_id):
+    error = models.ValidationError.objects.using(database).get(id=error_id)
+    event_id = error.event.pk
+    error.delete()
+
+    if models.ValidationError.objects.using(database).filter(event_id=event_id).exists():
+        return HttpResponse()
+
+    # if there are no more errors connected to this event, delete the event card from the validation area
+    soup = BeautifulSoup("", "html.parser")
+    div_id = f'div_id_card_event_validation_{event_id}'
+    soup.append(soup.new_tag('div', attrs={'id': div_id, 'hx-swap-oob': 'delete'}))
+    return HttpResponse(soup)
 
 
 path_prefix = '<str:database>/mission'
@@ -293,7 +359,10 @@ mission_event_urls = [
 
     path(f'{path_prefix}/event/log/<str:file_name>/', delete_log_file_errors,
          name="mission_event_delete_log_file_errors"),
+    path(f'{path_prefix}/event/log/error/<int:error_id>/<int:uuid>/', delete_log_file_error,
+         name="mission_event_delete_log_file_error"),
     path(f'{path_prefix}/event/event/<int:event_id>/', delete_event_errors, name="mission_event_delete_event_errors"),
+    path(f'{path_prefix}/event/error/<int:error_id>/', delete_event_error, name="mission_event_delete_event_error"),
 ]
 
 mission_event_urls += form_event_details.event_detail_urls

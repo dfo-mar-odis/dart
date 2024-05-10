@@ -343,6 +343,9 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         message += _("Found") + f"[{data_frame_avg.shape[0]}]"
         logger.warning(message)
 
+        core_models.FileError(mission=mission, file_name=file_name, line=skipped_rows, message=message,
+                              type=core_models.ErrorType.validation).save()
+
         drop_rows = data_frame_avg.shape[0] - (event.total_samples + 1)
         data_frame_avg = data_frame_avg[:-drop_rows]
 
