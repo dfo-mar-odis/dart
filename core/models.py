@@ -171,7 +171,7 @@ class Event(models.Model):
         if self.end_sample_id is None:
             return 1
 
-        return self.end_sample_id - self.sample_id
+        return (self.end_sample_id - self.sample_id) + 1
 
     @property
     def start_location(self):

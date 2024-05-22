@@ -77,11 +77,14 @@ class CardForm(forms.Form):
     def get_card_id(self):
         return f'div_id_card_{self.card_name}'
 
+    def get_card_class(self):
+        return f'card'
+
     def get_card(self, attrs: dict = None) -> Div:
 
-        card = Div(css_class='card', id=self.get_card_id())
+        card = Div(css_class=self.get_card_class(), id=self.get_card_id())
         if attrs:
-            card = Div(css_class='card', id=self.get_card_id(), **attrs)
+            card = Div(css_class=self.get_card_class(), id=self.get_card_id(), **attrs)
 
         card.fields.append(self.get_card_header())
         card.fields.append(self.get_card_body())

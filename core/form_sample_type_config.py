@@ -1,3 +1,5 @@
+import io
+
 import pandas as pd
 import numpy as np
 
@@ -56,7 +58,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         if data and file_type and file_type.startswith('xls'):
             data_frame = pd.read_excel(data, sheet_name=tab, nrows=30, header=None)
         else:
-            data_frame = pd.read_csv(data, nrows=30, header=None)
+            data_frame = pd.read_csv(io.StringIO(data.decode('utf-8')), nrows=30, header=None)
 
         column_count = data_frame.shape[1]
         nan_tolerance = 0.1
@@ -73,7 +75,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         if data and file_type and file_type.startswith('xls'):
             data_frame = pd.read_excel(data, sheet_name=tab, nrows=1, skiprows=header_index, header=None)
         else:
-            data_frame = pd.read_csv(data, nrows=1, skiprows=header_index, header=None)
+            data_frame = pd.read_csv(io.StringIO(data.decode('utf-8')), nrows=1, skiprows=header_index, header=None)
 
         header = data_frame.iloc[0]
         field_choices = [(str(column).lower(), column) for column in header]

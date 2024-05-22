@@ -161,11 +161,30 @@ def get_file_error_card(request, database, mission_id):
         card_body = card_div.find(id=error_card_form.get_card_body_id())
         card_body['class'] = card_body.get('class', []) + ['vertical-scrollbar-sm']
 
-        ul = soup.new_tag("ul")
+        ul = soup.new_tag("ul", attrs={'class': 'list-group'})
+
         card_body.append(ul)
         for error in errors:
-            li = soup.new_tag('li')
-            li.string = error.message
+            li_id = f'error_{error.pk}'
+            li = soup.new_tag('li', attrs={'class': 'list-group-item', 'id': li_id})
+            div = soup.new_tag('div', attrs={'class': 'col'})
+            div.string = error.message
+
+            url = reverse_lazy('core:mission_samples_delete_file_error', args=(database, error.pk))
+            btn_attrs = {
+                'class': 'btn btn-danger btn-sm col-auto',
+                'hx-delete': url,
+                'hx-confirm': _("Are you sure?"),
+                'hx-target': f"#{li_id}",
+                'hx-swap': 'outerHTML'
+            }
+            button = soup.new_tag('button', attrs=btn_attrs)
+            button.append(BeautifulSoup(load_svg('x-square'), 'html.parser').svg)
+
+            div_row = soup.new_tag('div', attrs={'class': 'row'})
+            div_row.append(div)
+            div_row.append(button)
+            li.append(div_row)
             ul.append(li)
 
         soup.append(card_div)
@@ -683,6 +702,12 @@ def get_biochem_buttons(request, database, mission_id):
     return HttpResponse(soup)
 
 
+def delete_file_error(request, database, error_id):
+    models.FileError.objects.using(database).filter(id=error_id).delete()
+
+    return HttpResponse()
+
+
 # ###### Mission Sample ###### #
 url_prefix = "<str:database>/sample"
 mission_sample_urls = [
@@ -708,6 +733,10 @@ mission_sample_urls = [
     path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
          name="mission_samples_download_bio_chem"),
 
+    path(f'{url_prefix}/sample/error/<int:error_id>/', delete_file_error,
+         name="mission_samples_delete_file_error"),
+
     path(f'{url_prefix}/sample/biochem/<int:mission_id>/', get_biochem_buttons,
          name="mission_samples_update_bio_chem_buttons"),
+
 ]

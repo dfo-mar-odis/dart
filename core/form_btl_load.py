@@ -212,19 +212,34 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
         body = btl_errors_soup.find(id=btl_error_form.get_card_body_id())
 
         files = errors.values_list('file_name', flat=True).distinct()
-        error_list = bottle_load_soup.new_tag('ul')
-        for file in files:
-            file_item = bottle_load_soup.new_tag('li')
-            file_item.string = str(file)
-            ul_file = bottle_load_soup.new_tag('ul')
-            for error in errors:
-                li_error = bottle_load_soup.new_tag('li')
-                li_error.string = error.message
-                ul_file.append(li_error)
-            file_item.append(ul_file)
-            error_list.append(file_item)
+        for index, file in enumerate(files):
+            body.append(card := bottle_load_soup.new_tag('div', attrs={'class': 'card',
+                                                                       'id': f'div_id_card_file_validation_{index}'}))
+            card.append(card_header := bottle_load_soup.new_tag('div', attrs={'class': 'card-header'}))
+            card_header.append(card_title := bottle_load_soup.new_tag('div', attrs={'class': 'card-title'}))
+            card_title.append(title := bottle_load_soup.new_tag('h6'))
+            title.string = str(file)
 
-        body.append(error_list)
+            card.append(card_body := bottle_load_soup.new_tag('div', attrs={'class': 'card-body'}))
+            card_body.append(ul_file := bottle_load_soup.new_tag('ul', attrs={'class': 'list-group'}))
+            for error in errors:
+                li_error_id = f'li_id_btl_error_{error.pk}'
+                ul_file.append(li_error := bottle_load_soup.new_tag('li', attrs={'class': 'list-group-item',
+                                                                                 'id': li_error_id}))
+                li_error.append(div_row := bottle_load_soup.new_tag('div', attrs={'class': "row"}))
+                div_row.append(div := bottle_load_soup.new_tag('div', attrs={'class': "col"}))
+                div.string = error.message
+
+                button_attrs = {
+                    'class': "btn btn-danger btn-sm col-auto",
+                    'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(database, error.pk,
+                                                                                                index)),
+                    'hx-target': f"#{li_error_id}",
+                    'hx-confirm': _("Are you Sure?"),
+                    'hx-swap': 'delete'
+                }
+                div_row.append(button := bottle_load_soup.new_tag('button', attrs=button_attrs))
+                button.append(BeautifulSoup(load_svg('x-square'), "html.parser").svg)
 
         form_body.append(btl_errors_soup)
 
@@ -383,6 +398,12 @@ def upload_btl_files(request, database, mission_id, **kwargs):
         response['HX-Trigger'] = 'update_samples'
 
     return response
+
+
+def delete_log_file_errors(request, database, file_name):
+    models.FileError.objects.using(database).filter(file_name__iexact=file_name).delete()
+
+    return HttpResponse()
 
 
 # ###### Bottle Load ###### #
