@@ -1,3 +1,4 @@
+import time
 from datetime import datetime
 
 import core.models
@@ -150,30 +151,31 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
         message = _("Missing a starting sample ID")
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
-    elif event.attachments.filter(name__iexact='76um').exists():
-        ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
-        if not ctd_events.filter(end_sample_id=event.sample_id).exists():
-            message = _("No CTD event with matching surface bottle. "
-                        "Check the deck sheet to confirm this is a surface bottle")
-            message += f" : {event.sample_id}"
-            possible_match =ctd_events.filter(sample_id__lte=event.sample_id, end_sample_id__gte=event.sample_id)
-            if possible_match.exists():
-                message += _(", Likely matches event : ") + str(possible_match.first().event_id)
+    elif event.mission.start_date < datetime.strptime("2024-01-01", '%Y-%m-%d').date():
+        if event.attachments.filter(name__iexact='76um').exists():
+            ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
+            if not ctd_events.filter(end_sample_id=event.sample_id).exists():
+                message = _("No CTD event with matching surface bottle. "
+                            "Check the deck sheet to confirm this is a surface bottle")
+                message += f" : {event.sample_id}"
+                possible_match =ctd_events.filter(sample_id__lte=event.sample_id, end_sample_id__gte=event.sample_id)
+                if possible_match.exists():
+                    message += _(", Likely matches event : ") + str(possible_match.first().event_id)
 
-            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
-            validation_errors.append(err)
-    elif event.attachments.filter(name__iexact='202um').exists():
-        ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
-        if not ctd_events.filter(sample_id=event.sample_id).exists():
-            message = _("No CTD event with matching bottom bottle. "
-                        "Check the deck sheet to confirm this is a bottom bottle")
-            message += f" : {event.sample_id}"
-            possible_match =ctd_events.filter(sample_id__lte=event.sample_id, end_sample_id__gte=event.sample_id)
-            if possible_match.exists():
-                message += _(", Likely matches event : ") + str(possible_match.first().event_id)
+                err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+                validation_errors.append(err)
+        elif event.attachments.filter(name__iexact='202um').exists():
+            ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
+            if not ctd_events.filter(sample_id=event.sample_id).exists():
+                message = _("No CTD event with matching bottom bottle. "
+                            "Check the deck sheet to confirm this is a bottom bottle")
+                message += f" : {event.sample_id}"
+                possible_match =ctd_events.filter(sample_id__lte=event.sample_id, end_sample_id__gte=event.sample_id)
+                if possible_match.exists():
+                    message += _(", Likely matches event : ") + str(possible_match.first().event_id)
 
-            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
-            validation_errors.append(err)
+                err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+                validation_errors.append(err)
 
     return validation_errors
 
