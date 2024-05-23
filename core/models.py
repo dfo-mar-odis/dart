@@ -33,6 +33,11 @@ class SimpleLookupName(models.Model):
 class Mission(models.Model):
     name = models.CharField(verbose_name=_("Mission Name"), max_length=50,
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
+
+    # default to version 3.2.7
+    dart_version = models.CharField(verbose_name=_("Dart Version"), max_length=50,
+                                    default="b7f674184f401a6a0192ba5e91462fcd3d97ee04")
+
     mission_descriptor = models.CharField(verbose_name=_("Mission Descriptor"), max_length=50, blank=True, null=True,
                                           help_text=_("Code assigned by OSD, ensures national coordination"))
 
