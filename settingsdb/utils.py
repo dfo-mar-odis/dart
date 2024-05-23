@@ -93,7 +93,7 @@ def migrate(database):
 
 def test_migration():
 
-    databases = ['CAR2023573', 'CAR2023573-2', 'CAR2023573-3']
+    databases = ['CAR2023573', 'CAR2023573-2', 'CAR2023573-3', 'TEL2024880']
     for db in databases:
         connect_database(db)
         try:
