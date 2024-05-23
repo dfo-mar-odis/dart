@@ -82,6 +82,9 @@ class SampleTypeConfig(models.Model):
     flag_field = models.CharField(verbose_name=_("Flag Column"), max_length=50, blank=True, null=True,
                                   help_text=_("Lowercase name of the column that contains flags, if it exists"))
 
+    limit_field = models.CharField(verbose_name=_("Detection Limit Column"), max_length=50, blank=True, null=True,
+                                   help_text=_("Lowercase name of the column that contains flags, if it exists"))
+
     comment_field = models.CharField(verbose_name=_("Comment Column"), max_length=50, blank=True, null=True,
                                      help_text=_("Lowercase name of the column containing comments, if it exists"))
 
