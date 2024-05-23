@@ -83,6 +83,10 @@
                         <li class="list-group-item">{% trans 'Replicate' %} : {{ config.replicate_field }}</li>
                         {% endif %}
 
+                        {% if config.limit_field %}
+                        <li class="list-group-item">{% trans 'Detection Limit' %} : {{ config.limit_field }}</li>
+                        {% endif %}
+
                         {% if config.flag_field %}
                         <li class="list-group-item">{% trans 'Quality Flag' %} : {{ config.flag_field }}</li>
                         {% endif %}

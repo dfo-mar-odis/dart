@@ -465,8 +465,8 @@ class DiscreteSampleValue(models.Model):
 
     # According to the BioChem - BioChem_Discrete_Simple_ERD.pdf
     #   BCDiscreteReplicates.Detection_Limit is a Number (11, 5) column
-    detection_limit = models.DecimalField(verbose_name=_("Detection Limit"), null=True, blank=True,
-                                          max_digits=11, decimal_places=5)
+    limit = models.DecimalField(verbose_name=_("Detection Limit"), null=True, blank=True, max_digits=11,
+                                decimal_places=5)
 
     # Individual samples can have different datatype than the general datatype provided by the
     # sample type. If this is blank the sample.type.datatype value should be used for the sample

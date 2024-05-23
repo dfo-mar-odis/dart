@@ -231,6 +231,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         dataframe = dataframe.reset_index(drop=True)
         sample_id_field, replicate_id_field = 'sid', 'rid'
         value_field = sample_config.value_field
+        limit_field = sample_config.limit_field
         flag_field = sample_config.flag_field
         comment_field = sample_config.comment_field
 
@@ -240,7 +241,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                    core_models.Bottle.objects.using(database).filter(event__mission=mission)}
         bottle_keys = sorted(bottles.keys())
 
-        # for speed we'll bulk delete Discrete values form all bottles with the requested sample type, then
+        # for speed, we'll bulk delete Discrete values form all bottles with the requested sample type, then
         # recreate them.
         sample_ids = [sample_id for sample_id in dataframe[sample_id_field].unique()]
 
@@ -309,6 +310,10 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             if comment_field and comment_field in row and not pd.isna(row[comment_field]):
                 comment = row[comment_field]
 
+            limit = None
+            if limit_field and limit_field in row and not pd.isna(row[limit_field]):
+                limit = row[limit_field]
+
             flag = None
             if flag_field and flag_field in row and not pd.isna(row[flag_field]):
                 flag = row[flag_field]
@@ -324,6 +329,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 discrete_sample = core_models.DiscreteSampleValue(sample=db_sample, value=value)
                 discrete_sample.replicate = replicate
                 discrete_sample.comment = comment
+                discrete_sample.limit = limit
                 discrete_sample.flag = flag
                 create_discrete_values.append(discrete_sample)
 
