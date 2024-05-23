@@ -12,6 +12,8 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
+from git import Repo
+
 from core import models
 from core.forms import NoWhiteSpaceCharField
 from dart.utils import load_svg
@@ -214,12 +216,14 @@ class MissionSettingsForm(forms.ModelForm):
 
     def save(self, commit=True):
         mission_name = self.cleaned_data['name']
+        repo = Repo(settings.BASE_DIR)
 
         if mission_name not in settings.DATABASES:
             settings_utils.add_database(mission_name)
 
         instance: models.Mission = super().save(commit=False)
 
+        instance.dart_version = repo.head.commit.hexsha
         instance.save(using=mission_name)
 
         return instance

@@ -39,6 +39,7 @@ user_logger = logger.getChild('user')
 class SampleTypeConfigForm(forms.ModelForm):
     sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
     value_field = forms.CharField(help_text=_("Column that contains the value data"))
+    limit_field = forms.CharField(required=False, help_text=_("Column that contains the detection limit, if it exists"))
     flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
     comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
 
@@ -86,7 +87,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         tab = int(self.initial.get('tab', tab) if tab == -1 else tab)
         skip = int(self.initial.get('skip', skip) if skip == -1 else skip)
         field_choices = self.get_column_headers(self.file_data, self.file_type, tab, skip)
-        choice_fields = ['sample_field', 'value_field', 'flag_field', 'comment_field']
+        choice_fields = ['sample_field', 'value_field', 'limit_field', 'flag_field', 'comment_field']
 
         for choice_field in choice_fields:
             s_field: forms.CharField = self.base_fields[choice_field]
@@ -196,6 +197,7 @@ class SampleTypeConfigForm(forms.ModelForm):
             Row(
                 Column(Field('sample_field')),
                 Column(Field('value_field')),
+                Column(Field('limit_field', )),
                 Column(Field('flag_field', )),
                 Column(Field('comment_field')),
                 css_class="flex-fill", id="div_id_fields_row"

@@ -244,11 +244,12 @@ def list_samples(request, database, mission_sample_type_id):
         'bottle__pressure',
         'discrete_values__replicate',
         'discrete_values__value',
+        'discrete_values__limit',
         'discrete_values__flag',
         'discrete_values__datatype',
         'discrete_values__comment',
     )
-    headings = ['Value', 'Flag', 'Datatype', 'Comments']
+    headings = ['Value', 'Limit', 'Flag', 'Datatype', 'Comments']
     df = read_frame(queryset)
     df.columns = ["Sample", "Pressure", "Replicate", ] + headings
     df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])

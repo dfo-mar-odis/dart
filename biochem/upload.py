@@ -377,6 +377,10 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         updated_fields.add(updated_value(bcd_row, 'mission_descriptor', mission.mission_descriptor))
 
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_qc_code', ds_sample.flag if ds_sample.flag else 0))
+
+        limit = ds_sample.limit if ds_sample.limit else None
+        updated_fields.add(updated_value(bcd_row, 'dis_detail_detection_limit', limit))
+
         updated_fields.add(updated_value(bcd_row, 'process_flag', 'NR'))
         updated_fields.add(updated_value(bcd_row, 'created_by', uploader))
         updated_fields.add(updated_value(bcd_row, 'data_center_code', primary_data_center.data_center_code))

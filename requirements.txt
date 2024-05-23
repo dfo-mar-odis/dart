@@ -83,3 +83,6 @@ cx_Oracle~=8.3
 
 # package handles native UI components like open file dialog.
 easygui==0.98.3
+
+# used for versioning databases
+gitpython==3.1.43

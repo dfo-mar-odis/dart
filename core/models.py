@@ -33,6 +33,11 @@ class SimpleLookupName(models.Model):
 class Mission(models.Model):
     name = models.CharField(verbose_name=_("Mission Name"), max_length=50,
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
+
+    # default to version 3.2.7
+    dart_version = models.CharField(verbose_name=_("Dart Version"), max_length=50,
+                                    default="b7f674184f401a6a0192ba5e91462fcd3d97ee04")
+
     mission_descriptor = models.CharField(verbose_name=_("Mission Descriptor"), max_length=50, blank=True, null=True,
                                           help_text=_("Code assigned by OSD, ensures national coordination"))
 
@@ -462,6 +467,11 @@ class DiscreteSampleValue(models.Model):
                                                 "form the same bottle."))
 
     flag = models.IntegerField(verbose_name=_("Data Quality Flag"), null=True, blank=True)
+
+    # According to the BioChem - BioChem_Discrete_Simple_ERD.pdf
+    #   BCDiscreteReplicates.Detection_Limit is a Number (11, 5) column
+    limit = models.DecimalField(verbose_name=_("Detection Limit"), null=True, blank=True, max_digits=11,
+                                decimal_places=5)
 
     # Individual samples can have different datatype than the general datatype provided by the
     # sample type. If this is blank the sample.type.datatype value should be used for the sample
