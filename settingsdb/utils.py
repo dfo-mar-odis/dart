@@ -12,6 +12,9 @@ from settingsdb import models
 from bio_tables import models as biomodels
 from dart import settings
 
+from core import models as core_models
+from git import Repo
+
 import logging
 
 logger = logging.getLogger('dart')
@@ -89,6 +92,11 @@ def is_database_synchronized(database):
 def migrate(database):
     if not is_database_synchronized(database):
         call_command('migrate', 'core', database=database)
+        repo = Repo(settings.BASE_DIR)
+
+        mission = core_models.Mission.objects.using(database).first()
+        mission.dart_version = repo.head.commit.hexsha
+        mission.save()
 
 
 def test_migration():
