@@ -333,6 +333,8 @@ def delete_log_file_error(request, database, error_id, uuid):
 def delete_event_errors(request, database, event_id):
     models.ValidationError.objects.using(database).filter(event_id=event_id).delete()
 
+    return HttpResponse()
+
 
 def delete_event_error(request, database, error_id):
     error = models.ValidationError.objects.using(database).get(id=error_id)
