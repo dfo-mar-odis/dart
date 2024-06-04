@@ -3,23 +3,30 @@
 
 <div>
 <div class="card">
-    <div class="card-header">
+    <div class="card-header" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         <div class="row">
             <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
-                    href="#div_id_bio_error_card_body">{% custom_icon 'caret-down' %}</button>
-            <span class="card-title col-auto align-self-end h6">{% trans "Database Warnings" %}</span>
+                    href="#div_id_card_body_expand_biochem_validation">{% custom_icon 'caret-down' %}</button>
+            <div class="col-auto align-self-end">
+                <div class="card-title" id="div_id_card_title_biochem_validation">
+                    <h6>{% trans "BioChem Validation" %}</h6>
+                </div>
+            </div>
+            <div class="col">
+                <button class="btn btn-sm btn-primary" hx-swap="none" hx-get="{% url 'core:form_biochem_validation_run' database mission.pk %}" title="{% trans "Run BioChem Validation" %}">
+                    {% custom_icon 'arrow-clockwise' %}
+                </button>
+            </div>
+            <div class="col-auto">
+                <div id="div_id_biochem_validation_count" class="badge bg-success">0</div>
+            </div>
         </div>
+        <div class="row" id="div_id_biochem_validation_details_alert"></div>
     </div>
-    <div class="collapse col" id="div_id_bio_error_card_body">
-{#        <div class="card-body vertical-scrollbar" hx-trigger="load, biochem_updated from:body" hx-target="#bio_errors"#}
-{#              hx-swap="outerHTML" hx-select="#bio_errors"#}
-{#             hx-get="{% url 'core:form_biochem_errors' database mission.pk %}">#}
-{#            <ul id="bio_errors" class="list-group" hx-swap-oob="true">#}
-{#            {% for error in biochem_errors %}#}
-{#                <li class="list-group-item">{{ error.message }}</li>#}
-{#            {% endfor %}#}
-{#            </ul>#}
-{#        </div>#}
+    <div class="collapse col" id="div_id_card_body_expand_biochem_validation">
+        <div class="card-body vertical-scrollbar" hx-trigger="load, biochem_validation_update from:body" hx-get="{% url 'core:form_validation_get_validation_errors' database mission.pk %}">
+
+        </div>
     </div>
 </div>
 </div>

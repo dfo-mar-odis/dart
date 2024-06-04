@@ -3,7 +3,7 @@ from django.urls import path
 from . import views, views_mission_sample, views_sample_type, views_mission_plankton
 from . import views_mission_sample_type, views_mission_event
 from . import form_biochem_database, form_btl_load, form_sample_type_config, form_mission_sample_type
-from . import form_plankton_load, form_mission_settings
+from . import form_plankton_load, form_mission_settings, form_validation_biochem
 from . import reports
 
 app_name = 'core'
@@ -28,6 +28,7 @@ urlpatterns.extend(views_mission_sample_type.mission_sample_type_urls)
 urlpatterns.extend(views_mission_plankton.plankton_urls)
 urlpatterns.extend(form_btl_load.bottle_load_urls)
 urlpatterns.extend(form_biochem_database.database_urls)
+urlpatterns.extend(form_validation_biochem.database_urls)
 urlpatterns.extend(form_sample_type_config.sample_type_config_urls)
 urlpatterns.extend(form_mission_sample_type.sample_type_urls)
 urlpatterns.extend(form_plankton_load.plankton_urls)
