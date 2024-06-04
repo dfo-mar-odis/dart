@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, re_path
 
 from docs import views
 
@@ -13,4 +13,6 @@ urlpatterns = [
     path('mission/mission_samples', views.MissionSamples.as_view(), name="mission_samples"),
     path('mission/file_configurations', views.FileConfigurations.as_view(), name="file_configurations"),
     path('mission/sample_types', views.SampleTypes.as_view(), name="sample_types"),
+
+    re_path('.*', views.markdown_page, name='markdown'),
 ]
