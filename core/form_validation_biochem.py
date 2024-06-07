@@ -1,4 +1,5 @@
 from bs4 import BeautifulSoup
+from enum import Enum
 from django.urls import reverse_lazy, path
 from django.http import HttpResponse
 from django.utils.translation import gettext as _
@@ -9,6 +10,22 @@ from core import forms
 import logging
 
 logger_notifications = logging.getLogger('dart.user.biochem_validation')
+
+
+class BIOCHEM_CODES(Enum):
+    DESCRIPTOR_MISSING = 1000
+
+
+def _validation_mission_descriptor(mission: core_models.Mission) -> [core_models.Error]:
+    logger_notifications.info(_("Validating Mission descriptor"))
+    descriptor_errors = []
+
+    if not mission.mission_descriptor:
+        err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem,
+                                message=_("Mission descriptor doesn't exist", code=BIOCHEM_CODES.DESCRIPTOR_MISSING))
+        descriptor_errors.append(err)
+
+    return descriptor_errors
 
 
 def _validate_mission_dates(mission: core_models.Mission) -> [core_models.Error]:
@@ -33,6 +50,7 @@ def _validate_mission_dates(mission: core_models.Mission) -> [core_models.Error]
 
 def validate_mission(mission: core_models.Mission) -> [core_models.Error]:
     errors = []
+    errors += _validation_mission_descriptor(mission)
     errors += _validate_mission_dates(mission)
 
     return errors

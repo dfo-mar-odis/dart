@@ -114,3 +114,31 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("End date comes before Start date"))
+
+    @tag('form_validation_biochem_test_mission_descriptor', 'git_issue_144')
+    def test_mission_descriptor(self):
+        # provided a mission with no name (used as the mission descriptor) to the _validation_mission_descriptor
+        # function an error should be reported.
+
+        bad_mission = core_factory.MissionFactory()
+        errors: [core_models.Error] = form_validation_biochem._validation_mission_descriptor(bad_mission)
+
+        self.assertIsNotNone(errors)
+
+        self.assertIsInstance(errors[0], core_models.Error)
+        self.assertEquals(errors[0].mission, bad_mission)
+        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
+
+    @tag('form_validation_biochem_test_mission_descriptor', 'git_issue_144')
+    def test_validate_mission_descriptor_mission(self):
+        # ensure the _validate_mission_descriptor function is called through the validation_mission function
+        bad_mission = core_factory.MissionFactory()
+        errors: [core_models.Error] = form_validation_biochem.validate_mission(bad_mission)
+
+        self.assertIsNotNone(errors)
+
+        self.assertIsInstance(errors[0], core_models.Error)
+        self.assertEquals(errors[0].mission, bad_mission)
+        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))

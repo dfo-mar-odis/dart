@@ -598,6 +598,9 @@ class AbstractError(models.Model):
     message = models.CharField(max_length=255, verbose_name=_("Message"))
     type = models.IntegerField(verbose_name=_("Error type"), default=0, choices=ErrorType.choices)
 
+    # The error code can be used to be more specific than an error type
+    code = models.IntegerField(verbose_name=_("Error code"), default=-1)
+
 
 # General errors we want to keep track of and notify the user about
 class Error(AbstractError):
