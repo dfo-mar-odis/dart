@@ -94,11 +94,14 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("Missing start date"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DATE_MISSING.value)
 
         self.assertIsInstance(errors[1], core_models.Error)
         self.assertEquals(errors[1].mission, bad_mission)
         self.assertEquals(errors[1].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[1].message, _("Missing end date"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DATE_MISSING.value)
+
 
     @tag('form_validation_biochem_test_validate_bad_dates')
     def test_validate_bad_dates(self):
@@ -114,6 +117,7 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("End date comes before Start date"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DATE_BAD_VALUES.value)
 
     @tag('form_validation_biochem_test_mission_descriptor', 'git_issue_144')
     def test_mission_descriptor(self):
@@ -129,6 +133,7 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
 
     @tag('form_validation_biochem_test_mission_descriptor', 'git_issue_144')
     def test_validate_mission_descriptor_mission(self):
@@ -142,3 +147,4 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
