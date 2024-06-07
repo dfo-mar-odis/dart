@@ -226,6 +226,10 @@ class BcsD(models.Model):
     created_by = models.CharField(max_length=30)
     created_date = models.DateField()
     data_center_code = models.IntegerField(blank=True, null=True)
+
+    # The process flag is used by the Biochem upload app to indicate if the data should be processed by
+    # the application. Pl/SQL code is run on the table and this flag is set to 'T' or 'F' depending on
+    # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
     batch_seq = models.IntegerField(blank=True, null=True)
 

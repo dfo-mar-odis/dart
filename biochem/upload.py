@@ -222,6 +222,9 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         updated_fields.add(updated_value(bcs_row, 'dis_headr_start_depth', bottle.pressure))
         updated_fields.add(updated_value(bcs_row, 'dis_headr_end_depth', bottle.pressure))
 
+        # The process flag is used by the Biochem upload app to indicate if the data should be processed by
+        # the application. Pl/SQL code is run on the table and this flag is set to 'T' or 'F' depending on
+        # if the data validates.
         updated_fields.add(updated_value(bcs_row, 'process_flag', 'NR'))
         updated_fields.add(updated_value(bcs_row, 'data_center_code', primary_data_center.data_center_code))
 
