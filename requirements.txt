@@ -19,7 +19,7 @@ crispy-bootstrap5
 django-filter==2.4.0
 
 # Icons to make things pretty
-django_bootstrap_icons
+django-bootstrap-icons
 
 # used for partial page rendering with HTMX
 django-render-block
