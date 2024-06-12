@@ -12,13 +12,13 @@ from settingsdb.models import FileConfiguration
 from core import models as core_models
 
 logger = logging.getLogger(f"dart.{__name__}")
-logger_notifications = logging.getLogger('dart.user.andies')
+logger_notifications = logging.getLogger('dart.user.andes')
 
 
 def get_or_create_file_config() -> QuerySet[FileConfiguration]:
-    file_type = 'andies_json'
+    file_type = 'andes_json'
     # These are all things the Elog parser requires, so we should probably figure out how to tackle them when reading
-    # an Andies Report
+    # an Andes Report
     fields = [
         ("lead_scientists", "chief_scientist", _("Label identifying the cheif scientists for the mission")),
         ("platform", "name", _("Label identifying the ship name used for the mission")),
@@ -285,7 +285,7 @@ def parse_actions(mission: core_models.Mission, file_name: str, samples: list[di
 
 def parse(mission: core_models.Mission, file_name: str, stream: io.StringIO):
     """
-    Parse a JSON formatted mission report outputed from the ANDIES application
+    Parse a JSON formatted mission report outputed from the ANDES application
 
     Keyword arguments:
         mission -- The mission to add data to

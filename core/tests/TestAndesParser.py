@@ -11,37 +11,37 @@ from django.test import tag
 
 from core.tests import CoreFactoryFloor as core_factory
 from dart.tests.DartTestCase import DartTestCase
-from core.parsers import andies
+from core.parsers import andes
 from core import models as core_models
 
 logger = logging.getLogger(f'dart.debug.{__name__}')
 
 
-@tag('parsers', 'andies_parser')
-class TestAndiesParser(DartTestCase):
+@tag('parsers', 'andes_parser')
+class TestAndesParser(DartTestCase):
 
     test_file_name = "CAR-2024-924 DART Export (2024-06-10).json"
     test_file_location = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
     test_file = os.path.join(test_file_location, test_file_name)
 
     def setUp(self):
-        andies.logger = logger
+        andes.logger = logger
         self.mission = core_factory.MissionFactory(
             name='CAR-2024-924',
             start_date=datetime.strptime("2024-05-23 09:00:00", '%Y-%m-%d %H:%M:%S'),
             end_date=datetime.strptime("2024-06-18 18:00:00", '%Y-%m-%d %H:%M:%S')
         )
 
-    @tag('andies_parser_test_andeis_parser_init')
+    @tag('andes_parser_test_andeis_parser_init')
     def test_andeis_parser_init(self):
         with open(self.test_file, 'r') as f:
             stream = StringIO(f.read())
-            andies.parse(self.mission, self.test_file_name, stream)
+            andes.parse(self.mission, self.test_file_name, stream)
 
         instruments = core_models.Instrument.objects.all()
         self.assertEquals(5, instruments.count())  # the test file has 5 instruments in it
 
-    @tag('andies_parser_test_andeis_parser_instruments')
+    @tag('andes_parser_test_andeis_parser_instruments')
     def test_andeis_parser_instruments(self):
         instruments = [
             {
@@ -64,7 +64,7 @@ class TestAndiesParser(DartTestCase):
             }
         ]
 
-        andies.parse_instruments(self.mission, self.test_file_name, instruments)
+        andes.parse_instruments(self.mission, self.test_file_name, instruments)
 
         mission_instruments = core_models.Instrument.objects.using('default').all()
         self.assertIsNotNone(mission_instruments.get(name__iexact='CTD AZOMP 2024'))
@@ -83,9 +83,9 @@ class TestAndiesParser(DartTestCase):
         beacon = mission_instruments.get(name__iexact='Argo (BIO AZOMP)')
         self.assertEquals(core_models.InstrumentType.other, beacon.type)
 
-    @tag('andies_parser_test_andeis_parser_stations')
+    @tag('andes_parser_test_andeis_parser_stations')
     def test_andeis_parser_stations(self):
-        # give a list of 'samples', which is really a list of stations, but the Andies report referes to them
+        # give a list of 'samples', which is really a list of stations, but the Andes report referes to them
         # as samples, stations from each sample should be added to the mission station table
         samples = [
             {
@@ -96,14 +96,14 @@ class TestAndiesParser(DartTestCase):
             }
         ]
 
-        andies.parse_stations(self.mission, self.test_file_name, samples)
+        andes.parse_stations(self.mission, self.test_file_name, samples)
 
         stations = core_models.Station.objects.all()
         self.assertEquals(len(samples), stations.count())
         station = stations.get(name__iexact='AR7W_13')
         self.assertIsNotNone(station)
 
-    @tag('andies_parser_test_andeis_parser_events')
+    @tag('andes_parser_test_andeis_parser_events')
     def test_andeis_parser_events(self):
         station = core_factory.StationFactory(name='AR7W_13')
         ctd_instrument = core_factory.CTDInstrumentFactory(name='CTD AZOMP 2024')
@@ -163,7 +163,7 @@ class TestAndiesParser(DartTestCase):
             ]
         }]
 
-        andies.parse_events(self.mission, self.test_file_name, samples)
+        andes.parse_events(self.mission, self.test_file_name, samples)
 
         events = core_models.Event.objects.all()
         event = events.get(event_id=10)
@@ -184,7 +184,7 @@ class TestAndiesParser(DartTestCase):
         self.assertEquals(2554, event.flow_end)
         self.assertEquals(505584, event.sample_id)
 
-    @tag('andies_parser_test_andeis_parser_actions')
+    @tag('andes_parser_test_andeis_parser_actions')
     def test_andeis_parser_actions(self):
 
         instrument = core_factory.CTDInstrumentFactory(name='CTD AZOMP 2024')
@@ -235,7 +235,7 @@ class TestAndiesParser(DartTestCase):
             ]
         }]
 
-        andies.parse_actions(self.mission, self.test_file_name, samples)
+        andes.parse_actions(self.mission, self.test_file_name, samples)
 
         actions = event.actions.all()
         self.assertEquals(3, actions.count())
