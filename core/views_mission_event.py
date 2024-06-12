@@ -47,6 +47,7 @@ class ValidationEventCard(forms.CardForm):
 
     def get_card_class(self):
         return "card mb-2"
+
     def get_card_header(self) -> Div:
         header = super().get_card_header()
 
@@ -103,6 +104,9 @@ class ValidationEventCard(forms.CardForm):
         self.event = event
         self.database = database if database else event._state.db
         title = _("Event") + f" {event.event_id} : {event.mission.start_date} - {event.mission.end_date}"
+        if event.station:
+            title += f": {event.station}"
+
         super().__init__(card_name=f"event_validation_{event.pk}", card_title=title, *args, **kwargs)
 
 

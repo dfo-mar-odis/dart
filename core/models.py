@@ -287,7 +287,7 @@ class Action(models.Model):
     longitude = models.DecimalField(verbose_name=_("Longitude"), blank=True, null=True, decimal_places=6, max_digits=9)
 
     # The file this action was loaded from. Events can span different files, but they can also be entered
-    # manually (comming soon) so this allows us to track an action back to the file it comes from, if it comes
+    # manually so this allows us to track an action back to the file it comes from, if it comes
     # from a file.
     file = models.CharField(verbose_name=_("File Name"), max_length=100, null=True, blank=True)
 
@@ -300,7 +300,7 @@ class Action(models.Model):
                                          help_text=_("if the action is an unknown type then leave a comment here "
                                                      "identifying what the 'other' type is"))
 
-    # the data collector would bet he person who fired the event on the ship. For BIO this would be the 'Author' field
+    # the data collector would be the person who fired the event on the ship. For BIO this would be the 'Author' field
     data_collector = models.CharField(verbose_name=_("Data Collector"), max_length=100, blank=True, null=True)
     sounding = models.FloatField(verbose_name=_("Sounding"), blank=True, null=True)
 
