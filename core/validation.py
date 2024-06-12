@@ -86,7 +86,8 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
     if event.instrument.type == core_models.InstrumentType.ctd:
         validation_errors += validate_ctd_event(event)
     elif event.instrument.type == core_models.InstrumentType.net:
-        validation_errors += validate_net_event(event)
+        if 'multinet' not in event.instrument.name.lower():
+            validation_errors += validate_net_event(event)
 
     return validation_errors
 
