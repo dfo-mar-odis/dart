@@ -20,6 +20,9 @@ def get_or_create_file_config() -> QuerySet[FileConfiguration]:
     # These are all things the Elog parser requires, so we should probably figure out how to tackle them when reading
     # an Andies Report
     fields = [
+        ("lead_scientists", "chief_scientist", _("Label identifying the cheif scientists for the mission")),
+        ("platform", "name", _("Label identifying the ship name used for the mission")),
+
         ("instrument_name", "name", _("Label identifying an instrument name")),
         ("instrument_type", "instrument_type", _("Label identifying an instrument type")),
         ("station_name", "station", _("Label identifying a station name")),
@@ -40,19 +43,7 @@ def get_or_create_file_config() -> QuerySet[FileConfiguration]:
         ("action_lat", "latitude", _("Label identifying the latitude recorded for the action")),
         ("action_lon", "longitude", _("Label identifying the longitude recorded for the action")),
         ("action_sounding", "sounding", _("Label identifying the event sounding to apply to actions")),
-
-        ("time_position", "Time|Position", _("Label identifying the time|position string of an action")),
-        ("action", "Action", _("Label identifying an elog action")),
-        ('lead_scientist', 'PI', _("Label identifying the lead scientists of the mission")),
-        ('protocol', "Protocol", _("Label identifying the protocol of the mission")),
-        ('cruise', "Cruise", _("Label identifying the cruse name of the mission")),
-        ("platform", "Platform", _("Label identifying the ship name used for the mission")),
-        ("attached", "Attached", _("Label identifying accessories attached to equipment")),
-        ("start_sample_id", "Sample ID", _("Label identifying a lone bottle, or starting bottle in a sequence")),
-        ("end_sample_id", "End_Sample_ID", _("Label identifying the ending bottle in a sequence")),
-        ("comment", "Comment", _("Label identifying an action comment")),
-        ("data_collector", "Author", _("Label identifying who logged the elog action")),
-        ]
+    ]
 
     existing_mappings = FileConfiguration.objects.filter(file_type=file_type)
     create_mapping = []
@@ -301,12 +292,23 @@ def parse(mission: core_models.Mission, file_name: str, stream: io.StringIO):
         stream -- io.StringIO object reading from the file
     """
 
+    config: QuerySet[FileConfiguration] = get_or_create_file_config()
+
     # Step 1 - read the file
     data = json.load(stream)
     database = mission._state.db
     core_models.FileError.objects.using(database).filter(file_name=file_name).delete()
 
     errors = []
+
+    if not mission.lead_scientist or (mission.lead_scientist and mission.lead_scientist == 'N/A'):
+        mission.lead_scientist = data['mission'].get(config.get(required_field='lead_scientists').mapped_field, "N/A")
+
+    if not mission.platform or (mission.platform and mission.platform == 'N/A'):
+        mission.platform = data['mission']['vessel'].get(config.get(required_field='platform').mapped_field, "N/A")
+
+    mission.save()
+
     errors += parse_instruments(mission, file_name, data['mission']['instruments'])
     errors += parse_stations(mission, file_name, data['mission']['samples'])
     errors += parse_events(mission, file_name, data['mission']['samples'])
