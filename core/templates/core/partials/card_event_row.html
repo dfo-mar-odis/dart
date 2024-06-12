@@ -14,8 +14,8 @@
 
                         <label for="elog_event_file_input_id" class="btn btn-primary btn-sm"
                                title="{% trans "Upload events from elog files" %}">Elog {% custom_icon 'arrow-up-square' %}</label>
-                        <label for="andies_event_file_input_id" class="btn btn-primary btn-sm"
-                               title="{% trans "Upload events from andies report" %}">Andies {% custom_icon 'arrow-up-square' %}</label>
+                        <label for="andes_event_file_input_id" class="btn btn-primary btn-sm"
+                               title="{% trans "Upload events from andes report" %}">Andes {% custom_icon 'arrow-up-square' %}</label>
                     </div>
                 </div>
                     {% block event_import_form %}
@@ -28,7 +28,7 @@
                     >
                         <input id="elog_event_file_input_id" type="file" name="elog_event" accept=".log"
                                multiple="true" class="invisible"/>
-                        <input id="andies_event_file_input_id" type="file" name="andies_event" accept=".json"
+                        <input id="andes_event_file_input_id" type="file" name="andes_event" accept=".json"
                                multiple="false" class="invisible"/>
                     <div id="div_id_event_alert"></div>
                     </form>

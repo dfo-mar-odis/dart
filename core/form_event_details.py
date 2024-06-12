@@ -17,7 +17,7 @@ from django.utils.translation import gettext as _
 from render_block import render_block_to_string
 
 from core import forms as core_forms, models, validation
-from core.parsers import FilterLogParser, elog, andies
+from core.parsers import FilterLogParser, elog, andes
 from core.parsers.FixStationParser import FixStationParser
 
 from dart.utils import load_svg
@@ -1123,9 +1123,9 @@ def import_elog_events(request, database, mission_id, **kwargs):
     mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     if request.method == 'GET':
-        if 'andies_event' in request.GET:
-            logger = andies.logger_notifications.name
-            message = _("Processing Andies Report")
+        if 'andes_event' in request.GET:
+            logger = andes.logger_notifications.name
+            message = _("Processing Andes Report")
         else:
             logger = elog.logger_notifications.name
             message = _("Processing Elog")
@@ -1140,9 +1140,9 @@ def import_elog_events(request, database, mission_id, **kwargs):
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
 
-    if 'andies_event' in request.FILES:
-        file = request.FILES.get('andies_event')
-        andies.parse(mission, file.name, file)
+    if 'andes_event' in request.FILES:
+        file = request.FILES.get('andes_event')
+        andes.parse(mission, file.name, file)
     else:
         files = request.FILES.getlist('elog_event')
         elog.parse_files(mission, files)
