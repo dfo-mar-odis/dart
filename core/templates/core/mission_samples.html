@@ -43,13 +43,13 @@
                 </div>
             </div>
         </div>
+        <div class="mb-2">
+            {% include 'core/partials/card_biochem_validation.html' %}
+        </div>
         <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" database mission.pk %}">
             {# The Biochem database form will be swapped in here after the page loads #}
             {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
             {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}
-        </div>
-        <div class="mb-2">
-            {% include 'core/partials/card_biochem_validation.html' %}
         </div>
     </div>
 {% endblock %}
