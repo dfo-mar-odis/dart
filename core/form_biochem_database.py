@@ -412,14 +412,16 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
         last_uploaded = bcs_d.objects.using('biochem').all().values_list('created_date', flat=True).distinct().last()
-        if last_uploaded:
-            bottles = bottles.filter(last_modified__gt=last_uploaded)
+        # if last_uploaded:
+        #     bottles = bottles.filter(last_modified__gt=last_uploaded)
 
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, bcs_d_model=bcs_d)
+        create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
+                                                               batch_name=mission.get_batch_name,
+                                                               bcs_d_model=bcs_d)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS rows"))
@@ -453,7 +455,9 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
             message = _("Compiling BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
             create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
-                                                                   samples=discreate_samples, bcd_d_model=bcd_d)
+                                                                   samples=discreate_samples,
+                                                                   batch_name=mission.get_batch_name,
+                                                                   bcd_d_model=bcd_d)
 
             message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
@@ -483,7 +487,8 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_p_rows(uploader, bottles, bcs_p)
+        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_p_rows(uploader, bottles,
+                                                                               mission.get_batch_name, bcs_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS rows"))
@@ -511,7 +516,8 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCD rows"))
-        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(database, uploader, samples, bcd_p)
+        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(database, uploader, samples,
+                                                                               mission.get_batch_name, bcd_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCD rows"))

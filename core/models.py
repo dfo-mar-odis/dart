@@ -86,6 +86,10 @@ class Mission(models.Model):
                                              blank=True, null=True)
 
     @property
+    def get_batch_name(self):
+        return f'{self.start_date.strftime("%Y%m")}{self.end_date.strftime("%m")}'
+
+    @property
     def get_biochem_table_name(self):
         if not self.biochem_table:
             self.biochem_table = f'bio_upload_{self.name}'

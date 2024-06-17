@@ -6,7 +6,7 @@ from typing import Type
 from datetime import datetime
 
 from django.db import connections, DatabaseError
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
 import bio_tables.models
@@ -123,18 +123,19 @@ def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.Bcs
 
 
 # returns the rows to create, rows to update and fields to update
-def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model: Type[models.BcsD] = None,
-                   batch_name: str = None) -> [[models.BcsD], [models.BcsD], [str]]:
+def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name: str,
+                   bcs_d_model: Type[models.BcsD] = None) -> [[models.BcsD], [models.BcsD], [str]]:
     user_logger.info("Creating/updating BCS table")
     bcs_objects_to_create = []
     bcs_objects_to_update = []
 
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
+    batch = batch_name
     existing_samples = {}
     if bcs_d_model:
         existing_samples = {int(sample.dis_headr_collector_sample_id): sample for sample in
-                            bcs_d_model.objects.using('biochem').all()}
+                            bcs_d_model.objects.using('biochem').filter(batch_seq=batch)}
 
     updated_fields = set()
     total_bottles = len(bottles)
@@ -228,9 +229,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], bcs_d_model
         updated_fields.add(updated_value(bcs_row, 'process_flag', 'NR'))
         updated_fields.add(updated_value(bcs_row, 'data_center_code', primary_data_center.data_center_code))
 
-        if not batch_name:
-            batch_name = f'{event.start_date.strftime("%Y")}{mission.pk}'
-        updated_fields.add(updated_value(bcs_row, 'batch_seq', batch_name))
+        updated_fields.add(updated_value(bcs_row, 'batch_seq', batch))
 
         # remove the blank string from the updated_fields set, if there are still values in the set after that
         # then this record needs to be updated.
@@ -274,16 +273,27 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
 # the row has been created. So the row will have to be written, the bcd.dis_data_num retrieved and attached
 # to the core.models.DiscreteSampleValue and then updated to fix the dis_detail_collector_samp_id key to be
 # just the bottle_id
-def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue],
-                   bcd_d_model: Type[models.BcdD] = None, batch_name: str = None
-                   ) -> [[models.BcdD], [models.BcdD], [str]]:
+def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
+                   bcd_d_model: Type[models.BcdD] = None) -> [[models.BcdD], [models.BcdD], [str]]:
     bcd_objects_to_create = []
     bcd_objects_to_update = []
     errors = []
 
+    batch = batch_name
+
+    dis_data_num_start = 1
     existing_samples = {}
     if bcd_d_model:
-        existing_samples = {sample.dis_data_num: sample for sample in bcd_d_model.objects.using('biochem').all()}
+        bcd_objects = bcd_d_model.objects.using('biochem').all()
+        existing_samples = {sample.dis_data_num: sample for sample in bcd_objects.filter(batch_seq=batch)}
+
+        if bcd_objects.filter(batch_seq=batch).exists():
+            dis_data_num_start = bcd_objects.filter(batch_seq=batch).aggregate(min_dis=Min('dis_data_num'))['min_dis']
+        elif dis_data_num_start := bcd_objects.aggregate(max_dis=Max('dis_data_num'))['max_dis']:
+            dis_data_num_start += 1
+        else:
+            dis_data_num_start = 1
+
 
     # if the dis_data_num key changes then this will be used to update the discrete sample dis_data_num
     dis_data_num_updates = []
@@ -293,15 +303,15 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
     updated_fields = set()
     total_samples = len(samples)
     for count, ds_sample in enumerate(samples):
-        dis_data_num = count + 1
+        dis_data_num = count + dis_data_num_start
         user_logger.info(_("Compiling BCD samples") + " : " + "%d/%d",
-                         dis_data_num, total_samples)
+                         (count + 1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
         mission = event.mission
 
-        # Use the row level datatype if provided other wise use the mission level datatype
+        # Use the row level datatype if provided otherwise use the mission level datatype
         bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
 
         existing_sample = False
@@ -366,7 +376,6 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
             updated_fields.add(updated_value(bcd_row, 'dis_header_stime', event_date.strftime("%H%M")))
 
         # ########### Stuff that we get from the Mission object #################################################### #
-        batch = batch_name if batch_name else f'{event.start_date.strftime("%Y")}{mission.pk}'
         updated_fields.add(updated_value(bcd_row, 'batch_seq', batch))
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detail_collector', mission.lead_scientist))
 
@@ -414,8 +423,8 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
 
 
-def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_model: Type[models.BcsP] = None,
-                   batch_name: str = None) -> [[models.BcsP], [models.BcsP], [str]]:
+def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_name: str,
+                   bcs_p_model: Type[models.BcsP] = None) -> [[models.BcsP], [models.BcsP], [str]]:
 
     bcs_objects_to_create = []
     bcs_objects_to_update = []
@@ -427,10 +436,11 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
     # mission = core_models.Mission.objects.get(pk=mission_id)
     # institute: bio_tables.models.BCDataCenter = mission.data_center
 
+    batch = batch_name
     existing_samples = {}
     if bcs_p_model:
         existing_samples = {sample.plank_sample_key_value: sample for sample in
-                            bcs_p_model.objects.using('biochem').all()}
+                            bcs_p_model.objects.using('biochem').filter(batch_seq=batch)}
 
     total_bottles = len(bottles)
     for count, bottle in enumerate(bottles):
@@ -543,7 +553,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], bcs_p_m
             row_update.add(updated_value(bcs_row, 'process_flag', 'NR'))
             row_update.add(updated_value(bcs_row, 'data_center_code', institute.data_center_code))
 
-            batch = batch_name if batch_name else f'{event.start_date.strftime("%Y")}{mission.pk}'
             row_update.add(updated_value(bcs_row, 'batch_seq', batch))
 
             # Maybe this should be averaged?
@@ -624,9 +633,8 @@ def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to
         db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
-def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.PlanktonSample],
-                   bcd_p_model: Type[models.BcdP] = None,
-                   batch_name: str = None) -> [[models.BcdP], [models.BcdP], [str]]:
+def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.PlanktonSample], batch_name: str,
+                   bcd_p_model: Type[models.BcdP] = None) -> [[models.BcdP], [models.BcdP], [str]]:
 
     create_bcd_rows: [models.BcdP] = []
     update_bcd_rows: [models.BcdP] = []
@@ -634,18 +642,31 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
 
     errors = []
 
+    batch = batch_name
+
+    plank_data_num = 1
     existing_samples = {}
     if bcd_p_model:
-        existing_samples = {sample.plank_data_num: sample for sample in bcd_p_model.objects.using('biochem').all()}
+        bcd_objects = bcd_p_model.objects.using('biochem').all()
+        existing_samples = {sample.plank_data_num: sample for sample in
+                            bcd_objects.filter(batch_seq=batch)}
+
+        if bcd_objects.filter(batch_seq=batch).exists():
+            plank_data_num = bcd_objects.filter(batch_seq=batch).aggregate(min_dis=Min('dis_data_num'))['min_dis']
+        elif plank_data_num := bcd_objects.aggregate(max_dis=Max('dis_data_num'))['max_dis']:
+            plank_data_num += 1
+        else:
+            plank_data_num = 1
 
     # if the dis_data_num key changes then this will be used to update the discrete sample dis_data_num
     plank_data_num_updates = []
 
     total_samples = len(samples)
     for count, sample in enumerate(samples):
-        plank_data_num = count + 1
         row_update = set("")
-        user_logger.info(_("Compiling BCD rows") + " : %d/%d", plank_data_num, total_samples)
+
+        plank_data_num = count + plank_data_num
+        user_logger.info(_("Compiling BCD rows") + " : %d/%d", (count + 1), total_samples)
 
         bottle = sample.bottle
         event = bottle.event
@@ -740,7 +761,7 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        row_update.add(updated_value(bcd_row, 'batch_seq', f'{event_date.strftime("%Y")}{mission.pk}'))
+        row_update.add(updated_value(bcd_row, 'batch_seq', batch))
 
         # mission descriptor
         # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code

@@ -142,13 +142,16 @@ def download_samples(request, database, mission_id):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     mission = models.Mission.objects.using(database).get(pk=mission_id)
+    batch_name = f'{mission.start_date.strftime("%Y%m")}{mission.end_date.strftime("%Y%m")}'
+
     plankton_samples = models.PlanktonSample.objects.using(database).filter(
         bottle__event__mission=mission).values_list('pk', flat=True).distinct()
     bottles = models.Bottle.objects.using(database).filter(plankton_data__id__in=plankton_samples).distinct()
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+    create, update, fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
+                                                   batch_name=mission.get_batch_name)
 
     bcs_headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
 
@@ -180,7 +183,8 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=plankton_samples)
+    create, update, fields = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=plankton_samples,
+                                                   batch_name=mission.get_batch_name)
 
     bcd_headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
 

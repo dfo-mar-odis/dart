@@ -24,6 +24,9 @@ class MockObjects:
     def all(self):
         return []
 
+    def filter(self, *args, **kwargs):
+        return []
+
 
 class MockBCSP(bio_models.BcsP):
 
@@ -45,7 +48,9 @@ class TestGetBCSPRows(DartTestCase):
 
         bottles = core_models.Bottle.objects.all()
         bcs_model = MockBCSP()
-        creat_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles, bcs_model)
+
+        creat_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles, mission.get_batch_name,
+                                                                       bcs_model)
 
         self.assertEquals(len(creat_rows), 1)
         self.assertEquals(len(update_rows), 0)
