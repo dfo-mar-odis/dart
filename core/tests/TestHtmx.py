@@ -24,13 +24,14 @@ class TestElogUpload(DartTestCase):
         self.url = reverse_lazy(self.upload_elog_url, args=('default', self.mission.pk,))
         self.client = Client()
 
+    @tag('utils_elog_upload_test_elog_uplaod_missing_mid')
     def test_elog_uplaod_missing_mid(self):
         logger.info("Running test_elog_uplaod_missing_mid")
 
         file_name = 'missing_mid_bad.log'
 
         with open(self.file_location+file_name, 'rb') as fp:
-            self.client.post(self.url, {'event': fp})
+            self.client.post(self.url, {'elog_event': fp})
 
         errors = self.mission.file_errors.all()
         self.assertTrue(errors.exists())
@@ -46,7 +47,7 @@ class TestElogUpload(DartTestCase):
         file_name = 'bad.log'
 
         with open(os.path.join(self.file_location, file_name), 'rb') as fp:
-            self.client.post(self.url, {'event': fp})
+            self.client.post(self.url, {'elog_event': fp})
 
         errors = self.mission.file_errors.all()
         self.assertTrue(errors.exists())
