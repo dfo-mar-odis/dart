@@ -15,6 +15,7 @@ from django.utils.translation import gettext as _
 from git import Repo
 
 from core import models
+from core.form_validation_biochem import BIOCHEM_CODES
 from core.forms import NoWhiteSpaceCharField
 from dart.utils import load_svg
 from settingsdb import models as settings_models, utils as settings_utils
@@ -109,7 +110,25 @@ class MissionSettingsForm(forms.ModelForm):
                 button_row.fields.append(Column(Div(HTML(f'<span class="me-2">{region}</span>'), button,
                                                     css_class="btn btn-outline-secondary"), css_class="col-auto"))
 
-        multi_select_col.fields.append(Row(Column(HTML(f'<span class="text-secondary">{multi_select_help_text}</span>')), css_class="mb-2"))
+        multi_select_col.fields.append(Row(
+            Column(HTML(f'<span class="text-secondary">{multi_select_help_text}</span>')), css_class="mb-2")
+        )
+
+        # if there's a validation error for a missing mission descriptor, highlight this field
+        descriptor_field = Field('mission_descriptor')
+        start_date_field = Field('start_date')
+        end_date_field = Field('end_date')
+        if self.instance.pk:
+            database = self.instance._state.db
+            if models.Error.objects.using(database).filter(
+                    code=BIOCHEM_CODES.DESCRIPTOR_MISSING.value).exists():
+                descriptor_field.attrs['class'] = descriptor_field.attrs.get('class', "") + " bg-danger-subtle"
+
+            date_issues = [BIOCHEM_CODES.DATE_MISSING.value, BIOCHEM_CODES.DATE_BAD_VALUES.value]
+            # if there's an issue with the dates highlight the date fields
+            if models.Error.objects.using(database).filter(code__in=date_issues).exists():
+                start_date_field.attrs['class'] = start_date_field.attrs.get('class', "") + " bg-danger-subtle"
+                end_date_field.attrs['class'] = end_date_field.attrs.get('class', "") + " bg-danger-subtle"
 
         submit = Submit('submit', 'Submit')
         self.helper.layout = Layout(
@@ -118,10 +137,10 @@ class MissionSettingsForm(forms.ModelForm):
             ),
             Row(
                 Column(
-                    Field('start_date')
+                    start_date_field
                 ),
                 Column(
-                    Field('end_date')
+                    end_date_field
                 )
             ),
             Row(
@@ -154,7 +173,7 @@ class MissionSettingsForm(forms.ModelForm):
                         css_class="alert alert-info ms-1 me-1"
                     ),
                     Row(
-                        Column(Field('mission_descriptor')),
+                        Column(descriptor_field),
                         Column(Field('lead_scientist')),
                     ),
                     Row(
