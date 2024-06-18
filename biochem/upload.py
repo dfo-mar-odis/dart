@@ -25,12 +25,6 @@ def create_model(database_name: str, model):
     with connections[database_name].schema_editor() as editor:
         editor.create_model(model)
 
-
-def delete_model(database_name: str, model):
-    with connections[database_name].schema_editor() as editor:
-        editor.delete_model(model)
-
-
 # returns true if the table already exists, false otherwise, or an exception will be thrown if there was
 # a connection or some other database issue.
 def check_and_create_model(database_name: str, upload_model) -> bool:
@@ -142,7 +136,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
     for count, bottle in enumerate(bottles):
         user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
         # some of the fields below may be the same as the current value if updating. When that happens
-        # a blank string is added tot he updated_fields set. Before adding a record to the 'things that need
+        # a blank string is added to the updated_fields set. Before adding a record to the 'things that need
         # updating' list we check to see if the updated_fields set is empty by first removing the blank string
         # if the string isn't in the set though an error is thrown, so add the blank string here so it will
         # definitely exist later.
