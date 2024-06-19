@@ -466,11 +466,17 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
             models.BioChemUpload.objects.using(database).filter(type_id=sensor_id)
 
         if 'add_sensor' in request.POST:
-            if not upload_sensors.filter(type_id=sensor_id).exists():
-                add_sensor = models.BioChemUpload(type_id=sensor_id)
-                add_sensor.save(using=database)
+            add_sensor = upload_sensors.get_or_create(type_id=sensor_id)[0]
+            add_sensor.status = models.BioChemUploadStatus.upload
+            add_sensor.save(using=database)
         else:
-            upload_sensors.filter(type_id=sensor_id).delete()
+            if upload_sensors.filter(type_id=sensor_id).exists():
+                sensor = upload_sensors.get(type_id=sensor_id)
+                if sensor.status == models.BioChemUploadStatus.uploaded or sensor.upload_date:
+                    sensor.status = models.BioChemUploadStatus.delete
+                    sensor.save(using=database)
+                else:
+                    sensor.delete()
 
         check = get_sensor_table_upload_checkbox(soup, database, mission, sensor_id)
         soup.append(check)
@@ -590,9 +596,6 @@ def download_samples(request, database, mission_id):
     mission = models.Mission.objects.using(database).get(pk=mission_id)
     events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
     bottles = models.Bottle.objects.using(database).filter(event__in=events)
-    # TODO: Validate the mission here and report to the user if there are things missing, like the
-    #  core.models.Mission.mission_descriptor
-
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
     create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
