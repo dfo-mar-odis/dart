@@ -443,7 +443,7 @@ class BioChemUpload(models.Model):
     modified_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True, auto_now=True,
                                          help_text=_("The last time this sensor/sample was modified"))
 
-    status = models.IntegerField(verbose_name=_("Status"), choices=BioChemUploadStatus.choices)
+    status = models.IntegerField(verbose_name=_("Status"), null=True, blank=True, choices=BioChemUploadStatus.choices)
 
 
 # The Sample model tracks sample/sensor types that can or have been uploaded for a specific bottle. It can also
