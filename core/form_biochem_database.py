@@ -477,11 +477,11 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
     bottles = core_models.Bottle.objects.using(database).filter(pk__in=bottle_ids)
 
     # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
-    # if exists:
-    #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
-    #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
-    #     if last_uploaded:
-    #         bottles = bottles.filter(last_modified__gt=last_uploaded)
+    if exists:
+        # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
+        last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
+        if last_uploaded:
+            bottles = bottles.filter(last_modified__gt=last_uploaded)
 
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload

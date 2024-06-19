@@ -263,10 +263,12 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
 # key containing the [bottle_id]_[replicate_number] when written to the database this key needs to be
 # changed to just the bottle_id.
 #
-# Due to database limitations the bcd.dis_data_num (auto generated primary key) can't be retrieved until
-# the row has been created. So the row will have to be written, the bcd.dis_data_num retrieved and attached
-# to the core.models.DiscreteSampleValue and then updated to fix the dis_detail_collector_samp_id key to be
-# just the bottle_id
+# The dis_data_num value is a primary key in the Biochem BCD table, it uniquely identifies each value so each
+# replicate gets its own dis_data_num, but we don't have the dis_data_num until *after* all rows have been written
+# to the database. So the dis_detail_collector_sample_id column is used to keep track of a bottle ID and the replicate
+# after the data is written to Biochem we get the dis_data_num value for the core.models.DiscreteSampleValue row
+# and then change the dis_detail_collector_sample_id to be just the bottle ID. Now that the DiscreteSampleValue
+# has a dis_data_num, we can use that to query the BCD table when looking for existing samples
 def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
                    bcd_d_model: Type[models.BcdD] = None) -> [[models.BcdD], [models.BcdD], [str]]:
     bcd_objects_to_create = []
@@ -275,31 +277,24 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
 
     batch = batch_name
 
-    dis_data_num_start = 1
-    existing_samples = {}
+    dis_data_num = 1
     if bcd_d_model:
-        bcd_objects = bcd_d_model.objects.using('biochem').all()
-        existing_samples = {sample.dis_data_num: sample for sample in bcd_objects.filter(batch_seq=batch)}
+        bcd_d_model.objects.using('biochem').filter(batch_seq=batch).delete()
 
-        if bcd_objects.filter(batch_seq=batch).exists():
-            dis_data_num_start = bcd_objects.filter(batch_seq=batch).aggregate(min_dis=Min('dis_data_num'))['min_dis']
-        elif dis_data_num_start := bcd_objects.aggregate(max_dis=Max('dis_data_num'))['max_dis']:
-            dis_data_num_start += 1
-        else:
-            dis_data_num_start = 1
-
-
-    # if the dis_data_num key changes then this will be used to update the discrete sample dis_data_num
-    dis_data_num_updates = []
+        # if a batch exists
+        if dis_data_num := bcd_d_model.objects.using('biochem').aggregate(max_dis=Max('dis_data_num'))['max_dis']:
+            dis_data_num += 1
 
     user_logger.info("Compiling BCD samples")
 
+    # update fields is a list of BCD column names that change and will be bulk updated later. If nothing
+    # changes, update_fields will be empty
     updated_fields = set()
+
     total_samples = len(samples)
     for count, ds_sample in enumerate(samples):
-        dis_data_num = count + dis_data_num_start
-        user_logger.info(_("Compiling BCD samples") + " : " + "%d/%d",
-                         (count + 1), total_samples)
+        dis_data_num = count + dis_data_num
+        user_logger.info(_("Compiling BCD samples") + " : " + "%d/%d", (count + 1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
@@ -308,39 +303,33 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         # Use the row level datatype if provided otherwise use the mission level datatype
         bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
 
+        # if a sample already exists it may need updating
         existing_sample = False
-        # some of the fields below may be the same as the current value if updating. When that happens
-        # a blank string is added tot he updated_fields set. Before adding a record to the 'things that need
-        # updating' list we check to see if the updated_fields set is empty by first removing the blank string
-        # if the string isn't in the set though an error is thrown, so add the blank string here so it will
-        # definitely exist later.
+
+        # Some of the fields below may be the same as the current value if updating a row. When that happens
+        # updated_value returns a blank string because adding None to a set will throw an error.
+        # So we add a blank string to the update_field set, then update_values returns a blank string if no
+        # update is required. Before adding a record to the 'things that need updating' list we remove the blank
+        # string (that we know is there) and then check to see if the updated_fields set is empty.
         updated_fields.add('')
 
         primary_data_center = mission.data_center
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
-        # determine if sample is existing or not here
-        if ds_sample.dis_data_num and ds_sample.dis_data_num in existing_samples.keys():
-            # If the sample does have a dis_data_num, we can get the corresponding row from the BCD table
-            bcd_row = existing_samples[ds_sample.dis_data_num]
-            existing_sample = True
+        # If the sample doesn't have a dis_data_num or it doesn't match an existing sample create a new row
+        collector_id = f'{bottle.bottle_id}'
 
+        # if these rows are being generated for a report we don't have the bcd_d_model, which is what
+        # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
+        # place of the BcdD model
+        if bcd_d_model:
+            bcd_row = bcd_d_model._meta.model(dis_detail_collector_samp_id=collector_id)
         else:
-            collector_id = f'{bottle.bottle_id}'
-
-            # if these rows are being generated for a report we don't have the bcd_d_model, which is what
-            # links Django to the oracle database
-            if bcd_d_model:
-                bcd_row = bcd_d_model._meta.model(dis_detail_collector_samp_id=collector_id)
-            else:
-                bcd_row = models.BcdDReportModel(dis_detail_collector_samp_id=collector_id)
-
-        if ds_sample.dis_data_num != dis_data_num:
-            ds_sample.dis_data_num = dis_data_num
-            dis_data_num_updates.append(ds_sample)
+            bcd_row = models.BcdDReportModel(dis_detail_collector_samp_id=collector_id)
 
         updated_fields.add(updated_value(bcd_row, 'dis_data_num', dis_data_num))
+
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_type_seq', bc_data_type.data_type_seq))
 
         # ########### Stuff that we get from the bottle object ################################################### #
@@ -407,9 +396,10 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         elif len(updated_fields) > 0:
             bcd_objects_to_update.append(bcd_row)
 
-    if len(dis_data_num_updates) > 0:
-        user_logger.info("Syncing local keys")
-        core_models.DiscreteSampleValue.objects.using(database).bulk_update(dis_data_num_updates, ['dis_data_num'])
+    for row in bcd_objects_to_create:
+        count = bcd_d_model.objects.using('biochem').filter(dis_data_num=row.dis_data_num).count()
+        msg = f"{row.dis_data_num} - {count}"
+        user_logger.info(msg)
 
     if len(errors) > 0:
         core_models.Error.objects.using(database).bulk_create(errors)
