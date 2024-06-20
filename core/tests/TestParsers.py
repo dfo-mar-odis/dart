@@ -315,18 +315,6 @@ class TestCTDParser(DartTestCase):
 
         self.assertEquals(len(errors), 1)
 
-    def test_process_sensors(self):
-        # Todo:
-        #  test sensor names can be retrieved from ROS files
-        #  test sensors can be created from BTL column names
-        pass
-
-    def test_process_data(self):
-        # Todo:
-        #  test that bottles are created provided a datafarme
-        #  and that discrete data is added to those bottles
-        pass
-
     def test_read_btl(self):
         # this tests the overall result
         mission = core_factory.MissionFactory(
@@ -341,6 +329,34 @@ class TestCTDParser(DartTestCase):
 
         self.assertTrue(sample_types.exists())
         self.assertTrue(samples.exists())
+
+    @tag('parsers_ctd_biochem_upload')
+    def test_biochem_upload(self):
+        # test that if a MissionSampleType has a BioChemUpload entry the entry is set to upload and the
+        # modified date is updated.
+        mission = core_factory.MissionFactory(
+            start_date=datetime.strptime('2022-10-01', '%Y-%m-%d'),
+            end_date=datetime.strptime('2022-10-24', '%Y-%m-%d'))
+        event = core_factory.CTDEventFactory(mission=mission, event_id=1, sample_id=495271, end_sample_id=495289)
+
+        datatype = bio_tables.models.BCDataType.objects.get(data_type_seq=90000009)
+        mst = core_factory.MissionSampleTypeFactory(mission=mission, name='sbeox0ml/l', datatype=datatype)
+        origional_modified_date = datetime.strptime('2020-10-24 14:03:22+00:00', '%Y-%m-%d %H:%M:%S%z')
+        core_models.BioChemUpload.objects.using('default').create(
+            type=mst,
+            status=core_models.BioChemUploadStatus.uploaded,
+            modified_date=origional_modified_date,
+            upload_date=datetime.strptime('2020-10-24 14:03:22+00:00', '%Y-%m-%d %H:%M:%S%z')
+        )
+        ctd_parser.read_btl(mission=event.mission,
+                            btl_file=os.path.join(self.test_file_location, self.test_file_001))
+
+        bcu = mst.uploads.all().first()
+        self.assertEquals(core_models.BioChemUploadStatus.upload, bcu.status)
+        self.assertTrue(origional_modified_date < bcu.modified_date)
+
+
+
 
 
 @tag('parsers', 'parsers_sample')

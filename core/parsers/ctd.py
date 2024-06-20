@@ -416,6 +416,12 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         logger.info("Updating sample values" + f" : {file_name}")
         core_models.DiscreteSampleValue.objects.using(database).bulk_update(update_discrete_samples, ['value'])
 
+    for ms_type in mission.mission_sample_types.all():
+        if bcu := ms_type.uploads.first():
+            bcu.status = core_models.BioChemUploadStatus.upload
+            bcu.modified_date = datetime.now()
+            bcu.save()
+
 
 # BIO and the NFL region track events within bottle files differently
 def get_elog_event_nfl(mission: core_models.Mission, event_number: int) -> core_models.Event:
