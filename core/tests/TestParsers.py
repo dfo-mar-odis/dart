@@ -223,6 +223,7 @@ class TestSampleXLSParser(DartTestCase):
         self.assertEquals([str(c) for c in df.columns], expected_oxy_columns)
 
 
+
 @tag('parsers', 'parsers_ctd')
 class TestCTDParser(DartTestCase):
 
@@ -354,9 +355,6 @@ class TestCTDParser(DartTestCase):
         bcu = mst.uploads.all().first()
         self.assertEquals(core_models.BioChemUploadStatus.upload, bcu.status)
         self.assertTrue(origional_modified_date < bcu.modified_date)
-
-
-
 
 
 @tag('parsers', 'parsers_sample')
@@ -604,6 +602,16 @@ class TestSampleCSVParser(DartTestCase):
         }
         df = pd.DataFrame(data)
 
+        # make a BioChemUpload entry to be checked to make sure it's updated
+        origional_modified_date = datetime.strptime("2020-01-01 00:00:00+00:00", '%Y-%m-%d %H:%M:%S%z')
+        sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
+        core_models.BioChemUpload.objects.using('default').create(
+            type=sample_type,
+            modified_date=origional_modified_date,
+            upload_date=datetime.strptime("2020-02-01 00:00:00+00:00", '%Y-%m-%d %H:%M:%S%z'),
+            status=core_models.BioChemUploadStatus.uploaded
+        )
+
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, file_name=self.file_name, dataframe=df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
@@ -613,8 +621,6 @@ class TestSampleCSVParser(DartTestCase):
         # check that a replicate was created for the first sample
         bottle_with_replicate = bottles.get(bottle_id=495271)
         self.assertIsNotNone(bottle_with_replicate)
-
-        sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
 
         sample = bottle_with_replicate.samples.get(type=sample_type)
         self.assertIsNotNone(sample)
@@ -637,6 +643,12 @@ class TestSampleCSVParser(DartTestCase):
 
         dv_comment = sample.discrete_values.get(replicate=1).comment
         self.assertEquals(dv_comment, "Dropped magnet in before H2SO4; sorry")
+
+        # If there was a BioChemUpload object with status 'uploaded' for the inserted data it should be marked as
+        # 'upload' and the modified date changed
+        bcu = sample_type.uploads.first()
+        self.assertEquals(core_models.BioChemUploadStatus.upload, bcu.status)
+        self.assertTrue(origional_modified_date < bcu.modified_date)
 
     def test_duplicate_error(self):
         # if there are multiple samples with the same replicate id there should be a 'duplicate' error.
