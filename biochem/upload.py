@@ -25,6 +25,7 @@ def create_model(database_name: str, model):
     with connections[database_name].schema_editor() as editor:
         editor.create_model(model)
 
+
 # returns true if the table already exists, false otherwise, or an exception will be thrown if there was
 # a connection or some other database issue.
 def check_and_create_model(database_name: str, upload_model) -> bool:

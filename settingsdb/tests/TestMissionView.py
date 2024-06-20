@@ -44,7 +44,7 @@ class TestMissionView(DartTestCase):
         if delete_db:
             for connection in connections.all():
                 if connection.alias == fake_db_name:
-                    settings.DATABASE.pop(connection.alias)
+                    settings.DATABASES.pop(connection.alias)
                     connection.close()
 
                     time.sleep(2)  # wait a couple of seconds to make sure the connection is closed

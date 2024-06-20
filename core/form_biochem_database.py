@@ -399,6 +399,21 @@ def update_connection_button(database, mission_id, post: bool = False, error: bo
     return button
 
 
+def remove_bcd_d_data(mission: core_models.Mission):
+    database = mission._state.db
+    batch = mission.get_batch_name
+
+    delete_samples = core_models.BioChemUpload.objects.using(database).filter(
+        status=core_models.BioChemUploadStatus.delete)
+
+    bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
+    for delete in delete_samples:
+        bcd_d.objects.using('biochem').filter(
+            dis_detail_data_type_seq=delete.type.datatype.data_type_seq,
+            batch_seq=batch
+        ).delete()
+
+
 def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
     # 1) get bottles from BCS_D table
@@ -430,14 +445,19 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
 
 def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
-    # 1) get the biochem BCD_D model
+
+    # 1) Start by removing records marked for deletion
+    remove_bcd_d_data(mission)
+
+    # 2) get the biochem BCD_D model
     bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
 
-    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
+    # 3) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
     exists = biochem.upload.check_and_create_model('biochem', bcd_d)
 
     if exists:
         user_logger.info(_("Compiling rows for : ") + mission.name)
+        batch = mission.get_batch_name
 
         # 3) else filter the samples down to rows based on:
         # 3a) samples in this mission
@@ -456,7 +476,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
             user_logger.info(message)
             create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
                                                                    samples=discreate_samples,
-                                                                   batch_name=mission.get_batch_name,
+                                                                   batch_name=batch,
                                                                    bcd_d_model=bcd_d)
 
             message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
