@@ -5,7 +5,7 @@ from typing import Type
 
 from datetime import datetime
 
-from django.db import connections, DatabaseError
+from django.db import connections, DatabaseError, OperationalError
 from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
@@ -31,6 +31,10 @@ def create_model(database_name: str, model):
 def check_and_create_model(database_name: str, upload_model) -> bool:
     try:
         upload_model.objects.using('biochem').exists()
+        return True
+    except OperationalError as e:
+        # when running unit tests an in-memory database is used and throws a different type of error
+        create_model(database_name, upload_model)
         return True
     except DatabaseError as e:
         # A 942 Oracle error means a table doesn't exist, in this case create the model. Otherwise pass the error along
@@ -278,13 +282,12 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
 
     batch = batch_name
 
-    dis_data_num = 1
     if bcd_d_model:
-        bcd_d_model.objects.using('biochem').filter(batch_seq=batch).delete()
-
         # if a batch exists
         if dis_data_num := bcd_d_model.objects.using('biochem').aggregate(max_dis=Max('dis_data_num'))['max_dis']:
             dis_data_num += 1
+
+    dis_data_num = dis_data_num if dis_data_num else 1
 
     user_logger.info("Compiling BCD samples")
 

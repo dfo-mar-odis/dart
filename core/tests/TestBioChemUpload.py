@@ -27,44 +27,63 @@ from settingsdb import utils
 
 logger = logging.getLogger(f'dart.{__name__}')
 
+fake_db_location = r'./test_db'
+biochem_db = 'biochem'
+default_db = 'default'
+fake_mission = 'TM15502'
 
-class MockObjects:
-
-    def using(self, database):
-        return self
-
-    def all(self):
-        return []
-
-    def filter(self, *args, **kwargs):
-        return []
+oxy_seq = 90000203
+salt_seq = 90000105
 
 
-class MockBCSP(bio_models.BcsP):
+def delete_model(database_name: str, model):
+    with connections[database_name].schema_editor() as editor:
+        editor.delete_model(model)
 
-    def __init__(self, *args, **kwargs):
-        self.objects = MockObjects()
-        super().__init__(*args, **kwargs)
+
+class AbstractTestDatabase(DartTestCase):
+    @classmethod
+    def setUpClass(cls):
+        databases = settings.DATABASES
+        databases[biochem_db] = databases['default'].copy()
+        databases[biochem_db]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
+
+        utils.load_biochem_fixtures(default_db)
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
 
 @tag('biochem', 'biochem_plankton')
-class TestGetBCSPRows(DartTestCase):
+class TestGetBCSPRows(AbstractTestDatabase):
+
+    def setUp(self):
+        self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
+
+        self.bio_model = upload.get_bcs_p_model(self.mission.get_biochem_table_name)
+        upload.create_model(biochem_db, self.bio_model)
+
+    def tearDown(self):
+        delete_db = True
+        if delete_db:
+            delete_model(biochem_db, self.bio_model)
 
     def test_get_bcs_p_rows(self):
         core_factory.BottleFactory.start_bottle_seq = 400000
-        mission = core_factory.MissionFactory(mission_descriptor="test_db")
-        bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=mission))
+        bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=self.mission))
         core_factory.PhytoplanktonSampleFactory.create_batch(
             10, bottle=bottle, gear_type_id=90000102
         )
 
         bottles = core_models.Bottle.objects.all()
-        bcs_model = MockBCSP()
+        bcs_model = self.bio_model
 
-        creat_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles, mission.get_batch_name,
-                                                                       bcs_model)
+        create_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles,
+                                                                        self.mission.get_batch_name,
+                                                                        bcs_model)
 
-        self.assertEquals(len(creat_rows), 1)
+        self.assertEquals(len(create_rows), 1)
         self.assertEquals(len(update_rows), 0)
         self.assertEquals(len(update_fields), 0)
 
@@ -154,66 +173,81 @@ class TestBioChemUpload(DartTestCase):
         self.assertEquals(core_models.BioChemUploadStatus.delete, bcu.first().status)
 
 
-fake_db_location = r'./test_db'
-biochem_db = 'biochem'
-default_db = 'default'
-fake_mission = 'TM15502'
-
-oxy_seq = 90000203
-salt_seq = 90000105
-
-
-@tag('biochem', 'fake_biochem')
-class TestFakeBioChemDB(DartTestCase):
-    database_bcd_table_name = "tm15502"
-
-    @classmethod
-    def setUpClass(cls):
-
-        call_command('migrate', database=default_db, app_label="core")
-        utils.load_biochem_fixtures(default_db)
-
-    @classmethod
-    def tearDownClass(cls):
-        # The in-memory 'default' database will disappear when the test class is done with it.
-        pass
+@tag('biochem', 'fake_biochem_upload')
+class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
     def setUp(self):
-        if not os.path.exists(fake_db_location):
-            os.makedirs(fake_db_location)
+        self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
-        databases = settings.DATABASES
-        databases[biochem_db] = databases['default'].copy()
-        databases[biochem_db]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
+    def test_data_marked_for_upload(self):
+        # provided a mission with data marked for Biochem upload the data should be pushed to the BioChem tables
+        core_factory.BottleFactory.start_bottle_seq = 400000
+        bottles = core_factory.BottleFactory.create_batch(10, event=core_factory.CTDEventFactory(mission=self.mission))
 
+        oxygen_datatype = bio_tables_models.BCDataType.objects.get(data_type_seq=oxy_seq)
+        oxy_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=oxygen_datatype)
+
+        salt_datatype = bio_tables_models.BCDataType.objects.get(data_type_seq=salt_seq)
+        sal_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=salt_datatype)
+
+        for bottle in bottles:
+            oxy_sample = core_factory.SampleFactory(bottle=bottle, type=oxy_sample_type)
+            core_factory.DiscreteValueFactory(sample=oxy_sample, value=3.9)
+
+            oxy_sample = core_factory.SampleFactory(bottle=bottle, type=sal_sample_type)
+            core_factory.DiscreteValueFactory(sample=oxy_sample, value=3.9)
+
+        core_models.BioChemUpload.objects.using(default_db).create(
+            status=core_models.BioChemUploadStatus.upload,
+            type=oxy_sample_type
+        )
+
+        form_biochem_database.upload_bcd_d_data(self.mission, 'upsonp')
+
+        model = upload.get_bcd_d_model(self.mission.get_biochem_table_name)
+        # oxygen samples should have been added to the biochem db
+        self.assertTrue(model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
+
+        # salt samples should not have been added to the biochem db
+        self.assertFalse(model.objects.using(biochem_db).filter(dis_detail_data_type_seq=salt_seq))
+
+        # When uploaded the BioChemUpload entry should be marked as 'uploaded' and the uploaded date
+        # should be set
+        oxy_upload = core_models.BioChemUpload.objects.using(default_db).get(type=oxy_sample_type)
+        self.assertEquals(core_models.BioChemUploadStatus.uploaded, oxy_upload.status)
+        self.assertTrue(oxy_upload.upload_date < oxy_upload.modified_date)
+
+
+@tag('biochem', 'fake_biochem_delete')
+class TestFakeBioChemDBDelete(AbstractTestDatabase):
+    database_bcd_table_name = "tm15502"
+
+    def setUp(self):
         self.mission = core_factory.MissionFactory(mission_descriptor="TM15502",
                                                    biochem_table=self.database_bcd_table_name)
         bcd_factory = biochem_factory.BcdDFactory
+
         self.model = upload.get_bcd_d_model(self.database_bcd_table_name)
-        upload.create_model('biochem', self.model)
+        upload.create_model(biochem_db, self.model)
 
         bcd_factory._meta.model = self.model
         bcd_factory.create_batch(10,
-                                dis_detail_data_type_seq=oxy_seq,
-                                data_type_method='O2_Winkler_Auto',
-                                batch_seq=self.mission.get_batch_name)
+                                 dis_detail_data_type_seq=oxy_seq,
+                                 data_type_method='O2_Winkler_Auto',
+                                 batch_seq=self.mission.get_batch_name)
         bcd_factory.create_batch(10,
-                                dis_detail_data_type_seq=oxy_seq,
-                                data_type_method='O2_Winkler_Auto',
-                                batch_seq=2)  # simulate data created from another source
+                                 dis_detail_data_type_seq=oxy_seq,
+                                 data_type_method='O2_Winkler_Auto',
+                                 batch_seq=2)  # simulate data created from another source
         bcd_factory.create_batch(10,
-                                dis_detail_data_type_seq=salt_seq,
-                                data_type_method='Salinity_Sal_PSS',
-                                batch_seq=self.mission.get_batch_name)
+                                 dis_detail_data_type_seq=salt_seq,
+                                 data_type_method='Salinity_Sal_PSS',
+                                 batch_seq=self.mission.get_batch_name)
 
     def tearDown(self):
         delete_db = True
         if delete_db:
-            self.delete_model('biochem', self.model)
-
-    def delete_model(self, database_name: str, model):
-        with connections[database_name].schema_editor() as editor:
-            editor.delete_model(model)
+            delete_model(biochem_db, self.model)
 
     def test_db_creation(self):
         # This is just to test that the biochem DB was created and data added to the specified

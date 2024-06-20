@@ -440,8 +440,8 @@ class BioChemUpload(models.Model):
 
     upload_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
                                        help_text=_("The last time this sensor/sample was uploaded to biochem"))
-    modified_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True, auto_now=True,
-                                         help_text=_("The last time this sensor/sample was modified"))
+    modified_date = models.DateTimeField(verbose_name=_("Modified Date"), null=True, blank=True, auto_now=True,
+                                         help_text=_("The last time this sensor/sample was loaded"))
 
     status = models.IntegerField(verbose_name=_("Status"), null=True, blank=True, choices=BioChemUploadStatus.choices)
 

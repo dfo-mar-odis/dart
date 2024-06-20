@@ -1,6 +1,8 @@
 import os.path
 import time
 
+from datetime import datetime
+
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Row, Field, HTML, Div
@@ -10,6 +12,7 @@ from django import forms
 from django.conf import settings
 from django.core.cache import caches
 from django.db import DatabaseError, close_old_connections
+from django.db.models import Q
 from django.http import HttpResponse, Http404
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
@@ -20,6 +23,7 @@ import biochem.upload
 
 from core import models as core_models
 from core import forms as core_forms
+from core.form_validation_biochem import BIOCHEM_CODES
 from core.forms import get_crispy_element_attributes
 from dart.utils import load_svg
 
@@ -463,6 +467,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
         # 3a) samples in this mission
         # 3b) samples of the current sample_type
         datatypes = core_models.BioChemUpload.objects.using(database).filter(
+            status=core_models.BioChemUploadStatus.upload,
             type__mission=mission).values_list('type', flat=True).distinct()
 
         discreate_samples = core_models.DiscreteSampleValue.objects.using(database).filter(
@@ -481,7 +486,25 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
 
             message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
-            biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
+            try:
+                biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
+                uploaded = core_models.BioChemUpload.objects.using(database).filter(
+                    type__mission=mission,
+                    status=core_models.BioChemUploadStatus.upload
+                )
+                for upload in uploaded:
+                    upload.status = core_models.BioChemUploadStatus.uploaded
+                    upload.upload_date = datetime.now()
+                    upload.save()
+
+            except Exception as ex:
+                message = _("An error occured while writing BCD rows: ") + str(ex)
+                core_models.Error.objects.using().create(
+                    mission=mission, message=message, type=core_models.ErrorType.biochem,
+                    code=BIOCHEM_CODES.FAILED_WRITING_DATA
+                )
+                user_logger.error(message)
+                logger.exception(ex)
 
 
 def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
