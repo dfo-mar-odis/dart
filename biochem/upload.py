@@ -5,6 +5,7 @@ from typing import Type
 
 from datetime import datetime
 
+from django.conf import settings
 from django.db import connections, DatabaseError, OperationalError
 from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
@@ -30,7 +31,7 @@ def create_model(database_name: str, model):
 # a connection or some other database issue.
 def check_and_create_model(database_name: str, upload_model) -> bool:
     try:
-        upload_model.objects.using('biochem').exists()
+        upload_model.objects.using(database_name).exists()
         return True
     except OperationalError as e:
         # when running unit tests an in-memory database is used and throws a different type of error
@@ -274,6 +275,19 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
 # after the data is written to Biochem we get the dis_data_num value for the core.models.DiscreteSampleValue row
 # and then change the dis_detail_collector_sample_id to be just the bottle ID. Now that the DiscreteSampleValue
 # has a dis_data_num, we can use that to query the BCD table when looking for existing samples
+
+def get_temp_space(tmp_db_name='biochem_tmp') -> Type[models.BcdD]:
+    databases = settings.DATABASES
+    if tmp_db_name not in databases:
+        databases[tmp_db_name] = databases['default'].copy()
+        databases[tmp_db_name]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
+
+    model = get_bcd_d_model('tmp_bcd_d')
+    check_and_create_model(tmp_db_name, model)
+    model.objects.using(tmp_db_name).delete()
+    return model
+
+
 def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
                    bcd_d_model: Type[models.BcdD] = None) -> [[models.BcdD], [models.BcdD], [str]]:
     bcd_objects_to_create = []
@@ -282,12 +296,22 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
 
     batch = batch_name
 
-    if bcd_d_model:
-        # if a batch exists
-        if dis_data_num := bcd_d_model.objects.using('biochem').aggregate(max_dis=Max('dis_data_num'))['max_dis']:
-            dis_data_num += 1
+    # if these rows are being generated for a report we don't have the bcd_d_model, which is what
+    # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
+    # place of the BcdD model
+    tmp_table = 'biochem_tmp'
+    tmp_model_manager = None
 
-    dis_data_num = dis_data_num if dis_data_num else 1
+    bcd_model = models.BcdDReportModel
+
+    if bcd_d_model:
+        # copy the biochem data we're interested in looking at into an in-memory version of the data
+        existing_samples_qs = bcd_d_model.objects.using('biochem').filter(batch_seq=batch_name)
+        tmp_samples = [sample for sample in existing_samples_qs]
+        tmp_model_manager = get_temp_space(tmp_table).objects.using(tmp_table)
+        tmp_model_manager.bulk_create(tmp_samples)
+
+        bcd_model = bcd_d_model._meta.model
 
     user_logger.info("Compiling BCD samples")
 
@@ -297,8 +321,8 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
 
     total_samples = len(samples)
     for count, ds_sample in enumerate(samples):
-        dis_data_num = count + dis_data_num
-        user_logger.info(_("Compiling BCD samples") + " : " + "%d/%d", (count + 1), total_samples)
+        # dis_data_num = count + dis_data_num
+        user_logger.info(_("Compiling updates for BCD samples") + " : " + "%d/%d", (count + 1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
@@ -324,15 +348,20 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         # If the sample doesn't have a dis_data_num or it doesn't match an existing sample create a new row
         collector_id = f'{bottle.bottle_id}'
 
-        # if these rows are being generated for a report we don't have the bcd_d_model, which is what
-        # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
-        # place of the BcdD model
-        if bcd_d_model:
-            bcd_row = bcd_d_model._meta.model(dis_detail_collector_samp_id=collector_id)
-        else:
-            bcd_row = models.BcdDReportModel(dis_detail_collector_samp_id=collector_id)
+        bcd_row = bcd_model(dis_detail_collector_samp_id=collector_id)
+        if tmp_model_manager:
+            existing_samples = tmp_model_manager.filter(
+                dis_detail_data_type_seq=bc_data_type.data_type_seq,
+                dis_detail_collector_samp_id=collector_id
+            )
+            if existing_samples.exists():
+                replicate = ds_sample.replicate-1
+                if replicate < len(existing_samples):
+                    bcd_row = existing_samples[replicate]
+                    existing_sample = True
 
-        updated_fields.add(updated_value(bcd_row, 'dis_data_num', dis_data_num))
+        # if not existing_sample:
+        #     updated_fields.add(updated_value(bcd_row, 'dis_data_num', dis_data_num))
 
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_type_seq', bc_data_type.data_type_seq))
 
@@ -400,13 +429,33 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         elif len(updated_fields) > 0:
             bcd_objects_to_update.append(bcd_row)
 
-    for row in bcd_objects_to_create:
-        count = bcd_d_model.objects.using('biochem').filter(dis_data_num=row.dis_data_num).count()
-        msg = f"{row.dis_data_num} - {count}"
-        user_logger.info(msg)
-
     if len(errors) > 0:
         core_models.Error.objects.using(database).bulk_create(errors)
+
+    if len(bcd_objects_to_create) > 0:
+        user_logger.info(_("Indexing Primary Keys"))
+        # to keep dis_data_num (primary key in the Biochem BCD table) a manageable number get all the
+        # currently used dis_data_num keys in order up to the highest value and create a list of integers
+        dis_data_num_query = bcd_d_model.objects.using('biochem').order_by('dis_data_num')
+        dis_data_num_seq = list(dis_data_num_query.values_list('dis_data_num', flat=True))
+
+        # find the first and last key in the set and use that to create a range, then subtract keys that are
+        # being used from the set. What is left are available keys that can be assigned to new rows being created
+        start, end = dis_data_num_seq[0], dis_data_num_seq[-1]
+        sort_seq = sorted(set(range(start, end)).difference(dis_data_num_seq))
+
+        dis_data_num = 0
+        for index, obj in enumerate(bcd_objects_to_create):
+            if index < len(sort_seq):
+                # the index number is a count of which object in the bcd_objects_to_create array we're on
+                # if the index is less than the length of our available keys array get the next available
+                # number in the sequence
+                dis_data_num = sort_seq[index]
+            else:
+                # if we're past the end of the available keys start get the last number in the sequence + 1
+                # then just add one to the sequence for every additional object.
+                dis_data_num = end + 1 if dis_data_num < end else dis_data_num + 1
+            obj.dis_data_num = dis_data_num
 
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
 

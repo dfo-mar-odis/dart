@@ -108,7 +108,7 @@ def get_sensor_table_upload_checkbox(soup: BeautifulSoup, database,
                                           args=(database, mission.pk, sample_type.pk,))
 
     if enabled:
-        if sample_type.uploads.exists():
+        if sample_type.uploads.exists() and sample_type.uploads.first().status != models.BioChemUploadStatus.delete:
             check.attrs['name'] = 'remove_sensor'
             check.attrs['checked'] = 'checked'
         else:
@@ -573,7 +573,9 @@ def upload_samples(request, database, mission_id):
 
     alert_soup = forms.blank_alert(**attrs)
     div.append(alert_soup)
-    return HttpResponse(soup)
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'update_samples'
+    return response
 
 
 def download_samples(request, database, mission_id):
