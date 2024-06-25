@@ -440,17 +440,17 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
         # if last_uploaded:
         #     bottles = bottles.filter(last_modified__gt=last_uploaded)
 
-    if bottles.exists():
-        # 4) upload only bottles that are new or were modified since the last biochem upload
-        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-        user_logger.info(_("Compiling BCS rows"))
-        create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
-                                                               batch_name=mission.get_batch_name,
-                                                               bcs_d_model=bcs_d)
+        if bottles.exists():
+            # 4) upload only bottles that are new or were modified since the last biochem upload
+            # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+            user_logger.info(_("Compiling BCS rows"))
+            create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
+                                                                   batch_name=mission.get_batch_name,
+                                                                   bcs_d_model=bcs_d)
 
-        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        user_logger.info(_("Creating/updating BCS rows"))
-        biochem.upload.upload_bcs_d(bcs_d, create, update, fields)
+            # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+            user_logger.info(_("Creating/updating BCS rows"))
+            biochem.upload.upload_bcs_d(bcs_d, create, update, fields)
 
 
 def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
@@ -830,7 +830,8 @@ def validate_connection(request, database, mission_id):
 
 
 def is_connected():
-    return caches['biochem_keys'].get('database_id', -1) != -1 and caches['biochem_keys'].get('pwd', -1) != -1
+    selected_database = caches['biochem_keys'].get('database_id', -1)
+    return selected_database != -1 and caches['biochem_keys'].get('pwd', -1, version=selected_database) != -1
 
 
 url_prefix = "<str:database>/<str:mission_id>"

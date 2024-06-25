@@ -165,7 +165,6 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
         m_start_date = mission.start_date
         m_end_date = mission.end_date
         updated_fields.add(updated_value(bcs_row, 'dis_sample_key_value', dis_sample_key_value))
-        updated_fields.add(updated_value(bcs_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
         updated_fields.add(updated_value(bcs_row, 'created_by', uploader))
 
         updated_fields.add(updated_value(bcs_row, 'mission_descriptor', mission.mission_descriptor))
@@ -239,6 +238,14 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
             bcs_objects_to_create.append(bcs_row)
         elif len(updated_fields) > 0:
             bcs_objects_to_update.append(bcs_row)
+
+    for bcs_row in bcs_objects_to_create:
+        bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
+
+    if len(bcs_objects_to_update):
+        updated_fields.add('created_date')
+        for bcs_row in bcs_objects_to_update:
+            bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
 
     return [bcs_objects_to_create, bcs_objects_to_update, updated_fields]
 
@@ -441,8 +448,11 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
 
         # find the first and last key in the set and use that to create a range, then subtract keys that are
         # being used from the set. What is left are available keys that can be assigned to new rows being created
-        start, end = dis_data_num_seq[0], dis_data_num_seq[-1]
-        sort_seq = sorted(set(range(start, end)).difference(dis_data_num_seq))
+        sort_seq = []
+        end = 0
+        if len(dis_data_num_seq) > 0:
+            start, end = dis_data_num_seq[0], dis_data_num_seq[-1]
+            sort_seq = sorted(set(range(start, end)).difference(dis_data_num_seq))
 
         dis_data_num = 0
         for index, obj in enumerate(bcd_objects_to_create):
