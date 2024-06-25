@@ -94,11 +94,14 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("Missing start date"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DATE_MISSING.value)
 
         self.assertIsInstance(errors[1], core_models.Error)
         self.assertEquals(errors[1].mission, bad_mission)
         self.assertEquals(errors[1].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[1].message, _("Missing end date"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DATE_MISSING.value)
+
 
     @tag('form_validation_biochem_test_validate_bad_dates')
     def test_validate_bad_dates(self):
@@ -114,3 +117,48 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEquals(errors[0].mission, bad_mission)
         self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
         self.assertEquals(errors[0].message, _("End date comes before Start date"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DATE_BAD_VALUES.value)
+
+    @tag('form_validation_biochem_test_mission_descriptor', 'git_issue_144')
+    def test_mission_descriptor(self):
+        # provided a mission with no name (used as the mission descriptor) to the _validation_mission_descriptor
+        # function an error should be reported.
+
+        bad_mission = core_factory.MissionFactory()
+        errors: [core_models.Error] = form_validation_biochem._validation_mission_descriptor(bad_mission)
+
+        self.assertIsNotNone(errors)
+
+        self.assertIsInstance(errors[0], core_models.Error)
+        self.assertEquals(errors[0].mission, bad_mission)
+        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
+
+    @tag('form_validation_biochem_test_mission_descriptor', 'git_issue_144')
+    def test_validate_mission_descriptor_mission(self):
+        # ensure the _validate_mission_descriptor function is called through the validation_mission function
+        bad_mission = core_factory.MissionFactory()
+        errors: [core_models.Error] = form_validation_biochem.validate_mission(bad_mission)
+
+        self.assertIsNotNone(errors)
+
+        self.assertIsInstance(errors[0], core_models.Error)
+        self.assertEquals(errors[0].mission, bad_mission)
+        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
+
+    @tag('form_validation_biochem_test_bottle_position_fail', 'git_issue_147')
+    def test_bottle_date_no_dates_fail(self):
+        # given an event with no date and a series of bottles with no dates validation should return an error
+        event = core_factory.CTDEventFactoryBlank(mission=self.mission)
+        bottles = core_factory.BottleFactory.create_batch(10, event=event)
+
+        errors: [core_models.Error] = form_validation_biochem._validate_bottles(self.mission)
+
+        self.assertIsInstance(errors[0], core_models.Error)
+        self.assertEquals(errors[0].mission, self.mission)
+        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEquals(errors[0].message, _("Event is missing a position. Event ID : ") + str(event.event_id))
+        self.assertEquals(errors[0].code, form_validation_biochem.BIOCHEM_CODES.POSITION_MISSING.value)

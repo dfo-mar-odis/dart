@@ -1,11 +1,12 @@
-import datetime
+from datetime import datetime
 
 from dart.tests.DartTestCase import DartTestCase
-from . import CoreFactoryFloor as core_factory
 from django.test import tag
 
 from core.models import ActionType as action_types
 from core.validation import validate_event, validate_ctd_event, validate_net_event
+
+from . import CoreFactoryFloor as core_factory
 
 import logging
 
@@ -15,8 +16,8 @@ logger = logging.getLogger('dart.test')
 @tag('validation', 'validation_general')
 class TestGeneralEventValidation(DartTestCase):
     def setUp(self) -> None:
-        self.start_date = datetime.datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
-        self.end_date = datetime.datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.start_date = datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.end_date = datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
         self.mission = core_factory.MissionFactory(
             start_date=self.start_date.date(),
             end_date=self.end_date.date()
@@ -62,13 +63,28 @@ class TestGeneralEventValidation(DartTestCase):
         logger.debug(errors)
         self.assertEquals(len(errors), 0)
 
+    def test_valid_location(self):
+        # events must have a valid start location, the start location is determined by an action, but actions
+        # are allowed to have blank lat/lon so during the validation we should check that the lat/lon is valid
+        event = core_factory.CTDEventFactoryBlank(mission=self.mission, sample_id=1, end_sample_id=10)
+        bad_action = core_factory.ActionFactory(event=event, latitude=None, longitude=None, type=action_types.bottom,
+                                                date_time=datetime.strptime("2020-01-02 14:30:00", '%Y-%m-%d %H:%M:%S'))
+
+        # start_location will return an array [lat, lon] if the action's lat/lon is blank the pair will be [None, None]
+        self.assertIsNone(event.start_location[0])
+        self.assertIsNone(event.start_location[1])
+
+        errors = validate_event(event)
+        logger.debug(errors)
+        self.assertEquals(len(errors), 1)
+
 
 @tag('validation', 'validation_ctd')
 class TestCTDEventValidation(DartTestCase):
 
     def setUp(self) -> None:
-        self.start_date = datetime.datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
-        self.end_date = datetime.datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.start_date = datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.end_date = datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
         self.mission = core_factory.MissionFactory(
             start_date=self.start_date.date(),
             end_date=self.end_date.date()

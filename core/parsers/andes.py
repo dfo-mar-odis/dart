@@ -7,6 +7,7 @@ from datetime import datetime
 from django.db.models import QuerySet
 from django.utils.translation import gettext_lazy as _
 
+import core.models
 from settingsdb.models import FileConfiguration
 
 from core import models as core_models
@@ -20,7 +21,7 @@ def get_or_create_file_config() -> QuerySet[FileConfiguration]:
     # These are all things the Elog parser requires, so we should probably figure out how to tackle them when reading
     # an Andes Report
     fields = [
-        ("lead_scientists", "chief_scientist", _("Label identifying the cheif scientists for the mission")),
+        ("lead_scientists", "chief_scientist", _("Label identifying the chief scientists for the mission")),
         ("platform", "name", _("Label identifying the ship name used for the mission")),
 
         ("instrument_name", "name", _("Label identifying an instrument name")),
@@ -142,7 +143,17 @@ def parse_events(mission: core_models.Mission, file_name: str, samples: list[dic
         for event in events:
             event_id = event[config.get(required_field='event_id').mapped_field]
             instrument_name = event[config.get(required_field='event_instrument_name').mapped_field]
-            instrument = instruments.get(name__iexact=instrument_name)
+            type_name = event[config.get(required_field='instrument_type').mapped_field]
+
+            if type_name.lower() == 'plankton net':
+                type_name = 'net'
+
+            type = core_models.InstrumentType.other
+            if core_models.InstrumentType.has_value(type_name):
+                type = core_models.InstrumentType.get(type_name)
+
+            instrument = instruments.get(name__iexact=instrument_name, type=type)
+
             sample_id = None
             end_sample_id = None
             if instrument.type == core_models.InstrumentType.ctd:
