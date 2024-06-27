@@ -21,7 +21,6 @@
         <th class="col">Name</th>
         <th class="col">Start Date</th>
         <th class="col">End Date</th>
-        <th class="col">Biochem Table</th>
         <th class="col-auto">{# mission details #}</th>
     </tr>
     </thead>
@@ -34,7 +33,6 @@
             <td>{{ mission.name }}</td>
             <td>{% if mission.start_date %}{{ mission.start_date }}{% endif %}</td>
             <td>{% if mission.end_date %}{{ mission.end_date }}{% endif %}</td>
-            <td>{{ mission.biochem_table }}</td>
 
             {% if mission.requires_migration %}
             <td>

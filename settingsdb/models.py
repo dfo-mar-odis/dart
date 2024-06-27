@@ -113,6 +113,15 @@ class BcDatabaseConnection(models.Model):
     uploader = models.CharField(verbose_name=_("Uploader Name"), max_length=20, blank=True, null=True,
                                 help_text=_("If not Account Name"))
 
+    bc_discrete_data_edits = models.CharField(verbose_name=_("BCD Table Name"), max_length=60,
+                                              default='BCDISCRETEDATAEDITS')
+    bc_discrete_station_edits = models.CharField(verbose_name=_("BCD Table Name"), max_length=60,
+                                                 default='BCDISCRETESTATNEDITS')
+    bc_plankton_data_edits = models.CharField(verbose_name=_("BCD Table Name"), max_length=60,
+                                              default='BCPLANKTONDATAEDITS')
+    bc_plankton_station_edits = models.CharField(verbose_name=_("BCD Table Name"), max_length=60,
+                                                 default='BCPLANKTONSTATNEDITS')
+
     def __str__(self):
         return f'{self.account_name} - {self.name}'
 
@@ -141,7 +150,6 @@ class BcDatabaseConnection(models.Model):
 
 # File configuration should be used by parsers that will create entries for what fields they require
 class FileConfiguration(models.Model):
-
     file_type = models.CharField(max_length=20)
     required_field = models.CharField(max_length=50, verbose_name=_("Required Field"),
                                       help_text=_("This is a field the parser will require to set DART table values"))
@@ -152,7 +160,6 @@ class FileConfiguration(models.Model):
 
 
 class GlobalStation(models.Model):
-
     name = models.CharField(verbose_name=_("Station Name"), max_length=20, unique=True)
 
     latitude = models.FloatField(verbose_name=_("Latitude"), blank=True, null=True)
@@ -165,7 +172,6 @@ class GlobalStation(models.Model):
 
 
 class GlobalGeographicRegion(models.Model):
-
     name = models.CharField(verbose_name=_("Geographic Region Name"), max_length=100, unique=True)
 
     def __str__(self):

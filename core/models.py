@@ -49,10 +49,6 @@ class Mission(models.Model):
     data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
                                     on_delete=models.DO_NOTHING)
 
-    biochem_table = models.CharField(verbose_name=_("Root BioChem Table Name"), max_length=100, null=True, blank=True,
-                                     help_text=_("How BioChem staging tables will be named without pre or post fixes. "
-                                                 "If blank, mission descriptor will be used."))
-
     # this is provided for convince so the user won't have to re-enter the directory repeatedly. It may differ based
     # on being 'At-sea' where data is collected or on land where collected data is loaded to BioChem
     bottle_directory = models.FilePathField(verbose_name=_("BTL Directory"),
