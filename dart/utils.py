@@ -43,7 +43,7 @@ def updated_value(row, field_name, new_value) -> str:
         if type(field) is DecimalField:
             new_value = round(new_value, field.decimal_places)
 
-    if current_value == new_value:
+    if current_value == new_value or (new_value is None and current_value is ''):
         return ''
 
     setattr(row, field_name, new_value)

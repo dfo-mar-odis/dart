@@ -86,6 +86,10 @@ class Mission(models.Model):
                                              blank=True, null=True)
 
     @property
+    def get_batch_name(self):
+        return f'{self.start_date.strftime("%Y%m")}{self.end_date.strftime("%m")}'
+
+    @property
     def get_biochem_table_name(self):
         if not self.biochem_table:
             self.biochem_table = f'bio_upload_{self.name}'
@@ -421,6 +425,12 @@ class MissionSampleType(models.Model):
         return label
 
 
+class BioChemUploadStatus(models.IntegerChoices):
+    upload = 1, "upload"
+    uploaded = 2, "uploaded"
+    delete = 3, "delete"
+
+
 # BioChemUpload is a table for tracking the last time a sensor or sample was uploaded to biochem. This way we can
 # track the data per-mission and let the user know if a sample has been uploaded, was modified and needs
 # to be re-uploaded, or hasn't been loaded yet.
@@ -430,11 +440,10 @@ class BioChemUpload(models.Model):
 
     upload_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True,
                                        help_text=_("The last time this sensor/sample was uploaded to biochem"))
-    modified_date = models.DateTimeField(verbose_name=_("Upload Date"), null=True, blank=True, auto_now=True,
-                                         help_text=_("The last time this sensor/sample was modified"))
+    modified_date = models.DateTimeField(verbose_name=_("Modified Date"), null=True, blank=True, auto_now=True,
+                                         help_text=_("The last time this sensor/sample was loaded"))
 
-    # Todo: add an action flag on this model that can be used to delete rows from BCS/BCD tables if
-    #       a sensor is removed from the list of sensors to upload to Biochem and it's already been uploaded.
+    status = models.IntegerField(verbose_name=_("Status"), null=True, blank=True, choices=BioChemUploadStatus.choices)
 
 
 # The Sample model tracks sample/sensor types that can or have been uploaded for a specific bottle. It can also

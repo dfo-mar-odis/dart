@@ -19,6 +19,7 @@ class MissionFactory(DjangoModelFactory):
 
     class Meta:
         model = models.Mission
+        database = 'default'
 
     name = factory.lazy_attribute(lambda o: faker.word())
     geographic_region = factory.lazy_attribute(lambda o: faker.word())

@@ -1,6 +1,8 @@
 import os.path
 import time
 
+from datetime import datetime
+
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Row, Field, HTML, Div
@@ -10,6 +12,7 @@ from django import forms
 from django.conf import settings
 from django.core.cache import caches
 from django.db import DatabaseError, close_old_connections
+from django.db.models import Q
 from django.http import HttpResponse, Http404
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
@@ -20,6 +23,7 @@ import biochem.upload
 
 from core import models as core_models
 from core import forms as core_forms
+from core.form_validation_biochem import BIOCHEM_CODES
 from core.forms import get_crispy_element_attributes
 from dart.utils import load_svg
 
@@ -399,6 +403,27 @@ def update_connection_button(database, mission_id, post: bool = False, error: bo
     return button
 
 
+def remove_bcd_d_data(mission: core_models.Mission):
+    database = mission._state.db
+    batch = mission.get_batch_name
+
+    delete_samples = core_models.BioChemUpload.objects.using(database).filter(
+        status=core_models.BioChemUploadStatus.delete)
+
+    bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
+    for delete in delete_samples:
+        try:
+            bcd_d.objects.using('biochem').filter(
+                dis_detail_data_type_seq=delete.type.datatype.data_type_seq,
+                batch_seq=batch
+            ).delete()
+            delete.delete()
+        except Exception as ex:
+            message = _("An issue occured while removeing rows for sensor/sample") + f": {delete.type.name}"
+            user_logger.error(message)
+            logger.exception(ex)
+
+
 def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
     # 1) get bottles from BCS_D table
@@ -412,35 +437,43 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_d.created_date
         last_uploaded = bcs_d.objects.using('biochem').all().values_list('created_date', flat=True).distinct().last()
-        if last_uploaded:
-            bottles = bottles.filter(last_modified__gt=last_uploaded)
+        # if last_uploaded:
+        #     bottles = bottles.filter(last_modified__gt=last_uploaded)
 
-    if bottles.exists():
-        # 4) upload only bottles that are new or were modified since the last biochem upload
-        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-        user_logger.info(_("Compiling BCS rows"))
-        create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, bcs_d_model=bcs_d)
+        if bottles.exists():
+            # 4) upload only bottles that are new or were modified since the last biochem upload
+            # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+            user_logger.info(_("Compiling BCS rows"))
+            create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
+                                                                   batch_name=mission.get_batch_name,
+                                                                   bcs_d_model=bcs_d)
 
-        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        user_logger.info(_("Creating/updating BCS rows"))
-        biochem.upload.upload_bcs_d(bcs_d, create, update, fields)
+            # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+            user_logger.info(_("Creating/updating BCS rows"))
+            biochem.upload.upload_bcs_d(bcs_d, create, update, fields)
 
 
 def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
-    # 1) get the biochem BCD_D model
+
+    # 1) Start by removing records marked for deletion
+    remove_bcd_d_data(mission)
+
+    # 2) get the biochem BCD_D model
     bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
 
-    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
+    # 3) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
     exists = biochem.upload.check_and_create_model('biochem', bcd_d)
 
     if exists:
         user_logger.info(_("Compiling rows for : ") + mission.name)
+        batch = mission.get_batch_name
 
         # 3) else filter the samples down to rows based on:
         # 3a) samples in this mission
         # 3b) samples of the current sample_type
         datatypes = core_models.BioChemUpload.objects.using(database).filter(
+            status=core_models.BioChemUploadStatus.upload,
             type__mission=mission).values_list('type', flat=True).distinct()
 
         discreate_samples = core_models.DiscreteSampleValue.objects.using(database).filter(
@@ -453,11 +486,31 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
             message = _("Compiling BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
             create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
-                                                                   samples=discreate_samples, bcd_d_model=bcd_d)
+                                                                   samples=discreate_samples,
+                                                                   batch_name=batch,
+                                                                   bcd_d_model=bcd_d)
 
             message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
             user_logger.info(message)
-            biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
+            try:
+                biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
+                uploaded = core_models.BioChemUpload.objects.using(database).filter(
+                    type__mission=mission,
+                    status=core_models.BioChemUploadStatus.upload
+                )
+                for upload in uploaded:
+                    upload.status = core_models.BioChemUploadStatus.uploaded
+                    upload.upload_date = datetime.now()
+                    upload.save()
+
+            except Exception as ex:
+                message = _("An error occured while writing BCD rows: ") + str(ex)
+                core_models.Error.objects.using(database).create(
+                    mission=mission, message=message, type=core_models.ErrorType.biochem,
+                    code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
+                )
+                user_logger.error(message)
+                logger.exception(ex)
 
 
 def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
@@ -473,17 +526,18 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
     bottles = core_models.Bottle.objects.using(database).filter(pk__in=bottle_ids)
 
     # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
-    # if exists:
-    #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
-    #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
-    #     if last_uploaded:
-    #         bottles = bottles.filter(last_modified__gt=last_uploaded)
+    if exists:
+        # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
+        last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
+        if last_uploaded:
+            bottles = bottles.filter(last_modified__gt=last_uploaded)
 
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_p_rows(uploader, bottles, bcs_p)
+        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_p_rows(uploader, bottles,
+                                                                               mission.get_batch_name, bcs_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS rows"))
@@ -511,7 +565,8 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCD rows"))
-        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(database, uploader, samples, bcd_p)
+        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(database, uploader, samples,
+                                                                               mission.get_batch_name, bcd_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCD rows"))
@@ -563,116 +618,6 @@ def get_database_connection_form(request, database, mission_id):
     form.append(database_form_soup)
 
     return form_soup
-
-
-# supply the upload_function that gathers data and sends it to the database.
-# It will receive a core.core_models.Mission and core.models.BcDatabaseConnection
-def upload_bio_chem(request, database, mission_id, upload_function):
-    soup = BeautifulSoup('', 'html.parser')
-    div = soup.new_tag('div')
-    div.attrs = {
-        'id': "div_id_biochem_alert_biochem_db_details",
-        'hx-swap-oob': 'true'
-    }
-    soup.append(div)
-
-    # check that the database and password were set in the cache
-    sentinel = object()
-    database_id = caches['biochem_keys'].get('database_id', default=sentinel)
-    password = caches['biochem_keys'].get(f'pwd', default=sentinel, version=database_id)
-    if database_id is sentinel or password is sentinel:
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': _("Database connection is unavailable, reconnect and try again."),
-        }
-        alert_soup = core_forms.blank_alert(**attrs)
-        div.append(alert_soup)
-
-        return HttpResponse(soup)
-
-    bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
-    if request.method == "GET":
-
-        message_component_id = 'div_id_upload_biochem'
-        attrs = {
-            'component_id': message_component_id,
-            'alert_type': 'info',
-            'message': _("Uploading"),
-            'hx-post': request.scope['path'],  # reuse the url of whatever is calling this function
-            'hx-swap': 'none',
-            'hx-trigger': 'load',
-            'hx-target': "#div_id_biochem_alert_biochem_db_details",
-            'hx-ext': "ws",
-            'ws-connect': f"/ws/biochem/notifications/{message_component_id}/"
-        }
-        alert_soup = core_forms.save_load_component(**attrs)
-
-        # add a message area for websockets
-        msg_div = alert_soup.find(id="div_id_upload_biochem_message")
-        msg_div.string = ""
-
-        # The core.consumer.processing_elog_message() function is going to write output to a div
-        # with the 'status' id, we'll stick that in the loading alerts message area and bam! Instant notifications!
-        msg_div_status = soup.new_tag('div')
-        msg_div_status['id'] = 'status'
-        msg_div_status.string = _("Loading")
-        msg_div.append(msg_div_status)
-        div.append(alert_soup)
-
-    elif request.method == "POST":
-        # have a couple second pause for the websocket to finish initializing.
-        time.sleep(2)
-
-        mission = core_models.Mission.objects.using(database).get(pk=mission_id)
-
-        try:
-            uploader = bc_database.uploader if bc_database.uploader else bc_database.account_name
-
-            upload_function(mission, uploader)
-            attrs = {
-                'component_id': 'div_id_upload_biochem',
-                'alert_type': 'success',
-                'message': _("Success"),
-            }
-            alert_soup = core_forms.blank_alert(**attrs)
-            div.append(alert_soup)
-
-        except DatabaseError as e:
-            logger.exception(e)
-
-            # A 12545 Oracle error means there's an issue with the database connection. This could be because
-            # the user isn't logged in on VPN so the Oracle DB can't be connected to.
-            if e.args[0].code == 12545:
-                caches['biochem_keys'].delete('pwd', version=database_id)
-                close_old_connections()
-                soup.append(update_connection_button(soup, mission_id, error=True))
-                attrs = {
-                    'component_id': 'div_id_upload_biochem',
-                    'alert_type': 'danger',
-                    'message': f'{e.args[0].code} : ' + _("Issue connecting to database, "
-                                                          "this may be due to VPN. (see ./logs/error.log)."),
-                }
-            else:
-                attrs = {
-                    'component_id': 'div_id_upload_biochem',
-                    'alert_type': 'danger',
-                    'message': f'{e.args[0].code} : ' + _("An unknown database issue occurred (see ./logs/error.log)."),
-                }
-
-            alert_soup = core_forms.blank_alert(**attrs)
-            div.append(alert_soup)
-        except KeyError as e:
-            attrs = {
-                'component_id': 'div_id_upload_biochem',
-                'alert_type': 'danger',
-                'message': e.args[0],
-            }
-
-            alert_soup = core_forms.blank_alert(**attrs)
-            div.append(alert_soup)
-
-    return HttpResponse(soup)
 
 
 def get_tns_details(request, database, mission_id):
@@ -885,7 +830,8 @@ def validate_connection(request, database, mission_id):
 
 
 def is_connected():
-    return caches['biochem_keys'].get('database_id', -1) != -1 and caches['biochem_keys'].get('pwd', -1) != -1
+    selected_database = caches['biochem_keys'].get('database_id', -1)
+    return selected_database != -1 and caches['biochem_keys'].get('pwd', -1, version=selected_database) != -1
 
 
 url_prefix = "<str:database>/<str:mission_id>"

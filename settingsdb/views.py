@@ -9,7 +9,7 @@ from crispy_forms.utils import render_crispy_form
 
 from django import forms
 from django.core.files.base import ContentFile
-from django.db import connections
+from django.db import connections, OperationalError
 from django.http import HttpResponse
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
@@ -99,12 +99,18 @@ def get_mission_dictionary(db_dir):
         databases = settings.DATABASES
         databases[database] = databases['default'].copy()
         databases[database]['NAME'] = os.path.join(db_dir, f'{database}.sqlite3')
-        if models.Mission.objects.using(database).exists():
-            if not utils.is_database_synchronized(database):
-                missions[database] = {'name': database, 'biochem_table': '', 'requires_migration': 'true'}
-            else:
-                mission = models.Mission.objects.using(database).first()
-                missions[database] = mission
+        try:
+            if models.Mission.objects.using(database).exists():
+                if not utils.is_database_synchronized(database):
+                    version = getattr(models.Mission.objects.using(database).first(), 'dart_version', None)
+                    missions[database] = {'name': database, 'biochem_table': '',
+                                          'requires_migration': 'true', 'version': version}
+                else:
+                    mission = models.Mission.objects.using(database).first()
+                    missions[database] = mission
+        except Exception as ex:
+            logger.exception(ex)
+            logger.error(_("Cound not open database, it appears to be corrupted") + " : " + database)
 
     for connection in connections.all():
         if connection.alias != 'default':
@@ -191,7 +197,7 @@ def filter_missions(after_date, before_date) -> list[dict]:
     missions_dict = {}
     try:
         missions_dict = get_mission_dictionary(connected.database_location)
-    except Exception:
+    except Exception as ex:
         pass
 
     missions = []
@@ -203,7 +209,9 @@ def filter_missions(after_date, before_date) -> list[dict]:
             if mission.start_date and mission.start_date < after_date:
                 continue
 
-        missions.append({'database':database, 'mission':mission})
+        version = mission['version'] if type(mission) == dict else getattr(mission, 'dart_version', 'No version number')
+        missions.append({'database': database, 'mission': mission,
+                         'version': version})
 
     return missions
 

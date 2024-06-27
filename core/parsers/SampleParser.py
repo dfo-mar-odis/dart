@@ -1,10 +1,15 @@
 import csv
 import pandas as pd
 import numpy as np
+
+from datetime import datetime
+
 from django.db import transaction
 from django.db.models.functions import Lower
 
 from django.utils.translation import gettext as _
+
+import core.models
 from core import models as core_models
 from settingsdb import models as settings_models
 from dart.utils import updated_value
@@ -341,6 +346,13 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 core_models.Sample.objects.using(database).bulk_update(update_samples['models'], update_samples['fields'])
 
             core_models.DiscreteSampleValue.objects.using(database).bulk_create(create_discrete_values)
+
+        # if all goes well, mark the sample_type as requiring an upload if a BioChemUpload entry exists
+        if mission_sample_type.uploads.first():
+            bcu = mission_sample_type.uploads.first()
+            bcu.status = core.models.BioChemUploadStatus.upload
+            bcu.modified_date = datetime.now()
+            bcu.save()
 
     except ValueError as ex:
         message = _("Could not read column") + f" '{sample_config.sample_field}'"
