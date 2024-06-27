@@ -28,7 +28,7 @@
 
     <tbody>
     {% for mission_dict in missions %}
-        {%  with mission=mission_dict.mission database=mission_dict.database %}
+        {%  with mission=mission_dict.mission database=mission_dict.database%}
             {% if database and mission %}
         <tr class="table-row" id="tr_id_mission_{{ database }}">
             <td>{{ mission.name }}</td>
@@ -38,7 +38,7 @@
 
             {% if mission.requires_migration %}
             <td>
-                {% if mision.dart_version %}Dart Version: {{ mission.dart_version }}{% else %}Dart Version: b7f674184f401a6a0192ba5e91462fcd3d97ee04{% endif %}
+                Dart Version: {{ mission_dict.version }}
                 <button id="btn_id_migrate_{{ mission.name }}" type="button" class="btn btn-danger" title="{% trans "Database requires migrations before it can be read" %}"
                         hx-target="#btn_id_migrate_{{ mission.name }}" hx-swap="outerHTML" hx-get="{% url 'settingsdb:migrate_database' mission.name %}"
                         hx-confirm="{% trans 'Make sure the database is backed up before running migrations to update the database model' %}">{% custom_icon 'arrow-clockwise' %}</button>
