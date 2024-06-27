@@ -63,40 +63,28 @@ def check_and_create_model(database_name: str, upload_model) -> bool:
 #         # 12545 occurs if we couldn't connect to the DB so the connection is bad
 #     elif e.args[0].code == 942:
 #         # 942 occurs if we can connect, but the table doesn't exist so the connection is good
-def get_bcd_d_model(table_name: str) -> Type[models.BcdD]:
-    bcd_table = table_name + '_bcd_d'
+def get_model(table_name: str, model):
     opts = {'__module__': 'biochem'}
-    mod = type(bcd_table, (models.BcdD,), opts)
-    mod._meta.db_table = bcd_table
+    mod = type(table_name, (model,), opts)
+    mod._meta.db_table = table_name
 
     return mod
 
 
-def get_bcs_d_model(table_name: str) -> Type[models.BcsD]:
-    bcs_table = table_name + '_bcs_d'
-    opts = {'__module__': 'biochem'}
-    mod = type(bcs_table, (models.BcsD,), opts)
-    mod._meta.db_table = bcs_table
-
-    return mod
+def get_bcd_d_model(table_name: str):
+    return get_model(table_name, models.BcdD)
 
 
-def get_bcd_p_model(table_name: str) -> Type[models.BcdP]:
-    bcd_table = table_name + '_bcd_p'
-    opts = {'__module__': 'biochem'}
-    mod = type(bcd_table, (models.BcdP,), opts)
-    mod._meta.db_table = bcd_table
-
-    return mod
+def get_bcs_d_model(table_name: str):
+    return get_model(table_name, models.BcsD)
 
 
-def get_bcs_p_model(table_name: str) -> Type[models.BcsP]:
-    bcs_table = table_name + '_bcs_p'
-    opts = {'__module__': 'biochem'}
-    mod = type(bcs_table, (models.BcsP,), opts)
-    mod._meta.db_table = bcs_table
+def get_bcd_p_model(table_name: str):
+    return get_model(table_name, models.BcdP)
 
-    return mod
+
+def get_bcs_p_model(table_name: str):
+    return get_model(table_name, models.BcsP)
 
 
 def db_write_by_chunk(model, chunk_size, data, fields=None):

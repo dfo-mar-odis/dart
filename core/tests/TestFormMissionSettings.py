@@ -42,6 +42,3 @@ class TestFormMissionSettings(DartTestCase):
         data_center_field = form.find("select", {"name": "data_center"})
         self.assertIsNotNone(data_center_field)
 
-        biochem_table_field = form.find("input", {"name": "biochem_table"})
-        self.assertIsNotNone(biochem_table_field)
-

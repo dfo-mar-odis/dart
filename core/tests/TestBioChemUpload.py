@@ -1,10 +1,7 @@
 import datetime
-import time
-import os
-import shutil
 
 from django.conf import settings
-from django.core.management import call_command
+from django.core.cache import caches
 from django.db import connections
 from django.test import tag
 from django.urls import reverse
@@ -17,8 +14,9 @@ from core import form_biochem_database
 from core.tests import CoreFactoryFloor as core_factory
 
 from biochem import upload
-from biochem import models as bio_models
 from biochem.tests import BCFactoryFloor as biochem_factory
+
+from settingsdb.tests import SettingsFactoryFloor as settings_factory
 
 from bio_tables import models as bio_tables_models
 
@@ -62,7 +60,10 @@ class TestGetBCSPRows(AbstractTestDatabase):
     def setUp(self):
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
-        self.bio_model = upload.get_bcs_p_model(self.mission.get_biochem_table_name)
+        sample_database = settings_factory.BcDatabaseConnection()
+        caches['biochem_keys'].set('database_id', sample_database.pk, 3600)
+
+        self.bio_model = upload.get_bcs_p_model(sample_database.bc_plankton_station_edits)
         upload.create_model(biochem_db, self.bio_model)
 
     def tearDown(self):
@@ -178,6 +179,10 @@ class TestBioChemUpload(DartTestCase):
 class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
     def setUp(self):
+
+        self.sample_database = settings_factory.BcDatabaseConnection()
+        caches['biochem_keys'].set('database_id', self.sample_database.pk, 3600)
+
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
     def test_data_marked_for_upload(self):
@@ -205,7 +210,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
         form_biochem_database.upload_bcd_d_data(self.mission, 'upsonp')
 
-        model = upload.get_bcd_d_model(self.mission.get_biochem_table_name)
+        model = upload.get_bcd_d_model(self.sample_database.bc_discrete_data_edits)
         # oxygen samples should have been added to the biochem db
         self.assertTrue(model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
 
@@ -231,13 +236,15 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
         # The Biochem Database connection is created by the AbstractTestDatabase class
 
         # create a mission so we'll have a database table name and batch sequence
-        self.mission = core_factory.MissionFactory(mission_descriptor="TM15502",
-                                                   biochem_table=self.database_bcd_table_name)
+        self.mission = core_factory.MissionFactory(mission_descriptor="TM15502")
+
+        sample_database = settings_factory.BcDatabaseConnection()
+        caches['biochem_keys'].set('database_id', sample_database.pk, 3600)
 
         # Setup factoryboy to use the model we linked to the in-memory biochem db BCD table
         bcd_factory = biochem_factory.BcdDFactory
 
-        self.model = upload.get_bcd_d_model(self.database_bcd_table_name)
+        self.model = upload.get_bcd_d_model(sample_database.bc_discrete_data_edits)
         upload.create_model(biochem_db, self.model)
         bcd_factory._meta.model = self.model
 
