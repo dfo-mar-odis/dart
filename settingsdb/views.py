@@ -202,10 +202,10 @@ def filter_missions(after_date, before_date) -> list[dict]:
     missions = []
     for database, mission in missions_dict.items():
         if before_date:
-            if mission.end_date and mission.end_date > before_date:
+            if not hasattr(mission, 'end_date') or mission.end_date and mission.end_date > before_date:
                 continue
         if after_date:
-            if mission.start_date and mission.start_date < after_date:
+            if not hasattr(mission, 'start_date') or mission.start_date and mission.start_date < after_date:
                 continue
 
         version = mission['version'] if type(mission) == dict else getattr(mission, 'dart_version', 'No version number')

@@ -60,7 +60,7 @@ def get_file_configs(data, file_type):
         # the user can load samples from.
         file_configs = sample_configs.filter(
             tab=matching_config.tab, skip=matching_config.skip,
-            sample_type__short_name=matching_config.sample_type.short_name)
+            sample_field__iexact=matching_config.sample_field)
         return file_configs
 
     return None
