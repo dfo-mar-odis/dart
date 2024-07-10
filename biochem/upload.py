@@ -140,7 +140,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
         mission = event.mission
         primary_data_center = mission.data_center
 
-        dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:02d}_{bottle.bottle_id}'
+        dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
         existing_sample = bottle.bottle_id in existing_samples.keys()
         if existing_sample:
