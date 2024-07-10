@@ -262,7 +262,17 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             value = row[value_field]
 
             if sample_id not in bottle_keys:
-                message = f"Could not find bottle matching id {sample_id} in file {file_name}"
+                message = f"Could not find bottle matching id {sample_id} in file {file_name} \n"
+                event = mission.events.filter(sample_id__lte=sample_id, end_sample_id__gte=sample_id)
+                if event:
+                    event = event.first()
+                    message += (_("Possible Event") + f" #{event.event_id} " + _("Bottle IDs") +
+                                f" {event.sample_id} - {event.end_sample_id}")
+                    message += _("\nEvent Comments : ")
+                    for action in event.actions.all():
+                        if action.comment:
+                            message += f"\n{action.get_type_display()} : {action.comment}"
+
                 error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
                                               type=core_models.ErrorType.sample)
                 errors.append(error)
