@@ -337,10 +337,15 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
     update_discrete_samples: [core_models.DiscreteSampleValue] = []
     # validate and remove bottles that don't exist
     if data_frame_avg.shape[0] > (event.total_samples + 1):
-        message = _('Event contained more than the expected number of bottles. Additional bottles will be dropped. ')
-        message += _("Event") + f" #{event.event_id} "
-        message += _("Expected") + f"[{(event.total_samples+1)}] "
-        message += _("Found") + f"[{data_frame_avg.shape[0]}]"
+        message = _('Event contained more than the expected number of bottles. Additional bottles will be dropped. \n')
+        message += _("Event") + f" #{event.event_id} \n"
+        message += _("Expected") + f"[{(event.total_samples+1)}] \n"
+        message += _("Found") + f"[{data_frame_avg.shape[0]}]\n"
+        message += _("\nEvent Comments : ")
+        for action in event.actions.all():
+            if action.comment:
+                message += f"\n{action.get_type_display()} : {action.comment}"
+
         logger.warning(message)
 
         core_models.FileError(mission=mission, file_name=file_name, line=skipped_rows, message=message,
@@ -373,11 +378,29 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
         # if the Bottle S/N column is present then use that values as the bottle ID
         if 'bottle_' in row[1]:
-            bottle_id = int(row[1]['bottle_'])
+            try:
+                bottle_id = int(row[1]['bottle_'])
+            except ValueError as ex:
+                logger.exception(ex)
+                message = _("There was an error parsing a bottle id - ")
+                message += _("\nEvent Comments : ")
+                for action in event.actions.all():
+                    if action.comment:
+                        message += f"\n{action.get_type_display()} : {action.comment}"
+
+                logger.error(message)
+
+                core_models.FileError(mission=mission, file_name=file_name, line=skipped_rows, message=message,
+                                      type=core_models.ErrorType.validation).save()
+                continue
 
         if not bottles.filter(bottle_id=bottle_id).exists():
-            message = _("Bottle does not exist for event")
+            message = _("Bottle does not exist for event \n")
             message += _("Event") + f" #{event.event_id} " + _("Bottle ID") + f" #{bottle_id}"
+            message += _("\nEvent Comments : ")
+            for action in event.actions.all():
+                if action.comment:
+                    message += f"\n{action.get_type_display()} : {action.comment}"
 
             logger.warning(message)
             continue
