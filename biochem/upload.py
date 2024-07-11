@@ -429,10 +429,12 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
 
     if len(bcd_objects_to_create) > 0:
         user_logger.info(_("Indexing Primary Keys"))
-        # to keep dis_data_num (primary key in the Biochem BCD table) a manageable number get all the
-        # currently used dis_data_num keys in order up to the highest value and create a list of integers
-        dis_data_num_query = bcd_d_model.objects.using('biochem').order_by('dis_data_num')
-        dis_data_num_seq = list(dis_data_num_query.values_list('dis_data_num', flat=True))
+        dis_data_num_seq = []
+        if bcd_d_model:
+            # to keep dis_data_num (primary key in the Biochem BCD table) a manageable number get all the
+            # currently used dis_data_num keys in order up to the highest value and create a list of integers
+            dis_data_num_query = bcd_d_model.objects.using('biochem').order_by('dis_data_num')
+            dis_data_num_seq = list(dis_data_num_query.values_list('dis_data_num', flat=True))
 
         # find the first and last key in the set and use that to create a range, then subtract keys that are
         # being used from the set. What is left are available keys that can be assigned to new rows being created
