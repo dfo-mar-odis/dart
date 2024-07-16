@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime
 
 from django.db import transaction
+from django.db.models import Q
 from django.db.models.functions import Lower
 
 from django.utils.translation import gettext as _
@@ -64,9 +65,9 @@ def get_file_configs(data, file_type):
             tab=matching_config.tab, skip=matching_config.skip,
             sample_field__iexact=matching_config.sample_field)
         file_configs = file_configs.filter(value_field__in=lowercase_fields)
-        file_configs = file_configs.filter(limit_field__in=lowercase_fields)
-        file_configs = file_configs.filter(flag_field__in=lowercase_fields)
-        file_configs = file_configs.filter(comment_field__in=lowercase_fields)
+        file_configs = file_configs.filter(Q(limit_field=None) | Q(limit_field__in=lowercase_fields))
+        file_configs = file_configs.filter(Q(limit_field=None) | Q(flag_field__in=lowercase_fields))
+        file_configs = file_configs.filter(Q(limit_field=None) | Q(comment_field__in=lowercase_fields))
         return file_configs
 
     return None

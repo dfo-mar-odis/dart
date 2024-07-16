@@ -6,6 +6,7 @@ from django.test import tag, Client
 from django.urls import reverse
 from django.conf import settings
 
+from core.parsers import PlanktonParser
 from dart.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
@@ -24,6 +25,13 @@ class TestFormPlanktonLoad(DartTestCase):
     def setUp(self):
         self.mission = core_factory.MissionFactory()
         self.client = Client()
+
+        # The origional column name for the sample ID in a plankton file was just 'ID'. It changed to 'SAMPLE_ID' in
+        # 2024. The test file still uses 'ID', but the Plankton Parser was updated to use the file config model
+        # so we can update the field for the file we're loading pretty easily.
+        config = PlanktonParser.get_or_create_phyto_file_config().get(required_field='id')
+        config.mapped_field = 'ID'
+        config.save()
 
     @tag('form_plankton_test_entry_point')
     def test_form_entry_point(self):
