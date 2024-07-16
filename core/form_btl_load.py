@@ -222,7 +222,7 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
 
             card.append(card_body := bottle_load_soup.new_tag('div', attrs={'class': 'card-body'}))
             card_body.append(ul_file := bottle_load_soup.new_tag('ul', attrs={'class': 'list-group'}))
-            for error in errors:
+            for error in errors.filter(file_name=file):
                 li_error_id = f'li_id_btl_error_{error.pk}'
                 ul_file.append(li_error := bottle_load_soup.new_tag('li', attrs={'class': 'list-group-item',
                                                                                  'id': li_error_id}))
