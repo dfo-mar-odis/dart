@@ -55,12 +55,18 @@ def get_file_configs(data, file_type):
 
         lowercase_fields = []
     if matching_config:
-        # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row with
-        # values fields in the available columns should give us all file configurations for this type of file that
+        # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row
+        # in the available columns should give us all file configurations for this type of file that
         # the user can load samples from.
+        #
+        # Now we have to filter out sample types that don't have value, limit, qc and comment columns in the file
         file_configs = sample_configs.filter(
             tab=matching_config.tab, skip=matching_config.skip,
             sample_field__iexact=matching_config.sample_field)
+        file_configs = file_configs.filter(value_field__in=lowercase_fields)
+        file_configs = file_configs.filter(limit_field__in=lowercase_fields)
+        file_configs = file_configs.filter(flag_field__in=lowercase_fields)
+        file_configs = file_configs.filter(comment_field__in=lowercase_fields)
         return file_configs
 
     return None
