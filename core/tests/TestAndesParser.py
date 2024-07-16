@@ -152,7 +152,7 @@ class TestAndesParser(DartTestCase):
                 {
                     "event_number": 11.0,
                     "instrument": "Plankton net (202μm)",
-                    "instrument_type": "NET",
+                    "instrument_type": "Net",
                     "wire_out": "1000 m",
                     "wire_angle": "45 degrees",
                     "flow_meter_start": 2068,

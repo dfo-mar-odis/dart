@@ -124,7 +124,11 @@ class TestFormBioChemDatabase(DartTestCase):
             'name': 'TTRAN',
             'host': 'VSNSBIOD78.ENT.DFO-MPO.CA',
             'port': '1521',
-            'engine': '1'
+            'engine': '1',
+            'bc_discrete_data_edits': "BCDISCRETEDATAEDITS",
+            'bc_discrete_station_edits': "BCDISCRETESTATNEDITS",
+            'bc_plankton_data_edits': "BCPLANKTONDATAEDITS",
+            'bc_plankton_station_edits': "BCPLANKTONSTATNEDITS",
         }
         url = reverse(self.add_database_url, args=('default', self.mission.pk))
 

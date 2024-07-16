@@ -49,10 +49,6 @@ class Mission(models.Model):
     data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
                                     on_delete=models.DO_NOTHING)
 
-    biochem_table = models.CharField(verbose_name=_("Root BioChem Table Name"), max_length=100, null=True, blank=True,
-                                     help_text=_("How BioChem staging tables will be named without pre or post fixes. "
-                                                 "If blank, mission descriptor will be used."))
-
     # this is provided for convince so the user won't have to re-enter the directory repeatedly. It may differ based
     # on being 'At-sea' where data is collected or on land where collected data is loaded to BioChem
     bottle_directory = models.FilePathField(verbose_name=_("BTL Directory"),
@@ -88,14 +84,6 @@ class Mission(models.Model):
     @property
     def get_batch_name(self):
         return f'{self.start_date.strftime("%Y%m")}{self.end_date.strftime("%m")}'
-
-    @property
-    def get_biochem_table_name(self):
-        if not self.biochem_table:
-            self.biochem_table = f'bio_upload_{self.name}'
-            self.save()
-
-        return self.biochem_table
 
     def __str__(self):
         return f'{self.name}'

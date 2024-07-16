@@ -525,6 +525,9 @@ def sample_data_upload(database, mission: models.Mission, uploader: str):
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
     samples_types_for_upload = [bcupload.type for bcupload in
                                 models.BioChemUpload.objects.using(database).filter(type__mission=mission)]
+
+    # Todo: I'm running the standard DART based event/data validation here, but we probably should be running the
+    #  BioChem Validation from core.form_validation_biochem.run_biochem_validation()
     errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
 
     if errors:

@@ -62,20 +62,7 @@ def biochem_upload_card(request, database, mission_id):
 
 
 def sample_data_upload(database, mission: models.Mission, uploader: str):
-    # clear previous errors if there were any from the last upload attempt
-    mission.errors.filter(type=models.ErrorType.biochem).delete()
-    models.Error.objects.using(database).filter(mission=mission, type=models.ErrorType.biochem).delete()
-
-    # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
-    # user_logger.info(_("Validating Sensor/Sample Datatypes"))
-    samples_types_for_upload = [bcupload.type for bcupload in
-                                models.BioChemUpload.objects.using(database).filter(type__mission=mission)]
-    # errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
-
-    # if errors:
-    #     # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
-    #     user_logger.info(_("Datatypes missing see errors"))
-    #     models.Error.objects.using(database).bulk_create(errors)
+    # todo: Setup error logging here, clear out old errors to prep for issues found during the BCS_P/BCD_P upload
 
     # create and upload the BCS data if it doesn't already exist
     form_biochem_database.upload_bcs_p_data(mission, uploader)

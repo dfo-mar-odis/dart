@@ -35,3 +35,15 @@ class SampleTypeConfigFactory(DjangoModelFactory):
     skip = factory.lazy_attribute(lambda o: faker.random.randint(0, 20))
     sample_field = factory.lazy_attribute(lambda o: faker.word())
     value_field = factory.lazy_attribute(lambda o: faker.word())
+
+
+class BcDatabaseConnection(DjangoModelFactory):
+
+    class Meta:
+        model = settings_models.BcDatabaseConnection
+
+    host = "localhost"
+    name = "TestDB"
+
+    account_name = "test_account"
+    uploader = "UploaderT"

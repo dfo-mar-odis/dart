@@ -1,5 +1,4 @@
 import os.path
-import time
 
 from datetime import datetime
 
@@ -12,7 +11,6 @@ from django import forms
 from django.conf import settings
 from django.core.cache import caches
 from django.db import DatabaseError, close_old_connections
-from django.db.models import Q
 from django.http import HttpResponse, Http404
 from django.template.context_processors import csrf
 from django.template.loader import render_to_string
@@ -50,7 +48,9 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
     class Meta:
         model = settings_models.BcDatabaseConnection
-        fields = ['account_name', 'uploader', 'name', 'host', 'port', 'engine', 'selected_database', 'db_password']
+        fields = ['account_name', 'uploader', 'name', 'host', 'port', 'engine', 'selected_database', 'db_password',
+                  'bc_discrete_data_edits', 'bc_discrete_station_edits', 'bc_plankton_data_edits',
+                  'bc_plankton_station_edits']
 
     def get_host_field_id(self):
         return f'input_id_host_{self.card_name}'
@@ -60,6 +60,18 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
     def get_tns_name_field_id(self):
         return f'input_id_name_{self.card_name}'
+
+    def get_bcd_d_field_id(self):
+        return f'input_id_bcd_d_{self.card_name}'
+
+    def get_bcs_d_field_id(self):
+        return f'input_id_bcs_d_{self.card_name}'
+
+    def get_bcd_p_field_id(self):
+        return f'input_id_bcd_p_{self.card_name}'
+
+    def get_bcs_p_field_id(self):
+        return f'input_id_bcs_p_{self.card_name}'
 
     def get_db_select(self):
         url = reverse_lazy('core:form_biochem_database_update_db_selection', args=(self.database, self.mission_id))
@@ -211,6 +223,12 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
         host_field = Field('host', id=self.get_host_field_id())
         port_field = Field('port', id=self.get_port_field_id())
 
+        bcd_d_field = Field('bc_discrete_data_edits', id=self.get_bcd_d_field_id())
+        bcs_d_field = Field('bc_discrete_station_edits', id=self.get_bcs_d_field_id())
+
+        bcd_p_field = Field('bc_plankton_data_edits', id=self.get_bcd_p_field_id())
+        bcs_p_field = Field('bc_plankton_station_edits', id=self.get_bcs_p_field_id())
+
         update_db_selection_url = reverse_lazy('core:form_biochem_database_update_db_selection', args=(self.database,
                                                                                                        self.mission_id))
         hx_attrs = {
@@ -232,6 +250,13 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
             **hx_attrs
         )
 
+        input_table_row = Row(
+            Column(bcd_d_field),
+            Column(bcs_d_field),
+            Column(bcd_p_field),
+            Column(bcs_p_field),
+        )
+
         if self.instance and self.instance.pk:
             button_column.append(self.get_update_database_button())
             button_column.append(self.get_remove_database_button())
@@ -239,6 +264,7 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
             button_column.append(self.get_add_database_button())
 
         body.append(input_row)
+        body.append(input_table_row)
 
         return body
 
@@ -403,6 +429,31 @@ def update_connection_button(database, mission_id, post: bool = False, error: bo
     return button
 
 
+def get_connected_database():
+    database_id = caches['biochem_keys'].get('database_id', None)
+    if not database_id:
+        # not connected to a database, thrown an error
+        pass
+
+    return settings_models.BcDatabaseConnection.objects.get(pk=database_id)
+
+
+def get_bcd_d_table():
+    return get_connected_database().bc_discrete_data_edits
+
+
+def get_bcs_d_table():
+    return get_connected_database().bc_discrete_station_edits
+
+
+def get_bcd_p_table():
+    return get_connected_database().bc_plankton_data_edits
+
+
+def get_bcs_p_table():
+    return get_connected_database().bc_plankton_station_edits
+
+
 def remove_bcd_d_data(mission: core_models.Mission):
     database = mission._state.db
     batch = mission.get_batch_name
@@ -410,7 +461,7 @@ def remove_bcd_d_data(mission: core_models.Mission):
     delete_samples = core_models.BioChemUpload.objects.using(database).filter(
         status=core_models.BioChemUploadStatus.delete)
 
-    bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
+    bcd_d = biochem.upload.get_bcd_d_model(get_bcd_d_table())
     for delete in delete_samples:
         try:
             bcd_d.objects.using('biochem').filter(
@@ -419,15 +470,30 @@ def remove_bcd_d_data(mission: core_models.Mission):
             ).delete()
             delete.delete()
         except Exception as ex:
-            message = _("An issue occured while removeing rows for sensor/sample") + f": {delete.type.name}"
+            message = _("An issue occurred while removing rows for sensor/sample") + f": {delete.type.name}"
             user_logger.error(message)
             logger.exception(ex)
 
 
+def remove_bcd_p_data(mission: core_models.Mission):
+    database = mission._state.db
+    batch = mission.get_batch_name
+
+    bcd_p = biochem.upload.get_bcd_p_model(get_bcd_p_table())
+
+    try:
+        bcd_p.objects.using('biochem').filter(batch_seq=batch).delete()
+    except Exception as ex:
+        message = _("An issue occurred while removing rows for BCD plankton data")
+        user_logger.error(message)
+        logger.exception(ex)
+
+
 def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
+
     # 1) get bottles from BCS_D table
-    bcs_d = biochem.upload.get_bcs_d_model(mission.get_biochem_table_name)
+    bcs_d = biochem.upload.get_bcs_d_model(get_bcs_d_table())
     exists = biochem.upload.check_and_create_model('biochem', bcs_d)
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
@@ -449,127 +515,137 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
                                                                    bcs_d_model=bcs_d)
 
             # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-            user_logger.info(_("Creating/updating BCS rows"))
+            user_logger.info(_("Creating/updating BCS Discrete rows"))
             biochem.upload.upload_bcs_d(bcs_d, create, update, fields)
-
-
-def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
-    database = mission._state.db
-
-    # 1) Start by removing records marked for deletion
-    remove_bcd_d_data(mission)
-
-    # 2) get the biochem BCD_D model
-    bcd_d = biochem.upload.get_bcd_d_model(mission.get_biochem_table_name)
-
-    # 3) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
-    exists = biochem.upload.check_and_create_model('biochem', bcd_d)
-
-    if exists:
-        user_logger.info(_("Compiling rows for : ") + mission.name)
-        batch = mission.get_batch_name
-
-        # 3) else filter the samples down to rows based on:
-        # 3a) samples in this mission
-        # 3b) samples of the current sample_type
-        datatypes = core_models.BioChemUpload.objects.using(database).filter(
-            status=core_models.BioChemUploadStatus.upload,
-            type__mission=mission).values_list('type', flat=True).distinct()
-
-        discreate_samples = core_models.DiscreteSampleValue.objects.using(database).filter(
-            sample__bottle__event__mission=mission
-        )
-        discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
-
-        if discreate_samples.exists():
-            # 4) upload only samples that are new or were modified since the last biochem upload
-            message = _("Compiling BCD rows for sample type") + " : " + mission.name
-            user_logger.info(message)
-            create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
-                                                                   samples=discreate_samples,
-                                                                   batch_name=batch,
-                                                                   bcd_d_model=bcd_d)
-
-            message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
-            user_logger.info(message)
-            try:
-                biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
-                uploaded = core_models.BioChemUpload.objects.using(database).filter(
-                    type__mission=mission,
-                    status=core_models.BioChemUploadStatus.upload
-                )
-                for upload in uploaded:
-                    upload.status = core_models.BioChemUploadStatus.uploaded
-                    upload.upload_date = datetime.now()
-                    upload.save()
-
-            except Exception as ex:
-                message = _("An error occured while writing BCD rows: ") + str(ex)
-                core_models.Error.objects.using(database).create(
-                    mission=mission, message=message, type=core_models.ErrorType.biochem,
-                    code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
-                )
-                user_logger.error(message)
-                logger.exception(ex)
 
 
 def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
 
     # 1) get bottles from BCS_P table
-    bcs_p = biochem.upload.get_bcs_p_model(mission.get_biochem_table_name)
+    bcs_p = biochem.upload.get_bcs_p_model(get_bcs_p_table())
     exists = biochem.upload.check_and_create_model('biochem', bcs_p)
 
-    # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
+    # 2) get all the bottles to be uploaded
     samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
     bottle_ids = samples.values_list('bottle_id').distinct()
     bottles = core_models.Bottle.objects.using(database).filter(pk__in=bottle_ids)
 
-    # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
-        last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
-        if last_uploaded:
-            bottles = bottles.filter(last_modified__gt=last_uploaded)
+        last_uploaded = bcs_p.objects.using('biochem').all().values_list('created_date', flat=True).distinct().last()
+        # if last_uploaded:
+        #     bottles = bottles.filter(last_modified__gt=last_uploaded)
 
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_p_rows(uploader, bottles,
-                                                                               mission.get_batch_name, bcs_p)
+        bcs_create, bcs_update, updated_fields = biochem.upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
+                                                                               batch_name=mission.get_batch_name,
+                                                                               bcs_p_model=bcs_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        user_logger.info(_("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCS Plankton rows"))
         biochem.upload.upload_bcs_p(bcs_p, bcs_create, bcs_update, updated_fields)
+
+
+def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
+    database = mission._state.db
+
+    # 1) get the biochem BCD_D model
+    table_name = get_bcd_d_table()
+    bcd_d = biochem.upload.get_bcd_d_model(table_name)
+
+    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
+    exists = biochem.upload.check_and_create_model('biochem', bcd_d)
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD D data. "
+                            f"Could not connect to table {table_name}")
+
+    # 3) Start by removing records marked for deletion
+    remove_bcd_d_data(mission)
+
+    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
+    batch = mission.get_batch_name
+
+    # 4) else filter the samples down to rows based on:
+    #  * samples in this mission
+    #  * samples of the current sample_type
+    datatypes = core_models.BioChemUpload.objects.using(database).filter(
+        status=core_models.BioChemUploadStatus.upload,
+        type__mission=mission).values_list('type', flat=True).distinct()
+
+    discreate_samples = core_models.DiscreteSampleValue.objects.using(database).filter(
+        sample__bottle__event__mission=mission
+    )
+    discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
+
+    if discreate_samples.exists():
+        # 4) upload only samples that are new or were modified since the last biochem upload
+        message = _("Compiling BCD rows for sample type") + " : " + mission.name
+        user_logger.info(message)
+        create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
+                                                               samples=discreate_samples,
+                                                               batch_name=batch,
+                                                               bcd_d_model=bcd_d)
+
+        message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
+        user_logger.info(message)
+        try:
+            biochem.upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
+            uploaded = core_models.BioChemUpload.objects.using(database).filter(
+                type__mission=mission,
+                status=core_models.BioChemUploadStatus.upload
+            )
+            for upload in uploaded:
+                upload.status = core_models.BioChemUploadStatus.uploaded
+                upload.upload_date = datetime.now()
+                upload.save()
+
+        except Exception as ex:
+            message = _("An error occured while writing BCD rows: ") + str(ex)
+            core_models.Error.objects.using(database).create(
+                mission=mission, message=message, type=core_models.ErrorType.biochem,
+                code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
+            )
+            user_logger.error(message)
+            logger.exception(ex)
 
 
 def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
     database = mission._state.db
 
-    # 1) get bottles from BCD_P table
-    bcd_p = biochem.upload.get_bcd_p_model(mission.get_biochem_table_name)
+    # 1) get Biochem BCD_P model
+    table_name = get_bcd_p_table()
+    bcd_p = biochem.upload.get_bcd_p_model(table_name)
+
+    # 2) if the BCD_P model doesn't exist, create it
     exists = biochem.upload.check_and_create_model('biochem', bcd_p)
 
-    # 2) if the bcs_p table doesn't exist, create with all the bottles. linked to plankton samples
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
+                            f"Could not connect to table {table_name}")
+
+    # 3) Start by removing records marked for deletion
+    remove_bcd_p_data(mission)
+
+    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
+    batch = mission.get_batch_name
+
+    # 4) if the bcs_p table exist, create with all the bottles. linked to plankton samples
     samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
 
-    # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
-    # if exists:
-    #     # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
-    #     last_uploaded = bcs_p.objects.all().values_list('created_date', flat=True).distinct().last()
-    #     if last_uploaded:
-    #         bottles = bottles.filter(last_modified__gt=last_uploaded)
-
     if samples.exists():
-        # 4) upload only bottles that are new or were modified since the last biochem upload
+        # 5) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-        user_logger.info(_("Compiling BCD rows"))
-        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(database, uploader, samples,
-                                                                               mission.get_batch_name, bcd_p)
+        user_logger.info(_("Compiling BCD Plankton rows"))
+        bcd_create, bcd_update, updated_fields = biochem.upload.get_bcd_p_rows(database=database, uploader=uploader,
+                                                                               samples=samples, batch_name=batch,
+                                                                               bcd_p_model=bcd_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        user_logger.info(_("Creating/updating BCD rows"))
+        user_logger.info(_("Creating/updating BCD Plankton rows"))
         biochem.upload.upload_bcd_p(bcd_p, bcd_create, bcd_update, updated_fields)
 
 

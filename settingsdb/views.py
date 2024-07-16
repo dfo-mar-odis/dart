@@ -103,14 +103,13 @@ def get_mission_dictionary(db_dir):
             if models.Mission.objects.using(database).exists():
                 if not utils.is_database_synchronized(database):
                     version = getattr(models.Mission.objects.using(database).first(), 'dart_version', None)
-                    missions[database] = {'name': database, 'biochem_table': '',
-                                          'requires_migration': 'true', 'version': version}
+                    missions[database] = {'name': database, 'requires_migration': 'true', 'version': version}
                 else:
                     mission = models.Mission.objects.using(database).first()
                     missions[database] = mission
         except Exception as ex:
             logger.exception(ex)
-            logger.error(_("Cound not open database, it appears to be corrupted") + " : " + database)
+            logger.error(_("Could not open database, it appears to be corrupted") + " : " + database)
 
     for connection in connections.all():
         if connection.alias != 'default':
@@ -151,7 +150,7 @@ class MissionFilterView(GenericTemplateView):
     filterset_class = filters.MissionFilter
     new_url = reverse_lazy("core:mission_new")
     home_url = ""
-    fields = ["id", "name", "biochem_table"]
+    fields = ["id", "name"]
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)

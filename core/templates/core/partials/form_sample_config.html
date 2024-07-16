@@ -33,6 +33,7 @@
         </div>
         <div class="col-auto">
             <button class="btn btn-primary btn-sm" name="add_sample"
+                title="{% trans "Add Sample Type" %}"
                 hx-get="{% url 'core:form_sample_config_new' database %}"
                 hx-target="#div_id_sample_type_holder"
             >{% custom_icon 'plus-square' %}</button>

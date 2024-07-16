@@ -245,16 +245,31 @@ def import_plankton(request, database, mission_id):
         dataframe = get_excel_dataframe(stream=data, sheet_number=(tab - 1), header_row=(header - 1))
         dataframe.columns = map(str.upper, dataframe.columns)
 
-        if 'WHAT_WAS_IT' in dataframe.columns:
-            parse_zooplankton(mission, file.name, dataframe)
-        else:
-            parse_phytoplankton(mission, file.name, dataframe)
+        try:
+            if 'WHAT_WAS_IT' in dataframe.columns:
+                parse_zooplankton(mission, file.name, dataframe)
+            else:
+                parse_phytoplankton(mission, file.name, dataframe)
 
-        if (errs := mission.file_errors.filter(file_name__iexact=file.name)).exists():
-            # might as well add the list of issues while loading the file to the response so the
-            # user knows what went wrong.
-            attrs['message'] = _("Completed with issues")
-            attrs['alert_type'] = 'warning'
+            if (errs := mission.file_errors.filter(file_name__iexact=file.name)).exists():
+                # might as well add the list of issues while loading the file to the response so the
+                # user knows what went wrong.
+                attrs['message'] = _("Completed with issues")
+                attrs['alert_type'] = 'warning'
+                alert = core_forms.blank_alert(**attrs)
+                ul = soup.new_tag('ul')
+                ul.attrs['class'] = 'vertical-scrollbar-sm'
+                for err in errs:
+                    li = soup.new_tag('li')
+                    li.string = err.message
+                    ul.append(li)
+                alert.find('div').find('div').append(ul)
+            else:
+                alert = core_forms.blank_alert(**attrs)
+        except KeyError as e:
+            errs = mission.file_errors.filter(file_name__iexact=file.name)
+            attrs['message'] = _("Could not load with issues")
+            attrs['alert_type'] = 'danger'
             alert = core_forms.blank_alert(**attrs)
             ul = soup.new_tag('ul')
             ul.attrs['class'] = 'vertical-scrollbar-sm'
@@ -263,8 +278,6 @@ def import_plankton(request, database, mission_id):
                 li.string = err.message
                 ul.append(li)
             alert.find('div').find('div').append(ul)
-        else:
-            alert = core_forms.blank_alert(**attrs)
 
         message_div.append(alert)
         # clear the file input upon success

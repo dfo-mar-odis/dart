@@ -45,6 +45,11 @@ class TestPhytoplanktonParser(DartTestCase):
         self.bottle_mission_start = core_factory.BottleFactory(event=self.event_mission_start, bottle_id=488275)
         self.bottle_mission_end = core_factory.BottleFactory(event=self.event_mission_end, bottle_id=488685)
 
+        config = PlanktonParser.get_or_create_phyto_file_config()
+        id_field = config.get(required_field='id')
+        id_field.mapped_field = 'ID'
+        id_field.save()
+
     def test_parser(self):
 
         # this should create 32 plankton samples

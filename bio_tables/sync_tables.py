@@ -11,7 +11,7 @@ from biochem import models as biochem_models
 from . import models as bio_models
 
 # The label used in settings.DATABASES must match the label the dart.db_router uses
-database_label = dart.db_routers.biochem_database_label
+database_label = 'biochem'
 
 
 def connect(user: str, password: str, name: str, host: str, port: int, engine: str = 'django.db.backends.oracle'):

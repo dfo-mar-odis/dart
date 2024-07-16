@@ -35,7 +35,7 @@ class MissionSettingsForm(forms.ModelForm):
 
     class Meta:
         model = models.Mission
-        fields = ['name', 'geographic_region', 'mission_descriptor', 'biochem_table', 'data_center', 'lead_scientist',
+        fields = ['name', 'geographic_region', 'mission_descriptor', 'data_center', 'lead_scientist',
                   'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments']
 
     def __init__(self, *args, **kwargs):
@@ -53,7 +53,6 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['global_geographic_region'].required = False
 
         self.fields['mission_descriptor'].required = False
-        self.fields['biochem_table'].required = False
         self.fields['lead_scientist'].required = False
         self.fields['data_center'].required = False
 
@@ -182,7 +181,6 @@ class MissionSettingsForm(forms.ModelForm):
                     ),
                     Row(
                         Column(Field('data_center')),
-                        Column(Field('biochem_table')),
                     ),
                     Row(Field('collector_comments')),
                     Row(Field('data_manager_comments')),
