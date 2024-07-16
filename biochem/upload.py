@@ -102,11 +102,11 @@ def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.Bcs
                  updated_fields: [str]):
     chunk_size = 100
     if len(bcs_rows_to_create) > 0:
-        user_logger.info(_("Creating BCS rows") + f" : {len(bcs_rows_to_create)}")
+        user_logger.info(_("Creating BCS Discrete rows") + f" : {len(bcs_rows_to_create)}")
         db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_create)
 
     if len(bcs_rows_to_update) > 0:
-        user_logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
+        user_logger.info(_("Updating BCS Discrete rows") + f": {len(bcs_rows_to_update)}")
         db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
@@ -564,11 +564,12 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
             # This was set to 1 in the existing AZMP Template for phyto
             row_update.add(updated_value(bcs_row, 'pl_headr_position_qc_code', 1) if not exists else '')
 
+
             # use the event starts and stops if not provided by the bottle.
             row_update.add(updated_value(bcs_row, 'pl_headr_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
             row_update.add(updated_value(bcs_row, 'pl_headr_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
-            row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(event.start_date, "%H%M%S")))
-            row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(event.end_date, "%H%M%S")))
+            row_update.add(updated_value(bcs_row, 'pl_headr_stime', datetime.strftime(event.start_date, "%H%M")))
+            row_update.add(updated_value(bcs_row, 'pl_headr_etime', datetime.strftime(event.end_date, "%H%M")))
 
             if bottle.latitude:
                 row_update.add(updated_value(bcs_row, 'pl_headr_slat', bottle.latitude))
@@ -662,11 +663,11 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
 def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to_update, updated_fields):
     chunk_size = 100
     if len(bcs_rows_to_create) > 0:
-        user_logger.info(_("Creating BCS rows") + f" : {len(bcs_rows_to_create)}")
+        user_logger.info(_("Creating BCS Plankton rows") + f" : {len(bcs_rows_to_create)}")
         db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_create)
 
     if len(bcs_rows_to_update) > 0:
-        user_logger.info(_("Updating BCS rows") + f": {len(bcs_rows_to_update)}")
+        user_logger.info(_("Updating BCS Plankton rows") + f": {len(bcs_rows_to_update)}")
         db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
