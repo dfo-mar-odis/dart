@@ -400,6 +400,7 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         updated_fields.add(updated_value(bcd_row, 'mission_descriptor', mission.mission_descriptor))
 
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_qc_code', ds_sample.flag if ds_sample.flag else 0))
+        updated_fields.add(updated_value(bcd_row, 'dis_detail_detection_limit', ds_sample.limit))
 
         limit = ds_sample.limit if ds_sample.limit else None
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detection_limit', limit))
