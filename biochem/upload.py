@@ -51,11 +51,23 @@ def check_and_create_model(database_name: str, upload_model) -> bool:
     return False
 
 
+# create a temporary in-memory database table that can be used to hold remote data for faster access
+def get_temp_space(model, tmp_db_name='biochem_tmp') -> Type[models.BcdD | models.BcdP]:
+    databases = settings.DATABASES
+    if tmp_db_name not in databases:
+        databases[tmp_db_name] = databases['default'].copy()
+        databases[tmp_db_name]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
+
+    check_and_create_model(tmp_db_name, model)
+    model.objects.using(tmp_db_name).delete()
+    return model
+
+
 # Use when testing DB connections when we don't want to edit the model
 #
 # example usage:
 #
-# bcd_d = upload.get_bcd_d_model('some_table')
+# bcd_d = upload.get_model('some_table', biochem_models.BcdD)
 # try:
 #     bcd_d.objects.exists()
 # except DatabaseError as e:
@@ -69,22 +81,6 @@ def get_model(table_name: str, model):
     mod._meta.db_table = table_name
 
     return mod
-
-
-def get_bcd_d_model(table_name: str):
-    return get_model(table_name, models.BcdD)
-
-
-def get_bcs_d_model(table_name: str):
-    return get_model(table_name, models.BcsD)
-
-
-def get_bcd_p_model(table_name: str):
-    return get_model(table_name, models.BcdP)
-
-
-def get_bcs_p_model(table_name: str):
-    return get_model(table_name, models.BcsP)
 
 
 def db_write_by_chunk(model, chunk_size, data, fields=None):
@@ -255,34 +251,6 @@ def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteS
             ds_sample.bio_upload_date = datetime.now().strftime("%Y-%m-%d")
 
 
-# Todo: Documentation
-# get_bcd_d_rows checks the local database against the BCD model and creates a list of BCD rows
-# to either be created or updated. It returns [rows_to_create, rows_to_update, fields_names_to_update]
-# if errors occur they'll be written to the local database Error table.
-#
-# When returned, the rows_to_create list will have the dis_detail_collector_samp_id column set as a compound
-# key containing the [bottle_id]_[replicate_number] when written to the database this key needs to be
-# changed to just the bottle_id.
-#
-# The dis_data_num value is a primary key in the Biochem BCD table, it uniquely identifies each value so each
-# replicate gets its own dis_data_num, but we don't have the dis_data_num until *after* all rows have been written
-# to the database. So the dis_detail_collector_sample_id column is used to keep track of a bottle ID and the replicate
-# after the data is written to Biochem we get the dis_data_num value for the core.models.DiscreteSampleValue row
-# and then change the dis_detail_collector_sample_id to be just the bottle ID. Now that the DiscreteSampleValue
-# has a dis_data_num, we can use that to query the BCD table when looking for existing samples
-
-def get_temp_space(tmp_db_name='biochem_tmp') -> Type[models.BcdD]:
-    databases = settings.DATABASES
-    if tmp_db_name not in databases:
-        databases[tmp_db_name] = databases['default'].copy()
-        databases[tmp_db_name]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
-
-    model = get_bcd_d_model('tmp_bcd_d')
-    check_and_create_model(tmp_db_name, model)
-    model.objects.using(tmp_db_name).delete()
-    return model
-
-
 def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_name: str,
                    bcs_p_model: Type[models.BcsP] = None) -> [[models.BcsP], [models.BcsP], [str]]:
 
@@ -386,6 +354,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
 
             # This was set to 1 in the existing AZMP Template for phyto
             row_update.add(updated_value(bcs_row, 'pl_headr_position_qc_code', 1) if not exists else '')
+            row_update.add(updated_value(bcs_row, 'pl_headr_preservation_seq', 90000039))
 
 
             # use the event starts and stops if not provided by the bottle.
@@ -496,26 +465,26 @@ def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to
 
 def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
                    bcd_d_model: Type[models.BcdD] = None) -> [[models.BcdD], [models.BcdD], [str]]:
+
     bcd_objects_to_create = []
     bcd_objects_to_update = []
     errors = []
 
-    batch = batch_name
-
     # if these rows are being generated for a report we don't have the bcd_d_model, which is what
     # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
     # place of the BcdD model
+    bcd_model = models.BcdDReportModel
+
     tmp_table = 'biochem_tmp'
     tmp_model_manager = None
-
-    bcd_model = models.BcdDReportModel
 
     if bcd_d_model:
         # copy the biochem data we're interested in looking at into an in-memory version of the database,
         # which will make queries much faster than doing them over a VPN to a datacenter across the country
         existing_samples_qs = bcd_d_model.objects.using('biochem').filter(batch_seq=batch_name)
         tmp_samples = [sample for sample in existing_samples_qs]
-        tmp_model_manager = get_temp_space(tmp_table).objects.using(tmp_table)
+        model = get_model('tmp_bcd_d', models.BcdD)
+        tmp_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
         tmp_model_manager.bulk_create(tmp_samples)
 
         bcd_model = bcd_d_model._meta.model
@@ -599,7 +568,6 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
             updated_fields.add(updated_value(bcd_row, 'dis_header_stime', event_date.strftime("%H%M")))
 
         # ########### Stuff that we get from the Mission object #################################################### #
-        updated_fields.add(updated_value(bcd_row, 'batch_seq', batch))
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detail_collector', mission.lead_scientist))
 
         # mission descriptor
@@ -618,8 +586,7 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         updated_fields.add(updated_value(bcd_row, 'dis_detail_detection_limit', limit))
 
         # The process flag is used by the Biochem upload app to indicate if the data should be processed by
-        # the application. Pl/SQL code is run on the table and this flag is set to 'DVE' depending on
-        # if the data validates.
+        # the application. 'NR' is the default code indicating the data needs to be processed
         updated_fields.add(updated_value(bcd_row, 'process_flag', 'NR'))
         updated_fields.add(updated_value(bcd_row, 'created_by', uploader))
         updated_fields.add(updated_value(bcd_row, 'data_center_code', primary_data_center.data_center_code))
@@ -629,6 +596,8 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         updated_fields.add(updated_value(bcd_row, 'dis_detail_data_value', ds_sample.value))
         updated_fields.add(updated_value(bcd_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
         updated_fields.add(updated_value(bcd_row, 'dis_sample_key_value', dis_sample_key_value))
+
+        updated_fields.add(updated_value(bcd_row, 'batch_seq', batch_name))
 
         updated_fields.remove('')
 
@@ -640,35 +609,8 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
     if len(errors) > 0:
         core_models.Error.objects.using(database).bulk_create(errors)
 
-    if len(bcd_objects_to_create) > 0:
-        user_logger.info(_("Indexing Primary Keys"))
-        dis_data_num_seq = []
-        if bcd_d_model:
-            # to keep dis_data_num (primary key in the Biochem BCD table) a manageable number get all the
-            # currently used dis_data_num keys in order up to the highest value and create a list of integers
-            dis_data_num_query = bcd_d_model.objects.using('biochem').order_by('dis_data_num')
-            dis_data_num_seq = list(dis_data_num_query.values_list('dis_data_num', flat=True))
-
-        # find the first and last key in the set and use that to create a range, then subtract keys that are
-        # being used from the set. What is left are available keys that can be assigned to new rows being created
-        sort_seq = []
-        end = 0
-        if len(dis_data_num_seq) > 0:
-            start, end = dis_data_num_seq[0], dis_data_num_seq[-1]
-            sort_seq = sorted(set(range(start, end)).difference(dis_data_num_seq))
-
-        dis_data_num = 0
-        for index, obj in enumerate(bcd_objects_to_create):
-            if index < len(sort_seq):
-                # the index number is a count of which object in the bcd_objects_to_create array we're on
-                # if the index is less than the length of our available keys array get the next available
-                # number in the sequence
-                dis_data_num = sort_seq[index]
-            else:
-                # if we're past the end of the available keys start get the last number in the sequence + 1
-                # then just add one to the sequence for every additional object.
-                dis_data_num = end + 1 if dis_data_num < end else dis_data_num + 1
-            obj.dis_data_num = dis_data_num
+    user_logger.info(_("Indexing Primary Keys"))
+    compress_keys(bcd_objects_to_create, bcd_d_model, 'dis_data_num')
 
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
 
@@ -680,20 +622,18 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
     bcd_objects_to_update = []
     errors = []
 
-    batch = batch_name
-
     # if these rows are being generated for a report we don't have the bcd_d_model, which is what
     # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
     # place of the BcdD model
+    bcd_model = models.BcdPReportModel
+
     tmp_table = 'biochem_tmp'
     tmp_model_manager = None
-
-    bcd_model = models.BcdPReportModel
 
     if bcd_p_model:
         # copy the biochem data we're interested in looking at into an in-memory version of the database,
         # which will make queries much faster than doing them over a VPN to a datacenter across the country
-        existing_samples_qs = bcd_p_model.objects.using('biochem').filter(batch_seq=batch)
+        existing_samples_qs = bcd_p_model.objects.using('biochem').filter(batch_seq=batch_name)
         tmp_samples = [sample for sample in existing_samples_qs]
         tmp_model_manager = get_temp_space(tmp_table).objects.using(tmp_table)
         tmp_model_manager.bulk_create(tmp_samples)
@@ -796,7 +736,7 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        row_update.add(updated_value(bcd_row, 'batch_seq', batch))
+        row_update.add(updated_value(bcd_row, 'batch_seq', batch_name))
 
         # mission descriptor
         # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code
@@ -822,37 +762,44 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
     if len(errors) > 0:
         core_models.Error.objects.using(database).bulk_create(errors)
 
-    if len(bcd_objects_to_create) > 0:
-        user_logger.info(_("Indexing Primary Keys"))
-        plank_data_num_seq = []
-        if bcd_p_model:
-            # to keep plank_data_num (primary key in the Biochem BCD table) a manageable number get all the
-            # currently used plank_data_num keys in order up to the highest value and create a list of integers
-            plank_data_num_query = bcd_p_model.objects.using('biochem').order_by('plank_data_num')
-            plank_data_num_seq = list(plank_data_num_query.values_list('plank_data_num', flat=True))
-
-        # find the first and last key in the set and use that to create a range, then subtract keys that are
-        # being used from the set. What is left are available keys that can be assigned to new rows being created
-        sort_seq = []
-        end = 0
-        if len(plank_data_num_seq) > 0:
-            start, end = plank_data_num_seq[0], plank_data_num_seq[-1]
-            sort_seq = sorted(set(range(start, end)).difference(plank_data_num_seq))
-
-        plank_data_num = 0
-        for index, obj in enumerate(bcd_objects_to_create):
-            if index < len(sort_seq):
-                # the index number is a count of which object in the bcd_objects_to_create array we're on
-                # if the index is less than the length of our available keys array get the next available
-                # number in the sequence
-                plank_data_num = sort_seq[index]
-            else:
-                # if we're past the end of the available keys start get the last number in the sequence + 1
-                # then just add one to the sequence for every additional object.
-                plank_data_num = end + 1 if plank_data_num < end else plank_data_num + 1
-            obj.plank_data_num = plank_data_num
+    user_logger.info(_("Indexing Primary Keys"))
+    compress_keys(bcd_objects_to_create, bcd_p_model, 'plank_data_num')
 
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
+
+
+def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
+    if len(bcd_objects_to_create) <= 0:
+        return
+
+    data_num_seq = []
+    if bcd_model:
+        # to keep data_num (primary key in the Biochem BCD table) a manageable number get all the
+        # currently used dis_data_num/plank_data_num keys in order up to the highest value and create a list of integers
+        data_num_query = bcd_model.objects.using('biochem').order_by(primary_key)
+        data_num_seq = list(data_num_query.values_list(primary_key, flat=True))
+
+    # find the first and last key in the set and use that to create a range, then subtract keys that are
+    # being used from the set. What is left are available keys that can be assigned to new rows being created
+    sort_seq = []
+    end = 0
+    if len(data_num_seq) > 0:
+        start, end = data_num_seq[0], data_num_seq[-1]
+        sort_seq = sorted(set(range(start, end)).difference(data_num_seq))
+
+    data_num = 0
+    for index, obj in enumerate(bcd_objects_to_create):
+        if index < len(sort_seq):
+            # the index number is a count of which object in the bcd_objects_to_create array we're on.
+            # If the index is less than the length of our available keys array, get the next available
+            # number in the sequence
+            data_num = sort_seq[index]
+        else:
+            # if we're past the end of the available keys start get the last number in the sequence + 1
+            # then just add one to the sequence for every additional object.
+            data_num = end + 1 if data_num < end else data_num + 1
+
+        setattr(obj, primary_key, data_num)
 
 
 def upload_bcd_p(bcd_p_model: Type[models.BcdP], bcd_rows_to_create, bcd_rows_to_update, updated_fields):

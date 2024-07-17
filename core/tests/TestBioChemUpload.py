@@ -7,6 +7,7 @@ from django.test import tag
 from django.urls import reverse
 
 import core.models
+from biochem.models import BcsP
 from dart.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
@@ -14,6 +15,7 @@ from core import form_biochem_database
 from core.tests import CoreFactoryFloor as core_factory
 
 from biochem import upload
+from biochem import models as bio_models
 from biochem.tests import BCFactoryFloor as biochem_factory
 
 from settingsdb.tests import SettingsFactoryFloor as settings_factory
@@ -63,7 +65,7 @@ class TestGetBCSPRows(AbstractTestDatabase):
         sample_database = settings_factory.BcDatabaseConnection()
         caches['biochem_keys'].set('database_id', sample_database.pk, 3600)
 
-        self.bio_model = upload.get_bcs_p_model(sample_database.bc_plankton_station_edits)
+        self.bio_model = upload.get_model(sample_database.bc_plankton_station_edits, BcsP)
         upload.create_model(biochem_db, self.bio_model)
 
     def tearDown(self):
@@ -210,7 +212,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
         form_biochem_database.upload_bcd_d_data(self.mission, 'upsonp')
 
-        model = upload.get_bcd_d_model(self.sample_database.bc_discrete_data_edits)
+        model = upload.get_model(self.sample_database.bc_discrete_data_edits, bio_models.BcdD)
         # oxygen samples should have been added to the biochem db
         self.assertTrue(model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
 
@@ -244,7 +246,7 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
         # Setup factoryboy to use the model we linked to the in-memory biochem db BCD table
         bcd_factory = biochem_factory.BcdDFactory
 
-        self.model = upload.get_bcd_d_model(sample_database.bc_discrete_data_edits)
+        self.model = upload.get_model(sample_database.bc_discrete_data_edits, bio_models.BcdD)
         upload.create_model(biochem_db, self.model)
         bcd_factory._meta.model = self.model
 
