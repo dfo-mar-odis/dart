@@ -515,7 +515,7 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
 
             # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
             user_logger.info(_("Creating/updating BCS Discrete rows"))
-            upload.upload_bcs_d(bcs_d, create, update, fields)
+            upload.upload_db_rows(bcs_d, create, update, fields)
 
 
 def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
@@ -546,7 +546,7 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Plankton rows"))
-        upload.upload_bcs_p(bcs_p, bcs_create, bcs_update, updated_fields)
+        upload.upload_db_rows(bcs_p, bcs_create, bcs_update, updated_fields)
 
 
 def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
@@ -592,11 +592,12 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
         message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
         try:
-            upload.upload_bcd_d(bcd_d, discreate_samples, create, update, fields)
+            upload.upload_db_rows(bcd_d, create, update, fields)
             uploaded = core_models.BioChemUpload.objects.using(database).filter(
                 type__mission=mission,
                 status=core_models.BioChemUploadStatus.upload
             )
+
             for sample in uploaded:
                 sample.status = core_models.BioChemUploadStatus.uploaded
                 sample.upload_date = datetime.now()
@@ -645,7 +646,7 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCD Plankton rows"))
-        upload.upload_bcd_p(bcd_p, bcd_create, bcd_update, updated_fields)
+        upload.upload_db_rows(bcd_p, bcd_create, bcd_update, updated_fields)
 
 
 def get_biochem_errors(request, database, **kwargs):

@@ -14,6 +14,15 @@ from . import models as bio_models
 database_label = 'biochem'
 
 
+# USAGE
+#
+# from bio_tables import sync_tables
+# sync_tables.connect('upsonp', 'password', 'PTRAN', 'NET.WORK.ADDRESS.COM', 1541)
+# sync_tables.inspect_db(['bcerrorcodes', 'bcdiscretestatnedits'])
+#
+# if the database is in the TNS names file on a local machine you can use the
+# sync_tables.connect_tns('upsonp', 'password', 'PTRAN')
+# to form the connection.
 def connect(user: str, password: str, name: str, host: str, port: int, engine: str = 'django.db.backends.oracle'):
     biochem_db = {
         'ENGINE': engine,
@@ -22,6 +31,26 @@ def connect(user: str, password: str, name: str, host: str, port: int, engine: s
         'PASSWORD': password,
         'PORT': port,
         'HOST': host,
+        'TIME_ZONE': None,
+        'CONN_HEALTH_CHECKS': False,
+        'CONN_MAX_AGE': 0,
+        'AUTOCOMMIT': True,
+        'ATOMIC_REQUESTS': False,
+        'OPTIONS': {}
+    }
+
+    settings.DATABASES[database_label] = biochem_db
+
+
+def connect_tns(user: str, password: str, name: str, engine: str = 'django.db.backends.oracle'):
+    tns = settings.TNS_NAMES.get(name.upper(), None)
+    biochem_db = {
+        'ENGINE': engine,
+        'NAME': name,
+        'USER': user,
+        'PASSWORD': password,
+        'PORT': tns['PORT'],
+        'HOST': tns['HOST'],
         'TIME_ZONE': None,
         'CONN_HEALTH_CHECKS': False,
         'CONN_MAX_AGE': 0,

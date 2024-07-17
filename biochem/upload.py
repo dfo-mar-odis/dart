@@ -94,16 +94,13 @@ def db_write_by_chunk(model, chunk_size, data, fields=None):
             model.objects.using('biochem').bulk_create(batch)
 
 
-def upload_bcs_d(bcs_d_model: Type[models.BcsD], bcs_rows_to_create: [models.BcsD], bcs_rows_to_update: [models.BcsD],
-                 updated_fields: [str]):
+def upload_db_rows(model, rows_to_create: [], rows_to_update: [], updated_fields: [str]):
     chunk_size = 100
-    if len(bcs_rows_to_create) > 0:
-        user_logger.info(_("Creating BCS Discrete rows") + f" : {len(bcs_rows_to_create)}")
-        db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_create)
+    if len(rows_to_create) > 0:
+        db_write_by_chunk(model, chunk_size, rows_to_create)
 
-    if len(bcs_rows_to_update) > 0:
-        user_logger.info(_("Updating BCS Discrete rows") + f": {len(bcs_rows_to_update)}")
-        db_write_by_chunk(bcs_d_model, chunk_size, bcs_rows_to_update, updated_fields)
+    if len(rows_to_update) > 0:
+        db_write_by_chunk(model, chunk_size, rows_to_update, updated_fields)
 
 
 # returns the rows to create, rows to update and fields to update
@@ -232,23 +229,6 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
             bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
 
     return [bcs_objects_to_create, bcs_objects_to_update, updated_fields]
-
-
-def upload_bcd_d(bcd_d_model: Type[models.BcdD], samples: [core_models.DiscreteSampleValue],
-                 bcd_rows_to_create: [models.BcdD], bcd_rows_to_update: [models.BcdD], updated_fields: [str]):
-    chunk_size = 100
-
-    # writing thousands of rows at one time is... apparently bad. Break the data up into manageable chunks.
-    if len(bcd_rows_to_create) > 0:
-        user_logger.info(f"Createing BCD rows: {len(bcd_rows_to_create)}")
-        db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_create)
-
-    if len(bcd_rows_to_update) > 0:
-        user_logger.info(f"Updating BCD rows: {len(bcd_rows_to_update)}")
-        db_write_by_chunk(bcd_d_model, chunk_size, bcd_rows_to_update, updated_fields)
-
-        for ds_sample in samples:
-            ds_sample.bio_upload_date = datetime.now().strftime("%Y-%m-%d")
 
 
 def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_name: str,
@@ -450,17 +430,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
                 bcs_objects_to_update.append(bcs_row)
 
     return bcs_objects_to_create, bcs_objects_to_update, updated_fields
-
-
-def upload_bcs_p(bcs_p_model: Type[models.BcsP], bcs_rows_to_create, bcs_rows_to_update, updated_fields):
-    chunk_size = 100
-    if len(bcs_rows_to_create) > 0:
-        user_logger.info(_("Creating BCS Plankton rows") + f" : {len(bcs_rows_to_create)}")
-        db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_create)
-
-    if len(bcs_rows_to_update) > 0:
-        user_logger.info(_("Updating BCS Plankton rows") + f": {len(bcs_rows_to_update)}")
-        db_write_by_chunk(bcs_p_model, chunk_size, bcs_rows_to_update, updated_fields)
 
 
 def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
@@ -800,14 +769,3 @@ def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
             data_num = end + 1 if data_num < end else data_num + 1
 
         setattr(obj, primary_key, data_num)
-
-
-def upload_bcd_p(bcd_p_model: Type[models.BcdP], bcd_rows_to_create, bcd_rows_to_update, updated_fields):
-    chunk_size = 100
-    if len(bcd_rows_to_create) > 0:
-        user_logger.info(_("Creating BCS rows") + f" : {len(bcd_rows_to_create)}")
-        db_write_by_chunk(bcd_p_model, chunk_size, bcd_rows_to_create)
-
-    if len(bcd_rows_to_update) > 0:
-        user_logger.info(_("Updating BCS rows") + f": {len(bcd_rows_to_update)}")
-        db_write_by_chunk(bcd_p_model, chunk_size, bcd_rows_to_update, updated_fields)
