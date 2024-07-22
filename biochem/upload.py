@@ -604,7 +604,8 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         # which will make queries much faster than doing them over a VPN to a datacenter across the country
         existing_samples_qs = bcd_p_model.objects.using('biochem').filter(batch_seq=batch_name)
         tmp_samples = [sample for sample in existing_samples_qs]
-        tmp_model_manager = get_temp_space(tmp_table).objects.using(tmp_table)
+        model = get_model('tmp_bcd_p', models.BcdP)
+        tmp_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
         tmp_model_manager.bulk_create(tmp_samples)
 
         bcd_model = bcd_p_model._meta.model
@@ -661,7 +662,11 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
 
         row_update.add(updated_value(bcd_row, 'pl_gen_counts', sample.count))
         row_update.add(updated_value(bcd_row, 'pl_gen_count_pct', sample.percent))
-        row_update.add(updated_value(bcd_row, 'pl_gen_wet_weight', sample.raw_wet_weight))
+
+        # if the wet weight is less than zero then it's being used as a code to generate a collector comment
+        # and should be set to None when uploaded to biochem
+        wet_weight = sample.raw_wet_weight if sample.raw_wet_weight and sample.raw_wet_weight > 0 else None
+        row_update.add(updated_value(bcd_row, 'pl_gen_wet_weight', wet_weight))
         row_update.add(updated_value(bcd_row, 'pl_gen_dry_weight', sample.raw_dry_weight))
         row_update.add(updated_value(bcd_row, 'pl_gen_bio_volume', sample.volume))
 
@@ -669,6 +674,7 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         row_update.add(updated_value(bcd_row, 'pl_gen_collector_comment', sample.collector_comment))
 
         row_update.add(updated_value(bcd_row, 'pl_gen_source', "UNASSIGNED"))
+        row_update.add(updated_value(bcd_row, 'pl_gen_modifier', sample.modifier))
 
         # PL_GEN_DATA_MANAGER_COMMENT
         # PL_FREQ_DATA_TYPE_SEQ
