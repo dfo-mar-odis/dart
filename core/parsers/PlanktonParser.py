@@ -41,6 +41,7 @@ def get_or_create_phyto_file_config() -> QuerySet[FileConfiguration]:
     fields = [("id", "SAMPLE_ID", _("Label identifying sample ID column")),
               ("aphia_id", "APHIA_ID", _("Label identifying the APHIA column")),
               ("taxonomic_name", "TAXONOMIC_NAME", _("Label identifying the taxonomic name column")),
+              ("modifier", "MODIFIER", _("Label identifying plankton modifier")),
               ("count", "CELLS_LITRE", _("Label identifying the cells per litre count column")),
               ("life_history_seq", "LIFE_HISTORY_SEQ", _("Label identifying the Life History Stage Sequence")),
               ('certainty', 'CERTAINTY', _("Label identifying the certainty column")),
@@ -131,6 +132,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
         name = row[config.get(required_field='taxonomic_name').mapped_field]
         count = row[config.get(required_field='count').mapped_field]
         certainty = row[config.get(required_field='certainty').mapped_field]
+        modifier = row[config.get(required_field='modifier').mapped_field]
         comment = row[config.get(required_field='comments').mapped_field]
         comment = comment if str(comment) != 'nan' else ""
 
@@ -158,6 +160,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
             plankton = core_models.PlanktonSample(file=filename, bottle=bottle)
 
             plankton.count = count
+            plankton.modifier = modifier
             plankton.taxa_id = taxa
             plankton.comments = comment + (f' ({str(certainty)})' if certainty and not np.isnan(certainty) else '')
 
@@ -171,6 +174,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
             plankton = bottle.plankton_data.get(taxa=taxa)
             updated_fields.add(updated_value(plankton, 'count', count))
             updated_fields.add(updated_value(plankton, 'taxa_id', taxa))
+            updated_fields.add(updated_value(plankton, 'modifier', modifier))
             updated_fields.add(updated_value(plankton, 'stage_id', stage if stage else 90000000))
 
             comment = comment + (f' ({str(certainty)})' if certainty and not np.isnan(certainty) else '')
