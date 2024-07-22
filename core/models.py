@@ -548,6 +548,7 @@ class PlanktonSample(models.Model):
 
     plank_data_num = models.IntegerField(verbose_name=_("Plankton data number"), blank=True, null=True,
                                          help_text=_("key linking this plankton sample to a biochem staging table"))
+    modifier = models.CharField(verbose_name=_("Plankton Modifier"), max_length=50, blank=True, null=True)
 
     @property
     def plank_sample_key_value(self):
