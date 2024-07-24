@@ -3,6 +3,7 @@ import io
 import time
 from pathlib import Path
 
+import django.utils.connection
 import numpy as np
 import os
 
@@ -12,6 +13,7 @@ from bs4 import BeautifulSoup
 
 from crispy_forms.utils import render_crispy_form
 from django.conf import settings
+from django.db import connections
 
 from django.db.models import Max, QuerySet
 from django.http import HttpResponse, Http404
@@ -20,7 +22,7 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 
-import biochem.upload
+from biochem import upload
 from biochem import models as biochem_models
 
 from core import forms, form_biochem_database, validation
@@ -91,7 +93,6 @@ def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Missi
 def get_sensor_table_upload_checkbox(soup: BeautifulSoup, database,
                                      mission: models.Mission,
                                      sample_type_id):
-
     sample_type = mission.mission_sample_types.get(pk=sample_type_id)
     enabled = False
     if sample_type.datatype:
@@ -170,7 +171,7 @@ def get_file_error_card(request, database, mission_id):
             div = soup.new_tag('div', attrs={'class': 'col'})
             msgs = error.message.split("\n")
             for msg in msgs:
-                div.append(msg_div:=soup.new_tag('div'))
+                div.append(msg_div := soup.new_tag('div'))
                 msg_div.string = msg
 
             url = reverse_lazy('core:mission_samples_delete_file_error', args=(database, error.pk))
@@ -497,8 +498,8 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
 
 
 def biochem_upload_card(request, database, mission_id):
-    # upload_url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(database, mission_id,))
-    # download_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(database, mission_id,))
+    # upload_url = reverse_lazy("core:mission_samples_upload_biochem", args=(database, mission_id,))
+    # download_url = reverse_lazy("core:mission_samples_download_biochem", args=(database, mission_id,))
 
     button_url = reverse_lazy('core:mission_samples_update_bio_chem_buttons', args=(database, mission_id))
 
@@ -516,7 +517,66 @@ def biochem_upload_card(request, database, mission_id):
     return HttpResponse(soup)
 
 
-def sample_data_upload(database, mission: models.Mission, uploader: str):
+def run_biochem_validation_procedure(batch_id, mission_descriptor):
+    errors = None
+
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"validating station data")
+        stn_pass_var = cur.callfunc("VALIDATE_DISCRETE_STATN_DATA.VALIDATE_DISCRETE_STATION", str, [batch_id])
+
+        user_logger.info(f"validating discrete data")
+        data_pass_var = cur.callfunc("VALIDATE_DISCRETE_STATN_DATA.VALIDATE_DISCRETE_DATA", str, [batch_id])
+
+        if stn_pass_var == 'T' and data_pass_var == 'T':
+            user_logger.info(f"Moving BCS/BCD data to workbench")
+            populate_pass_var = cur.callfunc("POPULATE_DISCRETE_EDITS_PKG.POPULATE_DISCRETE_EDITS", str, [batch_id])
+        else:
+            user_logger.info(f"Errors in BCS/BCD data. Stand by for a damage report.")
+
+        cur.execute('commit')
+
+        if stn_pass_var == 'F' or data_pass_var == 'F':
+            cur.execute(f"select * from BCSTATNDATAERRORS where batch_seq='{batch_id}'")
+            errors = cur.fetchall()
+
+    # if errors:
+    #     for error in errors:
+    #         user_logger.error(error)
+    #
+    return errors
+
+
+def get_mission_batch_id():
+    batch = None
+    try:
+        batch = biochem_models.Bcbatches.objects.using('biochem').order_by('batch_seq')
+        batch_seqs = list(batch.values_list('batch_seq', flat=True))
+
+        # find the first and last key in the set and use that to create a range, then subtract keys that are
+        # being used from the set. What is left are available keys that can be assigned to new rows being created
+        sort_seq = []
+        end = 0
+        if len(batch_seqs) > 0:
+            start, end = 1, batch_seqs[-1]
+            sort_seq = sorted(set(range(start, end)).difference(batch_seqs))
+
+        if len(sort_seq) > 0:
+            return sort_seq[0]
+
+        return end + 1
+
+    except django.utils.connection.ConnectionDoesNotExist as ex:
+        # if we're not connected, note it. The user may not be logged in or might be creating csv versions
+        # of the tables which will either be 1 or the batch_seq stored in the mission table
+        logger.exception(ex)
+    except django.db.utils.OperationalError as ex:
+        # if the bcbatches table doesn't exist, note it and return 1 to the user.
+        logger.exception(ex)
+
+    return 1
+
+
+def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=models.ErrorType.biochem).delete()
     models.Error.objects.using(database).filter(mission=mission, type=models.ErrorType.biochem).delete()
@@ -536,8 +596,11 @@ def sample_data_upload(database, mission: models.Mission, uploader: str):
         models.Error.objects.using(database).bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_d_data(mission, uploader)
-    form_biochem_database.upload_bcd_d_data(mission, uploader)
+    form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
+    form_biochem_database.upload_bcd_d_data(mission, uploader, batch_id)
+
+    user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
+    return run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
 
 
 def upload_samples(request, database, mission_id):
@@ -562,13 +625,27 @@ def upload_samples(request, database, mission_id):
         uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
             request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
+        batch_id = get_mission_batch_id()
         mission = models.Mission.objects.using(database).get(pk=mission_id)
-        sample_data_upload(database, mission, uploader)
+        biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
+                                                                        username=uploader,
+                                                                        batch_seq=batch_id)
+
+        bc_statn_data_errors = sample_data_upload(database, mission, uploader, batch_id)
         attrs = {
             'component_id': 'div_id_upload_biochem',
             'alert_type': 'success',
             'message': _("Thank you for uploading"),
         }
+        if bc_statn_data_errors:
+            bcd_rows = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
+            attrs['alert_type'] = 'warning'
+            attrs['message'] = _("Errors Present in Biochem Validation for batch") + f" : {batch_id}"
+            for error in bc_statn_data_errors:
+                err = biochem_models.Bcerrorcodes.objects.using('biochem').get(error_code=error[3])
+                data = bcd_rows.objects.using('biochem').get(dis_data_num=error[1])
+                attrs['message'] += f"\n{err.long_desc}\n- {data}"
+
     except Exception as e:
         logger.exception(e)
         attrs = {
@@ -606,8 +683,8 @@ def download_samples(request, database, mission_id):
     bottles = models.Bottle.objects.using(database).filter(event__in=events)
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = biochem.upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
-                                                           batch_name=mission.get_batch_name)
+    create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
+                                                   batch_name=mission.get_batch_name)
 
     bcs_headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
 
@@ -644,9 +721,8 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = biochem.upload.get_bcd_d_rows(database=database, uploader=uploader,
-                                                           samples=discrete_samples,
-                                                           batch_name=mission.get_batch_name)
+    create, update, fields = upload.get_bcd_d_rows(database=database, uploader=uploader, samples=discrete_samples,
+                                                   batch_name=mission.get_batch_name)
 
     bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
@@ -699,7 +775,7 @@ def get_biochem_buttons(request, database, mission_id):
     download_button.append(icon)
     download_button.attrs['class'] = 'btn btn-sm btn-primary'
     download_button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
-    download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_download_bio_chem",
+    download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_download_biochem",
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'
 
@@ -708,7 +784,7 @@ def get_biochem_buttons(request, database, mission_id):
     download_button.append(icon)
     download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
     download_button.attrs['title'] = _("Upload selected Sensors/Samples to Database")
-    download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_bio_chem",
+    download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_biochem",
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'
 
@@ -742,9 +818,9 @@ mission_sample_urls = [
     path('<str:database>/sample/upload/sensor/<int:mission_id>/', biochem_upload_card,
          name="mission_samples_biochem_upload_card"),
     path('<str:database>/sample/upload/biochem/<int:mission_id>/', upload_samples,
-         name="mission_samples_upload_bio_chem"),
+         name="mission_samples_upload_biochem"),
     path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
-         name="mission_samples_download_bio_chem"),
+         name="mission_samples_download_biochem"),
 
     path(f'{url_prefix}/sample/error/<int:error_id>/', delete_file_error,
          name="mission_samples_delete_file_error"),

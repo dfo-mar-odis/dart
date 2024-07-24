@@ -36,7 +36,7 @@ class EventDetails(core_forms.CardForm):
     mission = None
 
     def get_delete_button(self):
-        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('dash-square')
         button_id = f'btn_id_delete_{self.card_name}'
         button_attrs = {
@@ -52,7 +52,7 @@ class EventDetails(core_forms.CardForm):
         return button
 
     def get_edit_button(self):
-        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('pencil-square')
         button_id = f'btn_id_edit_{self.card_name}'
         button_attrs = {
@@ -68,7 +68,7 @@ class EventDetails(core_forms.CardForm):
         return button
 
     def get_add_button(self):
-        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('plus-square')
         button_id = f'btn_id_add_{self.card_name}'
         button_attrs = {
@@ -84,7 +84,7 @@ class EventDetails(core_forms.CardForm):
         return button
 
     def get_filter_log_button(self):
-        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('arrow-down-square')
         button_id = f'btn_id_filter_log_{self.card_name}'
         url = reverse_lazy("core:form_event_fix_station_filter_log", args=(self.database, self.event.pk,))
@@ -100,7 +100,7 @@ class EventDetails(core_forms.CardForm):
         return button
 
     def get_bottle_file_button(self):
-        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('plastic-bottle-icon')
         button_id = f'btn_id_bottle_file_{self.card_name}'
         url = reverse_lazy("core:form_event_fix_station_bottle", args=(self.database, self.event.pk,))

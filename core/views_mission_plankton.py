@@ -42,8 +42,8 @@ class PlanktonDetails(MissionMixin, GenericDetailView):
 
 
 def biochem_upload_card(request, database, mission_id):
-    # upload_url = reverse_lazy("core:mission_samples_upload_bio_chem", args=(database, mission_id,))
-    # download_url = reverse_lazy("core:mission_samples_download_bio_chem", args=(database, mission_id,))
+    # upload_url = reverse_lazy("core:mission_samples_upload_biochem", args=(database, mission_id,))
+    # download_url = reverse_lazy("core:mission_samples_download_biochem", args=(database, mission_id,))
 
     button_url = reverse_lazy('core:mission_plankton_update_biochem_buttons', args=(database, mission_id))
 

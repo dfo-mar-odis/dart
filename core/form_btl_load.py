@@ -49,7 +49,7 @@ class BottleLoadForm(CollapsableCardForm):
         return self.open_folder_url
 
     def get_open_folder_btn(self):
-        # url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(self.mission_id,))
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('folder-symlink')
         button_id = f'btn_id_load_{self.card_name}'
         button_attrs = {

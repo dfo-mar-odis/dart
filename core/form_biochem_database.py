@@ -488,9 +488,10 @@ def remove_bcd_p_data(mission: core_models.Mission):
         logger.exception(ex)
 
 
-def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
+def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch_name: int = None):
     database = mission._state.db
 
+    batch_name = batch_name if batch_name else mission.get_batch_name
     # 1) get bottles from BCS_D table
     bcs_d = upload.get_model(get_bcs_d_table(), bio_models.BcsD)
     exists = upload.check_and_create_model('biochem', bcs_d)
@@ -510,7 +511,7 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str):
             # send_user_notification_queue('biochem', _("Compiling BCS rows"))
             user_logger.info(_("Compiling BCS rows"))
             create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
-                                                           batch_name=mission.get_batch_name,
+                                                           batch_name=batch_name,
                                                            bcs_d_model=bcs_d)
 
             # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
@@ -549,8 +550,9 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
         upload.upload_db_rows(bcs_p, bcs_create, bcs_update, updated_fields)
 
 
-def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
+def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: int = None):
     database = mission._state.db
+    batch_name = batch_name if batch_name else mission.get_batch_name
 
     # 1) get the biochem BCD_D model
     table_name = get_bcd_d_table()
@@ -566,7 +568,6 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
     remove_bcd_d_data(mission)
 
     user_logger.info(_("Compiling BCD rows for : ") + mission.name)
-    batch = mission.get_batch_name
 
     # 4) else filter the samples down to rows based on:
     #  * samples in this mission
@@ -586,7 +587,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str):
         user_logger.info(message)
         create, update, fields = upload.get_bcd_d_rows(database=database, uploader=uploader,
                                                        samples=discreate_samples,
-                                                       batch_name=batch,
+                                                       batch_name=batch_name,
                                                        bcd_d_model=bcd_d)
 
         message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
@@ -797,7 +798,7 @@ def validate_connection(request, database, mission_id):
             if database_id is not sentinel:
                 caches['biochem_keys'].delete('pwd', version=database_id)
 
-                url = reverse_lazy('core:mission_samples_upload_bio_chem', args=(database, mission_id,))
+                url = reverse_lazy('core:mission_samples_upload_biochem', args=(database, mission_id,))
                 db_form = BiochemUploadForm(database, mission_id, initial={'selected_database': database_id})
                 db_form_html = render_crispy_form(db_form)
 

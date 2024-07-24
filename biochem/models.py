@@ -501,3 +501,71 @@ class Bcvolumemethods(models.Model):
     class Meta:
         managed = False
         db_table = 'BCVOLUMEMETHODS'
+
+
+class Bcbatches(models.Model):
+    batch_seq = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=250, blank=True, null=True)
+    username = models.CharField(max_length=30)
+
+    class Meta:
+        managed = False
+        db_table = 'BCBATCHES'
+
+
+class Bcactivityedits(models.Model):
+    activity_edt_seq = models.BigIntegerField(primary_key=True)  # The composite primary key (activity_edt_seq, event_edt_seq) found, that is not supported. The first column is selected.
+    event_edt_seq = models.BigIntegerField()
+    event_seq = models.BigIntegerField(blank=True, null=True)
+    activity_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    data_pointer_code = models.CharField(max_length=2, blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCACTIVITYEDITS'
+        unique_together = (('activity_edt_seq', 'event_edt_seq'),)
+
+
+class Bcerrors(models.Model):
+    error_num_seq = models.IntegerField(primary_key=True)
+    edit_table_name = models.CharField(max_length=30)
+    record_num_seq = models.BigIntegerField()
+    column_name = models.CharField(max_length=30)
+    error_code = models.IntegerField()
+    last_updated_by = models.CharField(max_length=30)
+    last_update_date = models.DateField()
+    batch_seq = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'BCERRORS'
+
+
+class Bcstatndataerrors(models.Model):
+    statn_data_table_name = models.CharField(max_length=30)
+    record_sequence_value = models.CharField(max_length=50)
+    column_name = models.CharField(max_length=30)
+    error_code = models.IntegerField()
+    statn_data_created_date = models.DateField()
+    collector_sample_id = models.CharField(max_length=50)
+    batch_seq = models.IntegerField()
+
+    class Meta:
+        managed = False
+        db_table = 'BCSTATNDATAERRORS'
+
+
+class Bcerrorcodes(models.Model):
+    error_code = models.IntegerField(primary_key=True, db_comment='Code that specifies the validation error in the Edit table system.')
+    description = models.CharField(max_length=80, db_comment='Description of the validation error.')
+    long_desc = models.CharField(max_length=300, blank=True, null=True, db_comment='Detailed description of the validation error.')
+    last_update_by = models.CharField(max_length=30, db_comment='The user id of the user who last updated the Codes in the ERROR_CODE table.')
+    last_update_date = models.DateField(db_comment='The date that the last update took place to a specified record in the ERROR_CODE table.')
+
+    class Meta:
+        managed = False
+        db_table = 'BCERRORCODES'

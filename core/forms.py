@@ -343,7 +343,11 @@ def blank_alert(component_id, message, **kwargs):
     # create an alert area saying we're loading
     alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
     alert_msg = soup.new_tag("div", attrs={'id': f'{component_id}_message'})
-    alert_msg.string = message
+    lines = message.split('\n')
+    for line in lines:
+        alert_msg.append(msg_div := soup.new_tag("div"))
+        msg_div.string = line
+    # alert_msg.string = message
 
     alert_div.append(alert_msg)
 
