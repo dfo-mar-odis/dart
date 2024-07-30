@@ -7,6 +7,8 @@ from django.utils.translation import gettext as _
 from core import models as core_models
 from core import forms
 
+from biochem import models as biochem_models
+
 import logging
 
 logger_notifications = logging.getLogger('dart.user.biochem_validation')
@@ -152,8 +154,13 @@ def get_validation_errors(request, database, mission_id):
     return response
 
 
+def get_batch_errors(request, batch_id):
+    errors = biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id)
+
+
 url_prefix = "<str:database>/<str:mission_id>"
 database_urls = [
     path(f'{url_prefix}/biochem/validation/run/', run_biochem_validation, name="form_biochem_validation_run"),
     path(f'{url_prefix}/biochem/validation/', get_validation_errors, name="form_validation_get_validation_errors"),
+    path('biochem/batch_validate/<int:batch_id>/', get_batch_errors, name="form_validation_get_batch_errors"),
 ]

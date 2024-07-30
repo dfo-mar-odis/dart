@@ -517,7 +517,27 @@ def biochem_upload_card(request, database, mission_id):
     return HttpResponse(soup)
 
 
-def run_biochem_validation_procedure(batch_id, mission_descriptor):
+def run_biochem_validation_procedure(request, batch_id):
+
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(div := soup.new_tag('div'))
+    div.attrs['id'] = "div_id_biochem_alert_biochem_db_details"
+    div.attrs['hx-swap-oob'] = 'true'
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': 'div_id_biochem_validation',
+            'message': _("Running Oracle Validation"),
+            'logger': user_logger.name,
+            'alert_type': 'info',
+            'hx-post': request.path,
+            'hx-trigger': "load",
+        }
+        alert = forms.websocket_post_request_alert(**attrs)
+        div.append(alert)
+
+        return HttpResponse(soup)
+
     errors = None
 
     with connections['biochem'].cursor() as cur:
@@ -534,16 +554,25 @@ def run_biochem_validation_procedure(batch_id, mission_descriptor):
             user_logger.info(f"Errors in BCS/BCD data. Stand by for a damage report.")
 
         cur.execute('commit')
+        cur.close()
 
-        if stn_pass_var == 'F' or data_pass_var == 'F':
-            cur.execute(f"select * from BCSTATNDATAERRORS where batch_seq='{batch_id}'")
-            errors = cur.fetchall()
+    attrs = {'component_id': 'div_id_biochem_alert'}
+    attrs['message'] = _("Validation Complete")
+    attrs['alert_type'] = 'success'
 
-    # if errors:
-    #     for error in errors:
-    #         user_logger.error(error)
-    #
-    return errors
+    if (errors := biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id)).exists():
+        # for error in errors:
+        #     user_logger.error(error)
+        attrs['message'] = _("Validation Complete with station errors") + f" : {errors.count()}"
+        attrs['alert_type'] = 'warning'
+        attrs['hx-get'] = reverse_lazy('core:form_biochem_database_get_batch_errors', args=(batch_id,))
+        attrs['hx-trigger'] = 'load'
+        attrs['hx-swap'] = 'none'
+
+    alert = forms.blank_alert(**attrs)
+    div.append(alert)
+
+    return HttpResponse(soup)
 
 
 def get_mission_batch_id():
@@ -599,11 +628,12 @@ def sample_data_upload(database, mission: models.Mission, uploader: str, batch_i
     form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
     form_biochem_database.upload_bcd_d_data(mission, uploader, batch_id)
 
-    user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
-    return run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
+    return batch_id
 
 
 def upload_samples(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
     div.attrs['id'] = "div_id_biochem_alert_biochem_db_details"
@@ -621,17 +651,39 @@ def upload_samples(request, database, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
+    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
     try:
         uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
             request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
         batch_id = get_mission_batch_id()
-        mission = models.Mission.objects.using(database).get(pk=mission_id)
-        biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
-                                                                        username=uploader,
-                                                                        batch_seq=batch_id)
+        # biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
+        #                                                                 username=uploader,
+        #                                                                 batch_seq=batch_id)
 
-        bc_statn_data_errors = sample_data_upload(database, mission, uploader, batch_id)
+        bc_statn_data_errors = []
+        # user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
+        # bc_statn_data_errors = run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
+
+        sample_data_upload(database, mission, uploader, batch_id)
+
+        soup.append(button_area := soup.new_tag('div'))
+        button_area.attrs['id'] = form_biochem_database.get_biochem_additional_button_id()
+        button_area.attrs['class'] = 'col-auto align-self-center'
+        button_area.attrs['hx-swap-oob'] = 'beforeend'
+
+        icon = BeautifulSoup(load_svg('arrow-clockwise'), 'html.parser').svg
+        button_area.append(validate_button := soup.new_tag('button'))
+        validate_button.append(icon)
+        validate_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
+        validate_button.attrs['title'] = _("Validate Biochem Upload")
+        validate_button.attrs['hx-swap'] = 'none'
+        validate_button.attrs['hx-get'] = reverse_lazy('core:mission_samples_validate_biochem_upload', args=(batch_id,))
+
         attrs = {
             'component_id': 'div_id_upload_biochem',
             'alert_type': 'success',
@@ -821,6 +873,10 @@ mission_sample_urls = [
          name="mission_samples_upload_biochem"),
     path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
          name="mission_samples_download_biochem"),
+
+    path('/sample/validate/biochem/<int:batch_id>/', run_biochem_validation_procedure,
+         name="mission_samples_validate_biochem_upload"),
+
 
     path(f'{url_prefix}/sample/error/<int:error_id>/', delete_file_error,
          name="mission_samples_delete_file_error"),

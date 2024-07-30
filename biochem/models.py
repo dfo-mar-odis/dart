@@ -547,7 +547,7 @@ class Bcerrors(models.Model):
 
 class Bcstatndataerrors(models.Model):
     statn_data_table_name = models.CharField(max_length=30)
-    record_sequence_value = models.CharField(max_length=50)
+    record_sequence_value = models.CharField(max_length=50, primary_key=True)
     column_name = models.CharField(max_length=30)
     error_code = models.IntegerField()
     statn_data_created_date = models.DateField()

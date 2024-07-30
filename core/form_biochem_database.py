@@ -22,7 +22,7 @@ from biochem import upload
 
 from core import models as core_models
 from core import forms as core_forms
-from core.form_validation_biochem import BIOCHEM_CODES
+from core.form_biochem_validation import BIOCHEM_CODES
 from core.forms import get_crispy_element_attributes
 from dart.utils import load_svg
 
@@ -384,6 +384,68 @@ def confirm_uploader(request):
         message.append(hidden)
         return alert_soup
     elif request.htmx.trigger == 'input_id_uploader_btn_cancel':
+        return soup
+
+
+def confirm_descriptor(request, mission):
+    if request.method == "GET":
+        alert_soup = get_progress_alert(request.path)
+        return alert_soup
+
+    soup = BeautifulSoup('', 'html.parser')
+    has_descriptor = hasattr(mission, 'mission_descriptor') and mission.mission_descriptor
+    if 'descriptor2' not in request.POST and not has_descriptor:
+        message_component_id = 'div_id_upload_biochem'
+        attrs = {
+            'component_id': message_component_id,
+            'alert_type': 'warning',
+            'message': _("Require Mission Descriptor")
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
+
+        input_div = soup.new_tag('div')
+        input_div['class'] = 'form-control input-group'
+
+        uploader_input = soup.new_tag('input')
+        uploader_input.attrs['id'] = 'input_id_descriptor'
+        uploader_input.attrs['type'] = "text"
+        uploader_input.attrs['name'] = "descriptor2"
+        uploader_input.attrs['class'] = 'textinput form-control'
+        uploader_input.attrs['maxlength'] = '20'
+        uploader_input.attrs['placeholder'] = _("Mission Descriptor")
+
+        icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
+
+        submit = soup.new_tag('button')
+        submit.attrs['class'] = 'btn btn-primary'
+        submit.attrs['hx-post'] = request.path
+        submit.attrs['id'] = 'input_id_descriptor_btn_submit'
+        submit.attrs['name'] = 'submit'
+        submit.append(icon)
+
+        icon = BeautifulSoup(load_svg('x-square'), 'html.parser').svg
+        cancel = soup.new_tag('button')
+        cancel.attrs['class'] = 'btn btn-danger'
+        cancel.attrs['hx-post'] = request.path
+        cancel.attrs['id'] = 'input_id_descriptor_btn_cancel'
+        cancel.attrs['name'] = 'cancel'
+        cancel.append(icon)
+
+        input_div.append(uploader_input)
+        input_div.append(submit)
+        input_div.append(cancel)
+
+        msg = alert_soup.find(id='div_id_upload_biochem_message')
+        msg.string = msg.string + " "
+        msg.append(input_div)
+        return alert_soup
+    elif request.htmx.trigger == 'input_id_descriptor_btn_submit':
+        alert_soup = get_progress_alert(request.path)
+        mission.mission_descriptor = request.POST['descriptor2'].strip()
+
+        mission.save()
+        return alert_soup
+    elif request.htmx.trigger == 'input_id_descriptor_btn_cancel':
         return soup
 
 
