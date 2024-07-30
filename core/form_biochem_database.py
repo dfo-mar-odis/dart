@@ -22,7 +22,7 @@ from biochem import upload
 
 from core import models as core_models
 from core import forms as core_forms
-from core.form_biochem_validation import BIOCHEM_CODES
+from core.form_biochem_pre_validation import BIOCHEM_CODES
 from core.forms import get_crispy_element_attributes
 from dart.utils import load_svg
 

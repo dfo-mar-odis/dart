@@ -13,7 +13,7 @@
                 </div>
             </div>
             <div class="col">
-                <button class="btn btn-sm btn-primary" hx-swap="none" hx-get="{% url 'core:form_biochem_validation_run' database mission.pk %}" title="{% trans "Run BioChem Validation" %}">
+                <button class="btn btn-sm btn-primary" hx-swap="none" hx-get="{% url 'core:form_biochem_pre_validation_run' database mission.pk %}" title="{% trans "Run BioChem Validation" %}">
                     {% custom_icon 'arrow-clockwise' %}
                 </button>
             </div>
@@ -24,7 +24,7 @@
         <div class="row" id="div_id_biochem_validation_details_alert"></div>
     </div>
     <div class="collapse col" id="div_id_card_body_expand_biochem_validation">
-        <div class="card-body vertical-scrollbar" hx-trigger="load, biochem_validation_update from:body" hx-get="{% url 'core:form_validation_get_validation_errors' database mission.pk %}">
+        <div class="card-body vertical-scrollbar" hx-trigger="load, biochem_validation_update from:body" hx-get="{% url 'core:form_biochem_pre_validation_get_validation_errors' database mission.pk %}">
 
         </div>
     </div>
