@@ -149,18 +149,12 @@ def get_validation_errors(request, database, mission_id):
                 li.append(a := soup.new_tag('a', href=link))
                 a.string = _("Mission Details")
 
-
     response = HttpResponse(soup)
     return response
-
-
-def get_batch_errors(request, batch_id):
-    errors = biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id)
 
 
 url_prefix = "<str:database>/<str:mission_id>"
 database_urls = [
     path(f'{url_prefix}/biochem/validation/run/', run_biochem_validation, name="form_biochem_pre_validation_run"),
     path(f'{url_prefix}/biochem/validation/', get_validation_errors, name="form_biochem_pre_validation_get_validation_errors"),
-    path('biochem/batch_validate/<int:batch_id>/', get_batch_errors, name="form_biochem_pre_validation_get_batch_errors"),
 ]
