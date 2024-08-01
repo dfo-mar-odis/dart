@@ -15,7 +15,7 @@ from django.utils.translation import gettext as _
 from git import Repo
 
 from core import models
-from core.form_validation_biochem import BIOCHEM_CODES
+from core.form_biochem_pre_validation import BIOCHEM_CODES
 from core.forms import NoWhiteSpaceCharField
 from dart.utils import load_svg
 from settingsdb import models as settings_models, utils as settings_utils

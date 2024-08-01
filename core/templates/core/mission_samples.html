@@ -28,14 +28,14 @@
     {% include 'core/partials/card_sample_load_header.html' %}
     </div>
 
-    <div id="div_id_data_display" class="container-fluid mb-2" hx-swap-oob="#div_id_data_display">
+    <div id="div_id_data_display" class="container-fluid mb-2" hx-swap-oob="#div_id_data_display"  hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         <div class="card mb-2" id="div_ctd_id">
             <div class="card-header">
                 <div class="row">
                     <div class="card-title col-auto align-self-end h6">{% trans "Sensor and Sample Data" %}</div>
                 </div>
             </div>
-            <div class="card-body" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+            <div class="card-body">
                 <div class="vertical-scrollbar" hx-swap="none" hx-trigger="load, update_samples from:body" hx-get="{% url 'core:mission_samples_sample_list' database mission.pk %}">
                     <table id="table_id_sample_table" class="table table-striped">
 
@@ -47,6 +47,11 @@
             {% include 'core/partials/card_biochem_validation.html' %}
         </div>
         <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_upload_card" database mission.pk %}">
+            {# The Biochem database form will be swapped in here after the page loads #}
+            {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
+            {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}
+        </div>
+        <div id="div_id_biochem_batches_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:mission_samples_biochem_batches_card" %}">
             {# The Biochem database form will be swapped in here after the page loads #}
             {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
             {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}

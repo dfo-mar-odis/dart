@@ -6,6 +6,7 @@ from typing import Type
 from datetime import datetime
 
 from django.conf import settings
+from django.apps import apps
 from django.db import connections, DatabaseError, OperationalError
 from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
@@ -76,8 +77,17 @@ def get_temp_space(model, tmp_db_name='biochem_tmp') -> Type[models.BcdD | model
 #     elif e.args[0].code == 942:
 #         # 942 occurs if we can connect, but the table doesn't exist so the connection is good
 def get_model(table_name: str, model):
-    opts = {'__module__': 'biochem'}
-    mod = type(table_name, (model,), opts)
+
+    app_models = apps.get_app_config('biochem').get_models()
+    existing_models = {model._meta.label_lower: model for model in app_models}
+
+    model_name = f'biochem.{table_name.lower()}'
+    if model_name in existing_models.keys():
+        mod = existing_models[model_name]
+    else:
+        opts = {'__module__': 'biochem'}
+        mod = type(table_name, (model,), opts)
+
     mod._meta.db_table = table_name
 
     return mod

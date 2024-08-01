@@ -15,6 +15,8 @@ import environ
 import sys
 
 from pathlib import Path
+
+from django.core.cache import caches
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
 
@@ -334,3 +336,4 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
     }
 }
+
