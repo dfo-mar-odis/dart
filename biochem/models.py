@@ -569,3 +569,201 @@ class Bcerrorcodes(models.Model):
     class Meta:
         managed = False
         db_table = 'BCERRORCODES'
+
+
+class Bcmissionedits(models.Model):
+    mission_edt_seq = models.BigIntegerField(primary_key=True)
+    mission_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    name = models.CharField(max_length=50, blank=True, null=True)
+    descriptor = models.CharField(max_length=50, blank=True, null=True)
+    leader = models.CharField(max_length=50, blank=True, null=True)
+    sdate = models.DateField(blank=True, null=True)
+    edate = models.DateField(blank=True, null=True)
+    institute = models.CharField(max_length=50, blank=True, null=True)
+    platform = models.CharField(max_length=50, blank=True, null=True)
+    protocol = models.CharField(max_length=50, blank=True, null=True)
+    geographic_region = models.CharField(max_length=100, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    more_comment = models.CharField(max_length=1, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCMISSIONEDITS'
+
+
+class Bceventedits(models.Model):
+    event_edt_seq = models.BigIntegerField(primary_key=True)
+    event_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    mission_seq = models.BigIntegerField(blank=True, null=True)
+    sdate = models.DateField(blank=True, null=True)
+    edate = models.DateField(blank=True, null=True)
+    stime = models.IntegerField(blank=True, null=True)
+    etime = models.IntegerField(blank=True, null=True)
+    min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    collector_station_name = models.CharField(max_length=50, blank=True, null=True)
+    collector_event_id = models.CharField(max_length=50, blank=True, null=True)
+    utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    more_comment = models.CharField(max_length=1, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    mission_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCEVENTEDITS'
+
+
+class Bccommentedits(models.Model):
+    comment_edt_seq = models.BigIntegerField(primary_key=True)
+    comment_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    mission_seq = models.BigIntegerField(blank=True, null=True)
+    event_seq = models.BigIntegerField(blank=True, null=True)
+    edit_comment = models.CharField(max_length=2000, blank=True, null=True)
+    comment_num = models.IntegerField(blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    mission_edt_seq = models.BigIntegerField(blank=True, null=True)
+    event_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCCOMMENTEDITS'
+
+
+class Bcdiscretedtailedits(models.Model):
+    dis_detail_edt_seq = models.BigIntegerField(primary_key=True)
+    discrete_detail_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    data_type_seq = models.IntegerField(blank=True, null=True)
+    discrete_seq = models.BigIntegerField(blank=True, null=True)
+    data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    data_flag = models.CharField(max_length=3, blank=True, null=True)
+    averaged_data = models.CharField(max_length=1, blank=True, null=True)
+    data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    qc_flag = models.CharField(max_length=3, blank=True, null=True)
+    detection_limit = models.DecimalField(max_digits=11, decimal_places=5, blank=True, null=True)
+    detail_collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    dis_headr_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISCRETEDTAILEDITS'
+
+
+class Bcdiscretehedredits(models.Model):
+    dis_headr_edt_seq = models.BigIntegerField(primary_key=True)
+    discrete_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    event_seq = models.BigIntegerField(blank=True, null=True)
+    activity_seq = models.BigIntegerField(blank=True, null=True)
+    gear_seq = models.IntegerField(blank=True, null=True)
+    sdate = models.DateField(blank=True, null=True)
+    edate = models.DateField(blank=True, null=True)
+    stime = models.IntegerField(blank=True, null=True)
+    etime = models.IntegerField(blank=True, null=True)
+    time_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    position_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    sounding = models.IntegerField(blank=True, null=True)
+    collector_deployment_id = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+    collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    responsible_group = models.CharField(max_length=50, blank=True, null=True)
+    shared_data = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    activity_edt_seq = models.BigIntegerField(blank=True, null=True)
+    event_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISCRETEHEDREDITS'
+
+
+class Bcdisreplicatedits(models.Model):
+    dis_repl_edt_seq = models.BigIntegerField(primary_key=True)
+    discrete_replicate_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    discrete_detail_seq = models.BigIntegerField(blank=True, null=True)
+    data_type_seq = models.IntegerField(blank=True, null=True)
+    data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    detection_limit = models.DecimalField(max_digits=11, decimal_places=5, blank=True, null=True)
+    detail_collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    dis_detail_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISREPLICATEDITS'
+
+
+class Bceditsaudittrails(models.Model):
+    audit_seq = models.BigIntegerField()
+    data_center_code = models.IntegerField()
+    audit_date = models.DateField()
+    table_name = models.CharField(max_length=30)
+    column_name = models.CharField(max_length=30)
+    sequence_name = models.CharField(max_length=30)
+    sequence_number = models.BigIntegerField()
+    user_name = models.CharField(max_length=30)
+    old_value = models.CharField(max_length=100, blank=True, null=True)
+    new_value = models.CharField(max_length=100, blank=True, null=True)
+    batch_seq = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCEDITSAUDITTRAILS'
