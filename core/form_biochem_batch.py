@@ -76,19 +76,36 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         return 'btn_id_batch_validate_content'
 
     @staticmethod
-    def get_validate_button_id():
-        return 'btn_id_batch_validate'
+    def get_validate_stage1_button_id():
+        return 'btn_id_batch_stage1_validate'
 
-    def get_validate_button(self):
+    @staticmethod
+    def get_validate_stage2_button_id():
+        return 'btn_id_batch_stage2_validate'
+
+    def get_validate_stage1_button(self):
         validate_attrs = {
-            'id': self.get_validate_button_id(),
+            'id': self.get_validate_stage1_button_id(),
             'title': _('Run Batch Validation'),
-            'name': 'validate_batch',
+            'name': 'validate_stage1_batch',
             'disabled': 'disabled',
             'hx-swap': 'none'
         }
 
         icon = load_svg('1-square')
+        validate_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **validate_attrs)
+        return validate_button
+
+    def get_validate_stage2_button(self):
+        validate_attrs = {
+            'id': self.get_validate_stage2_button_id(),
+            'title': _('Run Batch Validation'),
+            'name': 'validate_stage2_batch',
+            'disabled': 'disabled',
+            'hx-swap': 'none'
+        }
+
+        icon = load_svg('2-square')
         validate_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **validate_attrs)
         return validate_button
 
@@ -117,7 +134,8 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         header.fields[0].fields.append(Column(Row()))  # Spacer column to align buttons to the right
 
         header.fields[0].fields.append(btn_col := Column(id=get_biochem_additional_button_id(), css_class="col-auto"))
-        btn_col.fields.append(self.get_validate_button())
+        btn_col.fields.append(self.get_validate_stage1_button())
+        btn_col.fields.append(self.get_validate_stage2_button())
         btn_col.fields.append(self.get_delete_button())
 
         header.fields.append(self.get_alert_area())
@@ -208,6 +226,7 @@ def run_biochem_delete_procedure(request, batch_id):
     bcs_d.objects.using('biochem').filter(batch_seq=batch_id).delete()
 
     biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id).delete()
+    biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id).delete()
 
     attrs = {'component_id': 'div_id_biochem_batch_alert'}
     attrs['message'] = _("Deletion Complete")
@@ -227,7 +246,7 @@ def run_biochem_delete_procedure(request, batch_id):
     return response
 
 
-def run_biochem_validation_procedure(request, batch_id):
+def biochem_validation2_procedure(request, batch_id):
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
@@ -237,7 +256,7 @@ def run_biochem_validation_procedure(request, batch_id):
     if request.method == 'GET':
         attrs = {
             'alert_area_id': 'div_id_biochem_batch',
-            'message': _("Running Oracle Validation"),
+            'message': _("Running Oracle Stage 2 Validation"),
             'logger': user_logger.name,
             'alert_type': 'info',
             'hx-post': request.path,
@@ -248,7 +267,63 @@ def run_biochem_validation_procedure(request, batch_id):
 
         return HttpResponse(soup)
 
-    errors = None
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"validating mission data")
+        mission_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_MISSION_ERRORS", str, [batch_id, 'UPSONP'])
+
+        user_logger.info(f"validating event data")
+        event_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_EVENT_ERRORS", str, [batch_id, 'UPSONP'])
+
+        user_logger.info(f"validating discrete header data")
+        dis_hdr_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_DISHEDR_ERRORS", str, [batch_id, 'UPSONP'])
+
+        user_logger.info(f"validating discrete detail data")
+        dis_detail_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_DISDETAIL_ERRORS", str, [batch_id, 'UPSONP'])
+
+        user_logger.info(f"validating discrete replicate data")
+        dis_rep_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_DISREPLIC_ERRORS", str, [batch_id, 'UPSONP'])
+
+    attrs = {'component_id': 'div_id_biochem_batch'}
+    attrs['message'] = _("Validation Complete")
+    attrs['alert_type'] = 'success'
+
+    if (errors := biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id)).exists():
+        # for error in errors:
+        #     user_logger.error(error)
+        attrs['message'] = _("Validation Complete with station errors") + f" : {errors.count()}"
+        attrs['alert_type'] = 'warning'
+        attrs['hx-get'] = reverse_lazy('core:form_biochem_database_get_batch_errors', args=(batch_id,))
+        attrs['hx-trigger'] = 'load, update_batch from:body'
+        attrs['hx-swap'] = 'none'
+
+    alert = core_forms.blank_alert(**attrs)
+    div.append(alert)
+
+    response = HttpResponse(soup)
+    response['Hx-Trigger'] = 'reload_batch'
+    return response
+
+
+def biochem_validation1_procedure(request, batch_id):
+
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(div := soup.new_tag('div'))
+    div.attrs['id'] = BiochemBatchForm.get_batch_alert_area_id()
+    div.attrs['hx-swap-oob'] = 'true'
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': 'div_id_biochem_batch',
+            'message': _("Running Oracle Stage 1 Validation"),
+            'logger': user_logger.name,
+            'alert_type': 'info',
+            'hx-post': request.path,
+            'hx-trigger': "load",
+        }
+        alert = core_forms.websocket_post_request_alert(**attrs)
+        div.append(alert)
+
+        return HttpResponse(soup)
 
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"validating station data")
@@ -287,23 +362,36 @@ def run_biochem_validation_procedure(request, batch_id):
     return response
 
 
-def get_batch_info(request, batch_id):
-    soup = BeautifulSoup('', 'html.parser')
-
+def get_stage1_button(soup):
     icon = BeautifulSoup(load_svg('1-square'), 'html.parser').svg
-    soup.append(validate_button := soup.new_tag('button'))
-    validate_button.append(icon)
+    validate1_button = soup.new_tag('button')
+    validate1_button.append(icon)
+    validate1_button.attrs['id'] = BiochemBatchForm.get_validate_stage1_button_id()
+    validate1_button.attrs['class'] = 'btn btn-sm btn-primary'
+    validate1_button.attrs['title'] = _("Validate Stage 1")
+    validate1_button.attrs['hx-swap'] = 'none'
+    validate1_button.attrs['hx-swap-oob'] = 'true'
 
-    validate_button.attrs['id'] = BiochemBatchForm.get_validate_button_id()
-    validate_button.attrs['class'] = 'btn btn-sm btn-primary'
-    validate_button.attrs['title'] = _("Validate Biochem Upload")
-    validate_button.attrs['hx-swap'] = 'none'
-    validate_button.attrs['hx-swap-oob'] = 'true'
+    return validate1_button
 
+
+def get_stage2_button(soup):
+    icon = BeautifulSoup(load_svg('2-square'), 'html.parser').svg
+    validate2_button = soup.new_tag('button')
+    validate2_button.append(icon)
+    validate2_button.attrs['id'] = BiochemBatchForm.get_validate_stage2_button_id()
+    validate2_button.attrs['class'] = 'btn btn-sm btn-primary'
+    validate2_button.attrs['title'] = _("Validate Stage 2")
+    validate2_button.attrs['hx-swap'] = 'none'
+    validate2_button.attrs['hx-swap-oob'] = 'true'
+
+    return validate2_button
+
+
+def get_delete_button(soup):
     icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
-    soup.append(delete_button := soup.new_tag('button'))
+    delete_button = soup.new_tag('button')
     delete_button.append(icon)
-
     delete_button.attrs['id'] = BiochemBatchForm.get_delete_batch_button_id()
     delete_button.attrs['class'] = 'btn btn-sm btn-danger'
     delete_button.attrs['title'] = _("Delete Batch")
@@ -311,8 +399,18 @@ def get_batch_info(request, batch_id):
     delete_button.attrs['hx-swap-oob'] = 'true'
     delete_button.attrs['hx-confirm'] = _("Are you sure?")
 
+    return delete_button
+
+
+def get_batch_info(request, batch_id):
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(validate1_button := get_stage1_button(soup))
+    soup.append(validate2_button := get_stage2_button(soup))
+    soup.append(delete_button := get_delete_button(soup))
+
     if not batch_id or (batch_id and batch_id == 0):
-        validate_button.attrs['disabled'] = 'disabled'
+        validate1_button.attrs['disabled'] = 'disabled'
+        validate2_button.attrs['disabled'] = 'disabled'
         delete_button.attrs['disabled'] = 'disabled'
 
         soup.append(div := soup.new_tag('div'))
@@ -322,6 +420,7 @@ def get_batch_info(request, batch_id):
     soup.append(get_bcs_table(batch_id, False).find('div'))
     soup.append(get_bcd_table(batch_id, False).find('div'))
     soup.append(get_station_errors_table(batch_id, False).find('div'))
+    soup.append(get_data_errors_table(batch_id, False).find('div'))
     return HttpResponse(soup)
 
 
@@ -349,29 +448,13 @@ def get_batch(request):
 
     div_alert_area.attrs['hx-swap'] = 'innerHTML'
 
-    icon = BeautifulSoup(load_svg('1-square'), 'html.parser').svg
-    soup.append(validate_button := soup.new_tag('button'))
-    validate_button.append(icon)
-
-    validate_button.attrs['id'] = BiochemBatchForm.get_validate_button_id()
-    validate_button.attrs['class'] = 'btn btn-sm btn-primary'
-    validate_button.attrs['title'] = _("Validate Biochem Upload")
-    validate_button.attrs['hx-swap'] = 'none'
-    validate_button.attrs['hx-swap-oob'] = 'true'
-
-    icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
-    soup.append(delete_button := soup.new_tag('button'))
-    delete_button.append(icon)
-
-    delete_button.attrs['id'] = BiochemBatchForm.get_delete_batch_button_id()
-    delete_button.attrs['class'] = 'btn btn-sm btn-danger'
-    delete_button.attrs['title'] = _("Delete Batch")
-    delete_button.attrs['hx-swap'] = 'none'
-    delete_button.attrs['hx-swap-oob'] = 'true'
-    delete_button.attrs['hx-confirm'] = _("Are you sure?")
+    soup.append(validate1_button := get_stage1_button(soup))
+    soup.append(validate2_button := get_stage2_button(soup))
+    soup.append(delete_button := get_delete_button(soup))
 
     if not batch_id:
-        validate_button.attrs['disabled'] = 'disabled'
+        validate1_button.attrs['disabled'] = 'disabled'
+        validate2_button.attrs['disabled'] = 'disabled'
         delete_button.attrs['disabled'] = 'disabled'
         response = HttpResponse(soup)
         response['Hx-Trigger'] = 'clear_batch'
@@ -381,18 +464,35 @@ def get_batch(request):
     unvalidated = bcd_model.objects.using('biochem').filter(batch_seq=batch_id, process_flag='NR').exists()
     if not unvalidated:
         icon = BeautifulSoup(load_svg('1-square-fill'), 'html.parser').svg
-        validate_button.find('svg').decompose()
-        validate_button.append(icon)
-        validate_button.attrs['class'] = 'btn btn-sm btn-success'
+        validate1_button.find('svg').decompose()
+        validate1_button.append(icon)
+        validate1_button.attrs['class'] = 'btn btn-sm btn-success'
         if biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id).exists():
-            validate_button.attrs['class'] = 'btn btn-sm btn-danger'
+            validate1_button.attrs['class'] = 'btn btn-sm btn-danger'
+            validate2_button.attrs['disabled'] = 'disabled'
+        else:
+            mission_valid = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_seq=batch_id, process_flag='ENR').exists()
+            event_valid = biochem_models.Bceventedits.objects.using('biochem').filter(batch_seq=batch_id, process_flag='ENR').exists()
+            dishedr_valid = biochem_models.Bcdiscretehedredits.objects.using('biochem').filter(batch_seq=batch_id, process_flag='ENR').exists()
+            disdtai_valid = biochem_models.Bcdiscretedtailedits.objects.using('biochem').filter(batch_seq=batch_id, process_flag='ENR').exists()
+            disrepl_valid = biochem_models.Bcdisreplicatedits.objects.using('biochem').filter(batch_seq=batch_id, process_flag='ENR').exists()
 
-    validate_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_batch_validation', args=(batch_id,))
+            if not mission_valid and not event_valid and not dishedr_valid and not disdtai_valid and not disrepl_valid:
+                icon = BeautifulSoup(load_svg('2-square-fill'), 'html.parser').svg
+                validate2_button.find('svg').decompose()
+                validate2_button.append(icon)
+                validate2_button.attrs['class'] = 'btn btn-sm btn-success'
+                if biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id).exists():
+                    validate2_button.attrs['class'] = 'btn btn-sm btn-danger'
+
+    validate1_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_batch_validation1', args=(batch_id,))
+    validate2_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_batch_validation2', args=(batch_id,))
     delete_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_batch_delete', args=(batch_id,))
 
     soup.append(get_bcs_table(batch_id).find('div'))
     soup.append(get_bcd_table(batch_id).find('div'))
     soup.append(get_station_errors_table(batch_id).find('div'))
+    soup.append(get_data_errors_table(batch_id).find('div'))
     response = HttpResponse(soup)
     return response
 
@@ -439,13 +539,43 @@ def get_station_errors_table(batch_id, swap_oob=True):
     for error in errors:
         table.append(tr_header := soup.new_tag('tr'))
         tr_header.append(td := soup.new_tag('td'))
-        td.string = error.collector_sample_id
+        td.string = str(error.collector_sample_id)
 
         tr_header.append(td := soup.new_tag('td'))
-        td.string = error.statn_data_table_name
+        td.string = str(error.statn_data_table_name)
 
         tr_header.append(td := soup.new_tag('td'))
-        td.string = error.record_sequence_value
+        td.string = str(error.record_sequence_value)
+
+        tr_header.append(td := soup.new_tag('td'))
+        if error.error_code not in validation_errors.keys():
+            err = biochem_models.Bcerrorcodes.objects.using('biochem').get(error_code=error.error_code)
+            validation_errors[error.error_code] = err
+
+        td.string = str(validation_errors[error.error_code].long_desc)
+
+    return soup
+
+
+def get_data_errors_table(batch_id, swap_oob=True):
+    headers = ['Table', 'Record', 'Error']
+
+    soup = get_table_soup('Data Errors', 'table_id_biochem_batch_data_errors', headers, swap_oob)
+    if batch_id == 0:
+        return soup
+
+    table = soup.find('table')
+
+    validation_errors = {}
+    errors = biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id).order_by('-batch_seq')
+    for error in errors:
+        table.append(tr_header := soup.new_tag('tr'))
+
+        tr_header.append(td := soup.new_tag('td'))
+        td.string = str(error.edit_table_name)
+
+        tr_header.append(td := soup.new_tag('td'))
+        td.string = str(error.record_num_seq)
 
         tr_header.append(td := soup.new_tag('td'))
         if error.error_code not in validation_errors.keys():
@@ -458,7 +588,7 @@ def get_station_errors_table(batch_id, swap_oob=True):
 
 
 def get_bcs_table(batch_id, swap_oob=True):
-    headers = ['ID']
+    headers = ['ID', 'Process Flag']
     soup = get_table_soup("BCS - BcDiscreteStatnEdits", 'table_id_biochem_batch_bcs', headers, swap_oob)
 
     if batch_id == 0:
@@ -474,11 +604,14 @@ def get_bcs_table(batch_id, swap_oob=True):
         tr_header.append(td := soup.new_tag('td'))
         td.string = str(row.dis_sample_key_value)
 
+        tr_header.append(td := soup.new_tag('td'))
+        td.string = str(row.process_flag)
+
     return soup
 
 
 def get_bcd_table(batch_id, swap_oob=True):
-    headers = ['ID', 'Record', 'Sample ID', 'Data Type', 'Data Method']
+    headers = ['ID', 'Record', 'Sample ID', 'Data Type', 'Data Method', 'Process Flag']
     soup = get_table_soup("BCD - BcDiscreteDataEdits", 'table_id_biochem_batch_bcd', headers, swap_oob)
 
     if batch_id == 0:
@@ -506,6 +639,9 @@ def get_bcd_table(batch_id, swap_oob=True):
         tr_header.append(td := soup.new_tag('td'))
         td.string = str(row.data_type_method)
 
+        tr_header.append(td := soup.new_tag('td'))
+        td.string = str(row.process_flag)
+
     return soup
 
 
@@ -514,6 +650,7 @@ database_urls = [
     path(f'{prefix}', get_batch, name="form_biochem_batch_update_selected_batch"),
 
     path(f'{prefix}<int:batch_id>/', get_batch_info, name="form_biochem_batch_get_batch"),
-    path(f'{prefix}validate/<int:batch_id>/', run_biochem_validation_procedure, name="form_biochem_batch_validation"),
+    path(f'{prefix}validate1/<int:batch_id>/', biochem_validation1_procedure, name="form_biochem_batch_validation1"),
+    path(f'{prefix}validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_batch_validation2"),
     path(f'{prefix}delete/<int:batch_id>/', run_biochem_delete_procedure, name="form_biochem_batch_delete"),
 ]

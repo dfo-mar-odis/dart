@@ -683,7 +683,16 @@ def download_samples(request, database, mission_id):
     }
     soup.append(div)
 
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
+    bottles = models.Bottle.objects.using(database).filter(event__in=events)
+
     alert_soup = form_biochem_database.confirm_uploader(request)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
     if alert_soup:
         div.append(alert_soup)
         return HttpResponse(soup)
@@ -691,13 +700,12 @@ def download_samples(request, database, mission_id):
     uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
-    events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
-    bottles = models.Bottle.objects.using(database).filter(event__in=events)
+    batch_id = 1
+
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
     create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
-                                                   batch_name=mission.get_batch_name)
+                                                           batch_name=batch_id)
 
     bcs_headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
 
@@ -735,7 +743,7 @@ def download_samples(request, database, mission_id):
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
     create, update, fields = upload.get_bcd_d_rows(database=database, uploader=uploader, samples=discrete_samples,
-                                                   batch_name=mission.get_batch_name)
+                                                   batch_name=batch_id)
 
     bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
