@@ -41,6 +41,12 @@
     background-color: #FFF;
 }
 
+.tscroll tbody tr {
+    overflow: hidden;
+    height: 14px;
+    white-space: nowrap;
+}
+
 table.dataframe table {
     border-collapse: separate;
     border-spacing: 0;
