@@ -1,5 +1,8 @@
 import os.path
 
+import django.utils.connection
+import django.db.utils
+
 from datetime import datetime
 
 from bs4 import BeautifulSoup
@@ -23,9 +26,7 @@ from biochem import upload
 from core import models as core_models
 from core import forms as core_forms
 from core.form_biochem_pre_validation import BIOCHEM_CODES
-from core.forms import get_crispy_element_attributes
 from dart.utils import load_svg
-from dart import settings as dart_settings
 
 from settingsdb import models as settings_models
 
@@ -455,6 +456,36 @@ def get_connected_database():
     return settings_models.BcDatabaseConnection.objects.get(pk=database_id)
 
 
+def get_mission_batch_id():
+    batch = None
+    try:
+        batch = bio_models.Bcbatches.objects.using('biochem').order_by('batch_seq')
+        batch_seqs = list(batch.values_list('batch_seq', flat=True))
+
+        # find the first and last key in the set and use that to create a range, then subtract keys that are
+        # being used from the set. What is left are available keys that can be assigned to new rows being created
+        sort_seq = []
+        end = 0
+        if len(batch_seqs) > 0:
+            start, end = 1, batch_seqs[-1]
+            sort_seq = sorted(set(range(start, end)).difference(batch_seqs))
+
+        if len(sort_seq) > 0:
+            return sort_seq[0]
+
+        return end + 1
+
+    except django.utils.connection.ConnectionDoesNotExist as ex:
+        # if we're not connected, note it. The user may not be logged in or might be creating csv versions
+        # of the tables which will either be 1 or the batch_seq stored in the mission table
+        logger.exception(ex)
+    except django.db.utils.OperationalError as ex:
+        # if the bcbatches table doesn't exist, note it and return 1 to the user.
+        logger.exception(ex)
+
+    return 1
+
+
 def get_bcd_d_table():
     return get_connected_database().bc_discrete_data_edits
 
@@ -537,8 +568,10 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch_name: i
             upload.upload_db_rows(bcs_d, create, update, fields)
 
 
-def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
+def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch_name: int = None):
     database = mission._state.db
+
+    batch_name = batch_name if batch_name else mission.get_batch_name
 
     # 1) get bottles from BCS_P table
     bcs_p = upload.get_model(get_bcs_p_table(), bio_models.BcsP)
@@ -560,7 +593,7 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str):
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
         bcs_create, bcs_update, updated_fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
-                                                                       batch_name=mission.get_batch_name,
+                                                                       batch_name=batch_name,
                                                                        bcs_p_model=bcs_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
@@ -632,9 +665,10 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: i
             logger.exception(ex)
 
 
-def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
+def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch_name: int):
     database = mission._state.db
 
+    batch_name = batch_name if batch_name else mission.get_batch_name
     # 1) get Biochem BCD_P model
     table_name = get_bcd_p_table()
     bcd_p = upload.get_model(table_name, bio_models.BcdP)
@@ -650,7 +684,6 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
     remove_bcd_p_data(mission)
 
     user_logger.info(_("Compiling BCD rows for : ") + mission.name)
-    batch = mission.get_batch_name
 
     # 4) if the bcs_p table exist, create with all the bottles. linked to plankton samples
     samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
@@ -660,7 +693,7 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str):
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCD Plankton rows"))
         bcd_create, bcd_update, updated_fields = upload.get_bcd_p_rows(database=database, uploader=uploader,
-                                                                       samples=samples, batch_name=batch,
+                                                                       samples=samples, batch_name=batch_name,
                                                                        bcd_p_model=bcd_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
@@ -694,10 +727,15 @@ def get_database_connection_form(request, database, mission_id):
     database_connections = settings_models.BcDatabaseConnection.objects.all()
     if database_connections.exists():
         selected_db = database_connections.first()
-        if (db_id := os.getenv("BIOCHEM_DB_ID")) and database_connections.filter(id=db_id).exists():
-            selected_db = database_connections.get(pk=db_id)
-        elif (db_id := caches['biochem_keys'].get('database_id', -1)) == -1:
-            db_id = selected_db.pk
+        db_user = os.getenv("BIOCHEM_DB_USER", None)
+        db_name = os.getenv("BIOCHEM_DB_NAME", None)
+
+        if (db_name and db_user) and database_connections.filter(name__iexact=db_name,
+                                                                 account_name__iexact=db_user).exists():
+            selected_db = database_connections.filter(name__iexact=db_name,
+                                                      account_name__iexact=db_user).first()
+
+        db_id = caches['biochem_keys'].get('database_id', selected_db.pk)
 
         initial = {'selected_database': db_id}
         if db_id and (password := os.getenv("BIOCHEM_DB_PASS")):
@@ -979,7 +1017,7 @@ def is_connected():
         return False
 
     database = settings_models.BcDatabaseConnection.objects.get(pk=selected_database).name.upper()
-    return settings.DATABASES['biochem']['NAME'] == database
+    return settings.DATABASES['biochem']['NAME'].upper() == database
 
 
 url_prefix = "<str:database>/<str:mission_id>"

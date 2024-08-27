@@ -10,10 +10,10 @@ from django.test import tag, Client, SimpleTestCase
 from django.urls import reverse
 from django.utils.translation import gettext as _
 
-from bio_tables import sync_tables
 from core import form_biochem_pre_validation, views_mission_sample
 from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
+from core.form_biochem_database import get_mission_batch_id
 
 from dart.tests.DartTestCase import DartTestCase
 
@@ -61,7 +61,7 @@ class TestViewMissionSampleValidation(SimpleTestCase):
 
     def test_get_batch_id_no_model(self):
         # if there is no connection or model available to get the batch ID then 1 should be returned
-        batch_id = views_mission_sample.get_mission_batch_id()
+        batch_id = get_mission_batch_id()
 
         self.assertEquals(1, batch_id)
 
@@ -69,7 +69,7 @@ class TestViewMissionSampleValidation(SimpleTestCase):
         # if the connection exists, but there is no batches table, return 1
         self.setup_connection()
 
-        batch_id = views_mission_sample.get_mission_batch_id()
+        batch_id = get_mission_batch_id()
         self.assertEquals(1, batch_id)
 
     def test_get_batch_id_with_model(self):
@@ -78,7 +78,7 @@ class TestViewMissionSampleValidation(SimpleTestCase):
         self.setup_connection()
         self.get_batches_model()
 
-        batch_id = views_mission_sample.get_mission_batch_id()
+        batch_id = get_mission_batch_id()
         self.assertEquals(1, batch_id)
 
     def test_get_batch_id_with_model_with_mission(self):
@@ -88,7 +88,7 @@ class TestViewMissionSampleValidation(SimpleTestCase):
 
         bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=1, name=self.test_name)
         bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=5, name=self.test_name)
-        batch_id = views_mission_sample.get_mission_batch_id()
+        batch_id = get_mission_batch_id()
         self.assertEquals(2, batch_id)
 
 

@@ -576,15 +576,16 @@ class PlanktonSample(models.Model):
 # These are some of the common errors that occur when processing data and allow us to sort various errors depending
 # on what problems we're using the errors to solve.
 class ErrorType(models.IntegerChoices):
-    unknown = 0, "Unknown"
-    missing_id = 1, "Missing ID"
-    missing_value = 2, "Missing Value"
-    validation = 3, "Validation Error"
-    bottle = 4, "Bottle Error"
-    biochem = 5, "Biochem Error"
-    event = 6, "Event Error"
-    sample = 7, "Sample Error"
+    biochem_plankton = 9, "Biochem Plankton Error"
     plankton = 8, "Plankton Error"
+    sample = 7, "Sample Error"
+    event = 6, "Event Error"
+    biochem = 5, "Biochem Error"
+    bottle = 4, "Bottle Error"
+    validation = 3, "Validation Error"
+    missing_value = 2, "Missing Value"
+    missing_id = 1, "Missing ID"
+    unknown = 0, "Unknown"
 
 
 # This is the basis for most errors that we want to report to the user. All errors should have at the very least

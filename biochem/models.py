@@ -767,3 +767,167 @@ class Bceditsaudittrails(models.Model):
     class Meta:
         managed = False
         db_table = 'BCEDITSAUDITTRAILS'
+
+
+class Bcplanktndtailedits(models.Model):
+    pl_detail_edt_seq = models.BigIntegerField(primary_key=True)
+    plankton_detail_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    data_type_seq = models.IntegerField(blank=True, null=True)
+    plankton_general_seq = models.BigIntegerField(blank=True, null=True)
+    data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    detail_collector = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    pl_general_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTNDTAILEDITS'
+
+
+class Bcplanktnfreqedits(models.Model):
+    pl_freq_edt_seq = models.BigIntegerField(primary_key=True)
+    plankton_frequency_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    data_type_seq = models.IntegerField(blank=True, null=True)
+    plankton_general_seq = models.BigIntegerField(blank=True, null=True)
+    upper_bin_size = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)
+    lower_bin_size = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)
+    bug_count = models.IntegerField(blank=True, null=True)
+    bug_seq = models.IntegerField(blank=True, null=True)
+    data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    detail_collector = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    pl_general_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTNFREQEDITS'
+
+
+class Bcplanktngenerledits(models.Model):
+    pl_general_edt_seq = models.BigIntegerField(primary_key=True)
+    plankton_general_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    plankton_seq = models.BigIntegerField(blank=True, null=True)
+    national_taxonomic_seq = models.BigIntegerField(blank=True, null=True)
+    collector_taxonomic_id = models.CharField(max_length=20, blank=True, null=True)
+    life_history_seq = models.IntegerField(blank=True, null=True)
+    trophic_seq = models.IntegerField(blank=True, null=True)
+    min_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
+    max_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
+    split_fraction = models.DecimalField(max_digits=5, decimal_places=4, blank=True, null=True)
+    sex_seq = models.IntegerField(blank=True, null=True)
+    counts = models.DecimalField(max_digits=15, decimal_places=3, blank=True, null=True)
+    count_pct = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
+    wet_weight = models.DecimalField(max_digits=9, decimal_places=4, blank=True, null=True)
+    dry_weight = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    bio_volume = models.DecimalField(max_digits=8, decimal_places=3, blank=True, null=True)
+    presence = models.CharField(max_length=1, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    source = models.CharField(max_length=30, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    pl_headr_edt_seq = models.BigIntegerField(blank=True, null=True)
+    modifier = models.CharField(max_length=50, blank=True, null=True, db_comment='additional taxonomic information')
+    unit_seq = models.IntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTNGENERLEDITS'
+
+
+class Bcplanktnhedredits(models.Model):
+    pl_headr_edt_seq = models.BigIntegerField(primary_key=True)
+    plankton_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    event_seq = models.BigIntegerField(blank=True, null=True)
+    activity_seq = models.BigIntegerField(blank=True, null=True)
+    gear_seq = models.IntegerField(blank=True, null=True)
+    sdate = models.DateField(blank=True, null=True)
+    edate = models.DateField(blank=True, null=True)
+    stime = models.IntegerField(blank=True, null=True)
+    etime = models.IntegerField(blank=True, null=True)
+    phase_of_daylight = models.CharField(max_length=15, blank=True, null=True)
+    slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    time_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    position_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    sounding = models.IntegerField(blank=True, null=True)
+    volume = models.DecimalField(max_digits=7, decimal_places=3, blank=True, null=True)
+    volume_method_seq = models.IntegerField(blank=True, null=True)
+    large_plankton_removed = models.CharField(max_length=1, blank=True, null=True)
+    mesh_size = models.IntegerField(blank=True, null=True)
+    collection_method_seq = models.IntegerField(blank=True, null=True)
+    collector_deployment_id = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+    procedure_seq = models.IntegerField(blank=True, null=True)
+    preservation_seq = models.IntegerField(blank=True, null=True)
+    storage_seq = models.IntegerField(blank=True, null=True)
+    collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    meters_sqd_flag = models.CharField(max_length=1, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    responsible_group = models.CharField(max_length=50, blank=True, null=True)
+    shared_data = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    event_edt_seq = models.BigIntegerField(blank=True, null=True)
+    activity_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTNHEDREDITS'
+
+
+class Bcplanktnindivdledits(models.Model):
+    pl_indiv_edt_seq = models.BigIntegerField(primary_key=True)
+    plankton_individual_seq = models.BigIntegerField(blank=True, null=True)
+    data_center_code = models.IntegerField(blank=True, null=True)
+    data_type_seq = models.IntegerField(blank=True, null=True)
+    plankton_general_seq = models.BigIntegerField(blank=True, null=True)
+    bug_seq = models.IntegerField(blank=True, null=True)
+    data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    data_collector = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    last_update_date = models.DateField(blank=True, null=True)
+    process_flag = models.CharField(max_length=3)
+    batch_seq = models.IntegerField(blank=True, null=True)
+    pl_general_edt_seq = models.BigIntegerField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTNINDIVDLEDITS'
