@@ -3,7 +3,6 @@ import io
 import time
 from pathlib import Path
 
-import django.utils.connection
 import numpy as np
 import os
 
@@ -13,7 +12,6 @@ from bs4 import BeautifulSoup
 
 from crispy_forms.utils import render_crispy_form
 from django.conf import settings
-from django.db import connections
 
 from django.db.models import Max, QuerySet
 from django.http import HttpResponse, Http404
@@ -25,7 +23,8 @@ from django_pandas.io import read_frame
 from biochem import upload
 from biochem import models as biochem_models
 
-from core import forms, form_biochem_database, form_biochem_batch, validation
+from core import forms, form_biochem_database, form_biochem_discrete, validation
+from core.form_biochem_database import get_mission_batch_id
 from core import models
 from core import views
 from core.form_sample_type_config import process_file
@@ -519,7 +518,7 @@ def biochem_upload_card(request, database, mission_id):
     return responce
 
 
-def biochem_batches_card(request):
+def biochem_batches_card(request, database, mission_id):
 
     # The first time we get into this function will be a GET request from the mission_samples.html template asking
     # to put the UI component on the web page.
@@ -528,7 +527,7 @@ def biochem_batches_card(request):
     # request that should update the Batch selection drop down and then fire a trigger to clear the tables
 
     soup = BeautifulSoup('', 'html.parser')
-    form_soup = form_biochem_batch.get_batches_form(request)
+    form_soup = form_biochem_discrete.get_batches_form(request, database, mission_id)
 
     if request.method == "POST":
         batch_div = form_soup.find('div', {"id": "div_id_selected_batch"})
@@ -549,36 +548,7 @@ def biochem_batches_card(request):
     return HttpResponse(soup)
 
 
-def get_mission_batch_id():
-    batch = None
-    try:
-        batch = biochem_models.Bcbatches.objects.using('biochem').order_by('batch_seq')
-        batch_seqs = list(batch.values_list('batch_seq', flat=True))
-
-        # find the first and last key in the set and use that to create a range, then subtract keys that are
-        # being used from the set. What is left are available keys that can be assigned to new rows being created
-        sort_seq = []
-        end = 0
-        if len(batch_seqs) > 0:
-            start, end = 1, batch_seqs[-1]
-            sort_seq = sorted(set(range(start, end)).difference(batch_seqs))
-
-        if len(sort_seq) > 0:
-            return sort_seq[0]
-
-        return end + 1
-
-    except django.utils.connection.ConnectionDoesNotExist as ex:
-        # if we're not connected, note it. The user may not be logged in or might be creating csv versions
-        # of the tables which will either be 1 or the batch_seq stored in the mission table
-        logger.exception(ex)
-    except django.db.utils.OperationalError as ex:
-        # if the bcbatches table doesn't exist, note it and return 1 to the user.
-        logger.exception(ex)
-
-    return 1
-
-
+# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
 def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=models.ErrorType.biochem).delete()
@@ -605,6 +575,7 @@ def sample_data_upload(database, mission: models.Mission, uploader: str, batch_i
     return batch_id
 
 
+# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
 def upload_samples(request, database, mission_id):
     mission = models.Mission.objects.using(database).get(pk=mission_id)
 
@@ -800,14 +771,16 @@ def get_biochem_buttons(request, database, mission_id):
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'
 
-    icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
-    button_area.append(download_button := soup.new_tag('button'))
-    download_button.append(icon)
-    download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
-    download_button.attrs['title'] = _("Upload selected Sensors/Samples to Database")
-    download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_biochem",
-                                                   args=(database, mission_id))
-    download_button.attrs['hx-swap'] = 'none'
+    # TODO: This now belongs to the form_biochem_discrete and form_biochem_plankton modules
+    #       Remove when testing is complete
+    # icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
+    # button_area.append(download_button := soup.new_tag('button'))
+    # download_button.append(icon)
+    # download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
+    # download_button.attrs['title'] = _("Upload selected Sensors/Samples to Database")
+    # download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_biochem",
+    #                                                args=(database, mission_id))
+    # download_button.attrs['hx-swap'] = 'none'
 
     return HttpResponse(soup)
 
@@ -843,7 +816,7 @@ mission_sample_urls = [
     path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
          name="mission_samples_download_biochem"),
 
-    path('sample/batch/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
+    path(f'{url_prefix}/batch/<int:mission_id>/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
 
     path(f'{url_prefix}/sample/error/<int:error_id>/', delete_file_error,
          name="mission_samples_delete_file_error"),

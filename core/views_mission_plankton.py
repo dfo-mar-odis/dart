@@ -11,7 +11,8 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 from core.views import MissionMixin
-from core import models, forms, form_biochem_database
+from core import models, forms, form_biochem_database, form_biochem_plankton
+from core.form_biochem_database import get_mission_batch_id
 
 from biochem import models as biochem_models
 from biochem import upload
@@ -22,6 +23,7 @@ from dart.views import GenericDetailView
 
 debug_logger = logging.getLogger('dart.debug')
 logger = logging.getLogger('dart')
+user_logger = logger.getChild('user')
 
 
 class PlanktonDetails(MissionMixin, GenericDetailView):
@@ -49,7 +51,7 @@ def biochem_upload_card(request, database, mission_id):
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_card_wrapper"))
-    biochem_card_wrapper.attrs['class'] = "mb-2"
+    biochem_card_wrapper.attrs['class'] = "mb-2 mt-2"
     biochem_card_wrapper.attrs['hx-get'] = button_url
     biochem_card_wrapper.attrs['hx-trigger'] = 'load, biochem_db_update from:body'
     # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
@@ -58,18 +60,31 @@ def biochem_upload_card(request, database, mission_id):
     form_soup = form_biochem_database.get_database_connection_form(request, database, mission_id)
     biochem_card_wrapper.append(form_soup)
 
-    return HttpResponse(soup)
+    responce = HttpResponse(soup)
+    responce['Hx-Trigger'] = "biochem_db_connect"
+    return responce
 
 
-def sample_data_upload(database, mission: models.Mission, uploader: str):
-    # todo: Setup error logging here, clear out old errors to prep for issues found during the BCS_P/BCD_P upload
+# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
+def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
+    # clear previous errors if there were any from the last upload attempt
+    mission.errors.filter(type=models.ErrorType.biochem_plankton).delete()
+    models.Error.objects.using(database).filter(mission=mission, type=models.ErrorType.biochem_plankton).delete()
+
+    # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
+    user_logger.info(_("Validating Plankton Data"))
+
+    # errors = validation.validate_plankton_for_biochem(mission=mission)
 
     # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_p_data(mission, uploader)
-    form_biochem_database.upload_bcd_p_data(mission, uploader)
+    form_biochem_database.upload_bcs_p_data(mission, uploader, batch_id)
+    form_biochem_database.upload_bcd_p_data(mission, uploader, batch_id)
 
 
+# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
 def upload_samples(request, database, mission_id):
+    mission = models.Mission.objects.using(database).get(pk=mission_id)
+
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
     div.attrs['id'] = "div_id_biochem_alert_biochem_db_details"
@@ -87,12 +102,21 @@ def upload_samples(request, database, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
+    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
     try:
         uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
             request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
-        mission = models.Mission.objects.using(database).get(pk=mission_id)
-        sample_data_upload(database, mission, uploader)
+        batch_id = get_mission_batch_id()
+        biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
+                                                                        username=uploader,
+                                                                        batch_seq=batch_id)
+
+        sample_data_upload(database, mission, uploader, batch_id)
         attrs = {
             'component_id': 'div_id_upload_biochem',
             'alert_type': 'success',
@@ -108,7 +132,10 @@ def upload_samples(request, database, mission_id):
 
     alert_soup = forms.blank_alert(**attrs)
     div.append(alert_soup)
-    return HttpResponse(soup)
+
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'biochem_db_connect'
+    return response
 
 
 def download_samples(request, database, mission_id):
@@ -244,15 +271,47 @@ def get_biochem_buttons(request, database, mission_id):
                                                    args=(database, mission_id))
     download_button.attrs['hx-swap'] = 'none'
 
-    icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
-    button_area.append(download_button := soup.new_tag('button'))
-    download_button.append(icon)
-    download_button.attrs['title'] = _("Upload Plankton data to Database")
-    download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
-    download_button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_biochem_upload_plankton",
-                                                   args=(database, mission_id))
-    download_button.attrs['hx-swap'] = 'none'
+    # TODO: This now belongs to the form_biochem_discrete and form_biochem_plankton modules
+    #       Remove when testing is complete
+    # icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
+    # button_area.append(download_button := soup.new_tag('button'))
+    # download_button.append(icon)
+    # download_button.attrs['title'] = _("Upload Plankton data to Database")
+    # download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
+    # download_button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_biochem_upload_plankton",
+    #                                                args=(database, mission_id))
+    # download_button.attrs['hx-swap'] = 'none'
 
+    return HttpResponse(soup)
+
+
+def biochem_batches_card(request, database, mission_id):
+
+    # The first time we get into this function will be a GET request from the mission_samples.html template asking
+    # to put the UI component on the web page.
+
+    # The second time will be whenever a database is connected to or disconnected from which will be a POST
+    # request that should update the Batch selection drop down and then fire a trigger to clear the tables
+
+    soup = BeautifulSoup('', 'html.parser')
+    form_soup = form_biochem_plankton.get_batches_form(request, database, mission_id)
+
+    if request.method == "POST":
+        batch_div = form_soup.find('div', {"id": "div_id_selected_batch"})
+        batch_div.attrs['hx-swap-oob'] = 'true'
+        soup.append(batch_div)
+        response = HttpResponse(soup)
+        response['HX-Trigger'] = 'clear_batch'
+        return response
+
+    soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_batches_card_wrapper"))
+    biochem_card_wrapper.attrs['class'] = "mb-2"
+    biochem_card_wrapper.attrs['hx-trigger'] = 'biochem_db_connect from:body'
+    biochem_card_wrapper.attrs['hx-post'] = request.path
+    # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
+    biochem_card_wrapper.attrs['hx-swap'] = 'none'
+
+    biochem_card_wrapper.append(form_soup)
     return HttpResponse(soup)
 
 
@@ -261,9 +320,12 @@ url_prefix = "<str:database>/plankton"
 plankton_urls = [
     path(f'{url_prefix}/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
 
-    path(f'{url_prefix}/db/<int:mission_id>/', biochem_upload_card, name="mission_plankton_get_plankton_db_card"),
+    path('<str:database>/plankton/upload/sensor/<int:mission_id>/', biochem_upload_card,
+         name="mission_plankton_biochem_upload_card"),
+    path(f'{url_prefix}/plankton/batch/<int:mission_id>/', biochem_batches_card,
+         name="mission_plankton_biochem_plankton_card"),
 
-    path(f'{url_prefix}/upload/<int:mission_id>/', upload_samples,name="mission_plankton_biochem_upload_plankton"),
+    path(f'{url_prefix}/upload/<int:mission_id>/', upload_samples, name="mission_plankton_biochem_upload_plankton"),
     path(f'{url_prefix}/download/<int:mission_id>/', download_samples, name="mission_plankton_download_plankton"),
     path(f'{url_prefix}/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 
