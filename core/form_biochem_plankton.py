@@ -1,4 +1,3 @@
-import os
 import logging
 
 from bs4 import BeautifulSoup
@@ -7,7 +6,6 @@ from django.core.cache import caches
 
 from django.db import connections
 from django.http import HttpResponse
-from django.template.context_processors import csrf
 from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
 
@@ -16,12 +14,10 @@ from settingsdb import models as settingsdb_models
 from core import forms as core_forms
 from core import models as core_models
 from core import form_biochem_database
-from core.form_biochem_batch import BiochemBatchForm, get_table_soup, generic_table_paging
+from core import form_biochem_batch
 
 from biochem import upload
 from biochem import models as biochem_models
-
-from dart.utils import load_svg
 
 logger = logging.getLogger('dart')
 user_logger = logger.getChild('user')
@@ -29,16 +25,14 @@ user_logger = logger.getChild('user')
 _page_limit = 50
 
 
-class BiochemPlanktonBatchForm(BiochemBatchForm):
-
-    def get_biochem_batch_upload_url(self):
-        return reverse_lazy('core:form_biochem_plankton_upload_batch', args=(self.database, self.mission_id))
+class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
 
     def get_biochem_batch_url(self):
         return reverse_lazy('core:form_biochem_plankton_update_selected_batch', args=(self.database, self.mission_id))
 
     def get_biochem_batch_clear_url(self):
-        return reverse_lazy('core:form_biochem_plankton_get_batch', args=(0,))
+        return reverse_lazy('core:form_biochem_plankton_get_batch',
+                            args=(self.database, self.mission_id, self.batch_id))
 
     def get_batch_choices(self):
         mission = core_models.Mission.objects.using(self.database).get(pk=self.mission_id)
@@ -53,158 +47,29 @@ class BiochemPlanktonBatchForm(BiochemBatchForm):
         self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
 
 
-def get_batches_form(request, database, mission_id):
-    batches_form_crispy = BiochemPlanktonBatchForm(database=database, mission_id=mission_id)
+def get_batches_form(request, database, mission_id, batch_id=0):
+    batches_form_crispy = BiochemPlanktonBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
+    form_url = reverse_lazy('core:form_biochem_plankton_refresh', args=(database, mission_id, batch_id))
+    return form_biochem_batch.get_batches_form(request, batches_form_crispy, form_url)
 
-    context = {}
-    context.update(csrf(request))
-    database_form_html = render_crispy_form(batches_form_crispy, context=context)
-    database_form_soup = BeautifulSoup(database_form_html, 'html.parser')
 
-    form_soup = BeautifulSoup(f'<form id="form_id_db_batches"></form>', 'html.parser')
-    form = form_soup.find('form')
-    form.append(database_form_soup)
+def refresh_batches_form(request, database, mission_id, batch_id):
+    return HttpResponse(get_batches_form(request, database, mission_id, batch_id))
 
-    return form_soup
+
+def delete_plankton_proc(batch_id):
+    bcd_p = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
+    bcs_p = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
+
+    form_biochem_batch.delete_batch(batch_id, 'PLANKTON', bcd_p, bcs_p)
 
 
 def run_biochem_delete_procedure(request, database, mission_id, batch_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(div := soup.new_tag('div'))
-    div.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
-    div.attrs['hx-swap-oob'] = 'true'
-
-    if request.method == 'GET':
-        attrs = {
-            'alert_area_id': 'div_id_biochem_batch',
-            'message': _("Deleting Batch"),
-            'logger': user_logger.name,
-            'alert_type': 'info',
-            'hx-post': request.path,
-            'hx-trigger': "load",
-        }
-        alert = core_forms.websocket_post_request_alert(**attrs)
-        div.append(alert)
-
-        return HttpResponse(soup)
-
-    with connections['biochem'].cursor() as cur:
-        user_logger.info(f"Deleteing Batch {batch_id}")
-        delete_pass_var = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, 'PLANKTON'])
-
-    bcd_d = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
-    bcd_d.objects.using('biochem').filter(batch_seq=batch_id).delete()
-
-    bcs_d = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
-    bcs_d.objects.using('biochem').filter(batch_seq=batch_id).delete()
-
-    biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id).delete()
-    biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id).delete()
-
-    attrs = {'component_id': 'div_id_biochem_batch_alert'}
-    attrs['message'] = _("Deletion Complete")
-    attrs['alert_type'] = 'success'
-    alert = core_forms.blank_alert(**attrs)
-    div.append(alert)
-
     crispy_form = BiochemPlanktonBatchForm(database=database, mission_id=mission_id)
-    html = render_crispy_form(crispy_form)
-    form_soup = BeautifulSoup(html, 'html.parser')
-    batch_select = form_soup.find('div', {"id": "div_id_selected_batch"})
-    batch_select.attrs['hx-swap-oob'] = "true"
-    soup.append(batch_select)
-
-    response = HttpResponse(soup)
-    response['Hx-Trigger'] = 'clear_batch'
-    return response
+    return form_biochem_batch.run_biochem_delete_procedure(request, crispy_form, batch_id, delete_plankton_proc)
 
 
-def biochem_validation2_procedure(request, batch_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(div := soup.new_tag('div'))
-    div.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
-    div.attrs['hx-swap-oob'] = 'true'
-
-    if request.method == 'GET':
-        attrs = {
-            'alert_area_id': 'div_id_biochem_batch',
-            'message': _("Running Oracle Stage 2 Validation"),
-            'logger': user_logger.name,
-            'alert_type': 'info',
-            'hx-post': request.path,
-            'hx-trigger': "load",
-        }
-        alert = core_forms.websocket_post_request_alert(**attrs)
-        div.append(alert)
-
-        return HttpResponse(soup)
-
-    with connections['biochem'].cursor() as cur:
-        user_logger.info(f"validating mission data")
-        mission_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_MISSION_ERRORS", str, [batch_id, 'UPSONP'])
-
-        user_logger.info(f"validating event data")
-        event_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_EVENT_ERRORS", str, [batch_id, 'UPSONP'])
-
-        user_logger.info(f"validating plankton header data")
-        plk_hdr_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_HEDR_ERRORS", str, [batch_id, 'UPSONP'])
-
-        user_logger.info(f"validating plankton general data")
-        plk_generl_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_GENERL_ERRS", str,
-                                           [batch_id, 'UPSONP'])
-
-        user_logger.info(f"validating plankton details data")
-        plk_dtail_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_DTAIL_ERRS", str,
-                                          [batch_id, 'UPSONP'])
-
-        user_logger.info(f"validating plankton details data")
-        plk_freq_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_FREQ_ERRS", str, [batch_id, 'UPSONP'])
-
-        user_logger.info(f"validating plankton replicate data")
-        plk_indiv_pass_var = cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_INDIV_ERRS", str,
-                                          [batch_id, 'UPSONP'])
-
-    attrs = {'component_id': 'div_id_biochem_batch'}
-    attrs['message'] = _("Validation Complete")
-    attrs['alert_type'] = 'success'
-
-    if (errors := biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id)).exists():
-        # for error in errors:
-        #     user_logger.error(error)
-        attrs['message'] = _("Validation Complete with station errors") + f" : {errors.count()}"
-        attrs['alert_type'] = 'warning'
-        attrs['hx-get'] = reverse_lazy('core:form_biochem_database_get_batch_errors', args=(batch_id,))
-        attrs['hx-trigger'] = 'load, update_batch from:body'
-        attrs['hx-swap'] = 'none'
-
-    alert = core_forms.blank_alert(**attrs)
-    div.append(alert)
-
-    response = HttpResponse(soup)
-    response['Hx-Trigger'] = 'reload_batch'
-    return response
-
-
-def biochem_validation1_procedure(request, batch_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(div := soup.new_tag('div'))
-    div.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
-    div.attrs['hx-swap-oob'] = 'true'
-
-    if request.method == 'GET':
-        attrs = {
-            'alert_area_id': 'div_id_biochem_batch',
-            'message': _("Running Oracle Stage 1 Validation"),
-            'logger': user_logger.name,
-            'alert_type': 'info',
-            'hx-post': request.path,
-            'hx-trigger': "load",
-        }
-        alert = core_forms.websocket_post_request_alert(**attrs)
-        div.append(alert)
-
-        return HttpResponse(soup)
-
+def validation_proc(batch_id):
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"validating station data")
         stn_pass_var = cur.callfunc("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_STATION", str, [batch_id])
@@ -214,228 +79,103 @@ def biochem_validation1_procedure(request, batch_id):
 
         if stn_pass_var == 'T' and data_pass_var == 'T':
             user_logger.info(f"Moving BCS/BCD data to workbench")
-            populate_pass_var = cur.callfunc("POPULATE_PLANKTON_EDITS_PKG.POPULATE_PLANKTON_EDITS", str, [batch_id])
+            cur.callfunc("POPULATE_PLANKTON_EDITS_PKG.POPULATE_PLANKTON_EDITS", str, [batch_id])
         else:
             user_logger.info(f"Errors in BCS/BCD data. Stand by for a damage report.")
 
         cur.execute('commit')
         cur.close()
 
-    attrs = {'component_id': 'div_id_biochem_batch'}
-    attrs['message'] = _("Validation Complete")
-    attrs['alert_type'] = 'success'
 
-    if (errors := biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id)).exists():
-        # for error in errors:
-        #     user_logger.error(error)
-        attrs['message'] = _("Validation Complete with station errors") + f" : {errors.count()}"
-        attrs['alert_type'] = 'warning'
-        attrs['hx-get'] = reverse_lazy('core:form_biochem_database_get_batch_errors', args=(batch_id,))
-        attrs['hx-trigger'] = 'load, update_batch from:body'
-        attrs['hx-swap'] = 'none'
-
-    alert = core_forms.blank_alert(**attrs)
-    div.append(alert)
-
-    response = HttpResponse(soup)
-    response['Hx-Trigger'] = 'reload_batch'
-    return response
+def biochem_validation1_procedure(request, batch_id):
+    return form_biochem_batch.biochem_validation1_procedure(request, batch_id, validation_proc)
 
 
-def get_stage1_button(soup):
-    icon = BeautifulSoup(load_svg('1-square'), 'html.parser').svg
-    validate1_button = soup.new_tag('button')
-    validate1_button.append(icon)
-    validate1_button.attrs['id'] = BiochemPlanktonBatchForm.get_validate_stage1_button_id()
-    validate1_button.attrs['class'] = 'btn btn-sm btn-primary'
-    validate1_button.attrs['title'] = _("Validate Stage 1")
-    validate1_button.attrs['hx-swap'] = 'none'
-    validate1_button.attrs['hx-swap-oob'] = 'true'
+def validation2_proc(batch_id, user):
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"validating mission data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_MISSION_ERRORS", str, [batch_id, user])
 
-    return validate1_button
+        user_logger.info(f"validating event data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_EVENT_ERRORS", str, [batch_id, user])
 
+        user_logger.info(f"validating plankton header data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_HEDR_ERRORS", str, [batch_id, user])
 
-def get_stage2_button(soup):
-    icon = BeautifulSoup(load_svg('2-square'), 'html.parser').svg
-    validate2_button = soup.new_tag('button')
-    validate2_button.append(icon)
-    validate2_button.attrs['id'] = BiochemPlanktonBatchForm.get_validate_stage2_button_id()
-    validate2_button.attrs['class'] = 'btn btn-sm btn-primary'
-    validate2_button.attrs['title'] = _("Validate Stage 2")
-    validate2_button.attrs['hx-swap'] = 'none'
-    validate2_button.attrs['hx-swap-oob'] = 'true'
+        user_logger.info(f"validating plankton general data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_GENERL_ERRS", str, [batch_id, user])
 
-    return validate2_button
+        user_logger.info(f"validating plankton details data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_DTAIL_ERRS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton details data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_FREQ_ERRS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton replicate data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_INDIV_ERRS", str, [batch_id, user])
 
 
-def get_delete_button(soup):
-    icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
-    delete_button = soup.new_tag('button')
-    delete_button.append(icon)
-    delete_button.attrs['id'] = BiochemPlanktonBatchForm.get_delete_batch_button_id()
-    delete_button.attrs['class'] = 'btn btn-sm btn-danger'
-    delete_button.attrs['title'] = _("Delete Batch")
-    delete_button.attrs['hx-swap'] = 'none'
-    delete_button.attrs['hx-swap-oob'] = 'true'
-    delete_button.attrs['hx-confirm'] = _("Are you sure?")
-
-    return delete_button
+def biochem_validation2_procedure(request, batch_id):
+    return form_biochem_batch.biochem_validation2_procedure(request, batch_id, validation2_proc)
 
 
-def get_batch_info(request, batch_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(validate1_button := get_stage1_button(soup))
-    soup.append(validate2_button := get_stage2_button(soup))
-    soup.append(delete_button := get_delete_button(soup))
+def get_batch_info(request, database, mission_id, batch_id):
+    upload_url = "core:form_biochem_plankton_upload_batch"
+    return form_biochem_batch.get_batch_info(request, database, mission_id, batch_id, upload_url, add_tables_to_soup)
 
-    if not batch_id or (batch_id and batch_id == 0):
-        validate1_button.attrs['disabled'] = 'disabled'
-        validate2_button.attrs['disabled'] = 'disabled'
-        delete_button.attrs['disabled'] = 'disabled'
 
-        soup.append(div := soup.new_tag('div'))
-        div.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
-        div.attrs['hx-swap-oob'] = 'true'
+def stage1_valid_proc(batch_id):
+    mission_valid = biochem_models.Bcmissionedits.objects.using('biochem').filter(
+        batch_seq=batch_id,  process_flag='ENR').exists()
+    event_valid = biochem_models.Bceventedits.objects.using('biochem').filter(
+        batch_seq=batch_id, process_flag='ENR').exists()
 
-    add_tables_to_soup(soup, batch_id, False)
-    return HttpResponse(soup)
+    plkhedr_valid = biochem_models.Bcplanktnhedredits.objects.using('biochem').filter(
+        batch_seq=batch_id, process_flag='ENR').exists()
+    plkdtai_valid = biochem_models.Bcplanktndtailedits.objects.using('biochem').filter(
+        batch_seq=batch_id, process_flag='ENR').exists()
+    plkfreq_valid = biochem_models.Bcplanktnfreqedits.objects.using('biochem').filter(
+        batch_seq=batch_id, process_flag='ENR').exists()
+    plkgen_valid = biochem_models.Bcplanktngenerledits.objects.using('biochem').filter(
+        batch_seq=batch_id, process_flag='ENR').exists()
+    plkindi_valid = biochem_models.Bcplanktnindivdledits.objects.using('biochem').filter(
+        batch_seq=batch_id, process_flag='ENR').exists()
+
+    return not mission_valid and not event_valid and not plkhedr_valid and not plkdtai_valid and not plkfreq_valid and not plkgen_valid and not plkindi_valid
 
 
 def get_batch(request, database, mission_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(div_alert_area := soup.new_tag('div'))
-    div_alert_area.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
-    div_alert_area.attrs['hx-swap-oob'] = 'true'
-
-    if request.method == 'GET':
-        attrs = {
-            'alert_area_id': 'div_id_biochem_batch',
-            'message': _("Loading Batch"),
-            'logger': user_logger.name,
-            'alert_type': 'info',
-            'hx-post': request.path,
-            'hx-trigger': "load",
-        }
-        alert = core_forms.websocket_post_request_alert(**attrs)
-        div_alert_area.append(alert)
-
-        return HttpResponse(soup)
-
-    batch_id = request.POST.get('selected_batch', None)
-
-    div_alert_area.attrs['hx-swap'] = 'innerHTML'
-
-    soup.append(validate1_button := get_stage1_button(soup))
-    soup.append(validate2_button := get_stage2_button(soup))
-    soup.append(delete_button := get_delete_button(soup))
-
-    if not batch_id:
-        validate1_button.attrs['disabled'] = 'disabled'
-        validate2_button.attrs['disabled'] = 'disabled'
-        delete_button.attrs['disabled'] = 'disabled'
-        response = HttpResponse(soup)
-        response['Hx-Trigger'] = 'clear_batch'
-        return response
-
     bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
-    unvalidated = bcd_model.objects.using('biochem').filter(batch_seq=batch_id, process_flag='NR').exists()
-    if not unvalidated:
-        icon = BeautifulSoup(load_svg('1-square-fill'), 'html.parser').svg
-        validate1_button.find('svg').decompose()
-        validate1_button.append(icon)
-        validate1_button.attrs['class'] = 'btn btn-sm btn-success'
-        if biochem_models.Bcstatndataerrors.objects.using('biochem').filter(batch_seq=batch_id).exists():
-            validate1_button.attrs['class'] = 'btn btn-sm btn-danger'
-            validate2_button.attrs['disabled'] = 'disabled'
-        else:
-            mission_valid = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                          process_flag='ENR').exists()
-            event_valid = biochem_models.Bceventedits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                      process_flag='ENR').exists()
 
-            plkhedr_valid = biochem_models.Bcplanktnhedredits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                              process_flag='ENR').exists()
-            plkdtai_valid = biochem_models.Bcplanktndtailedits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                               process_flag='ENR').exists()
-            plkfreq_valid = biochem_models.Bcplanktnfreqedits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                              process_flag='ENR').exists()
-            plkgen_valid = biochem_models.Bcplanktngenerledits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                               process_flag='ENR').exists()
-            plkindi_valid = biochem_models.Bcplanktnindivdledits.objects.using('biochem').filter(batch_seq=batch_id,
-                                                                                                 process_flag='ENR').exists()
+    attrs = {
+        'request': request,
+        'database': database,
+        'mission_id': mission_id,
+        'bcd_model': bcd_model,
+        'stage1_valid_proc': stage1_valid_proc,
+        'upload_url': 'core:form_biochem_plankton_upload_batch',
+        'validate1_url': 'core:form_biochem_plankton_validation1',
+        'validate2_url': 'core:form_biochem_plankton_validation2',
+        'delete_url': 'core:form_biochem_plankton_delete',
+        'add_tables_to_soup_proc': add_tables_to_soup
+    }
 
-            if not mission_valid and not event_valid and not plkhedr_valid and not plkdtai_valid and not plkfreq_valid and not plkgen_valid and not plkindi_valid:
-                icon = BeautifulSoup(load_svg('2-square-fill'), 'html.parser').svg
-                validate2_button.find('svg').decompose()
-                validate2_button.append(icon)
-                validate2_button.attrs['class'] = 'btn btn-sm btn-success'
-                if biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id).exists():
-                    validate2_button.attrs['class'] = 'btn btn-sm btn-danger'
-
-    validate1_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_plankton_validation1', args=(batch_id,))
-    validate2_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_plankton_validation2', args=(batch_id,))
-    delete_button.attrs['hx-get'] = reverse_lazy('core:form_biochem_plankton_delete',
-                                                 args=(database, mission_id, batch_id,))
-
-    add_tables_to_soup(soup, batch_id)
-    response = HttpResponse(soup)
-    return response
+    return form_biochem_batch.get_batch(**attrs)
 
 
 def page_data_station_errors(request, batch_id, page):
     table_id = 'table_id_biochem_batch_errors'
-    return generic_table_paging(request, batch_id, page, table_id, get_station_errors_table)
+    return form_biochem_batch.generic_table_paging(request, batch_id, page, table_id, get_station_errors_table)
 
 
 def get_station_errors_table(batch_id, page=0, swap_oob=True):
-    page_start = _page_limit * page
-    table_id = 'table_id_biochem_batch_errors'
-
-    headers = ['Table', 'Record', 'Sample ID', 'Error']
-
-    soup = get_table_soup('Station/Data Errors', table_id, headers, swap_oob)
-    if batch_id == 0:
-        return soup
-
-    table = soup.find('tbody')
-
-    validation_errors = {}
-    errors = biochem_models.Bcstatndataerrors.objects.using('biochem').filter(
-        batch_seq=batch_id
-    ).order_by('-batch_seq')[page_start:(page_start + _page_limit)]
-
-    tr_header = None
-    for error in errors:
-        table.append(tr_header := soup.new_tag('tr'))
-        tr_header.append(td := soup.new_tag('td'))
-        td.string = str(error.statn_data_table_name)
-
-        tr_header.append(td := soup.new_tag('td'))
-        td.string = str(error.record_sequence_value)
-
-        tr_header.append(td := soup.new_tag('td'))
-        td.string = str(error.collector_sample_id)
-
-        tr_header.append(td := soup.new_tag('td'))
-        if error.error_code not in validation_errors.keys():
-            err = biochem_models.Bcerrorcodes.objects.using('biochem').get(error_code=error.error_code)
-            validation_errors[error.error_code] = err
-
-        td.string = str(validation_errors[error.error_code].long_desc)
-
-    if tr_header:
-        url = reverse_lazy('core:form_biochem_plankton_page_station_errors', args=(batch_id, (page + 1),))
-        tr_header.attrs['hx-target'] = f'#{table_id}_tbody'
-        tr_header.attrs['hx-trigger'] = 'intersect once'
-        tr_header.attrs['hx-get'] = url
-        tr_header.attrs['hx-swap'] = "none"
-
-    return soup
+    page_url = 'core:form_biochem_plankton_page_station_errors'
+    return form_biochem_batch.get_station_errors_table(batch_id, page, swap_oob, page_url)
 
 
 def page_data_errors(request, batch_id, page):
     table_id = 'table_id_biochem_batch_data_errors'
-    return generic_table_paging(request, batch_id, page, table_id, get_data_errors_table)
+    return form_biochem_batch.generic_table_paging(request, batch_id, page, table_id, get_data_errors_table)
 
 
 def get_data_errors_table(batch_id, page=0, swap_oob=True):
@@ -444,7 +184,7 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
 
     headers = ['Table', 'ID', 'Missing Lookup Value', 'Error']
 
-    soup = get_table_soup('Data Errors', table_id, headers, swap_oob)
+    soup = form_biochem_batch.get_table_soup('Data Errors', table_id, headers, swap_oob)
     if batch_id == 0:
         return soup
 
@@ -507,7 +247,8 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
 def get_data_error_summary_table(batch_id, swap_oob=True):
     headers = ['Error Count', 'Description']
 
-    soup = get_table_soup('Data Error Summary', 'table_id_biochem_batch_data_error_summary', headers, swap_oob)
+    soup = form_biochem_batch.get_table_soup('Data Error Summary',
+                                             'table_id_biochem_batch_data_error_summary', headers, swap_oob)
     if batch_id == 0:
         return soup
 
@@ -537,7 +278,7 @@ def get_data_error_summary_table(batch_id, swap_oob=True):
 
 def page_bcs(request, batch_id, page):
     table_id = 'table_id_biochem_batch_bcs'
-    return generic_table_paging(request, batch_id, page, table_id, get_bcs_table)
+    return form_biochem_batch.generic_table_paging(request, batch_id, page, table_id, get_bcs_table)
 
 
 def get_bcs_table(batch_id, page=0, swap_oob=True):
@@ -545,7 +286,7 @@ def get_bcs_table(batch_id, page=0, swap_oob=True):
     table_id = "table_id_biochem_batch_bcs"
 
     headers = ['ID', 'Sample ID', 'Process Flag']
-    soup = get_table_soup("BCS - BcPlanktonStatnEdits", table_id, headers, swap_oob)
+    soup = form_biochem_batch.get_table_soup("BCS - BcPlanktonStatnEdits", table_id, headers, swap_oob)
 
     if batch_id == 0:
         return soup
@@ -582,7 +323,7 @@ def get_bcs_table(batch_id, page=0, swap_oob=True):
 
 def page_bcd(request, batch_id, page):
     table_id = 'table_id_biochem_batch_bcd'
-    return generic_table_paging(request, batch_id, page, table_id, get_bcd_table)
+    return form_biochem_batch.generic_table_paging(request, batch_id, page, table_id, get_bcd_table)
 
 
 def get_bcd_table(batch_id, page=0, swap_oob=True):
@@ -590,7 +331,7 @@ def get_bcd_table(batch_id, page=0, swap_oob=True):
     table_id = "table_id_biochem_batch_bcd"
 
     headers = ['Record', 'ID', 'Process Flag']
-    soup = get_table_soup("BCD - BcPlanktonDataEdits", table_id, headers, swap_oob)
+    soup = form_biochem_batch.get_table_soup("BCD - BcPlanktonDataEdits", table_id, headers, swap_oob)
 
     if batch_id == 0:
         return soup
@@ -742,6 +483,15 @@ def upload_batch(request, database, mission_id):
             'alert_type': 'success',
             'message': _("Thank you for uploading"),
         }
+        form = BiochemPlanktonBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
+        html = render_crispy_form(form)
+        batch_form_soup = BeautifulSoup(html, 'html.parser')
+
+        select = batch_form_soup.find('select', attrs={'id': "control_id_database_select_biochem_batch_details"})
+        select.attrs['hx-swap-oob'] = 'true'
+        select.attrs['hx-trigger'] = 'load, change, reload_batch from:body'
+
+        soup.append(select)
     except Exception as e:
         logger.exception(e)
         attrs = {
@@ -754,7 +504,6 @@ def upload_batch(request, database, mission_id):
     div.append(alert_soup)
 
     response = HttpResponse(soup)
-    response['HX-Trigger'] = 'biochem_db_connect'
     return response
 
 
@@ -762,12 +511,15 @@ prefix = 'biochem/plankton'
 db_prefix = f'<str:database>/<int:mission_id>/{prefix}'
 database_urls = [
     path(f'{db_prefix}/upload/', upload_batch, name="form_biochem_plankton_upload_batch"),
-    path(f'{db_prefix}', get_batch, name="form_biochem_plankton_update_selected_batch"),
+    path(f'{db_prefix}/batch/', get_batch, name="form_biochem_plankton_update_selected_batch"),
+    path(f'{db_prefix}/batch/<int:batch_id>/', get_batch_info, name="form_biochem_plankton_get_batch"),
     path(f'{db_prefix}/delete/<int:batch_id>/', run_biochem_delete_procedure, name="form_biochem_plankton_delete"),
+    path(f'{db_prefix}/form/<int:batch_id>/', refresh_batches_form, name="form_biochem_plankton_refresh"),
 
-    path(f'{prefix}/batch/<int:batch_id>/', get_batch_info, name="form_biochem_plankton_get_batch"),
-    path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure, name="form_biochem_plankton_validation1"),
-    path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_plankton_validation2"),
+    path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure,
+         name="form_biochem_plankton_validation1"),
+    path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure,
+         name="form_biochem_plankton_validation2"),
 
     path(f'{prefix}/page/bcd/<int:batch_id>/<int:page>/', page_bcd, name="form_biochem_plankton_page_bcd"),
     path(f'{prefix}/page/bcs/<int:batch_id>/<int:page>/', page_bcs, name="form_biochem_plankton_page_bcs"),
