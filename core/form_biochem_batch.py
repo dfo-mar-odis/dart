@@ -1,6 +1,7 @@
 import os
 import logging
 
+import django.db.utils
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Field, Row
@@ -213,7 +214,11 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         if not database_id or not password:
             return
 
-        self.get_batch_choices()
+        try:
+            self.get_batch_choices()
+        except django.db.utils.DatabaseError as err:
+            if err.args[0].code != 942:
+                raise err
 
 
 def get_delete_button(soup):
