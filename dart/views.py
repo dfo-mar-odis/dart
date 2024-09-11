@@ -2,6 +2,7 @@ from django.urls import reverse_lazy
 from django.views.generic import CreateView, UpdateView, DetailView, TemplateView
 from django.views.generic.base import ContextMixin
 from django_filters.views import FilterView
+from git import Repo
 
 from settingsdb import utils
 from . import settings
@@ -28,6 +29,7 @@ class GenericViewMixin(ContextMixin):
         return self.theme
 
     def get_context_data(self, **kwargs):
+
         context = super().get_context_data(**kwargs)
         context["home_url"] = self.get_home_url()
         context["page_title"] = self.get_page_title()
@@ -44,6 +46,8 @@ class GenericViewMixin(ContextMixin):
         if hasattr(self, 'kwargs') and 'database' in getattr(self, 'kwargs'):
             context['database'] = self.kwargs['database']
 
+        repo = Repo(settings.BASE_DIR)
+        context['git_version'] = repo.git.rev_parse(repo.head.commit.hexsha, short=8)
         return context
 
 
