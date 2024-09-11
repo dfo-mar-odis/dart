@@ -9,7 +9,7 @@
 ## Windows
 1. Open a windows file explorer and navigate to the directory you wish to install DART
 1. In the address bar, where the current working directory is specified, type `cmd`
-1. In the command window type `git clone https://github.com/upsonp/dart`
+1. In the command window type `git clone https://github.com/dfo-mar-odis/dart`
 1. When the application has been checked out, type 'cd dart' to change to the dart project directory
 1. Type `start_dart.bat` to start the application for the first time.
 
