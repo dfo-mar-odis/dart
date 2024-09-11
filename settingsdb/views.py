@@ -7,6 +7,8 @@ from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Field, Column, Row, Hidden
 from crispy_forms.utils import render_crispy_form
 
+from git import Repo
+
 from django import forms
 from django.core.files.base import ContentFile
 from django.db import connections, OperationalError
@@ -20,7 +22,6 @@ from render_block import render_block_to_string
 from dart.utils import load_svg
 from settingsdb import models as setting_models
 from core import models
-from core import forms as core_forms
 from settingsdb import filters, utils
 
 from dart.views import GenericTemplateView
@@ -93,6 +94,7 @@ def get_mission_dictionary(db_dir):
 
     databases = [f.replace(".sqlite3", "") for f in listdir(db_dir) if
                  os.path.isfile(os.path.join(db_dir, f)) and f.endswith('sqlite3')]
+    repo = Repo(settings.BASE_DIR)
 
     missions = {}
     for database in databases:
@@ -103,7 +105,8 @@ def get_mission_dictionary(db_dir):
             if models.Mission.objects.using(database).exists():
                 if not utils.is_database_synchronized(database):
                     version = getattr(models.Mission.objects.using(database).first(), 'dart_version', None)
-                    missions[database] = {'name': database, 'requires_migration': 'true', 'version': version}
+                    short_version = repo.git.rev_parse(version, short=8)
+                    missions[database] = {'name': database, 'requires_migration': 'true', 'version': short_version}
                 else:
                     mission = models.Mission.objects.using(database).first()
                     missions[database] = mission

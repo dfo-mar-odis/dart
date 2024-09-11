@@ -107,6 +107,13 @@
 {% block body_js %}{% endblock %}
 
 </body>
-{% block post_content %}{% endblock post_content %}
+{% block post_content %}
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col"></div>
+            <div class="col-auto border">Git Version: {{ git_version }}</div>
+        </div>
+    </div>
+{% endblock post_content %}
 
 </html>
