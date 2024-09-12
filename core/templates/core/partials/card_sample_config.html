@@ -51,7 +51,7 @@
             <tbody>
                 <tr>
                     <td>{{ sample_config.tab }}</td>
-                    <td>{{ sample_config.skip }}</td>
+                    <td>{{ sample_config.skip|add:1 }}</td>
                     <td>{{ sample_config.sample_field }}</td>
                     <td>{{ sample_config.value_field }}</td>
                     <td>{% if sample_config.limit_field %}{{ sample_config.limit_field }}{% endif %}</td>
