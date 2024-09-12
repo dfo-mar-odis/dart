@@ -63,7 +63,7 @@
                     <div class="row">
                         <div class="col-auto">{% trans "File Type" %} : {{ config.file_type }}</div>
                         <div class="col-auto">{% trans "Tab #" %} : {{ config.tab }}</div>
-                        <div class="col-auto">{% trans "Header Row #" %} : {{ config.skip }}</div>
+                        <div class="col-auto">{% trans "Header Row #" %} : {{ config.skip|add:1 }}</div>
                         <div class="col-auto">{% trans "Allow Replicate" %} : {{ config.allow_replicate }}</div>
                         <div class="col"></div>
                         <div class="col-auto"><button class="btn btn-sm btn-danger mb-1"
