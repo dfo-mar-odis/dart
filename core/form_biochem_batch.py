@@ -290,6 +290,7 @@ def get_table_soup(title, html_id, headers, swap_oob=True):
     div_spinner.attrs['role'] = 'status'
 
     div.append(div_table := soup.new_tag('div'))
+    div_table.attrs['id'] = f'div_id_{html_id}_scroll'
     div_table.attrs['class'] = 'tscroll horizontal-scrollbar vertical-scrollbar-sm'
 
     if swap_oob:
@@ -604,6 +605,10 @@ def get_station_errors_table(batch_id, page, swap_oob, page_url):
     errors = biochem_models.Bcstatndataerrors.objects.using('biochem').filter(
         batch_seq=batch_id
     ).order_by('-batch_seq')[page_start:(page_start + _page_limit)]
+
+    if errors.count() > 0:
+        table_scroll = soup.find('div', {'id': f'div_id_{table_id}_scroll'})
+        table_scroll.attrs['class'] = 'tscroll horizontal-scrollbar vertical-scrollbar'
 
     tr_header = None
     for error in errors:
