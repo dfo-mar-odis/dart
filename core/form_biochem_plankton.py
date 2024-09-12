@@ -194,6 +194,10 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
     errors = biochem_models.Bcerrors.objects.using('biochem').filter(
         batch_seq=batch_id)[page_start:(page_start + _page_limit)]
 
+    if errors.count() > 0:
+        table_scroll = soup.find('div', {'id': f'div_id_{table_id}_scroll'})
+        table_scroll.attrs['class'] = 'tscroll horizontal-scrollbar vertical-scrollbar'
+
     tr_header = None
     for error in errors:
 

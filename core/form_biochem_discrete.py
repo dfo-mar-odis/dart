@@ -188,6 +188,10 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
     errors = biochem_models.Bcerrors.objects.using('biochem').filter(
         batch_seq=batch_id)[page_start:(page_start + _page_limit)]
 
+    if errors.count() > 0:
+        table_scroll = soup.find('div', {'id': f'div_id_{table_id}_scroll'})
+        table_scroll.attrs['class'] = 'tscroll horizontal-scrollbar vertical-scrollbar'
+
     tr_header = None
     for error in errors:
 
@@ -241,39 +245,29 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
     return soup
 
 
-def get_data_error_summary_table(batch_id, swap_oob=True):
-    headers = ['Error Count', 'Datatype', 'Description', 'Error']
-
-    soup = form_biochem_batch.get_table_soup('Data Error Summary',
-                                             'table_id_biochem_batch_data_error_summary', headers, swap_oob)
-    if batch_id == 0:
-        return soup
-
+def add_errors_to_table(soup, errors, table_name, table_key):
+    validation_errors = {}
     table = soup.find('tbody')
 
-    validation_errors = {}
-    # get all of the BCDisReplicateEdits rows that contain errors and distill them down to only unique datatypes
-    datatype_codes = biochem_models.Bcdisreplicatedits.objects.using('biochem').filter(
-        batch_seq=batch_id,
-        process_flag__iexact='err'
-    )
-
-    for code in datatype_codes.values_list('data_type_seq', flat=True).distinct():
-        errors = datatype_codes.filter(
+    for code in errors.values_list('data_type_seq', flat=True).distinct():
+        data_type_errors = errors.filter(
             data_type_seq=code,
         )
 
-        key = errors.first()
-        error = biochem_models.Bcerrors.objects.using('biochem').get(record_num_seq=key.dis_repl_edt_seq)
+        key = data_type_errors.first()
+        error = biochem_models.Bcerrors.objects.using('biochem').get(record_num_seq=getattr(key, table_key))
         datatype = biochem_models.Bcdatatypes.objects.using('biochem').get(data_type_seq=key.data_type_seq)
 
         table.append(tr_header := soup.new_tag('tr'))
 
         tr_header.append(td := soup.new_tag('td'))
-        td.string = str(errors.count())
+        td.string = str(data_type_errors.count())
 
         tr_header.append(td := soup.new_tag('td'))
         td.string = str(datatype.data_type_seq)
+
+        tr_header.append(td := soup.new_tag('td'))
+        td.string = str(table_name)
 
         tr_header.append(td := soup.new_tag('td'))
         td.string = str(datatype.method)
@@ -285,6 +279,37 @@ def get_data_error_summary_table(batch_id, swap_oob=True):
             validation_errors[error.error_code] = err
 
         td.string = str(validation_errors[error.error_code].long_desc)
+
+    return validation_errors
+
+
+def get_data_error_summary_table(batch_id, swap_oob=True):
+    headers = ['Error Count', 'Datatype', 'Table', 'Description', 'Error']
+
+    table_id = 'table_id_biochem_batch_data_error_summary'
+    soup = form_biochem_batch.get_table_soup('Data Error Summary', table_id, headers, swap_oob)
+    if batch_id == 0:
+        return soup
+
+    validation_errors = {}
+    # get all of the BCDisReplicateEdits rows that contain errors and distill them down to only unique datatypes
+    errors = biochem_models.Bcdisreplicatedits.objects.using('biochem').filter(
+        batch_seq=batch_id,
+        process_flag__iexact='err'
+    )
+
+    validation_errors.update(add_errors_to_table(soup, errors, 'BCDISREPLICATEDITS', 'dis_repl_edt_seq'))
+
+    errors = biochem_models.Bcdiscretedtailedits.objects.using('biochem').filter(
+        batch_seq=batch_id,
+        process_flag__iexact='err'
+    )
+
+    validation_errors.update(add_errors_to_table(soup, errors, 'BCDISCRETEDTAILEDITS', 'dis_detail_edt_seq'))
+
+    if len(soup.find("tbody").findAll('tr')) > 0:
+        table_scroll = soup.find('div', {'id': f'div_id_{table_id}_scroll'})
+        table_scroll.attrs['class'] = 'tscroll horizontal-scrollbar vertical-scrollbar'
 
     return soup
 
