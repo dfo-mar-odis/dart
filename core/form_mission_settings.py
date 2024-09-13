@@ -200,7 +200,7 @@ class MissionSettingsForm(forms.ModelForm):
     def clean_name(self):
 
         mission_name = self.cleaned_data['name']
-        db_name = mission_name + '.sqlite3'
+        db_name = f'DART_{mission_name}.sqlite3'
         if settings_models.LocalSetting.objects.filter(connected=True).exists():
             db_settings = settings_models.LocalSetting.objects.filter(connected=True).first()
         else:
@@ -233,15 +233,16 @@ class MissionSettingsForm(forms.ModelForm):
 
     def save(self, commit=True):
         mission_name = self.cleaned_data['name']
+        database_name = f'DART_{mission_name}'
         repo = Repo(settings.BASE_DIR)
 
         if mission_name not in settings.DATABASES:
-            settings_utils.add_database(mission_name)
+            settings_utils.add_database(database_name)
 
         instance: models.Mission = super().save(commit=False)
 
         instance.dart_version = repo.head.commit.hexsha
-        instance.save(using=mission_name)
+        instance.save(using=database_name)
 
         return instance
 
