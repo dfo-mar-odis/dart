@@ -121,7 +121,7 @@ class TestMissionViewUI(DartTestCase):
         url = reverse("settingsdb:update_mission_directory")
         response = self.client.get(url, {'directory': -1})
 
-        soup = BeautifulSoup(response.content)
+        soup = BeautifulSoup(response.content, 'html.parser')
         self.assertIsNotNone(soup)
 
         self.assertIsNotNone(soup)

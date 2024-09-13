@@ -42,7 +42,8 @@ class MissionCreateView(MissionMixin, GenericCreateView):
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):
-        success = reverse_lazy("core:mission_events_details", args=(self.object.name, self.object.pk, ))
+        database_name = f"DART_{self.object.name}"
+        success = reverse_lazy("core:mission_events_details", args=(database_name, self.object.pk, ))
         return success
 
 

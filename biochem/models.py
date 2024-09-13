@@ -560,11 +560,11 @@ class Bcstatndataerrors(models.Model):
 
 
 class Bcerrorcodes(models.Model):
-    error_code = models.IntegerField(primary_key=True, db_comment='Code that specifies the validation error in the Edit table system.')
-    description = models.CharField(max_length=80, db_comment='Description of the validation error.')
-    long_desc = models.CharField(max_length=300, blank=True, null=True, db_comment='Detailed description of the validation error.')
-    last_update_by = models.CharField(max_length=30, db_comment='The user id of the user who last updated the Codes in the ERROR_CODE table.')
-    last_update_date = models.DateField(db_comment='The date that the last update took place to a specified record in the ERROR_CODE table.')
+    error_code = models.IntegerField(primary_key=True)
+    description = models.CharField(max_length=80)
+    long_desc = models.CharField(max_length=300)
+    last_update_by = models.CharField(max_length=30)
+    last_update_date = models.DateField()
 
     class Meta:
         managed = False
@@ -849,7 +849,7 @@ class Bcplanktngenerledits(models.Model):
     process_flag = models.CharField(max_length=3)
     batch_seq = models.IntegerField(blank=True, null=True)
     pl_headr_edt_seq = models.BigIntegerField(blank=True, null=True)
-    modifier = models.CharField(max_length=50, blank=True, null=True, db_comment='additional taxonomic information')
+    modifier = models.CharField(max_length=50, blank=True, null=True)
     unit_seq = models.IntegerField(blank=True, null=True)
 
     class Meta:

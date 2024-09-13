@@ -189,7 +189,7 @@ class EventDetails(core_forms.CardForm):
         self.mission = mission if mission else event.mission
         self.editing = editing
 
-        self.database = database if database else self.mission.name
+        self.database = database if database else self.mission._state.db
 
         super().__init__(card_name='event_details', card_title=_("Event Details"), *args, **kwargs)
 
