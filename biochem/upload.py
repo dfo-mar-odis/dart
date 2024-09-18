@@ -172,7 +172,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
         updated_fields.add(updated_value(bcs_row, 'mission_institute',
                                          primary_data_center.name if primary_data_center else "Not Specified"))
 
-        updated_fields.add(updated_value(bcs_row, 'event_collector_event_id', event.event_id))
+        updated_fields.add(updated_value(bcs_row, 'event_collector_event_id', f'{event.event_id:03d}'))
         updated_fields.add(updated_value(bcs_row, 'event_collector_comment1', event.comments))
         updated_fields.add(updated_value(bcs_row, 'event_data_manager_comment', DART_EVENT_COMMENT))
         updated_fields.add(updated_value(bcs_row, 'event_collector_stn_name', event.station.name))
@@ -285,7 +285,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
             # if there's no recovery event then we won't be able to complete this row of data, it also means this
             # event was aborted
             message = _("Event was likely aborted and contains no recovered action")
-            message += " " + _("Event") + f" : {event.event_id}"
+            message += " " + _("Event") + f" : {event.event_id:03d}"
             logger.error(message)
             continue
 
@@ -320,7 +320,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
             row_update.add(updated_value(bcs_row, 'mission_more_comment', mission.more_comments))
             row_update.add(updated_value(bcs_row, 'mission_data_manager_comment', mission.data_manager_comments))
 
-            row_update.add(updated_value(bcs_row, 'event_collector_event_id', event.event_id))
+            row_update.add(updated_value(bcs_row, 'event_collector_event_id', f'{event.event_id:03d}'))
             row_update.add(updated_value(bcs_row, 'event_collector_stn_name', event.station.name))
             row_update.add(updated_value(bcs_row, 'event_sdate', datetime.strftime(event.start_date, "%Y-%m-%d")))
             row_update.add(updated_value(bcs_row, 'event_edate', datetime.strftime(event.end_date, "%Y-%m-%d")))
@@ -527,7 +527,7 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
         # ########### Stuff that we get from the event object #################################################### #
         event = bottle.event
 
-        updated_fields.add(updated_value(bcd_row, 'event_collector_event_id', event.event_id))
+        updated_fields.add(updated_value(bcd_row, 'event_collector_event_id', f'{event.event_id:03d}'))
         updated_fields.add(updated_value(bcd_row, 'event_collector_stn_name', event.station.name))
 
         if bottle.latitude and bottle.longitude:
@@ -713,7 +713,7 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         # ########### Stuff that we get from the event object #################################################### #
         event = bottle.event
 
-        row_update.add(updated_value(bcd_row, 'event_collector_event_id', event.event_id))
+        row_update.add(updated_value(bcd_row, 'event_collector_event_id', f'{event.event_id:03d}'))
         row_update.add(updated_value(bcd_row, 'event_collector_stn_name', event.station.name))
 
         event_date = event.start_date
