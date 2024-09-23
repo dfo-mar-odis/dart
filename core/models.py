@@ -407,7 +407,7 @@ class MissionSampleType(models.Model):
                                  blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
 
     def __str__(self):
-        label = self.name + (f" - {self.long_name}" if self.long_name else "")
+        label = (f"{self.name} - {self.long_name}" if self.long_name else "")
         label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
 
         return label

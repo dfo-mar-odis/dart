@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+{% block nav_button_block %}
+    <li class="nav-item me-2">
+        <a href="{% url 'core:mission_samples_sample_details' database object.pk %}" class="btn btn-primary"
+           title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a href="{% url 'core:mission_plankton_plankton_details' database object.pk %}" class="btn btn-primary"
+           title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' database object.pk %}"
+           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+    </li>
+{% endblock %}
+
+{% block content %}
+
+<div class="row">
+    <div id="div_underway_id">
+        <div class="card">
+            <div class="card-header">
+                <div class="row">
+                    <div class="card-title col">{% trans "Underway Samples" %}</div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary" type="button">+</button>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body vertical-scrollbar">
+                <div id="div_underway_list_id" class="row">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
