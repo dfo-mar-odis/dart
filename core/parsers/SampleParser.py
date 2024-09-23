@@ -46,8 +46,13 @@ def get_file_configs(data, file_type):
         elif file_type in excel_extensions:
             # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
             # if the tab changes
-            header = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None,
-                                   skiprows=sample_type.skip, nrows=1).iloc[0].tolist()
+            xls_data = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None,
+                                   skiprows=sample_type.skip, nrows=1)
+            lowercase_fields = []
+            if xls_data.empty:
+                continue
+
+            header = xls_data.iloc[0].tolist()
             lowercase_fields = [str(column).lower() for column in header]
 
         if sample_type.sample_field_lower in lowercase_fields and sample_type.value_field_lower in lowercase_fields:
