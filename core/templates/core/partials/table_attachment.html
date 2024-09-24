@@ -24,6 +24,8 @@
             {% endif %}
         </tr>
         {% endblock %}
+    {% empty %}
+        <tr><td>{% trans "None" %}</td></tr>
     {% endfor %}
     </tbody>
 </table>

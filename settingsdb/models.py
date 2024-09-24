@@ -12,6 +12,10 @@ class LocalSetting(models.Model):
     connected = models.BooleanField(verbose_name="Connected", default=False)
 
 
+class GlobalSampleTypeCategory(models.Model):
+    name = models.CharField(verbose_name="Sample Type Category", max_length=50, unique=True)
+
+
 # Sample types help us track sensors and samples that have been previously loaded for any mission, when we see a
 # sensor or sample with the same short name in the future we'll know what biochem data types to use as well as what
 # file configurations to use when loading that data.
@@ -21,6 +25,10 @@ class GlobalSampleType(models.Model):
                                               "used for the sample"), unique=True)
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
                                  help_text=_("Short descriptive name for this type of sample/sensor"))
+
+    category = models.ForeignKey(GlobalSampleTypeCategory, verbose_name=_("Sample Type Category"),
+                                 related_name="sample_types", on_delete=models.DO_NOTHING,
+                                 blank=True, null=True, help_text=_("Group sample types of similar type"))
 
     # priority will eventually allow a user to sort their sample types on the Mission Sample form
     priority = models.IntegerField(verbose_name=_("Priority"), default=1)

@@ -255,7 +255,6 @@ class EventForm(forms.ModelForm):
         #     submit_button = StrictButton(load_svg('arrow-clockwise'), css_class="btn btn-primary btn-sm ms-2",
         #                              **apply_attrs)
 
-
         self.fields['global_station'].widget.attrs["hx-swap"] = 'outerHTML'
         self.fields['global_station'].widget.attrs["hx-trigger"] = 'change'
         self.fields['global_station'].widget.attrs["hx-target"] = f'#{self.get_station_input_id()}'
@@ -833,7 +832,20 @@ def get_selected_event(request, database):
     card_details_soup = BeautifulSoup(card_details_html, 'html.parser')
     card = card_details_soup.find(id=card_details.get_card_id())
 
-    card.find(id=card_details.get_card_content_id()).append(details_soup.find(id='div_event_content_id'))
+    card_details_content = card.find(id=card_details.get_card_content_id())
+    event_details_content = details_soup.find(id='div_event_content_id')
+    card_details_content.append(event_details_content)
+
+    samples = models.MissionSampleType.objects.using(database).filter(is_sensor=False)
+    bottles = event.bottles.all()
+    bottle_list = {bottle: [sample.type for sample in bottle.samples.all()] for bottle in bottles}
+
+    bottle_html = render_to_string("core/partials/table_bottle.html",
+                                   context={"event": event, "sample_types": samples,
+                                            "bottle_list": bottle_list})
+    bottle_soup = BeautifulSoup(bottle_html, 'html.parser')
+
+    event_details_content.append(bottle_soup.find())
 
     soup.append(card)
     return HttpResponse(soup)
