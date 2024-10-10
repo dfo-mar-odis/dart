@@ -1,4 +1,5 @@
 import io
+import re
 
 import pandas as pd
 import numpy as np
@@ -16,6 +17,7 @@ from django.http import HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
+from pandas.errors import ParserError
 from render_block import render_block_to_string
 
 from core import forms as core_forms
@@ -59,7 +61,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         if data and file_type and file_type.startswith('xls'):
             data_frame = pd.read_excel(data, sheet_name=tab, nrows=30, header=None)
         else:
-            data_frame = pd.read_csv(io.StringIO(data.decode('utf-8')), nrows=30, header=None)
+            data_frame = pd.read_csv(io.StringIO(data.decode('utf-8')), nrows=1, header=None)
 
         column_count = data_frame.shape[1]
         nan_tolerance = 0.1
@@ -369,7 +371,7 @@ def save_sample_config(request, database, **kwargs):
                                                            data=request.POST, instance=config)
         else:
             sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
-                                                           data=request.POST)
+                                                           data=request.POST, initial=initial)
 
         if sample_type_config_form.is_valid():
             sample_config: settings_models.SampleTypeConfig = sample_type_config_form.save()
