@@ -71,8 +71,8 @@ def get_file_configs(data, file_type):
             sample_field__iexact=matching_config.sample_field)
         file_configs = file_configs.filter(value_field__in=lowercase_fields)
         file_configs = file_configs.filter(Q(limit_field__isnull=True) | Q(limit_field='') | Q(limit_field__in=lowercase_fields))
-        file_configs = file_configs.filter(Q(flag_field__isnull=True) | Q(flag_field__in='') | Q(flag_field__in=lowercase_fields))
-        file_configs = file_configs.filter(Q(comment_field__isnull=True) | Q(comment_field__in='') | Q(comment_field__in=lowercase_fields))
+        file_configs = file_configs.filter(Q(flag_field__isnull=True) | Q(flag_field='') | Q(flag_field__in=lowercase_fields))
+        file_configs = file_configs.filter(Q(comment_field__isnull=True) | Q(comment_field='') | Q(comment_field__in=lowercase_fields))
         return file_configs
 
     return None
