@@ -23,6 +23,42 @@ def convert_timedelta_to_string(delta: timedelta) -> str:
     return elapsed
 
 
+def get_station_list(database):
+    stations = []
+    station_list = []
+    for event in core_models.Event.objects.using(database).order_by('event_id'):
+        if event.station.name not in stations:
+            stations.append(event.station.name)
+            action = event.actions.first()
+            station_list.append({
+                'station': event.station.name,
+                'latitude': action.latitude,
+                'longitude': action.longitude,
+                'depth': action.sounding if action.sounding else 'NA'
+            })
+
+    return station_list
+
+
+def station_report(request, database, mission_id):
+    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    station_list = get_station_list(database)
+
+    header = ['station', 'latitude', 'longitude', 'depth']
+    data = ",".join(header) + "\n"
+
+    for station in station_list:
+        data += f'{station["station"]},{station["latitude"]},{station["longitude"]},{station["depth"]}\n'
+
+    file_to_send = ContentFile(data)
+
+    response = HttpResponse(file_to_send, content_type="text/csv")
+    response['Content-Length'] = file_to_send.size
+    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Station_Report.csv"'
+
+    return response
+
+
 def elog(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
@@ -245,4 +281,5 @@ report_urls = [
     path(f'{url_prefix}/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
     path(f'{url_prefix}/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
     path(f'{url_prefix}/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),
+    path(f'{url_prefix}/station/<int:mission_id>/', station_report, name="hx_report_station"),
 ]
