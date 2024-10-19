@@ -24,6 +24,7 @@ reports = {
     "Profile Summary": "core:hx_report_profile",
     "Elog Report": "core:hx_report_elog",
     "Error Report": "core:hx_report_error",
+    "Station Report": "core:hx_report_station",
 }
 
 
