@@ -358,7 +358,7 @@ def list_samples(request, database, mission_id):
     table_body.attrs['id'] = "tbody_id_sample_table"
 
     url = reverse_lazy('core:mission_samples_sample_list', args=(database, mission.pk,))
-    last_tr = table_body.find_all('tr')[0]
+    last_tr = table_body.find_all('tr')[-2]
     last_tr.attrs['hx-target'] = '#tbody_id_sample_table'
     last_tr.attrs['hx-trigger'] = 'intersect once'
     last_tr.attrs['hx-get'] = url + f"?page={page + 1}"

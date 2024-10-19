@@ -62,7 +62,7 @@ def station_report(request, database, mission_id):
 def elog(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
-    header = ['Mission', 'Event', 'Station', 'INSTRUMENT', 'AVG_SOUNDING', 'MIN_LAT', 'MIN_LON', 'MAX_LAT', 'MAX_LON',
+    header = ['Mission', 'Event', 'Station', 'Instrument', 'AVG_SOUNDING', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_Lon',
               'SDATE', 'STIME', 'EDATE', 'ETIME', 'DURATION', 'ELAPSED_TIME', 'COMMENTS']
 
     events = mission.events.annotate(start=Min("actions__date_time")).order_by('start')
