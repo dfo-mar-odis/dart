@@ -1,0 +1,34 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div class="horizontal-scrollbar">
+<table id="bottle_table_id" class="table table-striped table-sm">
+    <thead>
+    <tr class="bg-light">
+        <th>{% trans 'Bottle ID' %}</th>
+        <th>{% trans 'Pressure' %}</th>
+        {% for sample_type in sample_types %}
+        <th>{{ sample_type.name }}</th>
+        {% endfor %}
+    </tr>
+    </thead>
+    <tbody id="tbody_bottle_table_id">
+    {% for bottle, bottle_samples in bottle_list.items %}
+        <tr id="bottle-{{ bottle.pk }}">
+            <th>{{ bottle.bottle_id }}</th>
+            <th>{{ bottle.pressure }}</th>
+            {% for sample_type in sample_types %}
+                <td>
+                <input type="checkbox" id="{{ bottle.pk }}_{{ sample_type.pk }}"
+                {% if sample_type in bottle_samples %}
+                    checked="checked"
+                {% endif %}
+                 class="form-check-input" disabled />
+                </td>
+            {% endfor %}
+            </tr>
+    {% endfor %}
+    </tbody>
+</table>
+
+</div>
