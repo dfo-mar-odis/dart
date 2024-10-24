@@ -230,35 +230,39 @@ def list_samples(request, database, mission_sample_type_id):
     # out of alignment. We'll get the replicate columns here and use that value to insert blank
     # columns into the dataframe if a replicate column is missing from the query set.
     replicates = core_models.DiscreteSampleValue.objects.using(database).filter(
-        sample__type=mission_sample_type).aggregate(Max('replicate'))['replicate__max']
+        sample__type=mission_sample_type).order_by('sample__bottle__bottle_id')
 
-    queryset = mission_sample_type.samples.all()
-    queryset = queryset.order_by('bottle__bottle_id')[page_start:(page_start + page_limit)]
+    replicate_max = replicates.aggregate(Max('replicate'))['replicate__max']
+    queryset = mission_sample_type.samples.order_by('bottle__bottle_id')[page_start:(page_start + page_limit)]
 
     if not queryset.exists():
         # if there are no more bottles then we stop loading, otherwise weird things happen
         return HttpResponse()
 
-    queryset = queryset.values(
-        'bottle__bottle_id',
-        'bottle__pressure',
-        'discrete_values__replicate',
-        'discrete_values__value',
-        'discrete_values__limit',
-        'discrete_values__flag',
-        'discrete_values__datatype',
-        'discrete_values__comment',
+    discrete_queryset = core_models.DiscreteSampleValue.objects.using(database).filter(
+        sample__in=queryset
+    ).order_by('sample__bottle__bottle_id')
+    queryset_vals = discrete_queryset.values(
+        'sample__bottle__bottle_id',
+        'sample__bottle__pressure',
+        'replicate',
+        'value',
+        'limit',
+        'flag',
+        'datatype',
+        'comment',
     )
+
     headings = ['Value', 'Limit', 'Flag', 'Datatype', 'Comments']
-    df = read_frame(queryset)
+    df = read_frame(queryset_vals)
     df.columns = ["Sample", "Pressure", "Replicate", ] + headings
     df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
 
     for j, column in enumerate(headings):
-        for i in range(1, replicates + 1):
+        for i in range(1, replicate_max + 1):
             col_index = (column, i,)
             if col_index not in df.columns:
-                index = j * replicates + i - 1
+                index = j * replicate_max + i - 1
                 if index < df.shape[1]:
                     df.insert(index, col_index, np.nan)
                 else:
