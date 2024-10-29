@@ -163,21 +163,19 @@ def profile_summary(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
 
     exclude = []
-    mission_included_sampletypes = core_models.MissionSampleType.objects.filter(samples__bottle__event__mission_id=mission_id)
+    mission_included_sampletypes = mission.mission_sample_types.all()
 
     # if the mean chl and/or phae sampletypes are used then there's no need to include an average of the chl and/or
     # phae sampletypes because that's what the chl_mean/phae_mean
-    if 'chl_mean' in [st.short_name for st in mission_included_sampletypes]:
+    if 'chl_mean' in [st.name for st in mission_included_sampletypes]:
         exclude.append('chl')
 
-    if 'phae_mean' in [st.short_name for st in mission_included_sampletypes]:
+    if 'phae_mean' in [st.name for st in mission_included_sampletypes]:
         exclude.append('phae')
 
-    sample_types = core_models.MissionSampleType.objects.filter(
-        samples__bottle__event__mission=mission
-    ).exclude(name__in=exclude).distinct()
+    sample_types = mission.mission_sample_types.exclude(name__in=exclude).distinct()
 
-    header = ['MISSION', "STATION", "EVENT", 'GEAR', 'PRESSURE', "SAMPLE"] + [st.short_name.upper() for st in sample_types]
+    header = ['MISSION', "STATION", "EVENT", 'GEAR', 'PRESSURE', "SAMPLE"] + [st.name.upper() for st in sample_types]
     data = ",".join(header) + '\n'
 
     bottles = core_models.Bottle.objects.using(database).filter(event__mission=mission).order_by('bottle_id')
