@@ -36,6 +36,7 @@ def get_file_configs(data, file_type):
     lowercase_fields = []
     matching_config = None
 
+    xls_file = None
     for sample_type in sample_configs:
         if file_type == 'csv' or file_type == 'dat':
             if not lowercase_fields:
@@ -46,8 +47,14 @@ def get_file_configs(data, file_type):
         elif file_type in excel_extensions:
             # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
             # if the tab changes
+            if not xls_file:
+                xls_file = pd.ExcelFile(data)
+
+            if sample_type.tab > (len(xls_file.sheet_names)-1):
+                continue
+
             xls_data = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None,
-                                   skiprows=sample_type.skip, nrows=1)
+                                     skiprows=sample_type.skip, nrows=1)
             lowercase_fields = []
             if xls_data.empty:
                 continue
