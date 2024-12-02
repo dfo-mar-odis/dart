@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from django.http import HttpResponse
 from django.utils.translation import gettext as _
 from django.urls import reverse_lazy
+from django.conf import settings
+
 from render_block import render_block_to_string
 
 import core.form_mission_settings
@@ -10,7 +12,7 @@ from biochem import models
 
 from dart.views import GenericCreateView, GenericUpdateView, GenericDetailView
 
-from core import forms, models
+from core import models
 from core.parsers import elog
 
 import logging
@@ -43,7 +45,10 @@ class MissionCreateView(MissionMixin, GenericCreateView):
     template_name = "core/mission_settings.html"
 
     def get_success_url(self):
-        database_name = f"DART_{self.object.name}"
+        database_name = f"{self.object.name}"
+        if self.object.name not in settings.DATABASES:
+            database_name = f"DART_{self.object.name}"
+
         success = reverse_lazy("core:mission_events_details", args=(database_name, self.object.pk, ))
         return success
 

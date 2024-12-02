@@ -200,7 +200,12 @@ class MissionSettingsForm(forms.ModelForm):
     def clean_name(self):
 
         mission_name = self.cleaned_data['name']
-        db_name = f'DART_{mission_name}.sqlite3'
+        db_name = f'{mission_name}.sqlite3'
+        if mission_name not in settings.DATABASES:
+            # if the mission_name is already in the settings.Databases, it's a connected
+            # database that's being updated, otherwise we want to use the new naming convention.
+            db_name = f'DART_{mission_name}.sqlite3'
+
         if settings_models.LocalSetting.objects.filter(connected=True).exists():
             db_settings = settings_models.LocalSetting.objects.filter(connected=True).first()
         else:
@@ -233,7 +238,12 @@ class MissionSettingsForm(forms.ModelForm):
 
     def save(self, commit=True):
         mission_name = self.cleaned_data['name']
-        database_name = f'DART_{mission_name}'
+        database_name = mission_name
+        if mission_name not in settings.DATABASES:
+            # if the mission_name is already in the settings.Databases, it's a connected
+            # database that's being updated, otherwise we want to use the new naming convention.
+            database_name = f'DART_{mission_name}'
+
         repo = Repo(settings.BASE_DIR)
 
         if mission_name not in settings.DATABASES:
