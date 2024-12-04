@@ -279,6 +279,8 @@ def parse_actions(mission: core_models.Mission, file_name: str, samples: list[di
                     action_type_string = 'recovered'
                 elif action_type_string.lower() == 'deploy':
                     action_type_string = 'deployed'
+                elif action_type_string.lower() == 'abort':
+                    action_type_string = 'aborted'
 
                 action_lat = float(action_lat_string) if action_lat_string else None
                 action_lon = float(action_lon_string) if action_lon_string else None
