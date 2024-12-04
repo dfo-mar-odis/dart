@@ -26,15 +26,51 @@ def convert_timedelta_to_string(delta: timedelta) -> str:
 def get_station_list(database):
     stations = []
     station_list = []
-    for event in core_models.Event.objects.using(database).order_by('event_id'):
+    events = core_models.Event.objects.using(database).order_by('event_id')
+    for event in events:
         if event.station.name not in stations:
+            stn_events = events.filter(station=event.station)
+
+            # was a CTD done at this station
+            ctd_done = stn_events.filter(instrument__type=core_models.InstrumentType.ctd).exists()
+            # Were samples taken at this station.
+            rosette_done = core_models.Bottle.objects.using(database).filter(event__station=event.station).exists()
+
+            # was a VPR done at this station
+            vpr_done = stn_events.filter(instrument__type=core_models.InstrumentType.vpr).exists()
+
+            instrument_events = stn_events.exclude(actions__type=core_models.ActionType.aborted)
+
+            instruments = []
+            live_tow = False
+            if instrument_events.exists():
+                # used to figure out what nets/net types were done for this station
+                instruments = [i.lower() for i in instrument_events.values_list('instrument__name', flat=True)]
+
+                # I don't like this, but check if this is a live tow. If a net event is missing a sample ID
+                # it *MIGHT* have been a live tow... or someone just forgot to fill in the sample ID
+                live_tow = instrument_events.filter(instrument__type=core_models.InstrumentType.net,
+                                                    sample_id__isnull=True).exists()
+
             stations.append(event.station.name)
             action = event.actions.first()
             station_list.append({
                 'station': event.station.name,
                 'latitude': action.latitude,
                 'longitude': action.longitude,
-                'depth': action.sounding if action.sounding else 'NA'
+                'depth': action.sounding if action.sounding else 'NA',
+                'ctd': 'X' if ctd_done else '',
+                'rosette': 'X' if rosette_done else '',
+                'biol station': '',
+                'xbt': 'X' if 'xbt' in instruments else '',
+                'vpr': 'X' if vpr_done else '',
+                'plankton multinet':  'X' if any('multinet' in n for n in instruments) else '',
+                'plankton 200': 'X' if any('202' in n for n in instruments) else '',
+                'plankton 76':  'X' if any('76' in n for n in instruments) else '',
+                'plankton live':  'X' if live_tow else '',
+                'mooring deployed': 'X' if any('mooring' and 'deploy' in s for s in instruments) else '',
+                'mooring recovered': 'X' if any('mooring' and 'recover' in s for s in instruments) else '',
+                'argo': 'X' if any('argo' in s for s in instruments) else ''
             })
 
     return station_list
@@ -44,11 +80,21 @@ def station_report(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
     station_list = get_station_list(database)
 
-    header = ['station', 'latitude', 'longitude', 'depth']
+    header = ['station', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
+              'plankton multinet', 'plankton 200', 'plankton 76', 'plankton live', 'mooring deployed',
+              'mooring recovered', 'argo']
     data = ",".join(header) + "\n"
 
     for station in station_list:
-        data += f'{station["station"]},{station["latitude"]},{station["longitude"]},{station["depth"]}\n'
+        data += (f'{station["station"]},{station["latitude"]},'
+                 f'{station["longitude"]},{station["depth"]},'
+                 f'{station["ctd"]},{station["rosette"]},'
+                 f'{station["biol station"]},{station["xbt"]},{station["vpr"]},'
+                 f'{station["plankton multinet"]},{station["plankton 200"]},'
+                 f'{station["plankton 76"]},{station["plankton live"]},'
+                 f'{station["mooring deployed"]},{station["mooring recovered"]},'
+                 f'{station["argo"]}'
+                 f'\n')
 
     file_to_send = ContentFile(data)
 
@@ -240,8 +286,8 @@ def oxygen_report(request, database, mission_id):
     samples = ['oxy']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S', 'Oxy_W_Rep1', 'Oxy_W_Rep2']
 
-    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Oxygen_Rpt', headers=header,
-                             sensors=sensors, samples=samples)
+    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Oxygen_Rpt',
+                             headers=header, sensors=sensors, samples=samples)
 
 
 # The problem with this report is it depends on there being a SampleType with a short name 'sal'
