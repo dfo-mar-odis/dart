@@ -246,7 +246,7 @@ class TestSampleFileConfiguration(DartTestCase):
         )
         # required post variables that the form would have previously setup without user input
         file_type = 'xlsx'
-        header = 9
+        header = 10
         tab = 0
         sample_field = 'sample'
         value_field = 'o2_concentration(ml/l)'
