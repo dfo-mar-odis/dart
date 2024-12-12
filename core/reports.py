@@ -23,6 +23,13 @@ def convert_timedelta_to_string(delta: timedelta) -> str:
     return elapsed
 
 
+def get_event_ids(event_query):
+    if event_query is None or not event_query.exists():
+        return ''
+
+    return ' '.join([str(c) for c in event_query.values_list('event_id', flat=True)])
+
+
 def get_station_list(database):
     stations = []
     station_list = []
@@ -30,47 +37,58 @@ def get_station_list(database):
     for event in events:
         if event.station.name not in stations:
             stn_events = events.filter(station=event.station)
+            station_date = stn_events.first().start_date
 
             # was a CTD done at this station
-            ctd_done = stn_events.filter(instrument__type=core_models.InstrumentType.ctd).exists()
+            ctd_done = stn_events.filter(instrument__type=core_models.InstrumentType.ctd)
             # Were samples taken at this station.
-            rosette_done = core_models.Bottle.objects.using(database).filter(event__station=event.station).exists()
+            rosette_done = core_models.Bottle.objects.using(database).filter(event__station=event.station)
 
             # was a VPR done at this station
-            vpr_done = stn_events.filter(instrument__type=core_models.InstrumentType.vpr).exists()
+            vpr_done = stn_events.filter(instrument__type=core_models.InstrumentType.vpr)
+            xbt_done = stn_events.filter(instrument__name__iexact='xbt')
+            multinet_done = stn_events.filter(instrument__name__iexact='multinet')
+
+            net_events = stn_events.filter(instrument__type=core_models.InstrumentType.net)
+            net_202_done = net_events.filter(instrument__name__icontains='202')
+            net_76_done = net_events.filter(instrument__name__icontains='76')
 
             instrument_events = stn_events.exclude(actions__type=core_models.ActionType.aborted)
 
-            instruments = []
             live_tow = False
+            mooring_deployed = None
+            mooring_recovered = None
+            argo_done = None
             if instrument_events.exists():
-                # used to figure out what nets/net types were done for this station
-                instruments = [i.lower() for i in instrument_events.values_list('instrument__name', flat=True)]
-
                 # I don't like this, but check if this is a live tow. If a net event is missing a sample ID
                 # it *MIGHT* have been a live tow... or someone just forgot to fill in the sample ID
                 live_tow = instrument_events.filter(instrument__type=core_models.InstrumentType.net,
-                                                    sample_id__isnull=True).exists()
+                                                    sample_id__isnull=True)
+                moorings = instrument_events.filter(instrument__name__icontains='mooring')
+                mooring_deployed = moorings.filter(instrument__name__icontains='deploy')
+                mooring_recovered = moorings.filter(instrument__name__icontains='recover')
+                argo_done = instrument_events.filter(instrument__name__icontains='argo')
 
             stations.append(event.station.name)
             action = event.actions.first()
             station_list.append({
                 'station': event.station.name,
+                'date': station_date,
                 'latitude': action.latitude,
                 'longitude': action.longitude,
                 'depth': action.sounding if action.sounding else 'NA',
-                'ctd': 'X' if ctd_done else '',
-                'rosette': 'X' if rosette_done else '',
+                'ctd': get_event_ids(ctd_done),
+                'rosette': get_event_ids(ctd_done) if rosette_done.exists() else '',
                 'biol station': '',
-                'xbt': 'X' if 'xbt' in instruments else '',
-                'vpr': 'X' if vpr_done else '',
-                'plankton multinet':  'X' if any('multinet' in n for n in instruments) else '',
-                'plankton 200': 'X' if any('202' in n for n in instruments) else '',
-                'plankton 76':  'X' if any('76' in n for n in instruments) else '',
-                'plankton live':  'X' if live_tow else '',
-                'mooring deployed': 'X' if any('mooring' and 'deploy' in s for s in instruments) else '',
-                'mooring recovered': 'X' if any('mooring' and 'recover' in s for s in instruments) else '',
-                'argo': 'X' if any('argo' in s for s in instruments) else ''
+                'xbt': get_event_ids(xbt_done),
+                'vpr': get_event_ids(vpr_done),
+                'plankton multinet':  get_event_ids(multinet_done),
+                'plankton 200': get_event_ids(net_202_done),
+                'plankton 76': get_event_ids(net_76_done),
+                'plankton live':  get_event_ids(live_tow),
+                'mooring deployed': get_event_ids(mooring_deployed),
+                'mooring recovered': get_event_ids(mooring_recovered),
+                'argo': get_event_ids(argo_done),
             })
 
     return station_list
@@ -80,13 +98,13 @@ def station_report(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
     station_list = get_station_list(database)
 
-    header = ['station', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
+    header = ['station', 'date', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
               'plankton multinet', 'plankton 200', 'plankton 76', 'plankton live', 'mooring deployed',
               'mooring recovered', 'argo']
     data = ",".join(header) + "\n"
 
     for station in station_list:
-        data += (f'{station["station"]},{station["latitude"]},'
+        data += (f'{station["station"]},{station["date"]},{station["latitude"]},'
                  f'{station["longitude"]},{station["depth"]},'
                  f'{station["ctd"]},{station["rosette"]},'
                  f'{station["biol station"]},{station["xbt"]},{station["vpr"]},'
