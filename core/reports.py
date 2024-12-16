@@ -50,7 +50,7 @@ def get_station_list(database):
             multinet_done = stn_events.filter(instrument__name__iexact='multinet')
 
             net_events = stn_events.filter(instrument__type=core_models.InstrumentType.net)
-            net_202_done = net_events.filter(instrument__name__icontains='202')
+            net_202_done = net_events.filter(instrument__name__icontains='202', sample_id__isnull=False)
             net_76_done = net_events.filter(instrument__name__icontains='76')
 
             instrument_events = stn_events.exclude(actions__type=core_models.ActionType.aborted)
