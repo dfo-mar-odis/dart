@@ -27,7 +27,7 @@ def get_event_ids(event_query):
     if event_query is None or not event_query.exists():
         return ''
 
-    return '; '.join([f'{c:03d}' for c in event_query.values_list('event_id', flat=True)])
+    return ' / '.join([f'{c:03d}' for c in event_query.values_list('event_id', flat=True)])
 
 
 def get_station_list(database):
