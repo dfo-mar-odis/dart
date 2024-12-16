@@ -27,7 +27,7 @@ def get_event_ids(event_query):
     if event_query is None or not event_query.exists():
         return ''
 
-    return ' '.join([f'{c:03d}' for c in event_query.values_list('event_id', flat=True)])
+    return ':'.join([f'{c:03d}' for c in event_query.values_list('event_id', flat=True)])
 
 
 def get_station_list(database):
@@ -37,7 +37,7 @@ def get_station_list(database):
     for event in events:
         if event.station.name not in stations:
             stn_events = events.filter(station=event.station)
-            station_date = stn_events.first().start_date
+            station_date = datetime.strftime(stn_events.first().start_date, '%Y-%m-%d %H:%M:%S (%z)')
 
             # was a CTD done at this station
             ctd_done = stn_events.filter(instrument__type=core_models.InstrumentType.ctd)
