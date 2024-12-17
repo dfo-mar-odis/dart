@@ -98,7 +98,7 @@ def station_report(request, database, mission_id):
     mission = core_models.Mission.objects.using(database).get(pk=mission_id)
     station_list = get_station_list(database)
 
-    header = ['station', 'date', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
+    header = ['station', 'date (UTC)', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
               'plankton multinet', 'plankton 200', 'plankton 76', 'plankton live', 'mooring deployed',
               'mooring recovered', 'argo']
     data = ",".join(header) + "\n"
