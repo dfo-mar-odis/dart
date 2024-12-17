@@ -37,7 +37,7 @@ def get_station_list(database):
     for event in events:
         if event.station.name not in stations:
             stn_events = events.filter(station=event.station)
-            station_date = datetime.strftime(stn_events.first().start_date, '%Y-%m-%d %H:%M:%S (%z)')
+            station_date = datetime.strftime(stn_events.first().start_date, '%Y-%m-%d %H:%M:%S')
 
             # was a CTD done at this station
             ctd_done = stn_events.filter(instrument__type=core_models.InstrumentType.ctd)
