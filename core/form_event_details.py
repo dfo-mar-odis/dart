@@ -83,6 +83,22 @@ class EventDetails(core_forms.CardForm):
 
         return button
 
+    def get_copy_button(self) -> StrictButton:
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
+        button_icon = load_svg('copy')
+        button_id = f'btn_id_add_{self.card_name}'
+        button_attrs = {
+            'id': button_id,
+            'name': 'copy_event',
+            'title': _("Copy Station and Instrument"),
+            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.database, self.mission.pk, self.event.pk,)),
+            'hx-swap': 'outerHTML',
+            'hx-target': f"#{self.get_card_id()}"
+        }
+        button = StrictButton(button_icon, css_class='btn btn-sm btn-primary', **button_attrs)
+
+        return button
+
     def get_filter_log_button(self):
         # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('arrow-down-square')
@@ -148,6 +164,8 @@ class EventDetails(core_forms.CardForm):
 
         add_btn = self.get_add_button()
         if add_btn and self.mission:
+            if self.event:
+                start_row_spacer.fields.append(self.get_copy_button())
             start_row_spacer.fields.append(add_btn)
 
         end_row_spacer.fields.append(button_column)
@@ -192,6 +210,26 @@ class EventDetails(core_forms.CardForm):
         self.database = database if database else self.mission._state.db
 
         super().__init__(card_name='event_details', card_title=_("Event Details"), *args, **kwargs)
+
+
+# This form can be used the same as the event details form, but will remove buttons in the Card Header
+class NoDeleteEditEventDetails(EventDetails):
+    def get_add_button(self):
+        # We're going to use a '<label for="">...</label>' element to activate this button to put the
+        # button in a much more logical place for the user, this button still needs to exist and be referenced
+        # by the label tag, but it can be hidden.
+        #
+        # Once the add_event post action happens this label will need to be removed
+
+        button_icon = load_svg('plus-square')
+        label_string = '<label id="label_id_add_event" class="btn btn-sm btn-primary" for="btn_id_add_event">'
+        return HTML(label_string + button_icon + '</label>')
+
+    def get_edit_button(self):
+        return None
+
+    def get_delete_button(self):
+        return None
 
 
 class EventForm(forms.ModelForm):
@@ -250,6 +288,12 @@ class EventForm(forms.ModelForm):
             apply_attrs['hx-post'] = submit_url
             apply_attrs['hx-swap'] = "outerHTML"
             apply_attrs['hx-target'] = "#div_id_card_event_details"
+
+            if 'station' in self.initial:
+                station = models.Station.objects.using(self.database).get(pk=self.initial['station'])
+                gl_station = settings_models.GlobalStation.objects.filter(name__iexact=station.name)
+                if gl_station.exists():
+                    self.fields['global_station'].initial = gl_station.first().pk
 
         # The event ID and refresh button are in the core/template/partials/event_edit_form.html template
         # if self.instance.pk:
@@ -686,30 +730,12 @@ def deselect_event(soup, database):
         soup.append(table)
 
 
-def add_event(request, database, mission_id):
+def add_event(request, database, mission_id, **kwargs):
     mission = models.Mission.objects.using(database).get(pk=mission_id)
 
     soup = BeautifulSoup("", "html.parser")
 
     # we don't need the edit and delete buttons on the EventDetail card if we're editing
-    class NoDeleteEditEventDetails(EventDetails):
-        def get_add_button(self):
-            # We're going to use a '<label for="">...</label>' element to activate this button to put the
-            # button in a much more logical place for the user, this button still needs to exist and be referenced
-            # by the label tag, but it can be hidden.
-            #
-            # Once the add_event post action happens this label will need to be removed
-
-            button_icon = load_svg('plus-square')
-            label_string = '<label id="label_id_add_event" class="btn btn-sm btn-primary" for="btn_id_add_event">'
-            return HTML( label_string + button_icon + '</label>')
-
-        def get_edit_button(self):
-            return None
-
-        def get_delete_button(self):
-            return None
-
     card_form = NoDeleteEditEventDetails(mission=mission)
 
     context = {"database": database}
@@ -750,8 +776,13 @@ def add_event(request, database, mission_id):
         # called with no event id to create a blank instance of the event_edit_form
         last_event = mission.events.last()
         event_id = last_event.event_id + 1 if last_event else 1
+        initial = {'event_id': event_id, 'mission': mission.pk}
+        if 'event' in kwargs:
+            copy_event = mission.events.get(pk=kwargs['event'])
+            initial['station'] = copy_event.station.pk
+            initial['instrument'] = copy_event.instrument.pk
 
-        event_form = EventForm(database=database, initial={'event_id': event_id, 'mission': mission.pk})
+        event_form = EventForm(database=database, initial=initial)
 
     card_html = render_crispy_form(card_form)
     card_soup = BeautifulSoup(card_html, 'html.parser')
@@ -1220,6 +1251,7 @@ event_detail_urls = [
     path(f'{url_prefix}/event/import/<int:mission_id>/', import_elog_events, name="form_event_import_events_elog"),
     path(f'{url_prefix}/event/list/<int:mission_id>/', list_events, name="form_event_get_events"),
     path(f'{url_prefix}/new/<int:mission_id>/', add_event, name="form_event_add_event"),
+    path(f'{url_prefix}/new/<int:mission_id>/<int:event>/', add_event, name="form_event_add_event"),
     path(f'{url_prefix}/edit/<int:event_id>/', edit_event, name="form_event_edit_event"),
     path(f'{url_prefix}/delete/<int:event_id>/', delete_details, name="form_event_delete_event"),
 

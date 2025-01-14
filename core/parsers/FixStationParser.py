@@ -4,6 +4,7 @@ import io
 import ctd
 import re
 
+import numpy as np
 import pandas as pd
 
 from django.db.models import QuerySet
@@ -107,9 +108,19 @@ class FixStationParser:
         create_bottles = []
         update_bottles = []
         update_fields = set()
+        bottles_added = 0
         for row, bottle in data_frame_avg.iterrows():
             update_bottle_fields = set('')
-            bottle_id = bottle[dataframe_dict['bottle_id']]
+            if 'bottle_id' in dataframe_dict:
+                bottle_id = bottle[dataframe_dict['bottle_id']]
+            elif self.event.sample_id:
+                bottle_id = self.event.sample_id + bottles_added
+            else:
+                raise ValueError(_("Require either S/N column in BTL file or Start and End Bottle IDs specified for the Event"))
+
+            if core_models.Bottle.objects.using(self.database).filter(bottle_id=bottle_id).exists():
+                raise KeyError(_("Bottle with provided ID already exists") + f" {bottle_id}")
+
             closed = pytz.utc.localize(bottle['date'])
             pressure = bottle[dataframe_dict['pressure']]
 
@@ -123,11 +134,13 @@ class FixStationParser:
                 if len(update_bottle_fields) > 0:
                     update_bottles.append(bottle)
                     update_fields.update(update_bottle_fields)
+                    bottles_added += 1
             else:
                 bottle = core_models.Bottle(event=self.event, bottle_id=bottle_id)
                 bottle.closed = closed
                 bottle.pressure = pressure
                 create_bottles.append(bottle)
+                bottles_added += 1
 
         if len(create_bottles) > 0:
             core_models.Bottle.objects.using(self.database).bulk_create(create_bottles)
@@ -275,9 +288,15 @@ class FixStationParser:
             sample_type.name.lower(): sample_type for sample_type in mission.mission_sample_types.all()
         }
 
+        bottles_added = 0
         for row, data in data_frame_avg.iterrows():
             # if the Bottle S/N column is present then use that values as the bottle ID
-            bottle_id = int(data['bottle_'])
+            if 'bottle_' in data:
+                bottle_id = int(data['bottle_'])
+            elif self.event.sample_id:
+                bottle_id = self.event.sample_id + bottles_added
+            else:
+                raise ValueError(_("Require either S/N column in BTL file or Start and End Bottle IDs specified for the Event"))
 
             if not bottles.filter(bottle_id=bottle_id).exists():
                 message = _("Bottle does not exist for event")
@@ -322,7 +341,7 @@ class FixStationParser:
             logger.info("Updating sample values" + f" : {file_name}")
             core_models.DiscreteSampleValue.objects.using(self.database).bulk_update(update_discrete_samples, ['value'])
 
-    def _convert_to_decimal_deg(self, direction, hours, minutes):
+    def _convert_to_decimal_deg(self, direction, hours, minutes=0):
         lat_lon = float(hours) + (float(minutes) / 60.0)
         if direction.upper() == 'S' or direction.upper() == 'W':
             lat_lon *= -1
@@ -377,8 +396,8 @@ class FixStationParser:
         self._create_update_action(core_models.ActionType.bottom, bottom_bottle, sounding, lat, lon)
         self._create_update_action(core_models.ActionType.recovered, surface_bottle, sounding, lat, lon)
 
-        self.event.sample_id = surface_bottle.bottle_id
-        self.event.end_sample_id = bottom_bottle.bottle_id
+        self.event.sample_id = min(bottom_bottle.bottle_id, surface_bottle.bottle_id)
+        self.event.end_sample_id = max(bottom_bottle.bottle_id, surface_bottle.bottle_id)
 
         self.event.save()
 
