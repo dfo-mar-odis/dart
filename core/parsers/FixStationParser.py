@@ -21,7 +21,6 @@ logger_notifications = logging.getLogger('dart.user.fixstationparser')
 
 
 class FixStationParser:
-
     field_mappings = None
 
     def _get_units(self, sensor_description: str) -> [str, str]:
@@ -116,10 +115,13 @@ class FixStationParser:
             elif self.event.sample_id:
                 bottle_id = self.event.sample_id + bottles_added
             else:
-                raise ValueError(_("Require either S/N column in BTL file or Start and End Bottle IDs specified for the Event"))
+                raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
 
-            if core_models.Bottle.objects.using(self.database).filter(bottle_id=bottle_id).exists():
-                raise KeyError(_("Bottle with provided ID already exists") + f" {bottle_id}")
+            if (btl := core_models.Bottle.objects.using(self.database).exclude(event=self.event).filter(
+                    bottle_id=bottle_id)).exists():
+                # if the bottle exists for an event other than the current event
+                if not (btl.first().event == self.event):
+                    raise KeyError(_("Bottle with provided ID already exists") + f" {bottle_id}")
 
             closed = pytz.utc.localize(bottle['date'])
             pressure = bottle[dataframe_dict['pressure']]
@@ -296,7 +298,8 @@ class FixStationParser:
             elif self.event.sample_id:
                 bottle_id = self.event.sample_id + bottles_added
             else:
-                raise ValueError(_("Require either S/N column in BTL file or Start and End Bottle IDs specified for the Event"))
+                raise ValueError(
+                    _("Require either S/N column in BTL file or Start and End Bottle IDs specified for the Event"))
 
             if not bottles.filter(bottle_id=bottle_id).exists():
                 message = _("Bottle does not exist for event")
