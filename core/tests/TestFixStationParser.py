@@ -55,8 +55,10 @@ class TestFixStationParser(DartTestCase):
 
         self.assertEquals(10, self.event.bottles.count())
 
+    @tag('parsers_fixstation_test_bottle_update')
     def test_bottle_update(self):
         # If a bottle already exists then it's closed time and pressure should be updated based on the bottle file
+        # **For the current event**
         core_factory.BottleFactory(event=self.event, bottle_id=496479, closed=datetime.datetime.now(pytz.UTC),
                                    pressure=140)
 

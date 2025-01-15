@@ -18,7 +18,9 @@
                 <h3>{% trans 'Event : ' %}{{ event.event_id }}</h3>
             </div>
             <div class="col">
-                <button class="btn btn-sm btn-primary" name="add_event" title="{% trans "Update" %}" hx-swap="outerHTML" hx-target="#div_id_card_event_details" hx-post="{% url 'core:form_event_edit_event' database event.pk %}">{% custom_icon 'arrow-clockwise' %}</button>
+                <button class="btn btn-sm btn-primary" name="add_event" title="{% trans "Update event station/instrument details" %}"
+                        hx-swap="outerHTML" hx-target="#div_id_card_event_details"
+                        hx-post="{% url 'core:form_event_edit_event' database event.pk %}">{% custom_icon 'arrow-clockwise' %}</button>
             </div>
         </div>
     {% endif %}
