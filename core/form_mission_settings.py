@@ -62,6 +62,17 @@ class MissionSettingsForm(forms.ModelForm):
         btn_del_icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
         return StrictButton(btn_del_icon, css_class="btn btn-danger", **del_btn_attrs)
 
+    def get_region_button(self, region_name):
+        global_region = settings_models.GlobalGeographicRegion.objects.get_or_create(name=region_name)[0]
+        btn_attrs = {
+            'hx-post': reverse_lazy("core:form_mission_settings_remove_region", args=(global_region.pk,)),
+            'hx-target': "#div_id_geographic_region_field",
+            'title': _("Remove Region")
+        }
+        button = Div(HTML("-"), name="remove_geographic_region", value=f"{global_region.pk}",
+                     css_class="badge bg-danger", **btn_attrs)
+        return button
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
@@ -97,15 +108,13 @@ class MissionSettingsForm(forms.ModelForm):
             self.fields['end_date'].widget.attrs['value'] = end_date.strftime("%Y-%m-%d")
 
         multi_select_help_text = _("One to four geographic regions. Combined text length may not exceed 100 characters")
-        multi_select_field = Row(id="div_id_geographic_region_field")
-        multi_select_field.fields.append(multi_select_col := Column())
+        multi_select_field = Row(id="div_id_geographic_region_field", css_class='d-flex align-self-stretch align-items-center')
+        multi_select_field.fields.append(multi_select_col := Div(css_class=''))
 
         button_row = Row(css_class="bg-light border")
-
+        regions = None
         if 'geographic_region' in self.errors:
-            multi_select_col.fields.append(
-                Div(HTML(self.errors['geographic_region'][0]), css_class="bg-danger-subtle")
-            )
+            multi_select_col.fields.append(HTML(self.errors['geographic_region'][0]))
         elif self.initial.get("geographic_region"):
             multi_select_col.fields.append(button_row)
             region_str = self.initial.get("geographic_region", '')
@@ -114,16 +123,12 @@ class MissionSettingsForm(forms.ModelForm):
             regions.sort()
             # make sure regions exist in the global table if they're loaded from a mission
             for region in regions:
-                global_region = settings_models.GlobalGeographicRegion.objects.get_or_create(name=region)[0]
-                btn_attrs = {
-                    'hx-post': reverse_lazy("core:form_mission_settings_remove_region", args=(global_region.pk,)),
-                    'hx-target': "#div_id_geographic_region_field",
-                    'title': _("Remove Region")
-                }
-                button = Div(HTML("-"), name="remove_geographic_region", value=f"{global_region.pk}",
-                             css_class="badge bg-danger", **btn_attrs)
-                button_row.fields.append(Column(Div(HTML(f'<span class="me-2">{region}</span>'), button,
-                                                    css_class="btn btn-outline-secondary"), css_class="col-auto"))
+                button_row.fields.append(Column(Div(
+                    HTML(f'<span class="me-2">{region}</span>'),
+                    self.get_region_button(region),
+                    css_class="btn btn-outline-secondary"),
+                    css_class="col-auto")
+                )
 
         # if there's a validation error for a missing mission descriptor, highlight this field
         descriptor_field = Field('mission_descriptor')
@@ -171,7 +176,7 @@ class MissionSettingsForm(forms.ModelForm):
                         Column(self.get_btn_add, css_class="col-auto align-self-center"),
                         Column(
                             multi_select_field,
-                            css_class="bg-danger-subtle border me-2"
+                            css_class="border me-2 d-flex" + (" bg-danger-subtle" if regions is None and 'geographic_region' in self.errors else " bg-light")
                         ),
                         css_class="mb-2"
                     ),
@@ -296,7 +301,8 @@ def update_geographic_regions(request):
             geo_region_input.attrs['name'] = 'new_global_region'
             geo_region_input.attrs['id'] = 'id_global_geographic_region_input'
             geo_region_input.attrs['type'] = 'text'
-            geo_region_input.attrs['class'] = 'textinput form-control form-control-sm col'
+            geo_region_input.attrs['class'] = 'textinput form-control col'
+            geo_region_input.attrs['placeholder'] = _("Enter a new region name or comma separated list of regions")
 
             col1.append(geo_region_input)
 

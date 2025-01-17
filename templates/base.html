@@ -109,9 +109,15 @@
 </body>
 {% block post_content %}
     <div class="container-fluid">
-        <div class="row">
-            <div class="col"></div>
-            <div class="col-auto border">Git Version: {{ git_version }}</div>
+        <div class="d-flex align-items-end flex-column mb-3">
+            <div class="align-self-stretch">
+            </div>
+            <div>
+            {% if dart_version %}
+                <div class="border">DART: {{ dart_version }}</div>
+            {% endif %}
+                <div class="border">Git: {{ git_version }}</div>
+            </div>
         </div>
     </div>
 {% endblock post_content %}
