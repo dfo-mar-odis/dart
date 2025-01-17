@@ -50,7 +50,7 @@ class GenericViewMixin(ContextMixin):
 
         repo = Repo(settings.BASE_DIR)
         context['git_version'] = repo.git.rev_parse(repo.head.commit.hexsha, short=8)
-        context['dart_version'] = os.environ.get("dart_version", -1)
+        context['dart_version'] = os.environ.get("update_version", -1)
         return context
 
 
