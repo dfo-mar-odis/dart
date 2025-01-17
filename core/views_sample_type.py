@@ -1,4 +1,3 @@
-from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
 from django.http import Http404, HttpResponse
 from django.template.loader import render_to_string
@@ -8,7 +7,6 @@ from django.views.generic import TemplateView
 from render_block import render_block_to_string
 
 from dart.views import GenericViewMixin
-from core import models as core_models
 from core import forms
 
 from settingsdb import models as settings_models
@@ -80,13 +78,11 @@ def edit_sample_type(request, **kwargs):
 
 
 def delete_sample_type(request, sample_type_id):
-
     settings_models.GlobalSampleType.objects.get(pk=sample_type_id).delete()
     return HttpResponse()
 
 
 def save_sample_type(request, **kwargs):
-
     if request.method == "POST":
         if 'sample_type_id' in kwargs:
             sample_type = settings_models.GlobalSampleType.objects.get(pk=kwargs['sample_type_id'])
