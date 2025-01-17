@@ -22,6 +22,7 @@ from settingsdb import models as settings_models, utils as settings_utils
 
 
 class MissionSettingsForm(forms.ModelForm):
+
     name = NoWhiteSpaceCharField(max_length=50, label="Mission Name", required=True)
     mission_descriptor = NoWhiteSpaceCharField(max_length=50, required=False)
     global_geographic_region = forms.ChoiceField(label=_("Geographic Region"))
@@ -38,13 +39,36 @@ class MissionSettingsForm(forms.ModelForm):
         fields = ['name', 'geographic_region', 'mission_descriptor', 'data_center', 'lead_scientist',
                   'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments']
 
+    @property
+    def get_btn_add(self):
+        btn_attrs = {
+            'hx-post': reverse_lazy("core:form_mission_settings_add_region"),
+            'hx-target': "#div_id_geographic_region_card_body",
+            'hx-swap': 'outerHTML',
+            'title': _("Add selected region(s) to mission")
+        }
+        btn_add_icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
+        return StrictButton(btn_add_icon, css_class="btn btn-success", **btn_attrs)
+
+    @property
+    def get_btn_delete(self):
+        del_btn_attrs = {
+            'hx-post': reverse_lazy("core:form_mission_settings_delete_region"),
+            'hx-confirm': _("Are you sure?"),
+            'hx-target': "#div_id_geographic_region_card_body",
+            'hx-swap': 'outerHTML',
+            'title': _("Delete selected region(s)")
+        }
+        btn_del_icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
+        return StrictButton(btn_del_icon, css_class="btn btn-danger", **del_btn_attrs)
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.helper = FormHelper()
         self.helper.form_show_labels = True
-        self.fields['global_geographic_region'].widget.attrs["hx-swap"] = 'innerHTML'
+        self.fields['global_geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
         self.fields['global_geographic_region'].widget.attrs["hx-trigger"] = 'change'
-        self.fields['global_geographic_region'].widget.attrs["hx-target"] = "#id_global_region_field"
+        self.fields['global_geographic_region'].widget.attrs["hx-target"] = "#id_global_geographic_region"
         self.fields['global_geographic_region'].widget.attrs["hx-get"] = reverse_lazy('core:form_mission_settings_update_regions')
         self.fields['global_geographic_region'].choices = [(None, '------')]
         region_choices = settings_models.GlobalGeographicRegion.objects.all().order_by('name')
@@ -72,30 +96,22 @@ class MissionSettingsForm(forms.ModelForm):
         if (end_date := self.initial.get("end_date", -1)) != -1:
             self.fields['end_date'].widget.attrs['value'] = end_date.strftime("%Y-%m-%d")
 
-        icon = load_svg('plus-square')
-        btn_attrs = {
-            'hx-post': reverse_lazy("core:form_mission_settings_add_region"),
-            'hx-target': "#div_id_geographic_region_field",
-            'title': _("Add region to mission")
-        }
-        add_region_btn = StrictButton(BeautifulSoup(icon, 'html.parser').svg, css_class="btn btn-primary",
-                                      **btn_attrs)
-
         multi_select_help_text = _("One to four geographic regions. Combined text length may not exceed 100 characters")
-        multi_select_field = Div(id="div_id_geographic_region_field", css_class="container")
+        multi_select_field = Row(id="div_id_geographic_region_field")
         multi_select_field.fields.append(multi_select_col := Column())
 
-        button_row = Row(css_class="mb-2")
-        multi_select_col.fields.append(button_row)
+        button_row = Row(css_class="bg-light border")
 
         if 'geographic_region' in self.errors:
-            multi_select_col.fields.append(div_row := Row())
-            div_row.fields.append(div_col := Column(css_class='alert alert-danger'))
-            div_col.fields.append(HTML(self.errors['geographic_region']))
+            multi_select_col.fields.append(
+                Div(HTML(self.errors['geographic_region'][0]), css_class="bg-danger-subtle")
+            )
         elif self.initial.get("geographic_region"):
+            multi_select_col.fields.append(button_row)
             region_str = self.initial.get("geographic_region", '')
             multi_select_col.fields.append(Hidden("geographic_region", region_str))
-            regions = [region.strip() for region in region_str.split(',') if region]
+            regions = list(set([region.strip() for region in region_str.split(',') if region]))
+            regions.sort()
             # make sure regions exist in the global table if they're loaded from a mission
             for region in regions:
                 global_region = settings_models.GlobalGeographicRegion.objects.get_or_create(name=region)[0]
@@ -108,10 +124,6 @@ class MissionSettingsForm(forms.ModelForm):
                              css_class="badge bg-danger", **btn_attrs)
                 button_row.fields.append(Column(Div(HTML(f'<span class="me-2">{region}</span>'), button,
                                                     css_class="btn btn-outline-secondary"), css_class="col-auto"))
-
-        multi_select_col.fields.append(Row(
-            Column(HTML(f'<span class="text-secondary">{multi_select_help_text}</span>')), css_class="mb-2")
-        )
 
         # if there's a validation error for a missing mission descriptor, highlight this field
         descriptor_field = Field('mission_descriptor')
@@ -130,6 +142,7 @@ class MissionSettingsForm(forms.ModelForm):
                 end_date_field.attrs['class'] = end_date_field.attrs.get('class', "") + " bg-danger-subtle"
 
         submit = Submit('submit', 'Submit')
+
         self.helper.layout = Layout(
             Row(
                 Column(name_column),
@@ -142,22 +155,33 @@ class MissionSettingsForm(forms.ModelForm):
                     end_date_field
                 )
             ),
-            Row(
-                Column(
+            Div(
+                Div(
                     Row(
                         Column(
                             Field('global_geographic_region')
                         ),
                         Column(
-                            add_region_btn,
-                            css_class="col-1 align-self-center mt-3"
-                        )
+                            self.get_btn_delete,
+                            css_class='col-auto align-self-end mb-3'
+                        ),
+                        id="id_global_region_field"
                     ),
-                    id="id_global_region_field", css_class="col"
+                    Row(
+                        Column(self.get_btn_add, css_class="col-auto align-self-center"),
+                        Column(
+                            multi_select_field,
+                            css_class="bg-danger-subtle border me-2"
+                        ),
+                        css_class="mb-2"
+                    ),
+                    Row(Column(HTML(f'<span class="text-secondary">{multi_select_help_text}</span>'))),
+                    css_class="card-body",
+                    id="div_id_geographic_region_card_body"
                 ),
-                css_class="mb-2"
+                css_class="card mb-2",
+                id="div_id_geographic_region_card"
             ),
-            multi_select_field,
             Div(
                 Div(
                     Div(
@@ -263,7 +287,10 @@ def update_geographic_regions(request):
     if request.method == "GET":
         if request.GET.get("global_geographic_region", "-1") == '-1':
             row = soup.new_tag('div')
-            row.attrs['class'] = 'container-fluid row'
+            row.attrs['class'] = 'row mb-2'
+            row.attrs['id'] = 'id_global_geographic_region'
+            row.append(col1 := soup.new_tag('div'))
+            col1.attrs['class'] = 'col'
 
             geo_region_input = soup.new_tag('input')
             geo_region_input.attrs['name'] = 'new_global_region'
@@ -271,16 +298,7 @@ def update_geographic_regions(request):
             geo_region_input.attrs['type'] = 'text'
             geo_region_input.attrs['class'] = 'textinput form-control form-control-sm col'
 
-            submit = soup.new_tag('button')
-            submit.attrs['class'] = 'btn btn-primary btn-sm ms-2 col-auto'
-            submit.attrs['hx-post'] = request.path
-            submit.attrs['hx-target'] = '#id_global_region_field'
-            submit.attrs['hx-select'] = '#id_global_region_field'
-            submit.attrs['hx-swap'] = 'outerHTML'
-            submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
-
-            row.append(geo_region_input)
-            row.append(submit)
+            col1.append(geo_region_input)
 
             soup.append(row)
 
@@ -289,7 +307,7 @@ def update_geographic_regions(request):
         mission_form = MissionSettingsForm(request.GET)
         html = render_crispy_form(mission_form)
         soup = BeautifulSoup(html, "html.parser")
-        geo_region = soup.find(id="id_global_region_field")
+        geo_region = soup.find(id="id_global_geographic_region")
 
         return HttpResponse(geo_region.prettify())
 
@@ -302,10 +320,12 @@ def update_geographic_regions(request):
         html = render_crispy_form(mission_form)
 
         form_soup = BeautifulSoup(html, 'html.parser')
-        geographic_select = form_soup.find(id="id_global_region_field")
+        geographic_select = form_soup.find(id="id_global_geographic_region")
+        geographic_select.attrs.pop('hx-get')
         geographic_select.attrs['hx-post'] = reverse_lazy("core:form_mission_settings_add_region")
         geographic_select.attrs['hx-trigger'] = "load"
-        geographic_select.attrs['hx-target'] = "#div_id_geographic_region_field"
+        geographic_select.attrs['hx-target'] = "#div_id_geographic_region_card_body"
+        geographic_select.attrs['hx-swap'] = "outerHTML"
 
         soup.append(geographic_select)
         return HttpResponse(soup)
@@ -327,16 +347,21 @@ def remove_geographic_region(request, region_id):
 
 def add_geographic_region(request):
 
-    region_id = int(request.POST.get('global_geographic_region', -1) or -1)
+    soup = BeautifulSoup('', 'html.parser')
+    region = None
+    if 'new_global_region' in request.POST and (region_name := request.POST['new_global_region'].strip()):
+        region = settings_models.GlobalGeographicRegion.objects.get_or_create(name=region_name)[0]
+
+    region_id = region.pk if region else int(request.POST.get('global_geographic_region', -1) or -1)
     region_str = request.POST.get('geographic_region', '')
-    regions = [region.strip() for region in region_str.split(',') if region]
+    regions = list(set([region.strip() for region in region_str.split(',') if region]))
 
     too_many_regions_err = ''
     if region_id > 0:
         region_to_add = settings_models.GlobalGeographicRegion.objects.get(pk=region_id)
 
         if region_to_add.name not in regions:
-            if len(regions) >= 4:
+            if len(regions) + len(region_to_add.name.split(',')) > 4:
                 too_many_regions_err = _("Maximum of four regions")
             elif len(region_str + ', ' + region_to_add.name) > 100:
                 str_len = len(region_str + ', ' + region_to_add.name)
@@ -344,23 +369,60 @@ def add_geographic_region(request):
             else:
                 regions.append(region_to_add.name)
 
+    regions.sort()
     new_regions = ", ".join(regions)
 
-    form = MissionSettingsForm(initial={'geographic_region': new_regions})
+    initial = {
+        'geographic_region': new_regions,
+        'global_geographic_region': region_id
+    }
+    form = MissionSettingsForm(initial=initial)
     form_html = render_crispy_form(form)
     form_soup = BeautifulSoup(form_html, 'html.parser')
 
-    region_field = form_soup.find(id="div_id_geographic_region_field")
+    region_field = form_soup.find(id="div_id_geographic_region_card_body")
+    # region_field.attrs['hx-swap-oob'] = "outerHTML"
     if too_many_regions_err:
         region_field.append(div_row := form_soup.new_tag('div', attrs={'class': 'row'}))
         div_row.append(div := form_soup.new_tag('div', attrs={'class': 'col alert alert-warning'}))
         div.string = too_many_regions_err
 
-    return HttpResponse(region_field)
+    soup.append(region_field)
+    return HttpResponse(soup)
+
+
+def delete_geographic_region(request):
+    region_id = request.POST.get('global_geographic_region', -1)
+    selected_regions = request.POST.get('geographic_region', None)
+
+    soup = BeautifulSoup('', 'html.parser')
+
+    initial = {
+    }
+
+    regions = settings_models.GlobalGeographicRegion.objects.get(pk=region_id)
+
+    if selected_regions:
+        selected_regions = selected_regions.split(',')
+        selected_regions.sort()
+        initial['geographic_region'] = ','.join(selected_regions)
+
+    regions.delete()
+
+    form = MissionSettingsForm(initial=initial)
+    form_html = render_crispy_form(form)
+    form_soup = BeautifulSoup(form_html, 'html.parser')
+
+    region_field = form_soup.find(id="div_id_geographic_region_card_body")
+
+    soup.append(region_field)
+    return HttpResponse(soup)
+
 
 
 mission_urls = [
     path(f'add_region/', add_geographic_region, name="form_mission_settings_add_region"),
     path(f'remove_region/<int:region_id>/', remove_geographic_region, name="form_mission_settings_remove_region"),
+    path(f'delete_region/', delete_geographic_region, name="form_mission_settings_delete_region"),
     path('update_regions/', update_geographic_regions, name="form_mission_settings_update_regions"),
 ]
