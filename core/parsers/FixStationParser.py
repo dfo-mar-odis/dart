@@ -111,9 +111,9 @@ class FixStationParser:
         for row, bottle in data_frame_avg.iterrows():
             update_bottle_fields = set('')
             if 'bottle_id' in dataframe_dict:
-                bottle_id = bottle[dataframe_dict['bottle_id']]
+                bottle_id: int = bottle[dataframe_dict['bottle_id']]
             elif self.event.sample_id:
-                bottle_id = self.event.sample_id + bottles_added
+                bottle_id: int = self.event.sample_id + bottles_added
             else:
                 raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
 
@@ -121,7 +121,7 @@ class FixStationParser:
                     bottle_id=bottle_id)).exists():
                 # if the bottle exists for an event other than the current event
                 if not (btl.first().event == self.event):
-                    raise KeyError(_("Bottle with provided ID already exists") + f" {bottle_id}")
+                    raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")
 
             closed = pytz.utc.localize(bottle['date'])
             pressure = bottle[dataframe_dict['pressure']]

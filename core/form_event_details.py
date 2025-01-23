@@ -99,22 +99,6 @@ class EventDetails(core_forms.CardForm):
 
         return button
 
-    def get_filter_log_button(self):
-        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
-        button_icon = load_svg('arrow-down-square')
-        button_id = f'btn_id_filter_log_{self.card_name}'
-        url = reverse_lazy("core:form_event_fix_station_filter_log", args=(self.database, self.event.pk,))
-        button = HTML(
-            f'<span>'
-            f'<label for="{button_id}" class ="btn btn-primary btn-sm" title="{_("Load Filter Log")}">'
-            f'{button_icon}</label>'
-            f'<input id="{button_id}" type="file" name="filter_log" accept=".xlsx" multiple="false" '
-            f'hx-get="{url}" hx-trigger="change" hx-swap="none" class="invisible"/>'
-            f'</span>'
-        )
-
-        return button
-
     def get_bottle_file_button(self):
         # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('plastic-bottle-icon')
@@ -148,13 +132,9 @@ class EventDetails(core_forms.CardForm):
         if self.event and not self.event.files:
             del_btn = self.get_delete_button()
             edit_btn = self.get_edit_button()
-            filter_btn = self.get_filter_log_button()
             bottle_btn = self.get_bottle_file_button()
             if del_btn:
                 button_column.fields.append(del_btn)
-
-            if filter_btn:
-                start_row_spacer.fields.append(filter_btn)
 
             if bottle_btn:
                 start_row_spacer.fields.append(bottle_btn)
@@ -221,8 +201,8 @@ class NoDeleteEditEventDetails(EventDetails):
         #
         # Once the add_event post action happens this label will need to be removed
 
-        button_icon = load_svg('plus-square')
-        label_string = '<label id="label_id_add_event" class="btn btn-sm btn-primary" for="btn_id_add_event">'
+        button_icon = load_svg('check-square')
+        label_string = '<label id="label_id_add_event" class="btn btn-sm btn-success" for="btn_id_add_event">'
         return HTML(label_string + button_icon + '</label>')
 
     def get_edit_button(self):
