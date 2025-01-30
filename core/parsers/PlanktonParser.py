@@ -1,6 +1,7 @@
 import datetime
 import logging
 import numpy as np
+from django.db import IntegrityError
 
 from pandas import DataFrame
 
@@ -273,6 +274,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         user_logger.info(_("Creating plankton sample") + ": %d/%d", line_number, total_rows)
 
         bottle_id = row[config.get(required_field='id').mapped_field]
+        taxa_name = row[config.get(required_field='taxa').mapped_field]
         ncode = row[config.get(required_field='ncode').mapped_field]
         taxa_id = 90000000000000 + int(ncode)
 
@@ -295,10 +297,14 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         max_sieve = get_max_sieve(proc_code=proc_code)
         split_fraction = get_split_fraction(proc_code=proc_code, split=split)
 
-        try:
-            taxa = bio_models.BCNatnlTaxonCode.objects.using(database).get(pk=taxa_id)
-        except bio_models.BCNatnlTaxonCode.DoesNotExist as ex:
-            message = _("Could not find Biochem Taxa with code") + f" : {taxa_id}"
+        if taxa := bio_models.BCNatnlTaxonCode.objects.using(database).filter(pk=taxa_id):
+            taxa = taxa.first()
+        elif ((taxa := bio_models.BCNatnlTaxonCode.objects.using(database).filter(taxonomic_name__iexact=taxa_name))
+              and taxa.count() == 1):
+            taxa = taxa.first()
+        else:
+            message = (_("Line ") + str(line) + _(" : Could not find Biochem Taxa with code") +
+                       f" '{taxa_id}' or name '{taxa_name}'")
             error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             error.save(using=database)
@@ -426,7 +432,16 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
 
     if len(create_plankton) > 0:
         logger.info(_("Creating Zooplankton Samples"))
-        core_models.PlanktonSample.objects.using(database).bulk_create(create_plankton.values())
+        try:
+            core_models.PlanktonSample.objects.using(database).bulk_create(create_plankton.values())
+        except IntegrityError as ex:
+            message = _("Could not bulk create Plankton due to a foreign key issue")
+            user_logger.error(message)
+            for plankton in create_plankton.values():
+                try:
+                    plankton.save()
+                except IntegrityError as ex1:
+                    logger.error(_("Issue with plankton: ") + f"{plankton.bottle_id} - {plankton.taxa}")
 
     logger.info("Setting collector comments")
     for plankton in core_models.PlanktonSample.objects.using(database).filter(file=filename):

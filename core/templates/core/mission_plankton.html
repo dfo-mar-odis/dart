@@ -60,15 +60,18 @@
         <div class="mt-2">
             <div class="card">
                 <div class="card-header">
-                    <div class="card-title row">
-                        <div class="col">
-                            <h6 class="align-self-end">{% trans "Plankton Samples" %}</h6>
+                    <div class="card-title">
+                        <div class="row">
+                            <div class="col">
+                                <h6 class="align-self-end">{% trans "Plankton Samples" %}</h6>
+                            </div>
+                            <div class="col-auto">
+                                <button class="btn btn-sm btn-danger" hx-swap="none" hx-confirm="{% trans "Are you sure?" %}"
+                                        title="{% trans "Remove Plankton Samples from Mission" %}"
+                                        hx-get="{% url 'core:mission_plankton_clear' database mission.pk %}">{% custom_icon 'dash-square' %}</button>
+                            </div>
                         </div>
-                        <div class="col-auto">
-                            <button class="btn btn-sm btn-danger" hx-swap="none" hx-confirm="{% trans "Are you sure?" %}"
-                                    title="{% trans "Remove Plankton Samples from Mission" %}"
-                                    hx-get="{% url 'core:mission_plankton_clear' database mission.pk %}">{% custom_icon 'dash-square' %}</button>
-                        </div>
+                        <div class="row" id="div_id_plankton_db_details"> </div>
                     </div>
                 </div>
                 <div class="card-body">

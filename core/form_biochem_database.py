@@ -30,6 +30,8 @@ from dart.utils import load_svg
 
 from settingsdb import models as settings_models
 
+from bio_tables import sync_tables
+
 import logging
 
 user_logger = logging.getLogger('dart.user')
@@ -119,6 +121,32 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
 
         return StrictButton(connect_button_icon, css_class=connect_button_class, **connect_button_attrs)
 
+    def get_sync_biochem_button(self):
+        connected = is_connected()
+
+        sync_button_id = f'btn_id_sync_{self.card_name}'
+        sync_button_icon = load_svg('arrow-clockwise')
+        url = reverse_lazy('core:form_biochem_database_sync', args=(self.database, self.mission_id))
+
+        sync_button_attrs = {
+            'id': sync_button_id,
+            'name': 'sync',
+            'hx-get': url,
+            'hx-swap': 'none',
+            'title': _("Sync Biochem Lookup Tables")
+        }
+
+        if not connected:
+            connect_button_class = "btn btn-secondary btn-sm"
+            sync_button_attrs['disabled'] = 'disabled'
+        else:
+            connect_button_class = "btn btn-primary btn-sm"
+            sync_button_attrs['hx-confirm'] = _("About to synchronize local Biochem tables with the selected database."
+                                                "\nYou may have to reload data after updating Biochem tables."
+                                                "\nAre you sure?")
+
+        return StrictButton(sync_button_icon, css_class=connect_button_class, **sync_button_attrs)
+
     def get_db_password(self):
 
         password_field_label = f'control_id_password_{self.card_name}'
@@ -135,6 +163,10 @@ class BiochemUploadForm(core_forms.CollapsableCardForm, forms.ModelForm):
                     Div(
                         self.get_connection_button(),
                         css_class="input-group-sm mt-1"
+                    ),
+                    Div(
+                        self.get_sync_biochem_button(),
+                        css_class="input-group-sm mt-1 ms-1"
                     ),
                     css_class="input-group input-group-sm"
                 ),
@@ -860,6 +892,7 @@ def connect(database_id, password):
 
 
 def validate_connection(request, database, mission_id):
+
     soup = BeautifulSoup('', 'html.parser')
     icon = BeautifulSoup(load_svg('plug'), 'html.parser').svg
 
@@ -878,30 +911,7 @@ def validate_connection(request, database, mission_id):
         connection_button.attrs['hx-trigger'] = 'load'
         connection_button.attrs['disabled'] = 'true'
         connection_button.attrs['class'] = "btn btn-secondary btn-sm"
-        #
-        # # if connected to the database the validate connection button will be in it's 'disconnect' state
-        # # if disconnected the button will be in it's 'connect' state
-        # if 'connect' in request.GET:
-        #     soup.append(update_connection_button(database, mission_id, post=True))
-        # elif 'disconnect' in request.GET:
-        #     # if the user disconnects clear the password from the cache and set the connection button
-        #     # back to it's origional state.
-        #
-        #     sentinel = object()
-        #     database_id = caches['biochem_keys'].get('database_id', sentinel)
-        #     if database_id is not sentinel:
-        #         caches['biochem_keys'].delete('pwd', version=database_id)
-        #
-        #         url = reverse_lazy('core:mission_samples_upload_biochem', args=(database, mission_id,))
-        #         db_form = BiochemUploadForm(database, mission_id, initial={'selected_database': database_id})
-        #         db_form_html = render_crispy_form(db_form)
-        #
-        #         title_attributes = get_crispy_element_attributes(db_form.get_card_title())
-        #         soup = BeautifulSoup(db_form_html, 'html.parser')
-        #         soup.find(id=title_attributes['id']).attrs['hx-swap-oob'] = 'true'
-        #
-        #     close_old_connections()
-        #     soup.append(update_connection_button(database, mission_id))
+
         response = HttpResponse(soup)
         response['Hx-Trigger'] = "biochem_db_connect"
         return response
@@ -977,6 +987,40 @@ def is_connected():
     return settings.DATABASES['biochem']['NAME'].upper() == database
 
 
+def sync_biochem(request, database, mission_id, *kwargs):
+    soup = BeautifulSoup(f'', 'html.parser')
+
+    if request.method == "GET":
+
+        attrs = {
+            'alert_area_id': f'div_id_biochem_alert_biochem_db_details',
+            'message': _("Loading"),
+            'logger': sync_tables.logger_notifications.name,
+            'alert_type': 'info',
+            'hx-post': request.path,
+            'hx-trigger': "load",
+        }
+        alert = core_forms.websocket_post_request_alert(**attrs)
+        soup.append(alert)
+
+        return HttpResponse(soup)
+
+    try:
+        sync_tables.sync_all(database=database)
+        message = _("Success")
+        alert_type = 'success'
+    except Exception as e:
+        message = _("Could not synchronize local biochem tables with selected database. See error log for details.")
+        alert_type = 'danger'
+        logger.exception(e)
+
+    alert = core_forms.blank_alert("div_id_biochem_alert_biochem_db_details", message, alert_type=alert_type)
+    alert.find('div', recursive=False).attrs['hx-swap-oob'] = "true"
+    soup.append(alert)
+
+    return HttpResponse(soup)
+
+
 url_prefix = "<str:database>/<str:mission_id>"
 database_urls = [
     path(f'{url_prefix}/sample/errors/biochem/', get_biochem_errors, name="form_biochem_errors"),
@@ -985,4 +1029,5 @@ database_urls = [
     path(f'{url_prefix}/database/remove/', remove_database, name='form_biochem_database_remove_database'),
     path(f'{url_prefix}/database/select/', select_database, name='form_biochem_database_update_db_selection'),
     path(f'{url_prefix}/database/connect/', validate_connection, name='form_biochem_database_validate_connection'),
+    path(f'{url_prefix}/database/sync/', sync_biochem, name='form_biochem_database_sync'),
 ]

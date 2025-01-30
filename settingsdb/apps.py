@@ -27,7 +27,7 @@ class SettingsdbConfig(AppConfig):
             if 'settingsdb_globalsampletype' in connection.introspection.table_names():
                 if not models.GlobalSampleType.objects.all().exists():
                     logger.info("Loading sample type fixtures, this may take a moment")
-                    call_command('loaddata', 'biochem_fixtures')
+                    call_command('loaddata', 'default_biochem_fixtures')
                     call_command('loaddata', 'default_settings_fixtures')
 
         except Exception as ex:
