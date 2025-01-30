@@ -55,7 +55,7 @@ ctd==1.4.6
 # ctd @ git+https://github.com/upsonp/python-ctd@main
 
 # used for reading and producing xlsx files
-openpyxl==3.0.10
+openpyxl==3.1.5
 
 # Corrects network issues on windows
 PySocks==1.7.1
