@@ -26,6 +26,9 @@ def load_biochem_fixtures(database):
         if 'bio_tables_bcupdate' in connections[database].introspection.table_names():
             # check the bio_chem fixture file. If it's been modified then automatically reload the fixtures.
             fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/biochem_fixtures.json')
+            if not os.path.exists(fixture_file):
+                fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/default_biochem_fixtures.json')
+
             modified = datetime.fromtimestamp(os.path.getmtime(fixture_file))
             modified = pytz.utc.localize(modified)
 
