@@ -26,15 +26,17 @@ def load_biochem_fixtures(database):
         if 'bio_tables_bcupdate' in connections[database].introspection.table_names():
             # check the bio_chem fixture file. If it's been modified then automatically reload the fixtures.
             fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/biochem_fixtures.json')
+            load_bio_fixtures = 'biochem_fixtures'
             if not os.path.exists(fixture_file):
                 fixture_file = os.path.join(settings.BASE_DIR, 'bio_tables/fixtures/default_biochem_fixtures.json')
+                load_bio_fixtures = 'default_biochem_fixtures'
 
             modified = datetime.fromtimestamp(os.path.getmtime(fixture_file))
             modified = pytz.utc.localize(modified)
 
             if not biomodels.BCUpdate.objects.using(database).filter(pk=1).exists():
                 logger.info("Loading biochem fixtures, this may take a moment")
-                call_command('loaddata', 'biochem_fixtures', database=database)
+                call_command('loaddata', load_bio_fixtures, database=database)
                 last_update = biomodels.BCUpdate(last_update=modified)
                 last_update.save(using=database)
 
