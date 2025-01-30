@@ -242,17 +242,49 @@ def download_samples(request, database, mission_id):
 def clear_plankton(request, database, mission_id):
     mission = models.Mission.objects.using(database).get(pk=mission_id)
 
-    if request.method == 'POST':
-        samples = models.PlanktonSample.objects.using(database).filter(bottle__event__mission_id=mission_id)
-        files = samples.values_list('file', flat=True).distinct()
-        errors = mission.file_errors.filter(file_name__in=files)
-        errors.delete()
-        samples.delete()
+    soup = BeautifulSoup('', 'html.parser')
 
-    response = HttpResponse()
+    alert_id = "div_id_plankton_db_details"
+    if request.method == 'GET':
+        alert_attrs = {
+            "component_id": alert_id,
+            "alerty_type": "info",
+            "message": _("Deleting Plankton Samples"),
+            "hx-post": request.path,
+            "hx-trigger": "load",
+            "hx-swap-oob": "true",
+        }
+        alert = forms.save_load_component(**alert_attrs)
+        soup.append(alert)
+        return HttpResponse(soup)
+
+    samples = models.PlanktonSample.objects.using(database).filter(bottle__event__mission_id=mission_id)
+    files = samples.values_list('file', flat=True).distinct()
+    errors = mission.file_errors.filter(file_name__in=files)
+    errors.delete()
+    samples.delete()
+
+    soup.append(alert_row := soup.new_tag("div"))
+    alert_row.attrs['class'] = "row"
+    alert_row.attrs['id'] = alert_id
+    alert_row.attrs['hx-swap-oob'] = "true"
+
+    response = HttpResponse(soup)
     response['HX-Trigger'] = 'update_samples'
 
     return response
+
+
+def get_download_bcs_bcd_button(soup, database, mission_id):
+    icon = BeautifulSoup(load_svg('arrow-down-square'), 'html.parser').svg
+    button = soup.new_tag('button')
+    button.append(icon)
+    button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
+    button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
+    button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_download_plankton", args=(database, mission_id))
+    button.attrs['hx-swap'] = 'none'
+
+    return button
 
 
 def get_biochem_buttons(request, database, mission_id):
@@ -262,14 +294,7 @@ def get_biochem_buttons(request, database, mission_id):
     button_area.attrs['class'] = 'col-auto align-self-center'
     button_area.attrs['hx-swap-oob'] = 'true'
 
-    icon = BeautifulSoup(load_svg('arrow-down-square'), 'html.parser').svg
-    button_area.append(download_button := soup.new_tag('button'))
-    download_button.append(icon)
-    download_button.attrs['class'] = 'btn btn-sm btn-primary'
-    download_button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
-    download_button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_download_plankton",
-                                                   args=(database, mission_id))
-    download_button.attrs['hx-swap'] = 'none'
+    button_area.append(get_download_bcs_bcd_button(soup, database, mission_id))
 
     # TODO: This now belongs to the form_biochem_discrete and form_biochem_plankton modules
     #       Remove when testing is complete

@@ -64,6 +64,7 @@ def add_database(database):
     databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
 
     call_command('migrate', database=database, app_label="core")
+    call_command('migrate', database=database, app_label="bio_tables")
     load_biochem_fixtures(database)
 
 
