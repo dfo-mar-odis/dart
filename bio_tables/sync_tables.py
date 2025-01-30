@@ -1,14 +1,21 @@
 import os.path
-import re
+import codecs
 
+import chardet.universaldetector
+import django.db.utils
 from django.conf import settings
 from django.core import management
 from django.core.management.commands import dumpdata, inspectdb
 from django.db.models.fields.related import ForeignKey
+from django.db.models.fields.reverse_related import ManyToOneRel
 
-import dart.db_routers
 from biochem import models as biochem_models
 from . import models as bio_models
+
+import logging
+
+logger_notifications = logging.getLogger('dart.user')
+logger = logging.getLogger('dart')
 
 # The label used in settings.DATABASES must match the label the dart.db_router uses
 database_label = 'biochem'
@@ -71,9 +78,10 @@ def inspect_db(tables: [str]):
         management.call_command(inspectdb.Command(), table, database=database_label)
 
 
-def sync_table(bio_table_model, biochem_model, field_map):
-    print(f"Syncing {bio_table_model.__name__.lower()}")
-    biochem_data = biochem_model.objects.all()
+def sync_table(bio_table_model, biochem_model, field_map, database='default'):
+    logger_notifications.info(f"Syncing {bio_table_model.__name__.lower()}")
+    biochem_data = biochem_model.objects.using('biochem').all()
+    data_ids = [d.pk for d in biochem_data]
 
     updated = False
     new_data = []
@@ -81,7 +89,7 @@ def sync_table(bio_table_model, biochem_model, field_map):
     updated_fields = set()
 
     for data in biochem_data:
-        if not bio_table_model.objects.filter(pk=data.pk).exists():
+        if not bio_table_model.objects.using(database).filter(pk=data.pk).exists():
             bc = bio_table_model(pk=data.pk)
             for field in field_map:
                 bc_field_name = field if type(field) is str else field[1]
@@ -90,7 +98,7 @@ def sync_table(bio_table_model, biochem_model, field_map):
                 setattr(bc, bt_field_name, biochem_val)
             new_data.append(bc)
         else:
-            bc = bio_table_model.objects.get(pk=data.pk)
+            bc = bio_table_model.objects.using(database).get(pk=data.pk)
             row_updated = False
             for field in field_map:
                 bc_field_name = field if type(field) is str else field[1]
@@ -106,14 +114,22 @@ def sync_table(bio_table_model, biochem_model, field_map):
                 update_data.append(bc)
 
     if len(new_data) > 0:
-        print(f"Adding {len(new_data)} new {bio_table_model.__name__} codes")
-        bio_table_model.objects.bulk_create(new_data)
+        logger_notifications.info(f"Adding {len(new_data)} new {bio_table_model.__name__} codes")
+        bio_table_model.objects.using(database).bulk_create(new_data)
         updated = True
 
     if len(update_data) > 0:
-        print(f"Updating {len(update_data)} {bio_table_model.__name__} codes")
-        bio_table_model.objects.bulk_update(update_data, list(updated_fields))
+        logger_notifications.info(f"Updating {len(update_data)} {bio_table_model.__name__} codes")
+        bio_table_model.objects.using(database).bulk_update(update_data, list(updated_fields))
         updated = True
+
+    # Remove data that doesn't exist in the biochem DB table, but does exist in the local tables.
+    try:
+        bio_table_model.objects.using(database).exclude(pk__in=data_ids).delete()
+    except django.db.utils.IntegrityError as ex:
+        logger.exception(f"Could not delete keys from table {bio_table_model.__name__.lower()} : {ex}")
+    except django.db.utils.OperationalError as ex:
+        logger.exception(f"Could not delete keys from table {bio_table_model.__name__.lower()} : {ex}")
 
     return updated
 
@@ -141,13 +157,24 @@ def get_mapped_fields(dart_table_model, bio_chem_model) -> list:
             else:
                 raise ValueError(f"Could not map field {field} for {dart_table_model.__name__}")
 
-        else:
+        elif type(dart_table_model._meta.get_field(field)) is not ManyToOneRel:
             mapped_fields.append(field)
 
     return mapped_fields
 
 
-def create_fixture(bio_table_name: str = None, output_dir: str = "bio_tables/fixtures/"):
+def detect_encoding(file_path: str) -> str:
+    with open(file_path, 'rb') as file:
+        detector = chardet.universaldetector.UniversalDetector()
+        for line in file:
+            detector.feed(line)
+            if detector.done:
+                break
+        detector.close()
+    return detector.result['encoding']
+
+
+def create_fixture(bio_table_name: str = None, output_dir: str = "bio_tables/fixtures/", database='default'):
     # if a bio_table_name is supplied a fixture for that specific file will be created
     # otherwise a fixture for all bio_tables will be created
 
@@ -157,15 +184,27 @@ def create_fixture(bio_table_name: str = None, output_dir: str = "bio_tables/fix
         bio_table += f".{bio_table_name}"
         fixture_output = bio_table_name.lower() + ".json"
 
-    management.call_command(dumpdata.Command(), bio_table, indent=4, output=os.path.join(output_dir, fixture_output))
+    file_out = os.path.join(output_dir, fixture_output)
+    management.call_command(dumpdata.Command(), bio_table, indent=4, output=file_out,
+                            database=database)
+
+    encoding = detect_encoding(file_out)
+    if encoding != 'utf-8':
+        logger_notifications.info(f"re-encoding file from '{encoding}' to UTF-8")
+        with codecs.open(file_out, 'r', encoding=encoding.lower()) as f:
+            lines = f.read()
+
+        with codecs.open(file_out, 'w', encoding='utf8') as f:
+            f.write(lines)
 
 
-def sync(bio_table_model, biochem_model, force_create_fixture=False, field_map=None) -> bool:
+
+def sync(bio_table_model, biochem_model, force_create_fixture=False, field_map=None, database='default') -> bool:
     if not field_map:
         field_map = get_mapped_fields(bio_table_model, biochem_model)
 
-    updated = sync_table(bio_table_model=bio_table_model, biochem_model=biochem_model,
-                         field_map=field_map)
+    updated = sync_table(bio_table_model=bio_table_model, biochem_model=biochem_model, field_map=field_map,
+                         database=database)
 
     if force_create_fixture:
         create_fixture(bio_table_model.__name__)
@@ -173,7 +212,7 @@ def sync(bio_table_model, biochem_model, force_create_fixture=False, field_map=N
     return updated
 
 
-def sync_all(force_create_fixture=False):
+def sync_all(force_create_fixture=False, database='default'):
     sync_list = [
         (bio_models.BCDataCenter, biochem_models.Bcdatacenters),
         (bio_models.BCUnit, biochem_models.Bcunits),
@@ -195,9 +234,10 @@ def sync_all(force_create_fixture=False):
     updated = False
 
     for sync_model in sync_list:
-        if sync(sync_model[0], sync_model[1], force_create_fixture):
+        if sync(bio_table_model=sync_model[0], biochem_model=sync_model[1], force_create_fixture=force_create_fixture,
+                database=database):
             updated = True
 
     if updated:
-        print("Exporting new fixture file")
+        logger_notifications.info("Exporting new fixture file")
         create_fixture()
