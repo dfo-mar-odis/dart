@@ -600,7 +600,7 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
             attached_str = buffer.pop(mapped_fields['attached'])
 
             # if the time|position doesn't exist report the issue to the user, it may not have been set by mistake
-            if re.search(".*\|.*\|.*\|.*", buffer[mapped_fields['time_position']]) is None:
+            if re.search(r".*\|.*\|.*\|.*", buffer[mapped_fields['time_position']]) is None:
                 raise ValueError({'message': _("Badly formatted or missing Time|Position") + f"  $@MID@$ {mid}",
                                   'key': 'time_position',
                                   'expected': mapped_fields['time_position']})
