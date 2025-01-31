@@ -55,20 +55,22 @@ ctd==1.4.6
 # ctd @ git+https://github.com/upsonp/python-ctd@main
 
 # used for reading and producing xlsx files
-openpyxl==3.0.10
+openpyxl==3.1.5
 
 # Corrects network issues on windows
 PySocks==1.7.1
 
 # time zone package
-pytz~=2022.6
+pytz>=2022.6
 
 # math and data processing packages
-numpy~=1.23
-pandas~=1.5
+pandas==2.2.3
 jinja2==3.1.3
 matplotlib~=3.6.2
 django-pandas==0.6.6
+
+# cgi was removed for python 3.13, but django running asgi requires it
+legacy-cgi
 
 # Post pandas to_html table styling
 beautifulsoup4
