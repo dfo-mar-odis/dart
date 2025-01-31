@@ -32,7 +32,7 @@ class FixStationParser:
 
     def _get_priority(self, sensor_description: str) -> [int, str]:
         """given a sensor description, with units removed, find, remove and return the priority and remaining string"""
-        priority_pattern = ", (\d)"
+        priority_pattern = r", (\d)"
         priority = re.findall(priority_pattern, sensor_description)
         priority = priority[0] if priority else 1
         return int(priority), re.sub(priority_pattern, "", sensor_description)
@@ -164,7 +164,7 @@ class FixStationParser:
         # Sbeox0ML/L -> Sbeox (Sea-bird oxygen), 0 (primary sensor), ML/L
         # many sensors follow this format, the ones that don't are likely located, in greater detail, in
         # the ROS file configuration
-        details = re.match("(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
+        details = re.match(r"(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
         if not details:
             raise Exception(f"Sensor '{sensor}' does not follow the expected naming convention")
 
@@ -183,7 +183,7 @@ class FixStationParser:
         """given a ROS file create sensors objects from the config portion of the file"""
 
         summary = ctd.rosette_summary(self.ros_stream)
-        sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
+        sensor_headings = re.findall(r"# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
         existing_sensors = GlobalSampleType.objects.filter(is_sensor=True).values_list('short_name',
                                                                                        flat=True).distinct()

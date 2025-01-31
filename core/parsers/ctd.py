@@ -32,7 +32,7 @@ def get_event_number_nfl(data_frame: pandas.DataFrame):
     metadata = getattr(data_frame, "_metadata")
 
     # for the NFL Region uses the CTD number to link a BTL file to an Elog event.
-    event_number = re.search('CTD NUMBER: (\d+)\n', metadata['header'])[1]
+    event_number = re.search(r'CTD NUMBER: (\d+)\n', metadata['header'])[1]
     if len(str(event_number)) > 3:
         event_number = int(str(event_number)[-3:])
     return int(event_number)
@@ -44,12 +44,12 @@ def get_event_number_bio(data_frame: pandas.DataFrame):
 
     # for the Atlantic Region the last three digits of the bottle file name contains the elog event number,
     # but if there's a 'event_number' in the header use that instead.
-    event_number = re.search('event_number: *(\d+)\n', metadata['header'], re.IGNORECASE)
+    event_number = re.search(r'event_number: *(\d+)\n', metadata['header'], re.IGNORECASE)
     if event_number and (event_number := event_number[1]).isnumeric():
         event_number = int(str(event_number)[-3:])
         return int(event_number)
 
-    event_number = re.search(".*(?:\D|^)(\d+)", metadata['name'])[1]
+    event_number = re.search(r".*(?:\D|^)(\d+)", metadata['name'])[1]
     if len(str(event_number)) > 3:
         event_number = int(str(event_number)[-3:])
         return int(event_number)
@@ -76,7 +76,7 @@ def _get_units(sensor_description: str) -> [str, str]:
 
 def _get_priority(sensor_description: str) -> [int, str]:
     """given a sensor description, with units removed, find, remove and return the priority and remaining string"""
-    priority_pattern = ", (\d)"
+    priority_pattern = r", (\d)"
     priority = re.findall(priority_pattern, sensor_description)
     priority = priority[0] if priority else 1
     return int(priority), re.sub(priority_pattern, "", sensor_description)
@@ -102,7 +102,7 @@ def process_ros_sensors(sensors: [str], ros_file: str):
     """given a ROS file create sensors objects from the config portion of the file"""
 
     summary = ctd.rosette_summary(ros_file)
-    sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
+    sensor_headings = re.findall(r"# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
     existing_sensors = settings_models.GlobalSampleType.objects.filter(
         is_sensor=True).values_list('short_name', flat=True).distinct()
@@ -149,7 +149,7 @@ def parse_sensor_name(sensor: str) -> [str, int, str]:
     # Sbeox0ML/L -> Sbeox (Sea-bird oxygen), 0 (primary sensor), ML/L
     # many sensors follow this format, the ones that don't are likely located, in greater detail, in
     # the ROS file configuration
-    details = re.match("(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
+    details = re.match(r"(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
     if not details:
         raise Exception(f"Sensor '{sensor}' does not follow the expected naming convention")
 
