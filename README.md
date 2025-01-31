@@ -1,5 +1,5 @@
 # Requirements
-* Python 3.10+
+* Python 3.10, 3.11, 3.12
 * Git
 * C++ Visual Build Tools - required for oracle connections
 
