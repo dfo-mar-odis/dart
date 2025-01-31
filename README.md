@@ -5,6 +5,7 @@
 
 # Installation
 1. Before installation you must have Python 3.10 and [Git](https://git-scm.com/) installed.
+2. If you have a python 3.13 or later you will requier Dart in the 4.1.x branch instead of this version. You can check your python verion by opening a command window and typing `python -V`
 
 ## Windows
 1. Open a windows file explorer and navigate to the directory you wish to install DART
