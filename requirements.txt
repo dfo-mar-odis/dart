@@ -51,7 +51,7 @@ Faker==5.0.1
 factory-boy==3.1.0
 
 # CTD is used to process BTL and ROS files
-ctd==1.4.6
+ctd==1.4.7
 # ctd @ git+https://github.com/upsonp/python-ctd@main
 
 # used for reading and producing xlsx files
