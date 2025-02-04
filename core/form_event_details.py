@@ -371,7 +371,7 @@ class ActionForm(forms.ModelForm):
         }
 
     def __init__(self, event, database=None, *args, **kwargs):
-        self.database = database if database else event.mission.name
+        self.database = database if database else event.mission._state.db
 
         super().__init__(*args, **kwargs)
 
@@ -470,7 +470,7 @@ class AttachmentForm(forms.ModelForm):
 
     def __init__(self, event, database=None, *args, **kwargs):
 
-        self.database = database if database else event.mission.name
+        self.database = database if database else event.mission._state.db
 
         super().__init__(*args, **kwargs)
 
