@@ -1,6 +1,8 @@
 import datetime
 import io
 import time
+import re
+import numpy as np
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -9,6 +11,7 @@ from crispy_forms.layout import Div, Column, Row, Hidden, Field, Layout, HTML
 from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.core.cache import caches
+from django.core.validators import RegexValidator
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
@@ -363,6 +366,9 @@ class ActionForm(forms.ModelForm):
         attrs={'type': 'datetime-local', 'max': "9999-12-31 12:59:59",
                'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
 
+    latitude = forms.CharField(widget=forms.TextInput())
+    longitude = forms.CharField(widget=forms.TextInput())
+
     class Meta:
         model = models.Action
         fields = ['id', 'event', 'type', 'date_time', 'sounding', 'latitude', 'longitude', 'comment']
@@ -412,7 +418,14 @@ class ActionForm(forms.ModelForm):
             action_id_element = Hidden('id', self.instance.pk)
 
         station_name = event.station.name
-        if (global_station := settings_models.GlobalStation.objects.filter(name=station_name)).exists():
+        if event.actions.count() > 0:
+            action = event.actions.last()
+            self.fields['sounding'].initial = action.sounding
+            self.fields['latitude'].initial = action.latitude
+            self.fields['longitude'].initial = action.longitude
+            self.fields['date_time'].widget.attrs['value'] = action.date_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        elif (global_station := settings_models.GlobalStation.objects.filter(name=station_name)).exists():
             global_station = global_station.first()
             if self.initial.get("sounding", -1) == -1:
                 if global_station.sounding:
@@ -453,6 +466,52 @@ class ActionForm(forms.ModelForm):
                 css_class='input-group')
         )
         self.helper.form_show_labels = False
+
+    def clean_longitude(self):
+        data = self.cleaned_data['longitude']
+        if re.match(r'(-{0,1}\d{1,3} \d{1,2}.*\d+( [Ee]|[Ww])*)', data):
+            lon_split: [str] = data.split(' ')
+            lon = float(lon_split[0])
+            negative = False
+            if lon < 0:
+                lon *= -1
+                negative = True
+
+            if len(lon_split) > 1:
+                lon += float(lon_split[1])/60
+            if negative or (len(lon_split) > 2 and lon_split[2].upper() == 'W'):
+                lon *= -1
+            return str(np.round(lon, models.Action.longitude.field.decimal_places))
+
+        try:
+            lon = float(data)
+            return str(np.round(lon, models.Action.longitude.field.decimal_places))
+        except ValueError:
+            message = _("Longitude is badly formatted. Must be in decimal degrees, or degree minutes with 'W' or 'E'.")
+            raise forms.ValidationError(message)
+
+    def clean_latitude(self):
+        data = self.cleaned_data['latitude']
+        if re.match(r'(-{0,1}\d{1,2} \d{1,2}\.*\d+( [Nn]|[Ss])*)', data):
+            lat_split: [str] = data.split(' ')
+            lat = float(lat_split[0])
+            negative = False
+            if lat < 0:
+                lat *= -1
+                negative = True
+
+            if len(lat_split) > 1:
+                lat += float(lat_split[1])/60
+            if negative or (len(lat_split) > 2 and lat_split[2].upper() == 'S'):
+                lat *= -1
+            return str(np.round(lat, models.Action.latitude.field.decimal_places))
+
+        try:
+            lat = float(data)
+            return str(np.round(lat, models.Action.latitude.field.decimal_places))
+        except ValueError:
+            message = _("Latitude is badly formatted. Must be in decimal degrees, or degree minutes with 'N' or 'S'.")
+            raise forms.ValidationError(message)
 
     def save(self, commit=True):
         instance = super().save(False)
