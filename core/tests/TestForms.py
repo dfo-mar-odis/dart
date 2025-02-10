@@ -78,7 +78,7 @@ class TestMissionSamplesForm(DartTestCase):
         response = self.client.get(url, {"bottle_dir": sample_dir, "file_name": ['JC243a001.btl', 'JC243a006.btl']})
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        self.assertEquals(soup.prettify(), alert.prettify())
+        self.assertEqual(soup.prettify(), alert.prettify())
 
 
 @tag('forms', 'forms_sample_type_card')
@@ -145,10 +145,10 @@ class TestSampleTypeCard(DartTestCase):
         self.assertIsNotNone(soup.find(id='div_id_sample_type_form'))
 
         short_name_input = soup.find(id='id_short_name')
-        self.assertEquals(short_name_input.attrs['value'], sample_type.short_name)
+        self.assertEqual(short_name_input.attrs['value'], sample_type.short_name)
 
         long_name_input = soup.find(id='id_long_name')
-        self.assertEquals(long_name_input.attrs['value'], sample_type.long_name)
+        self.assertEqual(long_name_input.attrs['value'], sample_type.long_name)
 
     def test_save_update_sample_type(self):
         # provided an existing sample type with updated post arguments the sample_type should be updated
@@ -162,7 +162,7 @@ class TestSampleTypeCard(DartTestCase):
 
         sample_type_updated = settings_models.GlobalSampleType.objects.filter(short_name='oxy')
         self.assertTrue(sample_type_updated.exists())
-        self.assertEquals(sample_type_updated[0].long_name, 'Oxygen2')
+        self.assertEqual(sample_type_updated[0].long_name, 'Oxygen2')
 
         soup = BeautifulSoup(response.content, 'html.parser')
         form = soup.find(id="div_id_sample_type_form")

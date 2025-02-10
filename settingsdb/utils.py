@@ -43,7 +43,7 @@ def load_biochem_fixtures(database):
             elif modified.timestamp() != biomodels.BCUpdate.objects.using(database).get(pk=1).last_update.timestamp():
                 last_update = biomodels.BCUpdate.objects.using(database).get(pk=1)
                 logger.info("Loading biochem fixtures, this may take a moment")
-                call_command('loaddata', 'biochem_fixtures', database=database)
+                call_command('loaddata', fixture_file, database=database)
                 last_update.last_update = modified
                 last_update.save(using=database)
 

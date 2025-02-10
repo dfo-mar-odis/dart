@@ -70,18 +70,18 @@ class TestMissionView(DartTestCase):
         # be swapped onto the page under the tables. There should be 2 table rows, one for the headings, one for the
         # mission
         trs = soup.find_all('tr')
-        self.assertEquals(len(trs), 2)
+        self.assertEqual(len(trs), 2)
 
         mission_row = soup.find(id=f"tr_id_mission_{self.mission.name}")
         self.assertIsNotNone(mission_row)
 
         edit_mission_url = reverse("core:mission_edit", args=(fake_db_name, self.mission.pk))
         edit_settings_link = mission_row.find('a', id="a_id_edit_mission")
-        self.assertEquals(edit_settings_link.attrs['href'], edit_mission_url)
+        self.assertEqual(edit_settings_link.attrs['href'], edit_mission_url)
 
         edit_events_url = reverse("core:mission_events_details", args=(fake_db_name, self.mission.pk))
         edit_events_link = mission_row.find('a', id="a_id_edit_mission_events")
-        self.assertEquals(edit_events_link.attrs['href'], edit_events_url)
+        self.assertEqual(edit_events_link.attrs['href'], edit_events_url)
 
 
 @tag("mission_view", "mission_view_ui")
@@ -104,13 +104,13 @@ class TestMissionViewUI(DartTestCase):
 
         # the selection element needs to have an hx-trigger="changed" on it
         self.assertIn('hx-trigger', mission_select.attrs)
-        self.assertEquals(mission_select.attrs['hx-trigger'], 'change')
+        self.assertEqual(mission_select.attrs['hx-trigger'], 'change')
 
         self.assertIn('hx-get', mission_select.attrs)
-        self.assertEquals(mission_select.attrs['hx-get'], reverse('settingsdb:update_mission_directory'))
+        self.assertEqual(mission_select.attrs['hx-get'], reverse('settingsdb:update_mission_directory'))
 
         self.assertIn('hx-swap', mission_select.attrs)
-        self.assertEquals(mission_select.attrs['hx-swap'], 'outerHTML')
+        self.assertEqual(mission_select.attrs['hx-swap'], 'outerHTML')
 
     @tag("mission_view_ui_test_missions_directory_update_get")
     def test_missions_directory_update_get(self):

@@ -668,15 +668,18 @@ def download_samples(request, database, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
+    logger.info("Creating BCS/BCD files")
     uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
+    logger.info(f"Using uploader: {uploader}")
     batch_id = 1
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles,
-                                                           batch_name=batch_id)
+    create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch_name=batch_id)
+
+    logger.info(f"Created {len(create)} BCD rows")
 
     bcs_headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
 
@@ -693,7 +696,7 @@ def download_samples(request, database, mission_id):
             for bcs_row in create:
                 row = [getattr(bcs_row, header, '') for header in bcs_headers]
                 writer.writerow(row)
-    except PermissionError:
+    except PermissionError as e:
         attrs = {
             'component_id': 'div_id_upload_biochem',
             'alert_type': 'danger',
@@ -701,7 +704,7 @@ def download_samples(request, database, mission_id):
         }
         alert_soup = forms.blank_alert(**attrs)
         div.append(alert_soup)
-
+        logger.exception(e)
         return HttpResponse(soup)
 
     data_types = models.BioChemUpload.objects.using(database).filter(
@@ -732,7 +735,7 @@ def download_samples(request, database, mission_id):
                 row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
                        header in bcd_headers]
                 writer.writerow(row)
-    except PermissionError:
+    except PermissionError as e:
         attrs = {
             'component_id': 'div_id_upload_biochem',
             'alert_type': 'danger',
@@ -740,7 +743,7 @@ def download_samples(request, database, mission_id):
         }
         alert_soup = forms.blank_alert(**attrs)
         div.append(alert_soup)
-
+        logger.exception(e)
         return HttpResponse(soup)
 
     attrs = {

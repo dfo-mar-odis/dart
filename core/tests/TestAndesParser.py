@@ -39,7 +39,7 @@ class TestAndesParser(DartTestCase):
             andes.parse(self.mission, self.test_file_name, stream)
 
         instruments = core_models.Instrument.objects.all()
-        self.assertEquals(5, instruments.count())  # the test file has 5 instruments in it
+        self.assertEqual(5, instruments.count())  # the test file has 5 instruments in it
 
     @tag('andes_parser_test_andeis_parser_instruments')
     def test_andeis_parser_instruments(self):
@@ -69,19 +69,19 @@ class TestAndesParser(DartTestCase):
         mission_instruments = core_models.Instrument.objects.using('default').all()
         self.assertIsNotNone(mission_instruments.get(name__iexact='CTD AZOMP 2024'))
         ctd = mission_instruments.get(name__iexact='CTD AZOMP 2024')
-        self.assertEquals(core_models.InstrumentType.ctd, ctd.type)
+        self.assertEqual(core_models.InstrumentType.ctd, ctd.type)
 
         self.assertIsNotNone(mission_instruments.get(name__iexact='Plankton net (202um)'))
         net = mission_instruments.get(name__iexact='Plankton net (202um)')
-        self.assertEquals(core_models.InstrumentType.net, net.type)
+        self.assertEqual(core_models.InstrumentType.net, net.type)
 
         self.assertIsNotNone(mission_instruments.get(name__iexact='Plankton net (76um)'))
         net = mission_instruments.get(name__iexact='Plankton net (76um)')
-        self.assertEquals(core_models.InstrumentType.net, net.type)
+        self.assertEqual(core_models.InstrumentType.net, net.type)
 
         self.assertIsNotNone(mission_instruments.get(name__iexact='Argo (BIO AZOMP)'))
         beacon = mission_instruments.get(name__iexact='Argo (BIO AZOMP)')
-        self.assertEquals(core_models.InstrumentType.other, beacon.type)
+        self.assertEqual(core_models.InstrumentType.other, beacon.type)
 
     @tag('andes_parser_test_andeis_parser_stations')
     def test_andeis_parser_stations(self):
@@ -99,7 +99,7 @@ class TestAndesParser(DartTestCase):
         andes.parse_stations(self.mission, self.test_file_name, samples)
 
         stations = core_models.Station.objects.all()
-        self.assertEquals(len(samples), stations.count())
+        self.assertEqual(len(samples), stations.count())
         station = stations.get(name__iexact='AR7W_13')
         self.assertIsNotNone(station)
 
@@ -169,21 +169,21 @@ class TestAndesParser(DartTestCase):
         events = core_models.Event.objects.all()
         event = events.get(event_id=10)
         self.assertIsNotNone(event)
-        self.assertEquals(station, event.station)
-        self.assertEquals(ctd_instrument, event.instrument)
-        self.assertEquals(3312, event.wire_out)
-        self.assertEquals(505561, event.sample_id)
-        self.assertEquals(505584, event.end_sample_id)
+        self.assertEqual(station, event.station)
+        self.assertEqual(ctd_instrument, event.instrument)
+        self.assertEqual(3312, event.wire_out)
+        self.assertEqual(505561, event.sample_id)
+        self.assertEqual(505584, event.end_sample_id)
 
         event = events.get(event_id=11)
         self.assertIsNotNone(event)
-        self.assertEquals(station, event.station)
-        self.assertEquals(net_instrument, event.instrument)
-        self.assertEquals(1000, event.wire_out)
-        self.assertEquals(45, event.wire_angle)
-        self.assertEquals(2068, event.flow_start)
-        self.assertEquals(2554, event.flow_end)
-        self.assertEquals(505584, event.sample_id)
+        self.assertEqual(station, event.station)
+        self.assertEqual(net_instrument, event.instrument)
+        self.assertEqual(1000, event.wire_out)
+        self.assertEqual(45, event.wire_angle)
+        self.assertEqual(2068, event.flow_start)
+        self.assertEqual(2554, event.flow_end)
+        self.assertEqual(505584, event.sample_id)
 
     @tag('andes_parser_test_andeis_parser_actions')
     def test_andeis_parser_actions(self):
@@ -239,14 +239,14 @@ class TestAndesParser(DartTestCase):
         andes.parse_actions(self.mission, self.test_file_name, samples)
 
         actions = event.actions.all()
-        self.assertEquals(3, actions.count())
+        self.assertEqual(3, actions.count())
 
         deployed = actions.get(type=core_models.ActionType.deployed)
-        self.assertEquals(datetime.strptime(expected_actions[0]['created_at'], '%Y-%m-%d %H:%M:%S.%f%z'),
+        self.assertEqual(datetime.strptime(expected_actions[0]['created_at'], '%Y-%m-%d %H:%M:%S.%f%z'),
                           deployed.date_time)
-        self.assertEquals(np.around(expected_actions[0]['latitude'], 6), float(deployed.latitude))
-        self.assertEquals(np.around(expected_actions[0]['longitude'], 6), float(deployed.longitude))
-        self.assertEquals(expected_operator, deployed.data_collector)
-        self.assertEquals(expected_comment, deployed.comment)
-        self.assertEquals(expected_sounding, deployed.sounding)
-        self.assertEquals(self.test_file_name, deployed.file)
+        self.assertEqual(np.around(expected_actions[0]['latitude'], 6), float(deployed.latitude))
+        self.assertEqual(np.around(expected_actions[0]['longitude'], 6), float(deployed.longitude))
+        self.assertEqual(expected_operator, deployed.data_collector)
+        self.assertEqual(expected_comment, deployed.comment)
+        self.assertEqual(expected_sounding, deployed.sounding)
+        self.assertEqual(self.test_file_name, deployed.file)

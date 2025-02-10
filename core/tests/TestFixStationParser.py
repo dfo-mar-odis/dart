@@ -41,19 +41,19 @@ class TestFixStationParser(DartTestCase):
         core_models.FileError(mission=self.event.mission, file_name=self.btn_filename, line=0, message=_("test"),
                               type=core_models.ErrorType.bottle).save()
 
-        self.assertEquals(1, core_models.FileError.objects.using('default').filter(file_name=self.btn_filename).count())
+        self.assertEqual(1, core_models.FileError.objects.using('default').filter(file_name=self.btn_filename).count())
 
         parser = FixStationParser(self.event, self.btn_filename, self.btl_data, self.ros_data)
         parser.parse()
 
-        self.assertEquals(0, core_models.FileError.objects.using('default').filter(file_name=self.btn_filename).count())
+        self.assertEqual(0, core_models.FileError.objects.using('default').filter(file_name=self.btn_filename).count())
 
     def test_bottle_creation(self):
         # Create bottles for the provided event if present in the BTL file, but don't already exist
         parser = FixStationParser(self.event, self.btn_filename, self.btl_data, self.ros_data)
         parser.parse()
 
-        self.assertEquals(10, self.event.bottles.count())
+        self.assertEqual(10, self.event.bottles.count())
 
     @tag('parsers_fixstation_test_bottle_update')
     def test_bottle_update(self):
@@ -68,8 +68,8 @@ class TestFixStationParser(DartTestCase):
         dt = datetime.datetime.strptime("2024-01-24 14:16:45 +0000", '%Y-%m-%d %H:%M:%S %z')
 
         bottle = self.event.bottles.get(bottle_id=496479)
-        self.assertEquals(dt, bottle.closed)
-        self.assertEquals(2.873, float(bottle.pressure))
+        self.assertEqual(dt, bottle.closed)
+        self.assertEqual(2.873, float(bottle.pressure))
 
     def test_bottom_action(self):
         # a bottom action should be created for when the bottom bottle is closed

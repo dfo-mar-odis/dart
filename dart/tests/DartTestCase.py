@@ -2,4 +2,4 @@ from django.test import TestCase
 
 
 class DartTestCase(TestCase):
-    fixtures = ['biochem_fixtures']
+    fixtures = ['default_biochem_fixtures']

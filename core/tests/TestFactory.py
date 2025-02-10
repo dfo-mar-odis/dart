@@ -25,7 +25,7 @@ class TestCTDEvent(DartTestCase):
 
         self.assertIsNotNone(event.mission)
         self.assertIsNotNone(event.station)
-        self.assertEquals(event.instrument.type, models.InstrumentType.ctd)
+        self.assertEqual(event.instrument.type, models.InstrumentType.ctd)
         self.assertIsNotNone(event.sample_id)
         self.assertIsNotNone(event.end_sample_id)
 

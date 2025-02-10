@@ -87,9 +87,9 @@ class TestGetBCSPRows(AbstractTestDatabase):
                                                                         self.mission.get_batch_name,
                                                                         bcs_model)
 
-        self.assertEquals(len(create_rows), 1)
-        self.assertEquals(len(update_rows), 0)
-        self.assertEquals(len(update_fields), 0)
+        self.assertEqual(len(create_rows), 1)
+        self.assertEqual(len(update_rows), 0)
+        self.assertEqual(len(update_fields), 0)
 
 
 @tag('biochem', 'biochem_upload')
@@ -118,7 +118,7 @@ class TestBioChemUpload(DartTestCase):
         self.assertIsNotNone(bcu_entry.modified_date)
         logger.debug(bcu_entry.modified_date)
 
-        self.assertEquals(core_models.BioChemUploadStatus.upload, bcu_entry.status)
+        self.assertEqual(core_models.BioChemUploadStatus.upload, bcu_entry.status)
 
     def test_remove_non_uploaded_mission_data_type(self):
         # calling the checkbox url with a database, mission ID, and sensor_id should remove the sensor/sample
@@ -154,7 +154,7 @@ class TestBioChemUpload(DartTestCase):
         bcu = core_models.BioChemUpload.objects.using('default').filter(type_id=sensor_id)
         self.assertTrue(bcu.exists())
 
-        self.assertEquals(core_models.BioChemUploadStatus.delete, bcu.first().status)
+        self.assertEqual(core_models.BioChemUploadStatus.delete, bcu.first().status)
 
     def test_remove_upload_with_date_mission_data_type(self):
         # calling the checkbox url with a database, mission ID, and sensor_id should mark the sensor/sample
@@ -174,7 +174,7 @@ class TestBioChemUpload(DartTestCase):
         bcu = core_models.BioChemUpload.objects.using('default').filter(type_id=sensor_id)
         self.assertTrue(bcu.exists())
 
-        self.assertEquals(core_models.BioChemUploadStatus.delete, bcu.first().status)
+        self.assertEqual(core_models.BioChemUploadStatus.delete, bcu.first().status)
 
 
 @tag('biochem', 'fake_biochem_upload')
@@ -222,7 +222,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
         # When uploaded the BioChemUpload entry should be marked as 'uploaded' and the uploaded date
         # should be set
         oxy_upload = core_models.BioChemUpload.objects.using(default_db).get(type=oxy_sample_type)
-        self.assertEquals(core_models.BioChemUploadStatus.uploaded, oxy_upload.status)
+        self.assertEqual(core_models.BioChemUploadStatus.uploaded, oxy_upload.status)
         self.assertTrue(oxy_upload.upload_date < oxy_upload.modified_date)
 
 
@@ -291,6 +291,6 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
         logger.info("Print Data:")
         db_data = self.model.objects.using(biochem_db).order_by('dis_data_num')
 
-        self.assertEquals(31, db_data.count())
+        self.assertEqual(31, db_data.count())
         for d in db_data:
             logger.info(d)

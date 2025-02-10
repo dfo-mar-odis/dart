@@ -56,7 +56,7 @@ class TestPhytoplanktonParser(DartTestCase):
         PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
                                            dataframe=self.dataframe)
         samples = core_models.PlanktonSample.objects.using('default').all()
-        self.assertEquals(len(samples), 32)
+        self.assertEqual(len(samples), 32)
 
     def test_update(self):
         # if a plankton sample already exists then it should be updated.
@@ -65,13 +65,13 @@ class TestPhytoplanktonParser(DartTestCase):
                                                 count=1000)
 
         expected_plankton = core_models.PlanktonSample.objects.using('default').get(bottle=self.bottle_mission_start, taxa=taxa)
-        self.assertEquals(expected_plankton.count, 1000)
+        self.assertEqual(expected_plankton.count, 1000)
 
         PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
                                            dataframe=self.dataframe)
 
         expected_plankton = core_models.PlanktonSample.objects.using('default').get(bottle=self.bottle_mission_start, taxa=taxa)
-        self.assertEquals(expected_plankton.count, 200)
+        self.assertEqual(expected_plankton.count, 200)
 
 
 @tag('parsers', 'parsers_plankton', 'parsers_plankton_zoo')
@@ -129,24 +129,24 @@ class TestZooplanktonParser(DartTestCase):
         self.assertTrue(plankton.exists())
 
         plankton = plankton.first()
-        self.assertEquals(plankton.taxa.pk, taxa_key)
-        self.assertEquals(plankton.stage.pk, 90000030)
-        self.assertEquals(plankton.sex.pk, 90000002)
+        self.assertEqual(plankton.taxa.pk, taxa_key)
+        self.assertEqual(plankton.stage.pk, 90000030)
+        self.assertEqual(plankton.sex.pk, 90000002)
 
         # this is a 202 net so it should use a 90000102 gear_type
-        self.assertEquals(plankton.gear_type.pk, 90000102)
+        self.assertEqual(plankton.gear_type.pk, 90000102)
 
         # proc_code is 20 so the min_sieve should be mesh_size/1000
-        self.assertEquals(plankton.min_sieve, 202/1000)
+        self.assertEqual(plankton.min_sieve, 202/1000)
 
         # proc_code is 20 so the max_sieve should be 10
-        self.assertEquals(plankton.max_sieve, 10)
+        self.assertEqual(plankton.max_sieve, 10)
 
         # proc_code is 20 so the split_fraction should be rounded to 4 decimal places
-        self.assertEquals(plankton.split_fraction, 0.025)
+        self.assertEqual(plankton.split_fraction, 0.025)
 
         # what_was_it is 1 so this is a count
-        self.assertEquals(plankton.count, 15)
+        self.assertEqual(plankton.count, 15)
 
     def test_parser_with_data(self):
         # The first parser test is to create a PlanktonSample object, but it doesn't take a lot
@@ -157,43 +157,43 @@ class TestZooplanktonParser(DartTestCase):
         PlanktonParser.parse_zooplankton(self.mission, self.file_name, self.dataframe)
 
         samples = core_models.PlanktonSample.objects.using('default').filter(bottle__bottle_id=488275)
-        self.assertEquals(len(samples), 28)
+        self.assertEqual(len(samples), 28)
 
     def test_get_min_sieve(self):
-        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=21, mesh_size=202), 10)
+        self.assertEqual(PlanktonParser.get_min_sieve(proc_code=21, mesh_size=202), 10)
 
         expected = 202/1000
-        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=20, mesh_size=202), expected)
-        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=22, mesh_size=202), expected)
-        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=23, mesh_size=202), expected)
-        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=50, mesh_size=202), expected)
-        self.assertEquals(PlanktonParser.get_min_sieve(proc_code=99, mesh_size=202), expected)
+        self.assertEqual(PlanktonParser.get_min_sieve(proc_code=20, mesh_size=202), expected)
+        self.assertEqual(PlanktonParser.get_min_sieve(proc_code=22, mesh_size=202), expected)
+        self.assertEqual(PlanktonParser.get_min_sieve(proc_code=23, mesh_size=202), expected)
+        self.assertEqual(PlanktonParser.get_min_sieve(proc_code=50, mesh_size=202), expected)
+        self.assertEqual(PlanktonParser.get_min_sieve(proc_code=99, mesh_size=202), expected)
 
     def test_get_max_sieve(self):
-        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=20), 10)
-        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=22), 10)
-        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=50), 10)
-        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=99), 10)
+        self.assertEqual(PlanktonParser.get_max_sieve(proc_code=20), 10)
+        self.assertEqual(PlanktonParser.get_max_sieve(proc_code=22), 10)
+        self.assertEqual(PlanktonParser.get_max_sieve(proc_code=50), 10)
+        self.assertEqual(PlanktonParser.get_max_sieve(proc_code=99), 10)
 
-        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=21), None)
-        self.assertEquals(PlanktonParser.get_max_sieve(proc_code=23), None)
+        self.assertEqual(PlanktonParser.get_max_sieve(proc_code=21), None)
+        self.assertEqual(PlanktonParser.get_max_sieve(proc_code=23), None)
 
     def test_get_split_fraction(self):
         split = 0.02349
-        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=20, split=split), 0.0235)
-        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=21, split=split), 1)
-        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=22, split=split), 1)
-        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=23, split=split), 1)
-        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=50, split=split), 0.5)
-        self.assertEquals(PlanktonParser.get_split_fraction(proc_code=99, split=split), split)
+        self.assertEqual(PlanktonParser.get_split_fraction(proc_code=20, split=split), 0.0235)
+        self.assertEqual(PlanktonParser.get_split_fraction(proc_code=21, split=split), 1)
+        self.assertEqual(PlanktonParser.get_split_fraction(proc_code=22, split=split), 1)
+        self.assertEqual(PlanktonParser.get_split_fraction(proc_code=23, split=split), 1)
+        self.assertEqual(PlanktonParser.get_split_fraction(proc_code=50, split=split), 0.5)
+        self.assertEqual(PlanktonParser.get_split_fraction(proc_code=99, split=split), split)
 
     def test_get_gear_size_202(self):
         gear_type = PlanktonParser.get_gear_type(202)
-        self.assertEquals(gear_type.pk, 90000102)
+        self.assertEqual(gear_type.pk, 90000102)
 
     def test_get_gear_size_76(self):
         gear_type = PlanktonParser.get_gear_type(76)
-        self.assertEquals(gear_type.pk, 90000105)
+        self.assertEqual(gear_type.pk, 90000105)
 
 
 @tag('parsers', 'parsers_xls')
@@ -209,8 +209,8 @@ class TestSampleXLSParser(DartTestCase):
         file = SimpleUploadedFile(file_name, upload_file.read())
 
         df = SampleParser.get_excel_dataframe(file, 0)
-        self.assertEquals(df.index.start, 9)
-        self.assertEquals([c for c in df.columns], expected_oxy_columns)
+        self.assertEqual(df.index.start, 9)
+        self.assertEqual([c for c in df.columns], expected_oxy_columns)
 
     def test_open_file_oxygen_with_header_row(self):
         # when provided a header row get_excel_dataframe should just skip to that row, even if it's not the real header
@@ -224,8 +224,8 @@ class TestSampleXLSParser(DartTestCase):
 
         expected_header_row = 10
         df = SampleParser.get_excel_dataframe(file, 0, expected_header_row)
-        self.assertEquals(df.shape[0], 414)  # there are 424 rows in this file -expected_header_row gives 414
-        self.assertEquals([str(c) for c in df.columns], expected_oxy_columns)
+        self.assertEqual(df.shape[0], 414)  # there are 424 rows in this file -expected_header_row gives 414
+        self.assertEqual([str(c) for c in df.columns], expected_oxy_columns)
 
 
 
@@ -251,13 +251,13 @@ class TestCTDParser(DartTestCase):
 
         errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         bottles = core_models.Bottle.objects.using('default').filter(event=event)
         self.assertTrue(bottles.exists())
-        self.assertEquals(len(bottles), 19)
-        self.assertEquals(bottles.first().bottle_id, event.sample_id)
-        self.assertEquals(bottles.last().bottle_id, event.end_sample_id)
+        self.assertEqual(len(bottles), 19)
+        self.assertEqual(bottles.first().bottle_id, event.sample_id)
+        self.assertEqual(bottles.last().bottle_id, event.end_sample_id)
 
     def test_process_bottles_update(self):
         # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
@@ -274,15 +274,15 @@ class TestCTDParser(DartTestCase):
         core_factory.BottleFactory(event=event, bottle_number=1, bottle_id=bottle_id, pressure=initial_pressure)
 
         bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
-        self.assertEquals(bottle.pressure, initial_pressure)
+        self.assertEqual(bottle.pressure, initial_pressure)
 
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
         errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
-        self.assertEquals(float(bottle.pressure), updated_pressure)
+        self.assertEqual(float(bottle.pressure), updated_pressure)
 
     def test_process_bottles_validation(self):
         # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
@@ -300,13 +300,13 @@ class TestCTDParser(DartTestCase):
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_006)
         errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
-        self.assertEquals(len(errors), 11)
+        self.assertEqual(len(errors), 11)
         for error in errors:
             self.assertIsInstance(error, core_models.ValidationError)
 
         # 14 bottles should have been created even though there are 24 bottles in the BTL file
         bottles = core_models.Bottle.objects.using('default').filter(event=event)
-        self.assertEquals(len(bottles), 14)
+        self.assertEqual(len(bottles), 14)
 
     # The number of bottles loaded from a dataframe should match (event.end_sample_id - event.sample_id)
     def test_bottle_count_match_event_validation(self):
@@ -319,7 +319,7 @@ class TestCTDParser(DartTestCase):
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
         errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
 
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
     def test_read_btl(self):
         # this tests the overall result
@@ -358,7 +358,7 @@ class TestCTDParser(DartTestCase):
                             btl_file=os.path.join(self.test_file_location, self.test_file_001))
 
         bcu = mst.uploads.all().first()
-        self.assertEquals(core_models.BioChemUploadStatus.upload, bcu.status)
+        self.assertEqual(core_models.BioChemUploadStatus.upload, bcu.status)
         self.assertTrue(origional_modified_date < bcu.modified_date)
 
 
@@ -404,7 +404,7 @@ class TestSampleCSVParser(DartTestCase):
         core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
 
         sample = core_models.Sample.objects.filter(bottle=bottle)
-        self.assertEquals(len(sample), 1)
+        self.assertEqual(len(sample), 1)
 
         data = {
             self.oxy_file_settings.sample_field: ['495271_1', '495271_2'],
@@ -417,8 +417,8 @@ class TestSampleCSVParser(DartTestCase):
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, different_file, df)
 
         sample = core_models.Sample.objects.filter(bottle=bottle)
-        self.assertEquals(len(sample), 1)
-        self.assertEquals(sample.first().file, different_file)
+        self.assertEqual(len(sample), 1)
+        self.assertEqual(sample.first().file, different_file)
 
     def test_no_duplicate_discrete(self):
         # if a discrete value for a sample already exists the parser should update the discrete value,
@@ -432,7 +432,7 @@ class TestSampleCSVParser(DartTestCase):
         core_factory.DiscreteValueFactory(sample=sample, replicate=1, value=0.001, comment="some comment")
 
         discrete = core_models.DiscreteSampleValue.objects.using('default').filter(sample=sample)
-        self.assertEquals(len(discrete), 1)
+        self.assertEqual(len(discrete), 1)
 
         # this should update one discrete value and attach a second to the sample
         data = {
@@ -445,14 +445,14 @@ class TestSampleCSVParser(DartTestCase):
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
 
         discrete = core_models.DiscreteSampleValue.objects.using('default').filter(sample=sample)
-        self.assertEquals(len(discrete), 2)
-        self.assertEquals(discrete[0].replicate, 1)
-        self.assertEquals(discrete[0].value, 3.932)
-        self.assertEquals(discrete[0].comment, None)
+        self.assertEqual(len(discrete), 2)
+        self.assertEqual(discrete[0].replicate, 1)
+        self.assertEqual(discrete[0].value, 3.932)
+        self.assertEqual(discrete[0].comment, None)
 
-        self.assertEquals(discrete[1].replicate, 2)
-        self.assertEquals(discrete[1].value, 3.835)
-        self.assertEquals(discrete[1].comment, 'hello?')
+        self.assertEqual(discrete[1].replicate, 2)
+        self.assertEqual(discrete[1].value, 3.835)
+        self.assertEqual(discrete[1].comment, 'hello?')
 
     def test_missing_bottle_validation(self):
         # no bottles were created for this test we should get a bunch of validation errors
@@ -473,7 +473,7 @@ class TestSampleCSVParser(DartTestCase):
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, file_name=file_name, dataframe=df)
 
         samples = core_models.Sample.objects.filter(bottle__bottle_id=bottle_id)
-        self.assertEquals(len(samples), 1)
+        self.assertEqual(len(samples), 1)
 
     @tag('parsers_sample_split')
     def test_data_frame_split_sample(self):
@@ -516,9 +516,9 @@ class TestSampleCSVParser(DartTestCase):
 
         for i in range(len(expected_sample_ids)):
             row = df.iloc[i, :]
-            self.assertEquals(row[self.oxy_file_settings.value_field], expected_values[i])
-            self.assertEquals(row['sid'], expected_sample_ids[i])
-            self.assertEquals(row['rid'], expected_replicates[i])
+            self.assertEqual(row[self.oxy_file_settings.value_field], expected_values[i])
+            self.assertEqual(row['sid'], expected_sample_ids[i])
+            self.assertEqual(row['rid'], expected_replicates[i])
 
     @tag('parsers_sample_split')
     def test_data_frame_split_remove_calibration(self):
@@ -545,9 +545,9 @@ class TestSampleCSVParser(DartTestCase):
 
         for i in range(len(expected_sample_ids)):
             row = df.iloc[i, :]
-            self.assertEquals(row[file_settings.value_field], expected_values[i])
-            self.assertEquals(row['sid'], expected_sample_ids[i])
-            self.assertEquals(row['rid'], expected_replicates[i])
+            self.assertEqual(row[file_settings.value_field], expected_values[i])
+            self.assertEqual(row['sid'], expected_sample_ids[i])
+            self.assertEqual(row['rid'], expected_replicates[i])
 
     @tag('parsers_sample_split')
     def test_data_frame_split_no_blanks(self):
@@ -573,9 +573,9 @@ class TestSampleCSVParser(DartTestCase):
 
         for i in range(len(expected_sample_ids)):
             row = df.iloc[i, :]
-            self.assertEquals(row[file_settings.value_field], expected_values[i])
-            self.assertEquals(row['sid'], expected_sample_ids[i])
-            self.assertEquals(row['rid'], expected_replicates[i])
+            self.assertEqual(row[file_settings.value_field], expected_values[i])
+            self.assertEqual(row['sid'], expected_sample_ids[i])
+            self.assertEqual(row['rid'], expected_replicates[i])
 
     def test_data_frame_column_convert(self):
         # it's expected that the file_settings fields will be lower case fields so the columns of the dataframe
@@ -620,7 +620,7 @@ class TestSampleCSVParser(DartTestCase):
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, file_name=self.file_name, dataframe=df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
         bottles = core_models.Bottle.objects.using('default').filter(event=self.ctd_event)
 
         # check that a replicate was created for the first sample
@@ -631,10 +631,10 @@ class TestSampleCSVParser(DartTestCase):
         self.assertIsNotNone(sample)
 
         dv_value = sample.discrete_values.get(replicate=1).value
-        self.assertEquals(dv_value, 3.932)
+        self.assertEqual(dv_value, 3.932)
 
         dv_value = sample.discrete_values.get(replicate=2).value
-        self.assertEquals(dv_value, 3.835)
+        self.assertEqual(dv_value, 3.835)
 
         # check that the comment for bottle 495600 was captured
         bottle_with_comment = bottles.get(bottle_id=495600)
@@ -644,15 +644,15 @@ class TestSampleCSVParser(DartTestCase):
         self.assertIsNotNone(sample)
 
         dv_value = sample.discrete_values.get(replicate=1).value
-        self.assertEquals(dv_value, 3.135)
+        self.assertEqual(dv_value, 3.135)
 
         dv_comment = sample.discrete_values.get(replicate=1).comment
-        self.assertEquals(dv_comment, "Dropped magnet in before H2SO4; sorry")
+        self.assertEqual(dv_comment, "Dropped magnet in before H2SO4; sorry")
 
         # If there was a BioChemUpload object with status 'uploaded' for the inserted data it should be marked as
         # 'upload' and the modified date changed
         bcu = sample_type.uploads.first()
-        self.assertEquals(core_models.BioChemUploadStatus.upload, bcu.status)
+        self.assertEqual(core_models.BioChemUploadStatus.upload, bcu.status)
         self.assertTrue(origional_modified_date < bcu.modified_date)
 
     def test_duplicate_error(self):
@@ -671,8 +671,8 @@ class TestSampleCSVParser(DartTestCase):
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
         self.assertIsInstance(errors[0], core_models.FileError)
-        self.assertEquals('Duplicate replicate id found for sample 491', errors[0].message)
+        self.assertEqual('Duplicate replicate id found for sample 491', errors[0].message)
 
 

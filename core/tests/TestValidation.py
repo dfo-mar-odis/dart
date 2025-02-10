@@ -41,7 +41,7 @@ class TestGeneralEventValidation(DartTestCase):
 
         errors = validate_event(event)
         logger.debug(errors)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
     def test_validate_actions_other(self):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
@@ -61,7 +61,7 @@ class TestGeneralEventValidation(DartTestCase):
 
         errors = validate_event(event)
         logger.debug(errors)
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
     def test_valid_location(self):
         # events must have a valid start location, the start location is determined by an action, but actions
@@ -76,7 +76,7 @@ class TestGeneralEventValidation(DartTestCase):
 
         errors = validate_event(event)
         logger.debug(errors)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
 
 @tag('validation', 'validation_ctd')
@@ -105,7 +105,7 @@ class TestCTDEventValidation(DartTestCase):
 
         errors = validate_ctd_event(event)
         logger.debug(errors)
-        self.assertEquals(len(errors), 2)
+        self.assertEqual(len(errors), 2)
 
     def test_validation_end_sample_ids(self):
         event = core_factory.CTDEventFactory(mission=self.mission, sample_id=1000, end_sample_id=None)
@@ -122,7 +122,7 @@ class TestCTDEventValidation(DartTestCase):
 
         errors = validate_ctd_event(event)
         logger.debug(errors)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
     # Don't validate aborted events
     def test_aborted_validation_sample_ids(self):
@@ -140,7 +140,7 @@ class TestCTDEventValidation(DartTestCase):
 
         errors = validate_ctd_event(event)
         logger.debug(errors)
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
     def test_validate_net_event_missing_sample_id(self):
         expected_file = 'test.log'
