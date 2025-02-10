@@ -35,7 +35,7 @@ class TestElogUpload(DartTestCase):
 
         errors = self.mission.file_errors.all()
         self.assertTrue(errors.exists())
-        self.assertEquals(errors[0].type, models.ErrorType.event)
+        self.assertEqual(errors[0].type, models.ErrorType.event)
 
         for error in errors:
             logger.info(error)

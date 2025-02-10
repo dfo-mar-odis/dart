@@ -27,7 +27,7 @@ biochem_db = 'biochem'
 @tag('view', 'view_mission_sample_validation')
 class TestViewMissionSampleValidation(SimpleTestCase):
 
-    fixtures = ['biochem_fixtures']
+    fixtures = ['default_biochem_fixtures']
     test_name = '18te2409'
 
     def setUp(self):
@@ -63,14 +63,14 @@ class TestViewMissionSampleValidation(SimpleTestCase):
         # if there is no connection or model available to get the batch ID then 1 should be returned
         batch_id = get_mission_batch_id()
 
-        self.assertEquals(1, batch_id)
+        self.assertEqual(1, batch_id)
 
     def test_get_batch_id_with_connection(self):
         # if the connection exists, but there is no batches table, return 1
         self.setup_connection()
 
         batch_id = get_mission_batch_id()
-        self.assertEquals(1, batch_id)
+        self.assertEqual(1, batch_id)
 
     def test_get_batch_id_with_model(self):
         # if the connection exists and there is a batches table, get the lowest batch ID, which should be 1
@@ -79,7 +79,7 @@ class TestViewMissionSampleValidation(SimpleTestCase):
         self.get_batches_model()
 
         batch_id = get_mission_batch_id()
-        self.assertEquals(1, batch_id)
+        self.assertEqual(1, batch_id)
 
     def test_get_batch_id_with_model_with_mission(self):
         # if the connection exists and there is a batches table and there are missions, get the lowest free batch ID
@@ -89,7 +89,7 @@ class TestViewMissionSampleValidation(SimpleTestCase):
         bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=1, name=self.test_name)
         bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=5, name=self.test_name)
         batch_id = get_mission_batch_id()
-        self.assertEquals(2, batch_id)
+        self.assertEqual(2, batch_id)
 
 
 @tag('forms', 'form_biochem_pre_validation')
@@ -158,7 +158,7 @@ class TestFormBioChemDatabase(DartTestCase):
         logger.debug(response.headers)
 
         self.assertIn('HX-Trigger', response.headers)
-        self.assertEquals(response.headers['HX-Trigger'], 'biochem_validation_update')
+        self.assertEqual(response.headers['HX-Trigger'], 'biochem_validation_update')
 
     @tag('form_biochem_pre_validation_test_validate_missing_dates')
     def test_validate_missing_dates(self):
@@ -168,16 +168,16 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertIsNotNone(errors)
 
         self.assertIsInstance(errors[0], core_models.Error)
-        self.assertEquals(errors[0].mission, bad_mission)
-        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
-        self.assertEquals(errors[0].message, _("Missing start date"))
-        self.assertEquals(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DATE_MISSING.value)
+        self.assertEqual(errors[0].mission, bad_mission)
+        self.assertEqual(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEqual(errors[0].message, _("Missing start date"))
+        self.assertEqual(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DATE_MISSING.value)
 
         self.assertIsInstance(errors[1], core_models.Error)
-        self.assertEquals(errors[1].mission, bad_mission)
-        self.assertEquals(errors[1].type, core_models.ErrorType.biochem)
-        self.assertEquals(errors[1].message, _("Missing end date"))
-        self.assertEquals(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DATE_MISSING.value)
+        self.assertEqual(errors[1].mission, bad_mission)
+        self.assertEqual(errors[1].type, core_models.ErrorType.biochem)
+        self.assertEqual(errors[1].message, _("Missing end date"))
+        self.assertEqual(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DATE_MISSING.value)
 
 
     @tag('form_biochem_pre_validation_test_validate_bad_dates')
@@ -191,10 +191,10 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertIsNotNone(errors)
 
         self.assertIsInstance(errors[0], core_models.Error)
-        self.assertEquals(errors[0].mission, bad_mission)
-        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
-        self.assertEquals(errors[0].message, _("End date comes before Start date"))
-        self.assertEquals(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DATE_BAD_VALUES.value)
+        self.assertEqual(errors[0].mission, bad_mission)
+        self.assertEqual(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEqual(errors[0].message, _("End date comes before Start date"))
+        self.assertEqual(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DATE_BAD_VALUES.value)
 
     @tag('form_biochem_pre_validation_test_mission_descriptor', 'git_issue_144')
     def test_mission_descriptor(self):
@@ -207,10 +207,10 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertIsNotNone(errors)
 
         self.assertIsInstance(errors[0], core_models.Error)
-        self.assertEquals(errors[0].mission, bad_mission)
-        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
-        self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
-        self.assertEquals(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
+        self.assertEqual(errors[0].mission, bad_mission)
+        self.assertEqual(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEqual(errors[0].message, _("Mission descriptor doesn't exist"))
+        self.assertEqual(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
 
     @tag('form_biochem_pre_validation_test_mission_descriptor', 'git_issue_144')
     def test_validate_mission_descriptor_mission(self):
@@ -221,10 +221,10 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertIsNotNone(errors)
 
         self.assertIsInstance(errors[0], core_models.Error)
-        self.assertEquals(errors[0].mission, bad_mission)
-        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
-        self.assertEquals(errors[0].message, _("Mission descriptor doesn't exist"))
-        self.assertEquals(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
+        self.assertEqual(errors[0].mission, bad_mission)
+        self.assertEqual(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEqual(errors[0].message, _("Mission descriptor doesn't exist"))
+        self.assertEqual(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
 
     @tag('form_biochem_pre_validation_test_bottle_date_no_location_fail', 'git_issue_147')
     def test_bottle_date_no_location_fail(self):
@@ -235,8 +235,8 @@ class TestFormBioChemDatabase(DartTestCase):
         errors: [core_models.Error] = form_biochem_pre_validation._validate_bottles(self.mission)
 
         self.assertIsInstance(errors[0], core_models.Error)
-        self.assertEquals(errors[0].mission, self.mission)
-        self.assertEquals(errors[0].type, core_models.ErrorType.biochem)
-        self.assertEquals(errors[0].message, _("Event is missing a position. Event ID : ") + str(event.event_id))
-        self.assertEquals(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.POSITION_MISSING.value)
+        self.assertEqual(errors[0].mission, self.mission)
+        self.assertEqual(errors[0].type, core_models.ErrorType.biochem)
+        self.assertEqual(errors[0].message, _("Event is missing a position. Event ID : ") + str(event.event_id))
+        self.assertEqual(errors[0].code, form_biochem_pre_validation.BIOCHEM_CODES.POSITION_MISSING.value)
 

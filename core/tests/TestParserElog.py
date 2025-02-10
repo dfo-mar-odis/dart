@@ -20,7 +20,7 @@ class TestElogParser(DartTestCase):
                         f"Missing Required field {required_field}")
 
         field = queryset.get(required_field=required_field)
-        self.assertEquals(mapped_field, field.mapped_field)
+        self.assertEqual(mapped_field, field.mapped_field)
 
     @tag('parsers_elog_test_get_or_create_file_config')
     def test_get_or_create_file_config(self):
@@ -28,8 +28,8 @@ class TestElogParser(DartTestCase):
 
         # the config should only include elog mappings
         values = queryset.values_list('file_type', flat=True).distinct()
-        self.assertEquals(1, len(values))
-        self.assertEquals(values[0], 'elog')
+        self.assertEqual(1, len(values))
+        self.assertEqual(values[0], 'elog')
 
         self.assertElogField(queryset, 'event', 'Event')
         self.assertElogField(queryset, "time_position", "Time|Position")
@@ -63,7 +63,7 @@ class TestElogParser(DartTestCase):
         self.assertIsNotNone(mid_dictionary)
 
         # Returned dictionary should contain 9 elements
-        self.assertEquals(len(mid_dictionary[elog.ParserType.MID]), 9)
+        self.assertEqual(len(mid_dictionary[elog.ParserType.MID]), 9)
 
         logger.debug(f"Stations: {mid_dictionary[elog.ParserType.STATIONS]}")
         logger.debug(f"Instruments: {mid_dictionary[elog.ParserType.INSTRUMENTS]}")
@@ -134,11 +134,11 @@ class TestElogParser(DartTestCase):
             buffer[field.mapped_field] = "some value"
 
         response = elog.validate_message_object(elog_config, buffer)
-        self.assertEquals(len(response), 1)
+        self.assertEqual(len(response), 1)
         self.assertIsInstance(response[0], KeyError)
-        self.assertEquals(response[0].args[0]['key'], 'station')
-        self.assertEquals(response[0].args[0]['expected'], 'Station')
-        self.assertEquals(response[0].args[0]['message'], 'Message object missing key')
+        self.assertEqual(response[0].args[0]['key'], 'station')
+        self.assertEqual(response[0].args[0]['expected'], 'Station')
+        self.assertEqual(response[0].args[0]['message'], 'Message object missing key')
 
     def test_process_stations(self):
         stations = ['HL_01', 'HL_02', 'hl_02']
@@ -153,7 +153,7 @@ class TestElogParser(DartTestCase):
             self.assertTrue(core_models.Station.objects.filter(name__iexact=station).exists())
 
         # HL_02 should have only been added once
-        self.assertEquals(len(core_models.Station.objects.filter(name__iexact='HL_02')), 1)
+        self.assertEqual(len(core_models.Station.objects.filter(name__iexact='HL_02')), 1)
 
     def test_get_instrument_type(self):
         instruments = [
@@ -164,7 +164,7 @@ class TestElogParser(DartTestCase):
 
         for instrument in instruments:
             instrument_type = elog.get_instrument_type(instrument[0])
-            self.assertEquals(instrument_type, instrument[1], f'{instrument[0]} should be of type {instrument[1].name}')
+            self.assertEqual(instrument_type, instrument[1], f'{instrument[0]} should be of type {instrument[1].name}')
 
     def test_process_instruments(self):
         instruments = [
@@ -184,15 +184,15 @@ class TestElogParser(DartTestCase):
         elog.process_instruments(self.mission, [instrument[0] for instrument in instruments])
 
         # ctd should have only been added once
-        self.assertEquals(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.ctd)), 1)
+        self.assertEqual(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.ctd)), 1)
 
         # there should be 2 nets
-        self.assertEquals(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.net)), 2)
+        self.assertEqual(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.net)), 2)
         # one named 202um
-        self.assertEquals(len(core_models.Instrument.objects.filter(name__iexact='202')), 1)
+        self.assertEqual(len(core_models.Instrument.objects.filter(name__iexact='202')), 1)
 
         # one named 76um
-        self.assertEquals(len(core_models.Instrument.objects.filter(name__iexact='76')), 1)
+        self.assertEqual(len(core_models.Instrument.objects.filter(name__iexact='76')), 1)
 
     def test_process_events(self):
         expected_event_id = 1
@@ -221,18 +221,18 @@ class TestElogParser(DartTestCase):
         self.assertFalse(events.exists())
         errors = elog.process_events(self.mission, buffer)
 
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         events = core_models.Event.objects.using('default').filter(mission=self.mission)
         self.assertTrue(events.exists())
-        self.assertEquals(len(events), 1)
+        self.assertEqual(len(events), 1)
 
         event: core_models.Event = events[0]
-        self.assertEquals(event.event_id, expected_event_id)
-        self.assertEquals(event.instrument.name, expected_instrument)
-        self.assertEquals(event.instrument.type, expected_instrument_type)
-        self.assertEquals(event.sample_id, expected_sample_id)
-        self.assertEquals(event.end_sample_id, expected_end_sample_id)
+        self.assertEqual(event.event_id, expected_event_id)
+        self.assertEqual(event.instrument.name, expected_instrument)
+        self.assertEqual(event.instrument.type, expected_instrument_type)
+        self.assertEqual(event.sample_id, expected_sample_id)
+        self.assertEqual(event.end_sample_id, expected_end_sample_id)
 
     def test_process_events_no_station(self):
         buffer = {
@@ -250,14 +250,14 @@ class TestElogParser(DartTestCase):
         }
 
         errors = elog.process_events(self.mission, buffer)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
         error = errors[0]
         # The message id the error occurred during
-        self.assertEquals(error[0], '1')
+        self.assertEqual(error[0], '1')
 
         # The message
-        self.assertEquals(error[1], 'Error processing events, see error.log for details')
+        self.assertEqual(error[1], 'Error processing events, see error.log for details')
 
         # The actual exception that occurred
         self.assertIsInstance(error[2], core_models.Station.DoesNotExist)
@@ -286,14 +286,14 @@ class TestElogParser(DartTestCase):
         core_factory.StationFactory(name=expected_station)
 
         errors = elog.process_events(self.mission, buffer)
-        self.assertEquals(len(errors), 1)
+        self.assertEqual(len(errors), 1)
 
         error = errors[0]
         # The message id the error occurred during
-        self.assertEquals(error[0], '1')
+        self.assertEqual(error[0], '1')
 
         # The message
-        self.assertEquals(error[1], 'Error processing events, see error.log for details')
+        self.assertEqual(error[1], 'Error processing events, see error.log for details')
 
         # The actual exception that occurred
         self.assertIsInstance(error[2], core_models.Instrument.DoesNotExist)
@@ -361,28 +361,28 @@ class TestElogParser(DartTestCase):
             elog.ParserType.MID: buffer
         }
         errors = elog.process_attachments_actions(event.mission, parse_buffer)
-        self.assertEquals(len(errors), 0)
+        self.assertEqual(len(errors), 0)
 
         event = core_models.Event.objects.using('default').get(event_id=expected_event_id)
-        self.assertEquals(len(event.attachments.all()), 2)
-        self.assertEquals(len(event.actions.all()), 3)
+        self.assertEqual(len(event.attachments.all()), 2)
+        self.assertEqual(len(event.actions.all()), 3)
 
     @tag('parsers_elog_test_get_instrument')
     def test_get_instrument(self):
         # provided an instrument like 'RingNet' or 'CTD' and an attachment list like 'ph | SBE34' or
         # 'flowmeter | 202um', the get_instrument function should return a mock instrument object
         instrument = elog.get_instrument('ctd', 'ph | SBE34')
-        self.assertEquals(instrument.name, 'CTD')
-        self.assertEquals(instrument.type, core_models.InstrumentType.ctd)
+        self.assertEqual(instrument.name, 'CTD')
+        self.assertEqual(instrument.type, core_models.InstrumentType.ctd)
 
         instrument = elog.get_instrument('RingNet', '202')
-        self.assertEquals(instrument.name, '202')
-        self.assertEquals(instrument.type, core_models.InstrumentType.net)
+        self.assertEqual(instrument.name, '202')
+        self.assertEqual(instrument.type, core_models.InstrumentType.net)
 
         instrument = elog.get_instrument('net', 'flowmeter | 202')
-        self.assertEquals(instrument.name, '202')
-        self.assertEquals(instrument.type, core_models.InstrumentType.net)
+        self.assertEqual(instrument.name, '202')
+        self.assertEqual(instrument.type, core_models.InstrumentType.net)
 
         instrument = elog.get_instrument('net', '76um | flowmeter')
-        self.assertEquals(instrument.name, '76')
-        self.assertEquals(instrument.type, core_models.InstrumentType.net)
+        self.assertEqual(instrument.name, '76')
+        self.assertEqual(instrument.type, core_models.InstrumentType.net)

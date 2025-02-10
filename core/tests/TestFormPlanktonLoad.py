@@ -61,13 +61,13 @@ class TestFormPlanktonLoad(DartTestCase):
         file_input = card_form.find(id="id_input_sample_file")
         self.assertIsNotNone(file_input)
         self.assertIn('hx-get', file_input.attrs)
-        self.assertEquals(file_input.attrs['hx-get'], file_url)
+        self.assertEqual(file_input.attrs['hx-get'], file_url)
 
         self.assertIn('hx-trigger', file_input.attrs)
-        self.assertEquals(file_input.attrs['hx-trigger'], 'change')
+        self.assertEqual(file_input.attrs['hx-trigger'], 'change')
 
         self.assertIn('hx-swap', file_input.attrs)
-        self.assertEquals(file_input.attrs['hx-swap'], 'none')
+        self.assertEqual(file_input.attrs['hx-swap'], 'none')
 
         # the form needs to have a message area to display save/load dialogs
         card_msg_area = card_form.find(id="div_id_plankton_message")
@@ -90,10 +90,10 @@ class TestFormPlanktonLoad(DartTestCase):
         self.assertIsNotNone(message)
         self.assertIn('hx-post', message.attrs)
 
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-post'], url)
         self.assertIn('hx-trigger', message.attrs)
 
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
         self.assertIn('hx-swap-oob', message.attrs)
 
     @tag('form_plankton_test_file_chooser_zoo_post')
@@ -124,10 +124,10 @@ class TestFormPlanktonLoad(DartTestCase):
         self.assertIsNotNone(message)
         self.assertIn('hx-post', message.attrs)
 
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-post'], url)
         self.assertIn('hx-trigger', message.attrs)
 
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
         self.assertIn('hx-swap-oob', message.attrs)
 
     @tag('form_plankton_test_import_zoo_plankton_post')
@@ -163,11 +163,11 @@ class TestFormPlanktonLoad(DartTestCase):
         form = soup.find(id="div_id_plankton_form")
         self.assertIsNotNone(form)
         self.assertIn('hx-swap-oob', form.attrs)
-        self.assertEquals(0, len(form.find_all()))
+        self.assertEqual(0, len(form.find_all()))
 
         # the response should have an Hx-Trigger="update_samples" event to tell listening elements to update
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response.headers['Hx-Trigger'], 'update_samples')
+        self.assertEqual(response.headers['Hx-Trigger'], 'update_samples')
 
     @tag('form_plankton_test_import_phyto_plankton_post')
     def test_import_phyto_plankton_post(self):
@@ -206,11 +206,11 @@ class TestFormPlanktonLoad(DartTestCase):
         form = soup.find(id="div_id_plankton_form")
         self.assertIsNotNone(form)
         self.assertIn('hx-swap-oob', form.attrs)
-        self.assertEquals(0, len(form.find_all()))
+        self.assertEqual(0, len(form.find_all()))
 
         # the response should have an Hx-Trigger="update_samples" event to tell listening elements to update
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response.headers['Hx-Trigger'], 'update_samples')
+        self.assertEqual(response.headers['Hx-Trigger'], 'update_samples')
 
     @tag('form_plankton_test_list_plankton_get')
     def test_list_plankton_get(self):
@@ -225,11 +225,11 @@ class TestFormPlanktonLoad(DartTestCase):
 
         self.assertIn('hx-swap-oob', table.attrs)
         self.assertIn('hx-get', table.attrs)
-        self.assertEquals(table.attrs['hx-get'], url)
+        self.assertEqual(table.attrs['hx-get'], url)
         self.assertIn('hx-trigger', table.attrs)
         # the hx-trigger should NOT include 'load' because that will cause an infinite loop where the element
         # is swapped in and then immediately calls the url again.
-        self.assertEquals(table['hx-trigger'], 'update_samples from:body')
+        self.assertEqual(table['hx-trigger'], 'update_samples from:body')
 
     @tag('form_plankton_test_clear_plankton_post')
     def test_clear_plankton_post(self):

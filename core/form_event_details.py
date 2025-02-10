@@ -11,7 +11,6 @@ from crispy_forms.layout import Div, Column, Row, Hidden, Field, Layout, HTML
 from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.core.cache import caches
-from django.core.validators import RegexValidator
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
