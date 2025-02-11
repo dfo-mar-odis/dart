@@ -39,7 +39,7 @@ class BiochemDiscreteBatchForm(form_biochem_batch.BiochemBatchForm):
                             args=(self.database, self.mission_id, self.batch_id))
 
     def get_batch_choices(self):
-        mission = core_models.Mission.objects.using(self.database).get(pk=self.mission_id)
+        mission = core_models.Mission.objects.get(pk=self.mission_id)
         table_model = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
 
         batch_ids = table_model.objects.using('biochem').all().values_list('batch_seq', flat=True).distinct()
@@ -468,12 +468,12 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
 def sample_data_upload(database, mission: core_models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem).delete()
-    core_models.Error.objects.using(database).filter(mission=mission, type=core_models.ErrorType.biochem).delete()
+    core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
     samples_types_for_upload = [bcupload.type for bcupload in
-                                core_models.BioChemUpload.objects.using(database).filter(type__mission=mission)]
+                                core_models.BioChemUpload.objects.filter(type__mission=mission)]
 
     # Todo: I'm running the standard DART based event/data validation here, but we probably should be running the
     #  BioChem Validation from core.form_validation_biochem.run_biochem_validation()
@@ -482,7 +482,7 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
     if errors:
         # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
         user_logger.info(_("Datatypes missing see errors"))
-        core_models.Error.objects.using(database).bulk_create(errors)
+        core_models.Error.objects.bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
     form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
@@ -492,7 +492,7 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
 
 
 def upload_batch(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))

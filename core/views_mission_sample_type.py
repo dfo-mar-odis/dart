@@ -43,7 +43,7 @@ class SampleTypeDetails(GenericDetailView):
 
 
 def sample_type_card(request, database, sample_type_id):
-    mission_sample_type = models.MissionSampleType.objects.using(database).get(pk=sample_type_id)
+    mission_sample_type = models.MissionSampleType.objects.get(pk=sample_type_id)
 
     sample_type_form = forms.CardForm(card_title=str(mission_sample_type), card_name="mission_sample_type")
     sample_type_html = render_crispy_form(sample_type_form)

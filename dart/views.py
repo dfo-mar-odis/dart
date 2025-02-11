@@ -63,7 +63,7 @@ class GenericFlilterMixin(GenericViewMixin, FilterView):
             database = self.kwargs['database']
             utils.connect_database(database)
 
-            return self.model.objects.using(database).all()
+            return self.model.objects.all()
 
         return super().get_queryset()
 
@@ -86,7 +86,7 @@ class GenericCreateView(GenericViewMixin, CreateView):
             database = self.kwargs['database']
             utils.connect_database(database)
 
-            return self.model.objects.using(database).all()
+            return self.model.objects.all()
 
         return super().get_queryset()
 
@@ -102,7 +102,7 @@ class GenericUpdateView(GenericViewMixin, UpdateView):
             database = self.kwargs['database']
             utils.connect_database(database)
 
-            return self.model.objects.using(database).all()
+            return self.model.objects.all()
 
         return super().get_queryset()
 
@@ -117,7 +117,7 @@ class GenericDetailView(GenericViewMixin, DetailView):
             database = self.kwargs['database']
             utils.connect_database(database)
 
-            return self.model.objects.using(database).all()
+            return self.model.objects.all()
 
         return super().get_queryset()
 

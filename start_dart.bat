@@ -5,7 +5,7 @@ if not exist ".\logs\" (
 )
 
 set master_branch=4.1.x
-set dart_version=4.1.0.4
+set dart_version=4.1.1
 
 REM if this is not a git repo, and the application was installed from zip file we just want to run update
 REM if this is a cloned version of the git repo we want to pull from master, then run the update

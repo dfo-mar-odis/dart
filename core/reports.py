@@ -33,7 +33,7 @@ def get_event_ids(event_query):
 def get_station_list(database):
     stations = []
     station_list = []
-    events = core_models.Event.objects.using(database).order_by('event_id')
+    events = core_models.Event.objects.order_by('event_id')
     for event in events:
         if event.station.name not in stations:
             stn_events = events.filter(station=event.station)
@@ -42,7 +42,7 @@ def get_station_list(database):
             # was a CTD done at this station
             ctd_done = stn_events.filter(instrument__type=core_models.InstrumentType.ctd)
             # Were samples taken at this station.
-            rosette_done = core_models.Bottle.objects.using(database).filter(event__station=event.station)
+            rosette_done = core_models.Bottle.objects.filter(event__station=event.station)
 
             # was a VPR done at this station
             vpr_done = stn_events.filter(instrument__type=core_models.InstrumentType.vpr)
@@ -95,7 +95,7 @@ def get_station_list(database):
 
 
 def station_report(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
     station_list = get_station_list(database)
 
     header = ['station', 'date (UTC)', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
@@ -124,7 +124,7 @@ def station_report(request, database, mission_id):
 
 
 def elog(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     header = ['Mission', 'Event', 'Station', 'Instrument', 'AVG_SOUNDING', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_Lon',
               'SDATE', 'STIME', 'EDATE', 'ETIME', 'DURATION', 'ELAPSED_TIME', 'COMMENTS']
@@ -194,7 +194,7 @@ def elog(request, database, mission_id):
 
 
 def error_report(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     header = ['MISSION', "FILE", "LINE/OBJECT", 'ERROR_TYPE', 'MESSAGE']
     data = ",".join(header) + '\n'
@@ -204,7 +204,7 @@ def error_report(request, database, mission_id):
         row = [mission.name, error.file_name, error.line, error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
-    validation_errs = core_models.ValidationError.objects.using(database).filter(event__mission=mission)
+    validation_errs = core_models.ValidationError.objects.filter(event__mission=mission)
     for error in validation_errs:
         row = [mission.name, "", f"Event: {error.event.event_id}", error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
@@ -224,7 +224,7 @@ def error_report(request, database, mission_id):
 
 
 def profile_summary(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     exclude = []
     mission_included_sampletypes = mission.mission_sample_types.all()
@@ -242,7 +242,7 @@ def profile_summary(request, database, mission_id):
     header = ['MISSION', "STATION", "EVENT", 'GEAR', 'PRESSURE', "SAMPLE"] + [st.name.upper() for st in sample_types]
     data = ",".join(header) + '\n'
 
-    bottles = core_models.Bottle.objects.using(database).filter(event__mission=mission).order_by('bottle_id')
+    bottles = core_models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')
     for bottle in bottles:
         event = bottle.event
         row = [event.mission, event.station, event.event_id, event.instrument.get_type_display(),
@@ -265,11 +265,11 @@ def profile_summary(request, database, mission_id):
 
 
 def std_sample_report(request, database, mission_id, **kwargs):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     data = ",".join(kwargs['headers']) + '\n'
 
-    bottles = core_models.Bottle.objects.using(database).filter(event__mission_id=mission_id).order_by('bottle_id')
+    bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
 
     for bottle in bottles:
         row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]
@@ -323,7 +323,7 @@ def salt_report(request, database, mission_id):
 # The problem with this report is it depends on there being a SampleType with a short name 'chl'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def chl_report(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
     sensors = [s.name for s in mission.mission_sample_types.filter(long_name__icontains='fluorescence')]
 
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID"]

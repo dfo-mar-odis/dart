@@ -377,8 +377,8 @@ def migrate_database(request, database):
     utils.connect_database(database)
     utils.migrate(database)
 
-    if models.Mission.objects.using(database).exists():
-        mission = models.Mission.objects.using(database).first()
+    if models.Mission.objects.exists():
+        mission = models.Mission.objects.first()
         missions.append({'mission': mission, 'database': database})
 
     context = {

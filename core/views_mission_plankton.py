@@ -69,7 +69,7 @@ def biochem_upload_card(request, database, mission_id):
 def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=models.ErrorType.biochem_plankton).delete()
-    models.Error.objects.using(database).filter(mission=mission, type=models.ErrorType.biochem_plankton).delete()
+    models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem_plankton).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Plankton Data"))
@@ -83,7 +83,7 @@ def sample_data_upload(database, mission: models.Mission, uploader: str, batch_i
 
 # TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
 def upload_samples(request, database, mission_id):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
@@ -155,12 +155,12 @@ def download_samples(request, database, mission_id):
     uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     batch_name = f'{mission.start_date.strftime("%Y%m")}{mission.end_date.strftime("%Y%m")}'
 
-    plankton_samples = models.PlanktonSample.objects.using(database).filter(
+    plankton_samples = models.PlanktonSample.objects.filter(
         bottle__event__mission=mission).values_list('pk', flat=True).distinct()
-    bottles = models.Bottle.objects.using(database).filter(plankton_data__id__in=plankton_samples).distinct()
+    bottles = models.Bottle.objects.filter(plankton_data__id__in=plankton_samples).distinct()
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -193,7 +193,7 @@ def download_samples(request, database, mission_id):
 
         return HttpResponse(soup)
 
-    plankton_samples = models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
+    plankton_samples = models.PlanktonSample.objects.filter(bottle__event__mission=mission)
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -240,7 +240,7 @@ def download_samples(request, database, mission_id):
 
 
 def clear_plankton(request, database, mission_id):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
 
@@ -258,7 +258,7 @@ def clear_plankton(request, database, mission_id):
         soup.append(alert)
         return HttpResponse(soup)
 
-    samples = models.PlanktonSample.objects.using(database).filter(bottle__event__mission_id=mission_id)
+    samples = models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id)
     files = samples.values_list('file', flat=True).distinct()
     errors = mission.file_errors.filter(file_name__in=files)
     errors.delete()

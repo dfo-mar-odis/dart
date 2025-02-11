@@ -1,5 +1,5 @@
 import io
-import re
+from io import BytesIO, StringIO, BufferedReader
 
 import pandas as pd
 import numpy as np
@@ -12,12 +12,10 @@ from crispy_forms.layout import Layout, Field, Column, Hidden, Row, Div
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
-from django.core.validators import MinValueValidator, MaxValueValidator
 from django.http import HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
-from pandas.errors import ParserError
 from render_block import render_block_to_string
 
 from core import forms as core_forms
@@ -59,9 +57,9 @@ class SampleTypeConfigForm(forms.ModelForm):
         # if the initial skip isn't set or is -1 then we'll scan the first 30 lines to see if we can
         # figure out what the header line is. Then the user can adjust it if it's incorrect.
         if data and file_type and file_type.startswith('xls'):
-            data_frame = pd.read_excel(data, sheet_name=tab, nrows=30, header=None)
+            data_frame = pd.read_excel(BytesIO(data), sheet_name=tab, nrows=30, header=None)
         else:
-            data_frame = pd.read_csv(io.StringIO(data.decode('utf-8')), nrows=1, header=None)
+            data_frame = pd.read_csv(StringIO(data.decode('utf-8')), nrows=1, header=None)
 
         column_count = data_frame.shape[1]
         nan_tolerance = 0.1
@@ -76,9 +74,13 @@ class SampleTypeConfigForm(forms.ModelForm):
         # if the initial['skip'] is set then we only need one line from the file
         header_index = skip - 1
         if data and file_type and file_type.startswith('xls'):
-            data_frame = pd.read_excel(data, sheet_name=tab, nrows=1, skiprows=header_index, header=None)
+            if isinstance(data, BufferedReader):
+                data_frame = pd.read_excel(data, sheet_name=tab, nrows=1, skiprows=header_index, header=None)
+            else:
+                data_frame = pd.read_excel(BytesIO(data), sheet_name=tab, nrows=1, skiprows=header_index, header=None)
+
         else:
-            data_frame = pd.read_csv(io.StringIO(data.decode('utf-8')), nrows=1, skiprows=header_index, header=None)
+            data_frame = pd.read_csv(StringIO(data.decode('utf-8')), nrows=1, skiprows=header_index, header=None)
 
         header = data_frame.iloc[0]
         field_choices = [(str(column).lower(), column) for column in header]
@@ -117,7 +119,11 @@ class SampleTypeConfigForm(forms.ModelForm):
         if 'file_data' in kwargs:
             self.file_data = kwargs.pop('file_data')
             if file_type and file_type.startswith('xls'):
-                tabs = pd.ExcelFile(self.file_data).sheet_names
+                if isinstance(self.file_data, BufferedReader):
+                    tabs = pd.ExcelFile(self.file_data).sheet_names
+                else:
+                    tabs = pd.ExcelFile(BytesIO(self.file_data)).sheet_names
+
 
         super().__init__(*args, **kwargs)
 
@@ -529,7 +535,7 @@ def load_sample_config(request, database, **kwargs):
         if mission_id is None:
             raise Http404(_("Mission does not exist"))
 
-        context['mission'] = models.Mission.objects.using(database).get(pk=mission_id)
+        context['mission'] = models.Mission.objects.get(pk=mission_id)
         html = render_to_string("core/mission_samples.html", request=request, context=context)
         return HttpResponse(html)
     elif request.method == "POST":

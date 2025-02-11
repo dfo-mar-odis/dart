@@ -72,7 +72,7 @@ class PlanktonForm(forms.Form):
 
 
 def load_plankton(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
         # you can only get the file though a POST request
@@ -184,7 +184,7 @@ def load_plankton(request, database, mission_id):
 
 def import_plankton(request, database, mission_id):
 
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
         # you can only get the file though a POST request
@@ -317,7 +317,7 @@ def import_plankton(request, database, mission_id):
 
 def list_plankton(request, database, mission_id):
 
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', "html.parser")
     div = soup.new_tag('div')
@@ -332,7 +332,7 @@ def list_plankton(request, database, mission_id):
     page_limit = 50
     page_start = page_limit * page
 
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission).order_by(
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission).order_by(
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():

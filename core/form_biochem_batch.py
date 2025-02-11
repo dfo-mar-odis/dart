@@ -188,7 +188,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
 
     # this can be overridden by an implementing class to be more specific about what batches it retrieves.
     def get_batch_choices(self):
-        mission = core.models.Mission.objects.using(self.database).get(pk=self.mission_id)
+        mission = core.models.Mission.objects.get(pk=self.mission_id)
 
         # only get batch ids that match the mission descriptor
         batches = biochem_models.Bcbatches.objects.using('biochem').filter(

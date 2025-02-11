@@ -74,7 +74,7 @@ class ElogDetails(GenericDetailView):
 
 
 def hx_update_elog_config(request, database, mission_id):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     config = elog.get_or_create_file_config()
 
     context = {'database': database, 'object': mission}
