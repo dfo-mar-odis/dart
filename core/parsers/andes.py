@@ -81,12 +81,12 @@ def parse_instruments(mission: core_models.Mission, file_name: str, instruments:
         if type_name.lower() == 'plankton net':
             type_name = 'net'
 
-        if not core_models.Instrument.objects.using(database).filter(name=name).exists():
+        if not core_models.Instrument.objects.filter(name=name).exists():
             type = core_models.InstrumentType.other
             if core_models.InstrumentType.has_value(type_name):
                 type = core_models.InstrumentType.get(type_name)
 
-            core_models.Instrument.objects.using(database).create(name=name, type=type)
+            core_models.Instrument.objects.create(name=name, type=type)
 
     return errors
 
@@ -98,7 +98,7 @@ def parse_stations(mission: core_models.Mission, file_name: str, samples: list[d
 
     errors = []
 
-    existing_stations = [stn.name.lower() for stn in core_models.Station.objects.using(database).all()]
+    existing_stations = [stn.name.lower() for stn in core_models.Station.objects.all()]
     create_stations = {}
     station_count = len(samples)
     for index, station in enumerate(samples):
@@ -108,7 +108,7 @@ def parse_stations(mission: core_models.Mission, file_name: str, samples: list[d
         if name.lower() not in existing_stations and name.lower() not in create_stations.keys():
             create_stations[name.lower()] = core_models.Station(name=name)
 
-    core_models.Station.objects.using(database).bulk_create(create_stations.values())
+    core_models.Station.objects.bulk_create(create_stations.values())
 
     return errors
 
@@ -120,9 +120,9 @@ def parse_events(mission: core_models.Mission, file_name: str, samples: list[dic
     config: QuerySet[FileConfiguration] = get_or_create_file_config()
     database = mission._state.db
 
-    stations = core_models.Station.objects.using(database).all()
-    instruments = core_models.Instrument.objects.using(database).all()
-    mission_events = core_models.Event.objects.using(database).all()
+    stations = core_models.Station.objects.all()
+    instruments = core_models.Instrument.objects.all()
+    mission_events = core_models.Event.objects.all()
 
     errors = []
     create_events = {}
@@ -223,17 +223,17 @@ def parse_events(mission: core_models.Mission, file_name: str, samples: list[dic
                 mission_event.sample_id = sample_id
                 mission_event.end_sample_id = end_sample_id
 
-    core_models.Event.objects.using(database).bulk_create(create_events.values())
-    core_models.Event.objects.using(database).bulk_update(update_events.values(), update_fields)
+    core_models.Event.objects.bulk_create(create_events.values())
+    core_models.Event.objects.bulk_update(update_events.values(), update_fields)
 
-    mission_events = {event.event_id: event for event in core_models.Event.objects.using(database).all()}
+    mission_events = {event.event_id: event for event in core_models.Event.objects.all()}
     create_attachments = []
     if add_attachments:
         for key, value in add_attachments.items():
             attachment = core_models.Attachment(event=mission_events[key], name=value)
             create_attachments.append(attachment)
 
-    core_models.Attachment.objects.using(database).bulk_create(create_attachments)
+    core_models.Attachment.objects.bulk_create(create_attachments)
 
     return errors
 
@@ -291,7 +291,7 @@ def parse_actions(mission: core_models.Mission, file_name: str, samples: list[di
                                             comment=action_comment, sounding=action_sounding, file=file_name)
                 create_actions.append(action)
 
-    core_models.Action.objects.using(database).bulk_create(create_actions)
+    core_models.Action.objects.bulk_create(create_actions)
 
     return errors
 
@@ -310,7 +310,7 @@ def parse(mission: core_models.Mission, file_name: str, stream: io.StringIO):
     # Step 1 - read the file
     data = json.load(stream)
     database = mission._state.db
-    core_models.FileError.objects.using(database).filter(file_name=file_name).delete()
+    core_models.FileError.objects.filter(file_name=file_name).delete()
 
     errors = []
 
@@ -327,4 +327,4 @@ def parse(mission: core_models.Mission, file_name: str, stream: io.StringIO):
     errors += parse_events(mission, file_name, data['mission']['samples'])
     errors += parse_actions(mission, file_name, data['mission']['samples'])
 
-    core_models.FileError.objects.using(database).bulk_create(errors)
+    core_models.FileError.objects.bulk_create(errors)

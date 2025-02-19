@@ -291,11 +291,11 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         valid = validation.validate_bottle_sample_range(event=event, bottle_id=bottle_id)
         errors += valid
 
-        if core_models.Bottle.objects.using(database).filter(event=event, bottle_number=bottle_number).exists():
+        if core_models.Bottle.objects.filter(event=event, bottle_number=bottle_number).exists():
             # If a bottle already exists for this event then we'll update its fields rather than
             # creating a whole new bottle. Reason being there may be samples attached to bottles that are
             # being reloaded from a calibrated bottle file post mission.
-            b = core_models.Bottle.objects.using(database).get(event=event, bottle_number=bottle_number)
+            b = core_models.Bottle.objects.get(event=event, bottle_number=bottle_number)
 
             check_fields = {'bottle_id': bottle_id, 'date_time': date, 'pressure': pressure,
                             'latitude': latitude, 'longitude': longitude}
@@ -309,12 +309,12 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
                                             bottle_id=bottle_id, latitude=latitude, longitude=longitude)
             b_create.append(new_bottle)
 
-    core_models.Bottle.objects.using(database).bulk_create(b_create)
+    core_models.Bottle.objects.bulk_create(b_create)
     if len(b_update['data']) > 0:
-        core_models.Bottle.objects.using(database).bulk_update(objs=b_update['data'], fields=b_update['fields'])
+        core_models.Bottle.objects.bulk_update(objs=b_update['data'], fields=b_update['fields'])
 
     if len(errors) > 0:
-        core_models.ValidationError.objects.using(database).bulk_create(errors)
+        core_models.ValidationError.objects.bulk_create(errors)
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
@@ -354,7 +354,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         drop_rows = data_frame_avg.shape[0] - (event.total_samples + 1)
         data_frame_avg = data_frame_avg[:-drop_rows]
 
-    bottles = core_models.Bottle.objects.using(database).filter(event=event)
+    bottles = core_models.Bottle.objects.filter(event=event)
 
     # make global sample types local to this mission to be attached to samples when they're created
     logger.info("Creating local sample types")
@@ -407,7 +407,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
         bottle = bottles.get(bottle_id=bottle_id)
         for column in column_headers:
-            if (sample := core_models.Sample.objects.using(database).filter(bottle=bottle,
+            if (sample := core_models.Sample.objects.filter(bottle=bottle,
                                                                             type=sample_types[column])).exists():
                 sample = sample.first()
                 if updated_value(sample, 'file', file_name):
@@ -425,19 +425,19 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
     if len(new_samples) > 0:
         logger.info("Creating CTD samples for file" + f" : {file_name}")
-        core_models.Sample.objects.using(database).bulk_create(new_samples)
+        core_models.Sample.objects.bulk_create(new_samples)
 
     if len(update_samples) > 0:
         logger.info("Creating CTD samples for file" + f" : {file_name}")
-        core_models.Sample.objects.using(database).bulk_update(update_samples, ['file'])
+        core_models.Sample.objects.bulk_update(update_samples, ['file'])
 
     if len(new_discrete_samples) > 0:
         logger.info("Adding values to samples" + f" : {file_name}")
-        core_models.DiscreteSampleValue.objects.using(database).bulk_create(new_discrete_samples)
+        core_models.DiscreteSampleValue.objects.bulk_create(new_discrete_samples)
 
     if len(update_discrete_samples) > 0:
         logger.info("Updating sample values" + f" : {file_name}")
-        core_models.DiscreteSampleValue.objects.using(database).bulk_update(update_discrete_samples, ['value'])
+        core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
     for ms_type in mission.mission_sample_types.all():
         if bcu := ms_type.uploads.first():
@@ -469,10 +469,10 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     data_frame = ctd.from_btl(btl_file)
 
     file_name = data_frame._metadata['name']
-    if (errors := core_models.FileError.objects.using(database).filter(file_name=file_name)).exists():
+    if (errors := core_models.FileError.objects.filter(file_name=file_name)).exists():
         errors.delete()
 
-    if (errors := core_models.FileError.objects.using(database).filter(file_name=btl_file)).exists():
+    if (errors := core_models.FileError.objects.filter(file_name=btl_file)).exists():
         errors.delete()
 
     if file_name not in btl_file:
@@ -480,7 +480,7 @@ def read_btl(mission: core_models.Mission, btl_file: str):
         message += f" {btl_file} =/= {file_name}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save(using=database)
+        err.save()
         raise ValueError(message)
 
     event_number = get_event_number_bio(data_frame=data_frame)
@@ -491,14 +491,14 @@ def read_btl(mission: core_models.Mission, btl_file: str):
         message = _("Could not find matching event for event number") + f" : {event_number}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save(using=database)
+        err.save()
         raise ex
 
     if event.instrument.type != core_models.InstrumentType.ctd:
         message = "Event_Number" + f" : {event_number} - " + _("not a CTD event, check the event number in the BTL file is correct.")
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save(using=database)
+        err.save()
         raise ValueError("Bad Event number")
 
     # These are columns we either have no use for or we will specifically call and use later

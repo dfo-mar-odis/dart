@@ -544,8 +544,8 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch_name: i
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
     ctd_events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
-    bottles = core_models.Bottle.objects.using(database).filter(event__in=ctd_events)
-    # bottles = models.Bottle.objects.using(database).filter(event__mission=mission)
+    bottles = core_models.Bottle.objects.filter(event__in=ctd_events)
+    # bottles = models.Bottle.objects.filter(event__mission=mission)
     if exists:
         if bottles.exists():
             # 4) upload only bottles that are new or were modified since the last biochem upload
@@ -570,9 +570,9 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch_name: i
     exists = upload.check_and_create_model('biochem', bcs_p)
 
     # 2) get all the bottles to be uploaded
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
     bottle_ids = samples.values_list('bottle_id').distinct()
-    bottles = core_models.Bottle.objects.using(database).filter(pk__in=bottle_ids)
+    bottles = core_models.Bottle.objects.filter(pk__in=bottle_ids)
 
     if exists:
         # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
@@ -612,14 +612,14 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: i
     # 4) else filter the samples down to rows based on:
     #  * samples in this mission
     #  * samples of the current sample_type
-    datatypes = core_models.BioChemUpload.objects.using(database).filter(
+    datatypes = core_models.BioChemUpload.objects.filter(
         # status=core_models.BioChemUploadStatus.upload,
         type__mission=mission
     ).exclude(
         status=core_models.BioChemUploadStatus.delete
     ).values_list('type', flat=True).distinct()
 
-    discreate_samples = core_models.DiscreteSampleValue.objects.using(database).filter(
+    discreate_samples = core_models.DiscreteSampleValue.objects.filter(
         sample__bottle__event__mission=mission
     )
     discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
@@ -637,7 +637,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: i
         user_logger.info(message)
         try:
             upload.upload_db_rows(bcd_d, create, update, fields)
-            uploaded = core_models.BioChemUpload.objects.using(database).filter(
+            uploaded = core_models.BioChemUpload.objects.filter(
                 type__mission=mission,
                 status=core_models.BioChemUploadStatus.upload
             )
@@ -649,7 +649,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: i
 
         except Exception as ex:
             message = _("An error occured while writing BCD rows: ") + str(ex)
-            core_models.Error.objects.using(database).create(
+            core_models.Error.objects.create(
                 mission=mission, message=message, type=core_models.ErrorType.biochem,
                 code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
             )
@@ -675,7 +675,7 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch_name: i
     user_logger.info(_("Compiling BCD rows for : ") + mission.name)
 
     # 4) if the bcs_p table exist, create with all the bottles. linked to plankton samples
-    samples = core_models.PlanktonSample.objects.using(database).filter(bottle__event__mission=mission)
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
 
     if samples.exists():
         # 5) upload only bottles that are new or were modified since the last biochem upload
@@ -693,7 +693,7 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch_name: i
 def get_biochem_errors(request, database, **kwargs):
     mission_id = kwargs['mission_id']
     if request.method == 'GET':
-        mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+        mission = core_models.Mission.objects.get(pk=mission_id)
         context = {
             'database': database,
             'mission': mission,
@@ -1006,7 +1006,7 @@ def sync_biochem(request, database, mission_id, *kwargs):
         return HttpResponse(soup)
 
     try:
-        sync_tables.sync_all(database=database)
+        sync_tables.sync_all(database='mission_db')
         message = _("Success")
         alert_type = 'success'
     except Exception as e:

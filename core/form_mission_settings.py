@@ -136,13 +136,13 @@ class MissionSettingsForm(forms.ModelForm):
         end_date_field = Field('end_date')
         if self.instance.pk:
             database = self.instance._state.db
-            if models.Error.objects.using(database).filter(
+            if models.Error.objects.filter(
                     code=BIOCHEM_CODES.DESCRIPTOR_MISSING.value).exists():
                 descriptor_field.attrs['class'] = descriptor_field.attrs.get('class', "") + " bg-danger-subtle"
 
             date_issues = [BIOCHEM_CODES.DATE_MISSING.value, BIOCHEM_CODES.DATE_BAD_VALUES.value]
             # if there's an issue with the dates highlight the date fields
-            if models.Error.objects.using(database).filter(code__in=date_issues).exists():
+            if models.Error.objects.filter(code__in=date_issues).exists():
                 start_date_field.attrs['class'] = start_date_field.attrs.get('class', "") + " bg-danger-subtle"
                 end_date_field.attrs['class'] = end_date_field.attrs.get('class', "") + " bg-danger-subtle"
 
@@ -281,7 +281,7 @@ class MissionSettingsForm(forms.ModelForm):
         instance: models.Mission = super().save(commit=False)
 
         instance.dart_version = repo.head.commit.hexsha
-        instance.save(using=database_name)
+        instance.save()
 
         return instance
 

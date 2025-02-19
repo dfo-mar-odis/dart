@@ -8,6 +8,7 @@ from django.db import connections
 from django.http import HttpResponse
 from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
+from oauthlib.oauth2 import AccessDeniedError
 
 from settingsdb import models as settingsdb_models
 
@@ -39,14 +40,14 @@ class BiochemDiscreteBatchForm(form_biochem_batch.BiochemBatchForm):
                             args=(self.database, self.mission_id, self.batch_id))
 
     def get_batch_choices(self):
-        mission = core_models.Mission.objects.using(self.database).get(pk=self.mission_id)
+        mission = core_models.Mission.objects.get(pk=self.mission_id)
         table_model = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
 
         batch_ids = table_model.objects.using('biochem').all().values_list('batch_seq', flat=True).distinct()
 
         batches = biochem_models.Bcbatches.objects.using('biochem').filter(
             name=mission.mission_descriptor,
-            batch_seq__in=batch_ids
+            # batch_seq__in=batch_ids
         ).order_by('-batch_seq')
         self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
 
@@ -71,6 +72,66 @@ def delete_discrete_proc(batch_id):
 def run_biochem_delete_procedure(request, database, mission_id, batch_id):
     crispy_form = BiochemDiscreteBatchForm(database=database, mission_id=mission_id)
     return form_biochem_batch.run_biochem_delete_procedure(request, crispy_form, batch_id, delete_discrete_proc)
+
+
+def checkin_batch_proc(mission_id: int, batch_id: int):
+    return_status = ''
+    return_value = ''
+    # check for existing mission with this mission descriptor
+    mission = core_models.Mission.objects.get(id=mission_id)
+    headers = biochem_models.Bcdiscretehedrs.objects.using('biochem').filter(
+        event__mission__descriptor__iexact=mission.mission_descriptor)
+
+    if headers.exists():
+        bc_mission = headers.first().event.mission
+        mission_seq = bc_mission.mission_seq
+
+        # Check if the mission with the mission_seq is already checked out to the users edit tables
+        user_missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(mission_seq=mission_seq)
+        if not user_missions.exists():
+            # If not checked out, check if the mission with mission_seq is in the BCLockedMissions table
+            # If in the locked missions table and not in the users table we shouldn't be deleting or overriding
+            mission_locks = biochem_models.Bclockedmissions.objects.using('biochem').filter(mission_seq=mission_seq)
+            if mission_locks.exists():
+                msg = f"'{mission_locks.first().downloaded_by}' " + _("already has this mission checked out. "
+                        "Mission needs to be released from BCLockedMissions before it can be modified.")
+                raise PermissionError(msg)
+
+        # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
+        #       In this case I only retrieve the first mission that matches the mission.mission_descriptor,
+        #       but I don't think this is the right thing to do, I'll need to ask.
+        # check it out to the edit tables.
+        with connections['biochem'].cursor() as cur:
+            user_logger.info(f"Archiving existing mission with matching descriptor {mission_seq}")
+            return_value = cur.callproc("Download_Discrete_Mission", [mission_seq, return_status])
+
+        # I had already checked this mission out to my edit tables so I couldn't check it out again automatically
+
+        # Example return value on failure:
+        # return_value == [20000000010952, 'Download failed -1 ORA-00001: unique constraint (UPSONP.SYS_C0074932) violated']
+
+        # if there are no issues:
+        # return_value == [20000000010952, '']
+
+        # the problem here is in this case I was the one who checked out the mission to my user edit tables and it's
+        # fine for it to be deletede even with the "unique constraint" error above. However, if it was say Robert
+        # who'd checked out the mission for some reason, I wouldn't want this process to allow me (Patrick) to modify
+        # a locked mission. I'd want to tell the user (me) that someone else had the mission locked and maybe provide
+        # their username so that the user (me) could go over to Robert and ask him to unlock the mission if he's not
+        # using it.
+
+        # delete it from the Archive
+        user_logger.info(f"removing old mission from archives")
+        bc_mission.delete()
+
+    # check in new mission
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"Uploading new mission with batch id {batch_id}")
+        return_value = cur.callproc("ARCHIVE_BATCH.ARCHIVE_DISCRETE_BATCH", [batch_id, return_status])
+
+    # if the checkin fails release the old mission and delete it from the edit tables
+    # if successful delete the new mission from the edit tables, but keep the old one.
+    delete_discrete_proc(batch_id)
 
 
 def validation_proc(batch_id):
@@ -117,6 +178,10 @@ def biochem_validation2_procedure(request, batch_id):
     return form_biochem_batch.biochem_validation2_procedure(request, batch_id, validation2_proc)
 
 
+def biochem_checkin_procedure(request, mission_id, batch_id):
+    return form_biochem_batch.biochem_checkin_procedure(request, mission_id, batch_id, checkin_batch_proc)
+
+
 def get_batch_info(request, database, mission_id, batch_id):
     upload_url = "core:form_biochem_discrete_upload_batch"
     return form_biochem_batch.get_batch_info(request, database, mission_id, batch_id, upload_url, add_tables_to_soup)
@@ -150,6 +215,7 @@ def get_batch(request, database, mission_id):
         'upload_url': 'core:form_biochem_discrete_upload_batch',
         'validate1_url': 'core:form_biochem_discrete_validation1',
         'validate2_url': 'core:form_biochem_discrete_validation2',
+        'checkin_url': 'core:form_biochem_discrete_checkin',
         'delete_url': 'core:form_biochem_discrete_delete',
         'add_tables_to_soup_proc': add_tables_to_soup
     }
@@ -468,12 +534,12 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
 def sample_data_upload(database, mission: core_models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem).delete()
-    core_models.Error.objects.using(database).filter(mission=mission, type=core_models.ErrorType.biochem).delete()
+    core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
     samples_types_for_upload = [bcupload.type for bcupload in
-                                core_models.BioChemUpload.objects.using(database).filter(type__mission=mission)]
+                                core_models.BioChemUpload.objects.filter(type__mission=mission)]
 
     # Todo: I'm running the standard DART based event/data validation here, but we probably should be running the
     #  BioChem Validation from core.form_validation_biochem.run_biochem_validation()
@@ -482,7 +548,7 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
     if errors:
         # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
         user_logger.info(_("Datatypes missing see errors"))
-        core_models.Error.objects.using(database).bulk_create(errors)
+        core_models.Error.objects.bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
     form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
@@ -492,7 +558,7 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
 
 
 def upload_batch(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
@@ -588,6 +654,8 @@ database_urls = [
 
     path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure, name="form_biochem_discrete_validation1"),
     path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_discrete_validation2"),
+    path(f'{prefix}/checkin/<int:mission_id>/<int:batch_id>/', biochem_checkin_procedure,
+         name="form_biochem_discrete_checkin"),
     path(f'{prefix}/page/bcd/<int:batch_id>/<int:page>/', page_bcd, name="form_biochem_discrete_page_bcd"),
     path(f'{prefix}/page/bcs/<int:batch_id>/<int:page>/', page_bcs, name="form_biochem_discrete_page_bcs"),
     path(f'{prefix}/page/station_errors/<int:batch_id>/<int:page>/', page_data_station_errors,

@@ -35,7 +35,7 @@ class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
                             args=(self.database, self.mission_id, self.batch_id))
 
     def get_batch_choices(self):
-        mission = core_models.Mission.objects.using(self.database).get(pk=self.mission_id)
+        mission = core_models.Mission.objects.get(pk=self.mission_id)
         table_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
 
         batch_ids = table_model.objects.using('biochem').all().values_list('batch_seq', flat=True).distinct()
@@ -428,7 +428,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
 def sample_data_upload(database, mission: core_models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem_plankton).delete()
-    core_models.Error.objects.using(database).filter(mission=mission,
+    core_models.Error.objects.filter(mission=mission,
                                                      type=core_models.ErrorType.biochem_plankton).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
@@ -442,7 +442,7 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
 
 
 def upload_batch(request, database, mission_id):
-    mission = core_models.Mission.objects.using(database).get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))

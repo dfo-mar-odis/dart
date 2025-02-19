@@ -73,7 +73,7 @@ class ValidationEventCard(forms.CardForm):
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
-        validation_errors = models.ValidationError.objects.using(self.database).filter(event=self.event)
+        validation_errors = models.ValidationError.objects.filter(event=self.event)
 
         soup = BeautifulSoup("", "html.parser")
         soup.append(ul := soup.new_tag('ul', attrs={'class': "list-group"}))
@@ -132,7 +132,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
         spacer_col.fields.append(revalidate)
 
-        issue_count = models.ValidationError.objects.using(self.database).filter(event__mission=self.mission).count()
+        issue_count = models.ValidationError.objects.filter(event__mission=self.mission).count()
         issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
         buttons.fields.append(issue_count_col)
 
@@ -144,10 +144,10 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        events_ids = models.ValidationError.objects.using(self.database).filter(
+        events_ids = models.ValidationError.objects.filter(
             event__mission=self.mission
         ).values_list('event', flat=True)
-        events = models.Event.objects.using(self.database).filter(pk__in=events_ids)
+        events = models.Event.objects.filter(pk__in=events_ids)
         for event in events:
             event_card = ValidationEventCard(event=event)
             body.fields.append(event_card.helper.layout)
@@ -270,7 +270,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
 
 
 def get_validation_card(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     validation_card = ValidateEventsCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
@@ -282,7 +282,7 @@ def get_validation_card(request, database, mission_id, **kwargs):
 
 
 def get_file_validation_card(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     validation_card = ValidateFileCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
@@ -294,7 +294,7 @@ def get_file_validation_card(request, database, mission_id, **kwargs):
 
 
 def revalidate_events(request, database, mission_id):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == "GET":
 
@@ -314,17 +314,17 @@ def revalidate_events(request, database, mission_id):
 
 
 def delete_log_file_errors(request, database, file_name):
-    models.FileError.objects.using(database).filter(file_name__iexact=file_name).delete()
+    models.FileError.objects.filter(file_name__iexact=file_name).delete()
 
     return HttpResponse()
 
 
 def delete_log_file_error(request, database, error_id, uuid):
-    error = models.FileError.objects.using(database).get(id=error_id)
+    error = models.FileError.objects.get(id=error_id)
     file_name = error.file_name
     error.delete()
 
-    if models.FileError.objects.using(database).filter(file_name__iexact=file_name).exists():
+    if models.FileError.objects.filter(file_name__iexact=file_name).exists():
         return HttpResponse()
 
     # if there are no more errors connected to this event, delete the event card from the validation area
@@ -335,17 +335,17 @@ def delete_log_file_error(request, database, error_id, uuid):
 
 
 def delete_event_errors(request, database, event_id):
-    models.ValidationError.objects.using(database).filter(event_id=event_id).delete()
+    models.ValidationError.objects.filter(event_id=event_id).delete()
 
     return HttpResponse()
 
 
 def delete_event_error(request, database, error_id):
-    error = models.ValidationError.objects.using(database).get(id=error_id)
+    error = models.ValidationError.objects.get(id=error_id)
     event_id = error.event.pk
     error.delete()
 
-    if models.ValidationError.objects.using(database).filter(event_id=event_id).exists():
+    if models.ValidationError.objects.filter(event_id=event_id).exists():
         return HttpResponse()
 
     # if there are no more errors connected to this event, delete the event card from the validation area

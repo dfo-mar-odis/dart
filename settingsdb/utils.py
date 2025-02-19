@@ -65,16 +65,24 @@ def add_database(database):
         os.makedirs(location.database_location)
 
     databases = settings.DATABASES
-    databases[database] = databases['default'].copy()
-    databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
+    mission_database = 'mission_db'
+    databases[mission_database] = databases['default'].copy()
+    databases[mission_database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
 
-    call_command('migrate', database=database, app_label="core")
-    call_command('migrate', database=database, app_label="bio_tables")
-    load_biochem_fixtures(database)
+    call_command('migrate', database=mission_database, app_label="core")
+    call_command('migrate', database=mission_database, app_label="bio_tables")
+    load_biochem_fixtures(mission_database)
 
 
 def connect_database(database):
-    if database not in settings.DATABASES:
+    # if database not in settings.DATABASES:
+    if database == 'default':
+        return
+
+    databases = settings.DATABASES
+    mission_database = 'mission_db'
+    if mission_database not in databases or database != databases[mission_database].get('LOADED', None):
+
         try:
             location = models.LocalSetting.objects.get(connected=True)
         except settingsdb.models.LocalSetting.DoesNotExist as ex:
@@ -82,9 +90,9 @@ def connect_database(database):
             location.connected = True
             location.save()
 
-        databases = settings.DATABASES
-        databases[database] = databases['default'].copy()
-        databases[database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
+        databases[mission_database] = databases['default'].copy()
+        databases[mission_database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
+        databases[mission_database]["LOADED"] = database
 
 
 def is_database_synchronized(database):
@@ -96,11 +104,12 @@ def is_database_synchronized(database):
 
 
 def migrate(database):
-    if not is_database_synchronized(database):
-        call_command('migrate', 'core', database=database)
+    connect_database(database)
+    if not is_database_synchronized('mission_db'):
+        call_command('migrate', 'core', database='mission_db')
         repo = Repo(settings.BASE_DIR)
 
-        mission = core_models.Mission.objects.using(database).first()
+        mission = core_models.Mission.objects.first()
         mission.dart_version = repo.head.commit.hexsha
         mission.save()
 

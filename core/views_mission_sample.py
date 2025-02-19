@@ -47,7 +47,7 @@ def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Missi
 
     sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
 
-    dc_samples = models.DiscreteSampleValue.objects.using(database).filter(
+    dc_samples = models.DiscreteSampleValue.objects.filter(
         sample__bottle__event__mission_id=mission.pk, sample__type_id=sampletype_id)
 
     row_datatype = dc_samples.values_list("datatype", flat=True).distinct().first()
@@ -144,7 +144,7 @@ class SampleDetails(GenericDetailView):
 def get_file_error_card(request, database, mission_id):
     soup = BeautifulSoup("", "html.parser")
 
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     errors = mission.file_errors.filter(file_name=request.GET['file_name'])
     if errors.exists():
         attrs = {
@@ -233,7 +233,7 @@ def load_samples(request, database):
                                                    index, config_count)
 
             sample_config = settings_models.SampleTypeConfig.objects.get(pk=config_id)
-            mission = models.Mission.objects.using(database).get(pk=request.POST['mission_id'])
+            mission = models.Mission.objects.get(pk=request.POST['mission_id'])
 
             if file_type == 'csv' or file_type == 'dat':
                 io_stream = io.BytesIO(data)
@@ -263,7 +263,7 @@ def load_samples(request, database):
                                                    priority=sample_type.priority,
                                                    is_sensor=sample_type.is_sensor,
                                                    datatype=sample_type.datatype)
-                    mst.save(using=database)
+                    mst.save()
 
             except Exception as ex:
                 logger.error(f"Failed to load file {file_name}")
@@ -302,15 +302,15 @@ def list_samples(request, database, mission_id):
 
     table_soup = BeautifulSoup('', 'html.parser')
 
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.using(database).filter(event__mission=mission).order_by('bottle_id')[
+    mission = models.Mission.objects.get(pk=mission_id)
+    bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
                    page_start:(page_start + page_limit)]
 
     if not bottle_limit.exists():
         # if there are no more bottles then we stop loading, otherwise weird things happen
         return HttpResponse()
 
-    queryset = models.Sample.objects.using(database).filter(bottle__in=bottle_limit)
+    queryset = models.Sample.objects.filter(bottle__in=bottle_limit)
     queryset = queryset.order_by('bottle__bottle_id')
     queryset = queryset.values(
         'bottle__bottle_id',
@@ -460,24 +460,24 @@ def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission)
 
 def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
     soup = BeautifulSoup('', 'html.parser')
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     if request.method == 'POST':
         button = get_sensor_table_button(soup, database, mission, sensor_id)
         button.attrs['hx-swap-oob'] = 'true'
 
         upload_sensors: QuerySet[models.BioChemUpload] = \
-            models.BioChemUpload.objects.using(database).filter(type_id=sensor_id)
+            models.BioChemUpload.objects.filter(type_id=sensor_id)
 
         if 'add_sensor' in request.POST:
             add_sensor = upload_sensors.get_or_create(type_id=sensor_id)[0]
             add_sensor.status = models.BioChemUploadStatus.upload
-            add_sensor.save(using=database)
+            add_sensor.save()
         else:
             if upload_sensors.filter(type_id=sensor_id).exists():
                 sensor = upload_sensors.get(type_id=sensor_id)
                 if sensor.status == models.BioChemUploadStatus.uploaded or sensor.upload_date:
                     sensor.status = models.BioChemUploadStatus.delete
-                    sensor.save(using=database)
+                    sensor.save()
                 else:
                     sensor.delete()
 
@@ -552,12 +552,12 @@ def biochem_batches_card(request, database, mission_id):
 def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=models.ErrorType.biochem).delete()
-    models.Error.objects.using(database).filter(mission=mission, type=models.ErrorType.biochem).delete()
+    models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
     samples_types_for_upload = [bcupload.type for bcupload in
-                                models.BioChemUpload.objects.using(database).filter(type__mission=mission)]
+                                models.BioChemUpload.objects.filter(type__mission=mission)]
 
     # Todo: I'm running the standard DART based event/data validation here, but we probably should be running the
     #  BioChem Validation from core.form_validation_biochem.run_biochem_validation()
@@ -566,7 +566,7 @@ def sample_data_upload(database, mission: models.Mission, uploader: str, batch_i
     if errors:
         # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
         user_logger.info(_("Datatypes missing see errors"))
-        models.Error.objects.using(database).bulk_create(errors)
+        models.Error.objects.bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
     form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
@@ -577,7 +577,7 @@ def sample_data_upload(database, mission: models.Mission, uploader: str, batch_i
 
 # TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
 def upload_samples(request, database, mission_id):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
@@ -654,9 +654,9 @@ def download_samples(request, database, mission_id):
     }
     soup.append(div)
 
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
-    bottles = models.Bottle.objects.using(database).filter(event__in=events)
+    bottles = models.Bottle.objects.filter(event__in=events)
 
     alert_soup = form_biochem_database.confirm_uploader(request)
     if alert_soup:
@@ -707,10 +707,10 @@ def download_samples(request, database, mission_id):
         logger.exception(e)
         return HttpResponse(soup)
 
-    data_types = models.BioChemUpload.objects.using(database).filter(
+    data_types = models.BioChemUpload.objects.filter(
         type__mission=mission).values_list('type', flat=True).distinct()
 
-    discrete_samples = models.DiscreteSampleValue.objects.using(database).filter(
+    discrete_samples = models.DiscreteSampleValue.objects.filter(
         sample__bottle__event__mission=mission)
     discrete_samples = discrete_samples.filter(sample__type_id__in=data_types)
 
@@ -789,7 +789,7 @@ def get_biochem_buttons(request, database, mission_id):
 
 
 def delete_file_error(request, database, error_id):
-    models.FileError.objects.using(database).filter(id=error_id).delete()
+    models.FileError.objects.filter(id=error_id).delete()
 
     return HttpResponse()
 

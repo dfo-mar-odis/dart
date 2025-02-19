@@ -169,7 +169,7 @@ class BottleLoadForm(CollapsableCardForm):
             try:
                 files = [f for f in os.listdir(mission.bottle_directory) if f.upper().endswith('.BTL')]
                 if 'hide_loaded' in self.initial:
-                    loaded_files = [f.upper() for f in models.Sample.objects.using(self.database).filter(
+                    loaded_files = [f.upper() for f in models.Sample.objects.filter(
                         type__is_sensor=True,
                         bottle__event__mission=self.mission).values_list('file', flat=True).distinct()]
                     files = [f for f in files if f.upper() not in loaded_files]
@@ -193,7 +193,7 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
         initial = {'hide_loaded': "true"}
 
     collapsed = False if 'collapsed' in kwargs else True
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     bottle_load_form = BottleLoadForm(mission=mission, collapsed=collapsed, initial=initial)
     bottle_load_html = render_crispy_form(bottle_load_form, context=context)
     bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
@@ -339,7 +339,7 @@ def load_ctd_files(mission):
 
 
 def choose_bottle_dir(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
     if request.method == "POST" and 'dir_field' in request.POST:
         result = request.POST['dir_field']
     else:
@@ -347,7 +347,7 @@ def choose_bottle_dir(request, database, mission_id, **kwargs):
 
     if result:
         mission.bottle_directory = result
-        mission.save(using=database)
+        mission.save()
 
     return reload_files(request, database, mission_id, **kwargs)
 
@@ -360,7 +360,7 @@ def reload_files(request, database, mission_id, **kwargs):
 
 
 def upload_btl_files(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     thread_name = "load_ctd_files"
 
@@ -401,7 +401,7 @@ def upload_btl_files(request, database, mission_id, **kwargs):
 
 
 def delete_log_file_errors(request, database, file_name):
-    models.FileError.objects.using(database).filter(file_name__iexact=file_name).delete()
+    models.FileError.objects.filter(file_name__iexact=file_name).delete()
 
     return HttpResponse()
 

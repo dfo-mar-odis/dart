@@ -64,7 +64,7 @@ def _validate_bottles(mission) -> [core_models.Error]:
 
     errors: [core_models.Error] = []
     database = mission._state.db
-    bottles = core_models.Bottle.objects.using(database).filter(event__mission=mission)
+    bottles = core_models.Bottle.objects.filter(event__mission=mission)
 
     bottle_count = len(bottles)
     for index, bottle in enumerate(bottles):
@@ -103,12 +103,12 @@ def run_biochem_validation(request, database, mission_id):
         return HttpResponse(forms.websocket_post_request_alert(**attrs))
 
     # 1. Delete old validation errors
-    core_models.Error.objects.using(database).filter(type=core_models.ErrorType.biochem).delete()
+    core_models.Error.objects.filter(type=core_models.ErrorType.biochem).delete()
 
     # 2. Re-run validation
-    mission = core_models.Mission.objects.using(database).get(id=mission_id)
+    mission = core_models.Mission.objects.get(id=mission_id)
     errors = validate_mission(mission)
-    core_models.Error.objects.using(database).bulk_create(errors)
+    core_models.Error.objects.bulk_create(errors)
 
     response = HttpResponse()
     response['HX-Trigger'] = 'biochem_validation_update'
@@ -122,7 +122,7 @@ def get_validation_errors(request, database, mission_id):
     badge_error_count.attrs["id"] = "div_id_biochem_validation_count"
     badge_error_count.attrs['hx-swap-oob'] = "true"
 
-    errors = core_models.Error.objects.using(database).filter(type=core_models.ErrorType.biochem)
+    errors = core_models.Error.objects.filter(type=core_models.ErrorType.biochem)
     if not errors:
         badge_error_count.attrs['class'] = 'badge bg-success'
         badge_error_count.string = "0"

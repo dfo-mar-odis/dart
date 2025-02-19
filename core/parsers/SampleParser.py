@@ -2,6 +2,8 @@ import csv
 import pandas as pd
 import numpy as np
 
+from io import BufferedReader, BytesIO
+
 from datetime import datetime
 
 from django.db import transaction
@@ -47,6 +49,9 @@ def get_file_configs(data, file_type):
         elif file_type in excel_extensions:
             # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
             # if the tab changes
+            if not isinstance(data, BufferedReader) and not isinstance(data, BytesIO):
+                data = BytesIO(data)
+
             if not xls_file:
                 xls_file = pd.ExcelFile(data)
 
@@ -262,7 +267,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         sample_type = sample_config.sample_type
         mission_sample_type = sample_type.get_mission_sample_type(mission)
         bottles = {bottle.bottle_id: bottle for bottle in
-                   core_models.Bottle.objects.using(database).filter(event__mission=mission)}
+                   core_models.Bottle.objects.filter(event__mission=mission)}
         bottle_keys = sorted(bottles.keys())
 
         # for speed, we'll bulk delete Discrete values form all bottles with the requested sample type, then
@@ -271,7 +276,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
         existing_samples = mission_sample_type.samples.filter(bottle__event__mission=mission)
 
-        core_models.DiscreteSampleValue.objects.using(database).filter(sample__bottle__bottle_id__in=sample_ids,
+        core_models.DiscreteSampleValue.objects.filter(sample__bottle__bottle_id__in=sample_ids,
                                                                        sample__type=mission_sample_type).delete()
         replicate_counter = {}
         rows = dataframe.shape[0]
@@ -370,11 +375,11 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 replicate_counter[db_sample.bottle_id].append(replicate)
 
         with transaction.atomic():
-            core_models.Sample.objects.using(database).bulk_create(create_samples.values())
+            core_models.Sample.objects.bulk_create(create_samples.values())
             if len(update_samples['models']) > 0:
-                core_models.Sample.objects.using(database).bulk_update(update_samples['models'], update_samples['fields'])
+                core_models.Sample.objects.bulk_update(update_samples['models'], update_samples['fields'])
 
-            core_models.DiscreteSampleValue.objects.using(database).bulk_create(create_discrete_values)
+            core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values)
 
         # if all goes well, mark the sample_type as requiring an upload if a BioChemUpload entry exists
         if mission_sample_type.uploads.first():
@@ -399,4 +404,4 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                                       type=core_models.ErrorType.sample)
         errors.append(error)
 
-    core_models.FileError.objects.using(database).bulk_create(errors)
+    core_models.FileError.objects.bulk_create(errors)

@@ -2,7 +2,7 @@ from django.conf import settings
 
 
 class BioChemRouter:
-    defult_db_labels = ['settingsdb', 'bio_tables']
+    defult_db_labels = ['settingsdb']
 
     def db_for_read(self, model, **hints):
         if model._meta.app_label in self.defult_db_labels:

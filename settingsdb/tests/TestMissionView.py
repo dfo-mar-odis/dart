@@ -15,6 +15,10 @@ from core import models as core_models
 from settingsdb import models as settings_models
 from settingsdb import utils
 
+import logging
+
+logger = logging.getLogger('dart')
+
 fake_location = "./test_db"
 fake_db_name = 'fake_db'
 
@@ -32,7 +36,7 @@ class TestMissionView(DartTestCase):
         (settingsdb := settings_models.LocalSetting(database_location=fake_location, connected=True)).save()
         utils.add_database(fake_db_name)
 
-        core_models.Mission(name=fake_db_name).save(using=fake_db_name)
+        core_models.Mission(name=fake_db_name).save()
 
     @classmethod
     def tearDownClass(cls):
@@ -54,7 +58,7 @@ class TestMissionView(DartTestCase):
 
     def setUp(self) -> None:
         self.client = Client()
-        self.mission = core_models.Mission.objects.using(fake_db_name).first()
+        self.mission = core_models.Mission.objects.first()
 
     @tag("mission_view_test_list_missions_get")
     def test_list_missions_get(self):
@@ -70,6 +74,9 @@ class TestMissionView(DartTestCase):
         # be swapped onto the page under the tables. There should be 2 table rows, one for the headings, one for the
         # mission
         trs = soup.find_all('tr')
+        for tr in trs:
+            logger.info(tr)
+
         self.assertEqual(len(trs), 2)
 
         mission_row = soup.find(id=f"tr_id_mission_{self.mission.name}")
@@ -140,7 +147,7 @@ class TestMissionViewUI(DartTestCase):
         new_directory = r"C:\new_location\\"
         response = self.client.post(url, {'directory': new_directory})
 
-        options = settings_models.LocalSetting.objects.using('default').filter(database_location__iexact=new_directory)
+        options = settings_models.LocalSetting.objects.filter(database_location__iexact=new_directory)
         self.assertTrue(options.exists())
         pass
 

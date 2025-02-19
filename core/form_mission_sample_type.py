@@ -36,7 +36,7 @@ class BioChemDataType(forms.Form):
         super().__init__(*args, **kwargs)
 
         mission = mission_sample_type.mission
-        min_max = core_models.Bottle.objects.using(database).filter(event__mission=mission).aggregate(
+        min_max = core_models.Bottle.objects.filter(event__mission=mission).aggregate(
             Min('bottle_id'), Max('bottle_id'))
 
         self.fields['start_sample'].initial = min_max['bottle_id__min']
@@ -219,7 +219,7 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
 
 
 def list_samples(request, database, mission_sample_type_id):
-    mission_sample_type = core_models.MissionSampleType.objects.using(database).get(pk=mission_sample_type_id)
+    mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
@@ -229,7 +229,7 @@ def list_samples(request, database, mission_sample_type_id):
     # HTML table that gets returned to the interface will be missing columns and it throws everything
     # out of alignment. We'll get the replicate columns here and use that value to insert blank
     # columns into the dataframe if a replicate column is missing from the query set.
-    replicates = core_models.DiscreteSampleValue.objects.using(database).filter(
+    replicates = core_models.DiscreteSampleValue.objects.filter(
         sample__type=mission_sample_type).order_by('sample__bottle__bottle_id')
 
     replicate_max = replicates.aggregate(Max('replicate'))['replicate__max']
@@ -239,7 +239,7 @@ def list_samples(request, database, mission_sample_type_id):
         # if there are no more bottles then we stop loading, otherwise weird things happen
         return HttpResponse()
 
-    discrete_queryset = core_models.DiscreteSampleValue.objects.using(database).filter(
+    discrete_queryset = core_models.DiscreteSampleValue.objects.filter(
         sample__in=queryset
     ).order_by('sample__bottle__bottle_id')
     queryset_vals = discrete_queryset.values(
@@ -318,7 +318,7 @@ def update_sample_type_row(request, database, mission_sample_type_id):
         msg_div.append(alert)
         return HttpResponse(soup)
 
-    sample_type = core_models.MissionSampleType.objects.using(database).get(pk=mission_sample_type_id)
+    sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     data_type_code = request.POST['data_type_code']
     start_sample = request.POST['start_sample']
@@ -326,16 +326,16 @@ def update_sample_type_row(request, database, mission_sample_type_id):
 
     data_type = None
     if data_type_code:
-        data_type = bio_models.BCDataType.objects.using(database).get(data_type_seq=data_type_code)
+        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
-    discrete_update = core_models.DiscreteSampleValue.objects.using(database).filter(
+    discrete_update = core_models.DiscreteSampleValue.objects.filter(
         sample__bottle__bottle_id__gte=start_sample,
         sample__bottle__bottle_id__lte=end_sample,
         sample__type=sample_type,
     )
     for value in discrete_update:
         value.datatype = data_type
-    core_models.DiscreteSampleValue.objects.using(database).bulk_update(discrete_update, ['datatype'])
+    core_models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['datatype'])
 
     response = list_samples(request, database, sample_type.pk)
     return response
@@ -358,7 +358,7 @@ def update_sample_type_mission(request, database, mission_sample_type_id):
         msg_div.append(alert)
         return HttpResponse(soup)
 
-    sample_type = core_models.MissionSampleType.objects.using(database).get(pk=mission_sample_type_id)
+    sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     data_type_code = request.POST['data_type_code']
 
@@ -374,7 +374,7 @@ def update_sample_type_mission(request, database, mission_sample_type_id):
 
 
 def update_sample_type(request, database, mission_sample_type_id):
-    mission_sample_type = core_models.MissionSampleType.objects.using(database).get(pk=mission_sample_type_id)
+    mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
     if request.method == "GET":
         # if the GET request is empty populate the form with the default values
         if len(request.GET) <= 0:
@@ -423,7 +423,7 @@ def update_sample_type(request, database, mission_sample_type_id):
 
 
 def sample_delete(request, database, mission_sample_type_id):
-    mission_sample_type = core_models.MissionSampleType.objects.using(database).get(pk=mission_sample_type_id)
+    mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     if request.method == "GET":
         url = request.path
