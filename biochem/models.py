@@ -931,3 +931,110 @@ class Bcplanktnindivdledits(models.Model):
     class Meta:
         managed = False
         db_table = 'BCPLANKTNINDIVDLEDITS'
+
+
+class Bcmissions(models.Model):
+    mission_seq = models.BigIntegerField(primary_key=True)
+    data_center = models.ForeignKey(Bcdatacenters, related_name='missions', db_column='data_center_code',
+                                         on_delete=models.DO_NOTHING)
+    name = models.CharField(max_length=50, blank=True, null=True)
+    descriptor = models.CharField(max_length=50)
+    leader = models.CharField(max_length=50, blank=True, null=True)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+    institute = models.CharField(max_length=50, blank=True, null=True)
+    platform = models.CharField(max_length=50, blank=True, null=True)
+    protocol = models.CharField(max_length=50, blank=True, null=True)
+    geographic_region = models.CharField(max_length=100, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    more_comment = models.CharField(max_length=1, default='N')
+    prod_created_date = models.DateField()
+    prod_created_by = models.CharField(max_length=10, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCMISSIONS'
+
+
+class Bcevents(models.Model):
+    event_seq = models.BigIntegerField(primary_key=True)
+    data_center = models.ForeignKey(Bcdatacenters, related_name='events', db_column='DATA_CENTER_CODE',
+                                         on_delete=models.DO_NOTHING)
+    mission = models.ForeignKey(Bcmissions, related_name='events', db_column='MISSION_SEQ',
+                                           blank=True, null=True, on_delete=models.DO_NOTHING)
+    start_date = models.DateField(blank=True, null=True)
+    end_date = models.DateField(blank=True, null=True)
+    start_time = models.IntegerField(blank=True, null=True)
+    end_time = models.IntegerField(blank=True, null=True)
+    min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    collector_station_name = models.CharField(max_length=50, blank=True, null=True)
+    collector_event_id = models.CharField(max_length=50, blank=True, null=True)
+    utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    more_comment = models.CharField(max_length=1, default='N')
+    prod_created_date = models.DateField(blank=True, null=True)
+    prod_created_by = models.CharField(max_length=30, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCEVENTS'
+
+
+class Bcdiscretehedrs(models.Model):
+    discrete_seq = models.BigIntegerField(primary_key=True)
+    data_center = models.ForeignKey(Bcdatacenters, related_name='discreteheaders', db_column='DATA_CENTER_CODE',
+                                         on_delete=models.DO_NOTHING)
+    event = models.ForeignKey(Bcevents, related_name='discreteheaders', db_column='EVENT_SEQ',
+                                  on_delete=models.DO_NOTHING)
+    activity_seq = models.IntegerField()
+    gear_seq = models.IntegerField()
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    start_time = models.IntegerField(blank=True, null=True)
+    end_time = models.IntegerField(blank=True, null=True)
+    time_qc_code = models.CharField(max_length=2)
+    start_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    end_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    start_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    end_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    position_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    sounding = models.IntegerField()
+    collector_deployment_id = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50)
+    collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    responsible_group = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField()
+    shared_data = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_by = models.CharField(max_length=10, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISCRETEHEDRS'
+
+
+class Bclockedmissions(models.Model):
+    mission_seq = models.BigIntegerField(primary_key=True, db_column='MISSION_SEQ')
+    mission_name = models.CharField(max_length=50, blank=True, null=True)
+    descriptor = models.CharField(max_length=50, blank=True, null=True)
+    data_pointer_code = models.CharField(max_length=2, blank=True, null=True) #  DH for discrete, PL for Plankton
+    downloaded_by = models.CharField(max_length=10, blank=True, null=True)
+    downloaded_date = models.DateField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCLOCKEDMISSIONS'

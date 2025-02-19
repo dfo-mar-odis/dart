@@ -49,7 +49,7 @@ def get_file_configs(data, file_type):
         elif file_type in excel_extensions:
             # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
             # if the tab changes
-            if not isinstance(data, BufferedReader):
+            if not isinstance(data, BufferedReader) and not isinstance(data, BytesIO):
                 data = BytesIO(data)
 
             if not xls_file:

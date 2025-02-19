@@ -15,8 +15,9 @@ from django.http import HttpResponse
 from django.template.context_processors import csrf
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
+from oauthlib.oauth2 import AccessDeniedError
 
-import core.models
+from core import models as core_models
 from core import forms as core_forms
 from biochem import models as biochem_models
 
@@ -48,6 +49,10 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
     @staticmethod
     def get_batch_alert_area_id():
         return f"div_id_biochem_batch_alert_area"
+
+    @staticmethod
+    def get_checkin_batch_button_id():
+        return 'btn_id_checkin_batch'
 
     @staticmethod
     def get_delete_batch_button_id():
@@ -135,6 +140,20 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         validate_button = StrictButton(icon, css_class="btn btn-primary btn-sm", **validate_attrs)
         return validate_button
 
+    def get_checkin_button(self):
+        attrs = {
+            'id': self.get_checkin_batch_button_id(),
+            'title': _('Checkin Batch'),
+            'name': 'checkin_batch',
+            'disabled': 'disabled',
+            'hx-swap': 'none',
+            'hx-confirm': _("Are you Sure?")
+        }
+
+        icon = load_svg('check-square')
+        button = StrictButton(icon, css_class="btn btn-secondary btn-sm", **attrs)
+        return button
+
     def get_delete_button(self):
         attrs = {
             'id': self.get_delete_batch_button_id(),
@@ -163,6 +182,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         btn_col.fields.append(self.get_upload_button())
         btn_col.fields.append(self.get_validate_stage1_button())
         btn_col.fields.append(self.get_validate_stage2_button())
+        btn_col.fields.append(self.get_checkin_button())
         btn_col.fields.append(self.get_delete_button())
 
         header.fields.append(self.get_alert_area())
@@ -188,7 +208,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
 
     # this can be overridden by an implementing class to be more specific about what batches it retrieves.
     def get_batch_choices(self):
-        mission = core.models.Mission.objects.get(pk=self.mission_id)
+        mission =core_models.Mission.objects.get(pk=self.mission_id)
 
         # only get batch ids that match the mission descriptor
         batches = biochem_models.Bcbatches.objects.using('biochem').filter(
@@ -219,6 +239,20 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         except django.db.utils.DatabaseError as err:
             if err.args[0].code != 942:
                 raise err
+
+
+def get_checkin_button(soup):
+    icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
+    button = soup.new_tag('button')
+    button.append(icon)
+    button.attrs['id'] = BiochemBatchForm.get_checkin_batch_button_id()
+    button.attrs['class'] = 'btn btn-sm btn-secondary'
+    button.attrs['title'] = _("Checkin Batch")
+    button.attrs['hx-swap'] = 'none'
+    button.attrs['hx-swap-oob'] = 'true'
+    button.attrs['hx-confirm'] = _("Are you sure?")
+
+    return button
 
 
 def get_delete_button(soup):
@@ -328,6 +362,49 @@ def get_batches_form(request, batches_form_crispy, form_url):
     form.append(database_form_soup)
 
     return form_soup
+
+
+def biochem_checkin_procedure(request, mission_id, batch_id, checkin_proc):
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(div := soup.new_tag('div'))
+    div.attrs['id'] = BiochemBatchForm.get_batch_alert_area_id()
+    div.attrs['hx-swap-oob'] = 'true'
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': 'div_id_biochem_batch',
+            'message': _("Running Oracle Stage 2 Validation"),
+            'logger': user_logger.name,
+            'alert_type': 'info',
+            'hx-post': request.path,
+            'hx-trigger': "load",
+        }
+        alert = core_forms.websocket_post_request_alert(**attrs)
+        div.append(alert)
+
+        return HttpResponse(soup)
+
+    attrs = {
+        'component_id': 'div_id_biochem_batch',
+        'message': _("Validation Complete"),
+    }
+
+    try:
+        checkin_proc(mission_id, batch_id)
+        attrs['message'] = _("Checkin Procedure Complete")
+        attrs['alert_type'] = "success"
+        div.append(core_forms.blank_alert(**attrs))
+    except PermissionError as ex:
+        # if there's a failure we don't want to refresh anything so the user has a chance to see the
+        # failure message.
+        attrs['alert_type'] = 'danger'
+        attrs['message'] = _("Checkin Procedure failed") + " : " + str(ex)
+        div.append(core_forms.blank_alert(**attrs))
+
+    response = HttpResponse(soup)
+    if attrs['alert_type'] == 'success':
+        response['Hx-Trigger'] = 'refresh_form'
+    return response
 
 
 def delete_batch(batch_id, label, bcd_model, bcs_model):
@@ -463,7 +540,7 @@ def get_error_alert(batch_id, message):
 
 
 def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
-              upload_url, validate1_url, validate2_url, delete_url, add_tables_to_soup_proc):
+              upload_url, validate1_url, validate2_url, checkin_url, delete_url, add_tables_to_soup_proc):
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div_alert_area := soup.new_tag('div'))
     div_alert_area.attrs['id'] = BiochemBatchForm.get_batch_alert_area_id()
@@ -490,12 +567,14 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
     soup.append(upload_button := get_upload_button(soup))
     soup.append(validate1_button := get_stage1_button(soup))
     soup.append(validate2_button := get_stage2_button(soup))
+    soup.append(checkin_button := get_checkin_button(soup))
     soup.append(delete_button := get_delete_button(soup))
 
     upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(database, mission_id,))
 
     validate1_button.attrs['disabled'] = 'disabled'
     validate2_button.attrs['disabled'] = 'disabled'
+    checkin_button.attrs['disabled'] = 'disabled'
     delete_button.attrs['disabled'] = 'disabled'
 
     if not batch_id:
@@ -524,11 +603,13 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
                 validate2_button.find('svg').decompose()
                 validate2_button.append(icon)
                 validate2_button.attrs['class'] = 'btn btn-sm btn-success'
+                checkin_button.attrs.pop('disabled')
                 if biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id).exists():
                     validate2_button.attrs['class'] = 'btn btn-sm btn-danger'
 
     validate1_button.attrs['hx-get'] = reverse_lazy(validate1_url, args=(batch_id,))
     validate2_button.attrs['hx-get'] = reverse_lazy(validate2_url, args=(batch_id,))
+    checkin_button.attrs['hx-get'] = reverse_lazy(checkin_url, args=(mission_id, batch_id,))
     delete_button.attrs['hx-get'] = reverse_lazy(delete_url, args=(database, mission_id, batch_id,))
 
     add_tables_to_soup_proc(soup, batch_id)
@@ -542,6 +623,7 @@ def get_batch_info(request, database, mission_id, batch_id, upload_url, add_tabl
     soup.append(upload_button := get_upload_button(soup))
     soup.append(validate1_button := get_stage1_button(soup))
     soup.append(validate2_button := get_stage2_button(soup))
+    soup.append(checkin_button := get_checkin_button(soup))
     soup.append(delete_button := get_delete_button(soup))
 
     upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(database, mission_id))
@@ -549,6 +631,7 @@ def get_batch_info(request, database, mission_id, batch_id, upload_url, add_tabl
     if not batch_id:
         validate1_button.attrs['disabled'] = 'disabled'
         validate2_button.attrs['disabled'] = 'disabled'
+        checkin_button.attrs['disabled'] = 'disabled'
         delete_button.attrs['disabled'] = 'disabled'
 
         soup.append(div := soup.new_tag('div'))

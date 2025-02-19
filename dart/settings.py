@@ -163,7 +163,7 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASE_ROUTERS = ["dart.db_routers.BioChemRouter", "dart.routers.PrimaryRouter"]
+DATABASE_ROUTERS = ["dart.routers.PrimaryRouter"]
 # DATABASE_ROUTERS = ['dynamic_db_router.DynamicDbRouter']
 DATABASES = {
     'default': {
