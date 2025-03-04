@@ -1,16 +1,99 @@
 import datetime
-import decimal
 
 import factory
-import random
 
-from django.utils import timezone
 from factory.django import DjangoModelFactory
 from faker import Faker
 
 from biochem import models
 
 faker = Faker()
+
+
+class BcBatchesFactor(DjangoModelFactory):
+    class Meta:
+        model = models.Bcbatches
+
+    batch_seq = factory.Sequence(lambda n: n)
+    name = factory.lazy_attribute(lambda o: faker.name())
+    username = factory.lazy_attribute(lambda o: o.name.upper())
+
+
+class BcDataCenterFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcdatacenters
+        django_get_or_create = ("data_center_code",)
+
+
+class BcMissionEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcmissionedits
+
+    mission_edt_seq = factory.Sequence(lambda n: 200000000 + n)
+    data_center = factory.SubFactory(BcDataCenterFactory, data_center_code=20, name="BIO")
+    batch = factory.SubFactory(BcBatchesFactor)
+
+    descriptor = factory.lazy_attribute(lambda o: faker.name())
+
+
+class BcEventEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bceventedits
+
+    event_edt_seq = factory.Sequence(lambda n: 300000000 + n)
+    mission_edit = factory.SubFactory(BcMissionEditsFactory)
+    data_center = factory.lazy_attribute(lambda o: o.mission_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.mission_edit.batch)
+
+
+class BcActivityEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcactivityedits
+
+    activity_edt_seq = factory.Sequence(lambda n: 400000000 + n)
+    event_edit = factory.SubFactory(BcEventEditsFactory)
+    data_center = factory.lazy_attribute(lambda o: o.event_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
+
+
+class BcDiscreteHeaderEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcdiscretehedredits
+
+    dis_headr_edt_seq = factory.Sequence(lambda n: 500000000 + n)
+    event_edit = factory.SubFactory(BcEventEditsFactory)
+    data_center = factory.lazy_attribute(lambda o: o.event_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
+
+
+class BcPlanktonHeaderEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcplanktnhedredits
+
+    pl_headr_edt_seq = factory.Sequence(lambda n: 500000000 + n)
+    event_edit = factory.SubFactory(BcEventEditsFactory)
+    data_center = factory.lazy_attribute(lambda o: o.event_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
+
+
+class BcMoreCommentEditsEventFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bccommentedits
+
+    comment_edt_seq = factory.Sequence(lambda n: 600000000 + n)
+    event_edit = factory.SubFactory(BcEventEditsFactory)
+    data_center = factory.lazy_attribute(lambda o: o.event_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
+
+
+class BcMoreCommentEditsMissionFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bccommentedits
+
+    comment_edt_seq = factory.Sequence(lambda n: 600000000 + n)
+    mission_edit = factory.SubFactory(BcMissionEditsFactory)
+    data_center = factory.lazy_attribute(lambda o: o.mission_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.mission_edit.batch)
 
 
 class BcdDFactory(DjangoModelFactory):

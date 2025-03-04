@@ -134,6 +134,81 @@ def checkin_batch_proc(mission_id: int, batch_id: int):
     delete_discrete_proc(batch_id)
 
 
+def merge_headers(event_0: biochem_models.Bceventedits, event_1: biochem_models.Bceventedits):
+    event_0.discrete_header_edits.all()
+
+    for header in event_0.discrete_header_edits.all():
+        sample_id = header.collector_sample_id
+        gear_type = header.gear_seq
+
+        merge_headers = event_1.discrete_header_edits.filter(collector_sample_id=sample_id, gear_seq=gear_type)
+        updated_details = []
+        updated_replicates = []
+        for merge_header in merge_headers:
+            # Todo: need to check if a matching detail_edit already exists in the header_edit object
+            #       if it does, we'll have to remove the old detail_edit or update it
+            details = merge_header.discrete_detail_edits.all()
+            for detail in details:
+                detail.dis_header_edit = header
+                detail.batch = header.batch
+                updated_details.append(detail)
+
+                replicates = detail.discrete_replicate_edits.all()
+                for replicate in replicates:
+                    replicate.batch = header.batch
+                    updated_replicates.append(replicate)
+
+        biochem_models.Bcdisreplicatedits.objects.using('biochem').bulk_update(updated_replicates, ['batch'])
+        biochem_models.Bcdiscretedtailedits.objects.using('biochem').bulk_update(updated_details, ['dis_header_edit', 'batch'])
+
+        pass
+    pass
+
+
+def merge_events(mission_0: biochem_models.Bcmissionedits, mission_1: biochem_models.Bcmissionedits):
+    for event in mission_1.event_edits.all():
+        matching_events = mission_0.event_edits.filter(sdate=event.sdate, stime=event.stime,
+                                                       collector_station_name__iexact=event.collector_station_name)
+        if not matching_events.exists():
+            continue
+
+        merge_headers(matching_events.first(), event)
+
+
+def merge_missions(mission_0: biochem_models.Bcmissionedits, mission_1: biochem_models.Bcmissionedits):
+    mission_0.data_center = mission_1.data_center
+    mission_0.name = mission_1.name
+    mission_0.leader = mission_1.leader
+    mission_0.sdate = mission_1.sdate
+    mission_0.edate = mission_1.edate
+    mission_0.institute = mission_1.institute
+    mission_0.platform = mission_1.platform
+    mission_0.protocol = mission_1.protocol
+    mission_0.geographic_region = mission_1.geographic_region
+    mission_0.collector_comment = mission_1.collector_comment
+    mission_0.data_manager_comment = mission_1.data_manager_comment
+
+    # additional comments stored in the more_comments table will have to be swapped to mission_0
+    # more_comment = mission_1.
+
+    mission_0.prod_created_date = mission_1.prod_created_date
+    mission_0.created_by = mission_1.created_by
+    mission_0.created_date = mission_1.created_date
+    mission_0.last_update_by = mission_1.last_update_by
+    mission_0.last_update_date = mission_1.last_update_date
+
+    mission_0.save()
+
+    merge_events(mission_0, mission_1)
+
+def merge_batch_proc(mission_id: int):
+    mission = core_models.Mission.objects.get(id=mission_id)
+    descriptor = mission.mission_descriptor
+
+    missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(descriptor=descriptor).order_by('mission_seq')
+    merge_missions(missions[0], missions[1])
+
+
 def validation_proc(batch_id):
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"validating station data")
@@ -182,6 +257,10 @@ def biochem_checkin_procedure(request, mission_id, batch_id):
     return form_biochem_batch.biochem_checkin_procedure(request, mission_id, batch_id, checkin_batch_proc)
 
 
+def biochem_merge_procedure(request, mission_id):
+    return form_biochem_batch.biochem_merge_procedure(request, mission_id, merge_batch_proc)
+
+
 def get_batch_info(request, database, mission_id, batch_id):
     upload_url = "core:form_biochem_discrete_upload_batch"
     return form_biochem_batch.get_batch_info(request, database, mission_id, batch_id, upload_url, add_tables_to_soup)
@@ -189,16 +268,16 @@ def get_batch_info(request, database, mission_id, batch_id):
 
 def stage1_valid_proc(batch_id):
     mission_valid = biochem_models.Bcmissionedits.objects.using('biochem').filter(
-        batch_seq=batch_id, process_flag='ENR').exists()
+        batch=batch_id, process_flag='ENR').exists()
     event_valid = biochem_models.Bceventedits.objects.using('biochem').filter(
-        batch_seq=batch_id, process_flag='ENR').exists()
+        batch=batch_id, process_flag='ENR').exists()
 
     dishedr_valid = biochem_models.Bcdiscretehedredits.objects.using('biochem').filter(
-        batch_seq=batch_id, process_flag='ENR').exists()
+        batch=batch_id, process_flag='ENR').exists()
     disdtai_valid = biochem_models.Bcdiscretedtailedits.objects.using('biochem').filter(
-        batch_seq=batch_id, process_flag='ENR').exists()
+        batch=batch_id, process_flag='ENR').exists()
     disrepl_valid = biochem_models.Bcdisreplicatedits.objects.using('biochem').filter(
-        batch_seq=batch_id, process_flag='ENR').exists()
+        batch=batch_id, process_flag='ENR').exists()
 
     return not mission_valid and not event_valid and not dishedr_valid and not disdtai_valid and not disrepl_valid
 
@@ -216,6 +295,7 @@ def get_batch(request, database, mission_id):
         'validate1_url': 'core:form_biochem_discrete_validation1',
         'validate2_url': 'core:form_biochem_discrete_validation2',
         'checkin_url': 'core:form_biochem_discrete_checkin',
+        'merge_url': 'core:form_biochem_discrete_merge',
         'delete_url': 'core:form_biochem_discrete_delete',
         'add_tables_to_soup_proc': add_tables_to_soup
     }
@@ -252,7 +332,7 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
 
     validation_errors = {}
     errors = biochem_models.Bcerrors.objects.using('biochem').filter(
-        batch_seq=batch_id)[page_start:(page_start + _page_limit)]
+        batch=batch_id)[page_start:(page_start + _page_limit)]
 
     if errors.count() > 0:
         table_scroll = soup.find('div', {'id': f'div_id_{table_id}_scroll'})
@@ -315,7 +395,7 @@ def add_errors_to_table(soup, errors, table_name, table_key):
     validation_errors = {}
     table = soup.find('tbody')
 
-    for code in errors.values_list('data_type_seq', flat=True).distinct():
+    for code in errors.values_list('data_type', flat=True).distinct():
         data_type_errors = errors.filter(
             data_type_seq=code,
         )
@@ -360,14 +440,14 @@ def get_data_error_summary_table(batch_id, swap_oob=True):
     validation_errors = {}
     # get all of the BCDisReplicateEdits rows that contain errors and distill them down to only unique datatypes
     errors = biochem_models.Bcdisreplicatedits.objects.using('biochem').filter(
-        batch_seq=batch_id,
+        batch=batch_id,
         process_flag__iexact='err'
     )
 
     validation_errors.update(add_errors_to_table(soup, errors, 'BCDISREPLICATEDITS', 'dis_repl_edt_seq'))
 
     errors = biochem_models.Bcdiscretedtailedits.objects.using('biochem').filter(
-        batch_seq=batch_id,
+        batch=batch_id,
         process_flag__iexact='err'
     )
 
@@ -656,6 +736,8 @@ database_urls = [
     path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_discrete_validation2"),
     path(f'{prefix}/checkin/<int:mission_id>/<int:batch_id>/', biochem_checkin_procedure,
          name="form_biochem_discrete_checkin"),
+    path(f'{prefix}/merge/<int:mission_id>/', biochem_merge_procedure,
+         name="form_biochem_discrete_merge"),
     path(f'{prefix}/page/bcd/<int:batch_id>/<int:page>/', page_bcd, name="form_biochem_discrete_page_bcd"),
     path(f'{prefix}/page/bcs/<int:batch_id>/<int:page>/', page_bcs, name="form_biochem_discrete_page_bcs"),
     path(f'{prefix}/page/station_errors/<int:batch_id>/<int:page>/', page_data_station_errors,
