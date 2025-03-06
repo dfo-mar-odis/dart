@@ -673,7 +673,6 @@ def generic_table_paging(request, batch_id, page, table_id, table_page_func):
         # if there are no more table rows, then we're just going to stop the spinner
         spinner.attrs['class'] = ''
 
-
     soup.append(spinner)
     return HttpResponse(soup)
 
