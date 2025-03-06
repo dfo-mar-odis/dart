@@ -663,10 +663,16 @@ def generic_table_paging(request, batch_id, page, table_id, table_page_func):
         url = request.path + '?done=true'
         table_soup = table_page_func(batch_id, page)
         first_tr = table_soup.find('tbody').find('tr')
-        first_tr.attrs['hx-get'] = url
-        first_tr.attrs['hx-trigger'] = 'load'
-        first_tr.attrs['hx-swap'] = 'none'
-        return HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
+        # if there are more table rows off screen then set the first tr to stop the loading spinner until
+        # the user scrolls down
+        if first_tr:
+            first_tr.attrs['hx-get'] = url
+            first_tr.attrs['hx-trigger'] = 'load'
+            first_tr.attrs['hx-swap'] = 'none'
+            return HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
+        # if there are no more table rows, then we're just going to stop the spinner
+        spinner.attrs['class'] = ''
+
 
     soup.append(spinner)
     return HttpResponse(soup)

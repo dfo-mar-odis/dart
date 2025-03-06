@@ -373,6 +373,8 @@ class Bottle(models.Model):
     bottle_number = models.IntegerField(verbose_name=_("Bottle Number"), blank=True, null=True)
 
     pressure = models.DecimalField(verbose_name=_("Pressure"), default=0.0, decimal_places=3, max_digits=7)
+    end_pressure = models.DecimalField(verbose_name=_("End Pressure"), decimal_places=3, max_digits=7,
+                                       blank=True, null=True)
 
     latitude = models.DecimalField(verbose_name=_("Latitude"), blank=True, null=True, decimal_places=6, max_digits=8)
     longitude = models.DecimalField(verbose_name=_("Longitude"), blank=True, null=True, decimal_places=6, max_digits=9)
@@ -549,6 +551,9 @@ class PlanktonSample(models.Model):
     plank_data_num = models.IntegerField(verbose_name=_("Plankton data number"), blank=True, null=True,
                                          help_text=_("key linking this plankton sample to a biochem staging table"))
     modifier = models.CharField(verbose_name=_("Plankton Modifier"), max_length=50, blank=True, null=True)
+
+    # a data quality flag of 0 means this data hasn't been quality controlled.
+    flag = models.IntegerField(verbose_name=_("Data Quality Flag"), default=0)
 
     @property
     def plank_sample_key_value(self):

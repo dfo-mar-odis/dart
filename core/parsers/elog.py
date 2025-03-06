@@ -321,6 +321,9 @@ def get_instrument_type(instrument_name: str) -> core_models.InstrumentType:
         instrument_type = core_models.InstrumentType[instrument_name.lower()].value
         return instrument_type
     except KeyError:
+        if instrument_name.upper() == "BIONESS":
+            return core_models.InstrumentType.net
+
         if instrument_name.upper() == "RINGNET":
             return core_models.InstrumentType.net
 
@@ -357,7 +360,10 @@ def get_instrument(name, attachments):
     instrument_name = name.upper()
     instrument_type = get_instrument_type(instrument_name=name)
     if instrument_type == core_models.InstrumentType.net:
-        instrument_name = get_net_mesh_size(name, attachments)
+        if instrument_name.upper() == "BIONESS":
+            instrument_name = instrument_name.upper()
+        else:
+            instrument_name = get_net_mesh_size(name, attachments)
 
     instrument = core_models.Instrument(name=instrument_name, type=instrument_type)
 
