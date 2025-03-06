@@ -1227,6 +1227,59 @@ class Bceditsaudittrails(models.Model):
         db_table = 'BCEDITSAUDITTRAILS'
 
 
+class Bcplanktnhedrs(models.Model):
+    plankton_seq = models.BigIntegerField(primary_key=True)
+    data_center = models.ForeignKey(Bcdatacenters, related_name='planktonheaders', db_column='DATA_CENTER_CODE',
+                                         on_delete=models.DO_NOTHING)
+    event = models.ForeignKey(Bcevents, related_name='planktonheaders', db_column='EVENT_SEQ',
+                                  on_delete=models.DO_NOTHING)
+    activity_seq = models.IntegerField()
+    gear_seq = models.IntegerField()
+    start_date = models.DateField()
+    end_date = models.DateField(blank=True, null=True)
+    start_time = models.IntegerField(blank=True, null=True)
+    end_time = models.IntegerField(blank=True, null=True)
+    phase_of_daylight = models.CharField(max_length=15)
+    start_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    end_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    start_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    end_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    time_qc_code = models.CharField(max_length=2)
+    position_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    sounding = models.IntegerField()
+    volume = models.DecimalField(max_digits=7, decimal_places=3, blank=True, null=True)
+    volume_method = models.ForeignKey(Bcvolumemethods, related_name='planktonheaders',
+                                          db_column='volume_method_seq', on_delete=models.DO_NOTHING)
+    large_plankton_removed = models.CharField(max_length=1, blank=True, null=True)
+    mesh_size = models.IntegerField(blank=True, null=True)
+    collection_method = models.ForeignKey(Bccollectionmethods, related_name='planktonheaders',
+                                          db_column='collection_method_seq', on_delete=models.DO_NOTHING)
+    collector_deployment_id = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50)
+    procedure = models.ForeignKey(Bcprocedures, related_name='planktonheaders', db_column='procedure_seq',
+                                  on_delete=models.DO_NOTHING)
+    preservation = models.ForeignKey(Bcpreservations, related_name='planktonheaders', db_column='preservation_seq',
+                                  on_delete=models.DO_NOTHING)
+    storage = models.ForeignKey(Bcstorages, related_name='planktonheaders', db_column='storage_seq',
+                                  on_delete=models.DO_NOTHING)
+    collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    meters_sqd_flag = models.CharField(max_length=1, blank=True, null=True)
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    responsible_group = models.CharField(max_length=50, blank=True, null=True)
+    shared_data = models.CharField(max_length=50, blank=True, null=True)
+    prod_created_date = models.DateField()
+    prod_created_by = models.CharField(max_length=10, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTNHEDRS'
+
+
 class Bclockedmissions(models.Model):
     mission_seq = models.BigIntegerField(primary_key=True, db_column='mission_seq')
     mission_name = models.CharField(max_length=50, blank=True, null=True)
