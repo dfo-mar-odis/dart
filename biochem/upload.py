@@ -368,7 +368,10 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
                 row_update.add(updated_value(bcs_row, 'pl_headr_elon', event.end_location[1]))
 
             row_update.add(updated_value(bcs_row, 'pl_headr_start_depth', bottle.pressure))
-            row_update.add(updated_value(bcs_row, 'pl_headr_end_depth', bottle.pressure))
+            if hasattr(bottle, 'end_pressure') and bottle.end_pressure is not None:
+                row_update.add(updated_value(bcs_row, 'pl_headr_end_depth', bottle.end_pressure))
+            else:
+                row_update.add(updated_value(bcs_row, 'pl_headr_end_depth', bottle.pressure))
 
             row_update.add(updated_value(bcs_row, 'process_flag', 'NR'))
             row_update.add(updated_value(bcs_row, 'data_center_code', institute.data_center_code))
