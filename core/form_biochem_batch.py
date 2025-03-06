@@ -649,10 +649,9 @@ def generic_table_paging(request, batch_id, page, table_id, table_page_func):
     spinner.attrs['id'] = f'{table_id}_spinner'
     spinner.attrs['role'] = 'status'
     spinner.attrs['hx-swap-oob'] = "true"
+    spinner.attrs['class'] = ''
 
-    if 'done' in request.GET:
-        spinner.attrs['class'] = ''
-    elif 'next' not in request.GET:
+    if 'next' not in request.GET:
         url = request.path + '?next=true'
         spinner.attrs['class'] = 'spinner-border spinner-border-sm ms-2'
         spinner.attrs['hx-get'] = url
@@ -663,10 +662,13 @@ def generic_table_paging(request, batch_id, page, table_id, table_page_func):
         url = request.path + '?done=true'
         table_soup = table_page_func(batch_id, page)
         first_tr = table_soup.find('tbody').find('tr')
-        first_tr.attrs['hx-get'] = url
-        first_tr.attrs['hx-trigger'] = 'load'
-        first_tr.attrs['hx-swap'] = 'none'
-        return HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
+        # if there are more table rows off screen then set the first tr to stop the loading spinner until
+        # the user scrolls down
+        if first_tr:
+            first_tr.attrs['hx-get'] = url
+            first_tr.attrs['hx-trigger'] = 'load'
+            first_tr.attrs['hx-swap'] = 'none'
+            return HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
 
     soup.append(spinner)
     return HttpResponse(soup)

@@ -12,7 +12,7 @@ from django_pandas.io import read_frame
 
 from core import models as core_models
 from core import forms as core_forms
-from core.parsers.PlanktonParser import parse_zooplankton, parse_phytoplankton
+from core.parsers.PlanktonParser import parse_zooplankton, parse_phytoplankton, parse_zooplankton_bioness
 
 from core.parsers.SampleParser import get_excel_dataframe
 
@@ -247,7 +247,10 @@ def import_plankton(request, database, mission_id):
 
         try:
             if 'WHAT_WAS_IT' in dataframe.columns:
-                parse_zooplankton(mission, file.name, dataframe)
+                if 'START_DEPTH' and 'END_DEPTH' in dataframe.columns:
+                    parse_zooplankton_bioness(mission, file.name, dataframe)
+                else:
+                    parse_zooplankton(mission, file.name, dataframe)
             else:
                 parse_phytoplankton(mission, file.name, dataframe)
 
