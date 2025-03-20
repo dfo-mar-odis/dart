@@ -482,11 +482,17 @@ def confirm_descriptor(request, mission):
 def get_connected_database():
     database_id = caches['biochem_keys'].get('database_id', None)
     if not database_id:
-        # not connected to a database, thrown an error
-        pass
+        raise DatabaseError("Not connected to a database")
 
     return settings_models.BcDatabaseConnection.objects.get(pk=database_id)
 
+
+def get_uploader():
+    connected_database = get_connected_database()
+    if connected_database.uploader:
+        return connected_database.uploader.upper()
+
+    return connected_database.account_name.upper()
 
 def get_mission_batch_id():
     batch = None
@@ -534,8 +540,8 @@ def get_bcs_p_table():
     return get_connected_database().bc_plankton_station_edits
 
 
-def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch_name: int = None):
-    database = mission._state.db
+def upload_bcs_d_data(mission: core_models.Mission, batch_name: int = None):
+    uploader = get_uploader()
 
     batch_name = batch_name if batch_name else mission.get_batch_name
     # 1) get bottles from BCS_D table
@@ -593,7 +599,8 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch_name: i
         upload.upload_db_rows(bcs_p, bcs_create, bcs_update, updated_fields)
 
 
-def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: int = None):
+def upload_bcd_d_data(mission: core_models.Mission, batch_name: int = None):
+    uploader = get_uploader()
     database = mission._state.db
     batch_name = batch_name if batch_name else mission.get_batch_name
 
@@ -628,7 +635,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader: str, batch_name: i
         # 4) upload only samples that are new or were modified since the last biochem upload
         message = _("Compiling BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
-        create, update, fields = upload.get_bcd_d_rows(database=database, uploader=uploader,
+        create, update, fields = upload.get_bcd_d_rows(uploader=uploader,
                                                        samples=discreate_samples,
                                                        batch_name=batch_name,
                                                        bcd_d_model=bcd_d)

@@ -154,7 +154,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
             'hx-confirm': _("Are you Sure?")
         }
 
-        icon = load_svg('check-square')
+        icon = load_svg('body-text')
         button = StrictButton(icon, css_class="btn btn-secondary btn-sm", **attrs)
         return button
 
@@ -168,7 +168,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
             'hx-confirm': _("Are you Sure?")
         }
 
-        icon = load_svg('check-square')
+        icon = load_svg('body-text')
         button = StrictButton(icon, css_class="btn btn-secondary btn-sm", **attrs)
         return button
 
@@ -200,8 +200,8 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         btn_col.fields.append(self.get_upload_button())
         btn_col.fields.append(self.get_validate_stage1_button())
         btn_col.fields.append(self.get_validate_stage2_button())
-        btn_col.fields.append(self.get_checkin_button())
         btn_col.fields.append(self.get_merge_button())
+        btn_col.fields.append(self.get_checkin_button())
         btn_col.fields.append(self.get_delete_button())
 
         header.fields.append(self.get_alert_area())
@@ -275,7 +275,7 @@ def get_checkin_button(soup):
 
 
 def get_merge_button(soup):
-    icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
+    icon = BeautifulSoup(load_svg('body-text'), 'html.parser').svg
     button = soup.new_tag('button')
     button.append(icon)
     button.attrs['id'] = BiochemBatchForm.get_merge_batch_button_id()
@@ -397,7 +397,18 @@ def get_batches_form(request, batches_form_crispy, form_url):
     return form_soup
 
 
-def biochem_checkin_procedure(request, mission_id, batch_id, checkin_proc):
+def set_selected_batch(biochem_form_class: BiochemBatchForm):
+    html = render_crispy_form(biochem_form_class)
+    batch_form_soup = BeautifulSoup(html, 'html.parser')
+
+    select = batch_form_soup.find('select', attrs={'id': "control_id_database_select_biochem_batch_details"})
+    select.attrs['hx-swap-oob'] = 'true'
+    select.attrs['hx-trigger'] = 'load, change, reload_batch from:body'
+
+    return select
+
+
+def biochem_checkin_procedure(request, batch_id, checkin_proc):
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
     div.attrs['id'] = BiochemBatchForm.get_batch_alert_area_id()
@@ -406,7 +417,7 @@ def biochem_checkin_procedure(request, mission_id, batch_id, checkin_proc):
     if request.method == 'GET':
         attrs = {
             'alert_area_id': 'div_id_biochem_batch',
-            'message': _("Running Checking Procedure"),
+            'message': _("Running Checkin Procedure"),
             'logger': user_logger.name,
             'alert_type': 'info',
             'hx-post': request.path,
@@ -423,7 +434,7 @@ def biochem_checkin_procedure(request, mission_id, batch_id, checkin_proc):
     }
 
     try:
-        checkin_proc(mission_id, batch_id)
+        checkin_proc(batch_id)
         attrs['message'] = _("Checkin Procedure Complete")
         attrs['alert_type'] = "success"
         div.append(core_forms.blank_alert(**attrs))
@@ -440,10 +451,10 @@ def biochem_checkin_procedure(request, mission_id, batch_id, checkin_proc):
     return response
 
 
-def biochem_merge_procedure(request, mission_id, merge_proc):
+def biochem_merge_procedure(request, biochem_form, batch_id, merge_proc):
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div := soup.new_tag('div'))
-    div.attrs['id'] = BiochemBatchForm.get_batch_alert_area_id()
+    div.attrs['id'] = biochem_form.get_batch_alert_area_id()
     div.attrs['hx-swap-oob'] = 'true'
 
     if request.method == 'GET':
@@ -465,22 +476,42 @@ def biochem_merge_procedure(request, mission_id, merge_proc):
         'message': _("Merge Complete"),
     }
 
-    merge_proc(mission_id)
+    merged_id = merge_proc(batch_id)
+
     attrs['message'] = _("Merge Procedure Complete")
     attrs['alert_type'] = "success"
     div.append(core_forms.blank_alert(**attrs))
 
+    if merged_id:
+        updated_biochem_form = type(biochem_form)(database=biochem_form.database,
+                                                  mission_id=biochem_form.mission_id, batch_id=merged_id)
+        selected = set_selected_batch(updated_biochem_form)
+        soup.append(selected)
+
     response = HttpResponse(soup)
+    # if merged:
+    #     # if merged successfully, remove the batch
+    #     response['HX-Trigger'] = 'delete_batch'
+    # response['Hx-Trigger'] = 'refresh_form'
     return response
 
 
 def delete_batch(batch_id, label, bcd_model, bcs_model):
+    unlock = False
+    bcmission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_id=batch_id)
+    if bcmission_edits.exists() and hasattr(bcmission_edits.first(), 'mission'):
+        bc_mission = bcmission_edits.first().mission
+        unlock = bc_mission.locked_missions if hasattr(bc_mission, 'locked_missions') else None
+
+    response = None
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"Deleteing Batch {batch_id}")
-        cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
+        response = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
 
     bcd_model.objects.using('biochem').filter(batch_seq=batch_id).delete()
     bcs_model.objects.using('biochem').filter(batch_seq=batch_id).delete()
+    if unlock:
+        unlock.delete()
 
 
 def run_biochem_delete_procedure(request, crispy_form, batch_id, delete_proc):
@@ -577,7 +608,7 @@ def biochem_validation2_procedure(request, batch_id, validation2_proc):
 
         return HttpResponse(soup)
 
-    validation2_proc(batch_id, 'UPSONP')
+    validation2_proc(batch_id)
 
     alert = get_error_alert(batch_id, _("Validation Complete with data errors"))
     div.append(alert)
@@ -634,8 +665,8 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
     soup.append(upload_button := get_upload_button(soup))
     soup.append(validate1_button := get_stage1_button(soup))
     soup.append(validate2_button := get_stage2_button(soup))
-    soup.append(checkin_button := get_checkin_button(soup))
     soup.append(merge_button := get_merge_button(soup))
+    soup.append(checkin_button := get_checkin_button(soup))
     soup.append(delete_button := get_delete_button(soup))
 
     upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(database, mission_id,))
@@ -655,6 +686,9 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
     validate1_button.attrs.pop('disabled')
     delete_button.attrs.pop('disabled')
 
+    # add a custom trigger event to the button so it can be called by other actions when appropriate
+    delete_button.attrs['hx-trigger'] = 'click, delete_batch from:body'
+
     unvalidated = bcd_model.objects.using('biochem').filter(batch_seq=batch_id, process_flag='NR').exists()
     if not unvalidated:
         icon = BeautifulSoup(load_svg('1-square-fill'), 'html.parser').svg
@@ -665,6 +699,8 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
             validate1_button.attrs['class'] = 'btn btn-sm btn-danger'
         else:
             validate2_button.attrs.pop('disabled')
+            # add a custom trigger event to the button so it can be called by other actions when appropriate
+            validate2_button.attrs['hx-trigger'] = 'click, validate_2 from:body'
 
             stage1_valid = stage1_valid_proc(batch_id)
             if stage1_valid:
@@ -672,15 +708,16 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
                 validate2_button.find('svg').decompose()
                 validate2_button.append(icon)
                 validate2_button.attrs['class'] = 'btn btn-sm btn-success'
-                checkin_button.attrs.pop('disabled')
-                merge_button.attrs.pop('disabled')
                 if biochem_models.Bcerrors.objects.using('biochem').filter(batch=batch_id).exists():
                     validate2_button.attrs['class'] = 'btn btn-sm btn-danger'
+                else:
+                    merge_button.attrs.pop('disabled')
+                    checkin_button.attrs.pop('disabled')
 
     validate1_button.attrs['hx-get'] = reverse_lazy(validate1_url, args=(batch_id,))
     validate2_button.attrs['hx-get'] = reverse_lazy(validate2_url, args=(batch_id,))
-    checkin_button.attrs['hx-get'] = reverse_lazy(checkin_url, args=(mission_id, batch_id,))
-    merge_button.attrs['hx-get'] = reverse_lazy(merge_url, args=(mission_id,))
+    checkin_button.attrs['hx-get'] = reverse_lazy(checkin_url, args=(batch_id,))
+    merge_button.attrs['hx-get'] = reverse_lazy(merge_url, args=(database, mission_id, batch_id,))
     delete_button.attrs['hx-get'] = reverse_lazy(delete_url, args=(database, mission_id, batch_id,))
 
     add_tables_to_soup_proc(soup, batch_id)

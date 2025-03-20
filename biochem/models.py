@@ -569,7 +569,8 @@ class Bcmissions(models.Model):
 
 class Bcmissionedits(models.Model):
     mission_edt_seq = models.BigIntegerField(primary_key=True)
-    mission_seq = models.BigIntegerField(blank=True, null=True)
+    mission = models.OneToOneField(Bcmissions, related_name='mission_edits', db_column='mission_seq',
+                                   on_delete=models.DO_NOTHING, blank=True, null=True)
     data_center = models.ForeignKey(Bcdatacenters, related_name='mission_edits', db_column='data_center_code',
                                     blank=True, null=True, on_delete=models.DO_NOTHING)
 
@@ -1281,7 +1282,8 @@ class Bcplanktnhedrs(models.Model):
 
 
 class Bclockedmissions(models.Model):
-    mission_seq = models.BigIntegerField(primary_key=True, db_column='mission_seq')
+    mission = models.OneToOneField(Bcmissions, related_name='locked_missions', db_column='mission_seq',
+                                primary_key=True, on_delete=models.CASCADE)
     mission_name = models.CharField(max_length=50, blank=True, null=True)
     descriptor = models.CharField(max_length=50, blank=True, null=True)
     data_pointer_code = models.CharField(max_length=2, blank=True, null=True)  # DH for discrete, PL for Plankton

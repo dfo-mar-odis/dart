@@ -1,8 +1,10 @@
-from enum import Enum
+import time
 
-import biochem
 from biochem import models
 
+import logging
+
+logger = logging.getLogger('dart.debug')
 
 # _merge_dictionaries takes a left and right dictionary, they're assumed to be in the same format and that the
 # right dictionary is being merged *into* the left dictionary.
@@ -32,16 +34,11 @@ def _merge_dictionaries(update_dict: dict, new_dict: dict) -> None:
             # if an object in the new dictionary already exists in the update_dict then we have to merge the
             # fields that are different in the new object into the update_dict object, otherwise we just override
             # whatever changes were already made to the object in the update_dict
-            for new_object in new_dict[new_key]['objects']:
-                if new_object not in update_dict[new_key]['objects']:
-                    update_dict[new_key]['objects'].update([new_object])
+            for primary_key, new_object in new_dict[new_key]['objects'].items():
+                if primary_key not in update_dict[new_key]['objects'].keys():
+                    update_dict[new_key]['objects'][primary_key] = new_object
                 elif hasattr(new_object, new_field):
-                    iterator = iter(update_dict[new_key]['objects'])
-
-                    # There's no way to retrieve a specific element from a set so iterate over the set
-                    # until we find the element we want to update.
-                    while (update_object := next(iterator)) != new_object: pass
-
+                    update_object = update_dict[new_key]['objects'][primary_key]
                     setattr(update_object, new_field, getattr(new_object, new_field))
 
 
@@ -54,10 +51,12 @@ def _merge_dictionaries(update_dict: dict, new_dict: dict) -> None:
 #   }
 # }
 def _merge_objects(update_dict, current_object, new_object, field):
-    if getattr(current_object, field) != getattr(new_object, field):
-        setattr(current_object, field, getattr(new_object, field))
-        update_dict[current_object._meta.model]['objects'].update([current_object])
-        update_dict[current_object._meta.model]['fields'].update([field])
+    logger.debug(f"Start Merge Objects '{field}': {time.perf_counter()}")
+    # if getattr(current_object, field) != getattr(new_object, field):
+    setattr(current_object, field, getattr(new_object, field))
+    update_dict[current_object._meta.model]['objects'][current_object.pk] = current_object
+    update_dict[current_object._meta.model]['fields'].update([field])
+    logger.debug(f"End Merge Objects '{field}': {time.perf_counter()}")
 
 
 class MergeMissions:
@@ -117,7 +116,7 @@ class MergeMissions:
         setattr(bc_object, field, new_value)
         update_dict: dict = {
             bc_object._meta.model: {
-                'objects': {bc_object},
+                'objects': {bc_object.pk: bc_object},
                 'fields': {field},
             },
         }
@@ -135,7 +134,7 @@ class MergeMissions:
     def get_update_events(self):
         update_dict: dict = {
             models.Bceventedits: {
-                'objects': set(),
+                'objects': dict(),
                 'fields': set(),
             },
         }
@@ -173,12 +172,12 @@ class MergeMissions:
                 #       does exist we'll have to merge the details
 
                 # update batch ids for all related objects that reference the event being merged
-                n_dict = self.get_update_reference_field("batch", event, self.mission_0.batch)
-                _merge_dictionaries(update_dict, n_dict)
-
-                # update event_edit objects for related objects that reference the event being merged
-                n_dict = self.get_update_reference_field("event_edit", event, existing_event)
-                _merge_dictionaries(update_dict, n_dict)
+                # n_dict = self.get_update_reference_field("batch", event, self.mission_0.batch)
+                # _merge_dictionaries(update_dict, n_dict)
+                #
+                # # update event_edit objects for related objects that reference the event being merged
+                # n_dict = self.get_update_reference_field("event_edit", event, existing_event)
+                # _merge_dictionaries(update_dict, n_dict)
 
             except models.Bceventedits.DoesNotExist:
                 # if the event doesn't exist in the main mission, then we'll update the mission_edit for the
@@ -210,7 +209,7 @@ class MergeMissions:
 
         for key, update in updated_objects.items():
             if len(update['objects']) > 0:
-                key.objects.using(self.database).bulk_update(update['objects'], fields=update['fields'])
+                key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
 
     def merge_missions(self) -> None:
         self.update_status("Merging Missions")

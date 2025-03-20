@@ -550,7 +550,7 @@ class TestEventMerge(TestCase):
 
 
 @tag('test_merge_bio_tables', 'test_discrete_header_merge')
-class TestEventMerge(TestCase):
+class TestDiscreteHeaderMerge(TestCase):
 
     mission_0 = None
     mission_1 = None

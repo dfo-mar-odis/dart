@@ -210,7 +210,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
             type=oxy_sample_type
         )
 
-        form_biochem_database.upload_bcd_d_data(self.mission, 'upsonp')
+        form_biochem_database.upload_bcd_d_data(self.mission)
 
         model = upload.get_model(self.sample_database.bc_discrete_data_edits, bio_models.BcdD)
         # oxygen samples should have been added to the biochem db

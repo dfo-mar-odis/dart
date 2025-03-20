@@ -1,24 +1,20 @@
 import logging
+from datetime import datetime
 
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
-from django.core.cache import caches
 
 from django.db import connections
 from django.http import HttpResponse
 from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
-from oauthlib.oauth2 import AccessDeniedError
-
-from settingsdb import models as settingsdb_models
 
 from core import validation
 from core import forms as core_forms
 from core import models as core_models
-from core import form_biochem_database
-from core import form_biochem_batch
+from core import form_biochem_database, form_biochem_batch
 
-from biochem import upload
+from biochem import upload, MergeTables
 from biochem import models as biochem_models
 
 
@@ -57,6 +53,10 @@ def get_batches_form(request, database, mission_id, batch_id=0):
     form_url = reverse_lazy('core:form_biochem_discrete_refresh', args=(database, mission_id, batch_id))
     return form_biochem_batch.get_batches_form(request, batches_form_crispy, form_url)
 
+# this is a function that can be passed to the MergeTables object, merge tables will
+# call this function to report status updates
+def status_update(message: str, current: int = 0, max: int = 0):
+    user_logger.info(f"{message}: {current}/{max}")
 
 def refresh_batches_form(request, database, mission_id, batch_id):
     return HttpResponse(get_batches_form(request, database, mission_id, batch_id))
@@ -74,55 +74,62 @@ def run_biochem_delete_procedure(request, database, mission_id, batch_id):
     return form_biochem_batch.run_biochem_delete_procedure(request, crispy_form, batch_id, delete_discrete_proc)
 
 
-def checkin_batch_proc(mission_id: int, batch_id: int):
+def checkout_existing_mission(mission: biochem_models.Bcmissionedits) -> biochem_models.Bcmissions | None:
     return_status = ''
     return_value = ''
-    # check for existing mission with this mission descriptor
-    mission = core_models.Mission.objects.get(id=mission_id)
+
+    # if the mission doesn't have discrete headers, then it doesn't belong here in form_biochem_discrete
     headers = biochem_models.Bcdiscretehedrs.objects.using('biochem').filter(
-        event__mission__descriptor__iexact=mission.mission_descriptor)
+        event__mission__descriptor__iexact=mission.descriptor)
 
     if headers.exists():
         bc_mission = headers.first().event.mission
         mission_seq = bc_mission.mission_seq
 
         # Check if the mission with the mission_seq is already checked out to the users edit tables
-        user_missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(mission_seq=mission_seq)
+        user_missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(mission=bc_mission)
         if not user_missions.exists():
             # If not checked out, check if the mission with mission_seq is in the BCLockedMissions table
             # If in the locked missions table and not in the users table we shouldn't be deleting or overriding
-            mission_locks = biochem_models.Bclockedmissions.objects.using('biochem').filter(mission_seq=mission_seq)
-            if mission_locks.exists():
-                msg = f"'{mission_locks.first().downloaded_by}' " + _("already has this mission checked out. "
+            if hasattr(bc_mission, 'locked_missions'):
+                msg = f"'{bc_mission.locked_missions.downloaded_by}' " + _("already has this mission checked out. "
                         "Mission needs to be released from BCLockedMissions before it can be modified.")
                 raise PermissionError(msg)
 
-        # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
-        #       In this case I only retrieve the first mission that matches the mission.mission_descriptor,
-        #       but I don't think this is the right thing to do, I'll need to ask.
-        # check it out to the edit tables.
-        with connections['biochem'].cursor() as cur:
-            user_logger.info(f"Archiving existing mission with matching descriptor {mission_seq}")
-            return_value = cur.callproc("Download_Discrete_Mission", [mission_seq, return_status])
+            # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
+            #       In this case I only retrieve the first mission that matches the mission.mission_descriptor,
+            #       but I don't think this is the right thing to do, I'll need to ask.
+            # check it out to the edit tables.
+            with connections['biochem'].cursor() as cur:
+                user_logger.info(f"Archiving existing mission with matching descriptor {mission_seq}")
+                return_value = cur.callproc("Download_Discrete_Mission", [mission_seq, return_status])
 
-        # I had already checked this mission out to my edit tables so I couldn't check it out again automatically
+            if return_value[1] is None:
+                biochem_models.Bclockedmissions.objects.using('biochem').create(
+                    mission = bc_mission,
+                    mission_name = bc_mission.name,
+                    descriptor = bc_mission.descriptor,
+                    data_pointer_code = "DH",  # reference to BCDataPointers table - "DH" for discrete, "PL" for plankton
+                    downloaded_by = form_biochem_database.get_uploader(),
+                    downloaded_date = datetime.now()).save(using='biochem')
+                return bc_mission
+        else:
+            return user_missions.first().mission
 
-        # Example return value on failure:
-        # return_value == [20000000010952, 'Download failed -1 ORA-00001: unique constraint (UPSONP.SYS_C0074932) violated']
+    return None
 
-        # if there are no issues:
-        # return_value == [20000000010952, '']
+def checkin_batch_proc(batch_id: int):
+    return_status = ''
+    return_value = ''
 
-        # the problem here is in this case I was the one who checked out the mission to my user edit tables and it's
-        # fine for it to be deletede even with the "unique constraint" error above. However, if it was say Robert
-        # who'd checked out the mission for some reason, I wouldn't want this process to allow me (Patrick) to modify
-        # a locked mission. I'd want to tell the user (me) that someone else had the mission locked and maybe provide
-        # their username so that the user (me) could go over to Robert and ask him to unlock the mission if he's not
-        # using it.
+    # check for existing mission matching this batch and check it out to the user edit tables if it exists
+    # This is to create a backup which the user can then recover from if something goes wrong.
+    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    batch_mission_edit = batch.mission_edits.first()
 
-        # delete it from the Archive
-        user_logger.info(f"removing old mission from archives")
-        bc_mission.delete()
+    bc_mission: biochem_models.Bcmissions = checkout_existing_mission(batch_mission_edit)
+
+    validation2_proc(batch_id)
 
     # check in new mission
     with connections['biochem'].cursor() as cur:
@@ -131,82 +138,39 @@ def checkin_batch_proc(mission_id: int, batch_id: int):
 
     # if the checkin fails release the old mission and delete it from the edit tables
     # if successful delete the new mission from the edit tables, but keep the old one.
+    if return_value[1] is not None:
+        user_logger.error(f"Issues with archiving mission: {return_value[1]}")
+        raise ValueError(return_value[1])
+
+    # if the mission exists in the lock tables and there was no problem archiving it,
+    # then remove it from the locked table
+    if bc_mission and bc_mission.locked_missions:
+        bc_mission.locked_missions.delete()
+
     delete_discrete_proc(batch_id)
 
 
-def merge_headers(event_0: biochem_models.Bceventedits, event_1: biochem_models.Bceventedits):
-    event_0.discrete_header_edits.all()
+# return the batch id of the mission_edits the selected batch was merged into if the merge was completed successfully,
+# None if now merge occurred or there was an error
+def merge_batch_proc(batch_id: int) -> int | None:
+    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    batch_mission_edit = batch.mission_edits.first()
 
-    for header in event_0.discrete_header_edits.all():
-        sample_id = header.collector_sample_id
-        gear_type = header.gear_seq
+    # check out an existing mission if one exists
+    bc_mission: biochem_models.Bcmissions = checkout_existing_mission(batch_mission_edit)
+    bc_mission_edit = bc_mission.mission_edits if hasattr(bc_mission, 'mission_edits') else None
 
-        merge_headers = event_1.discrete_header_edits.filter(collector_sample_id=sample_id, gear_seq=gear_type)
-        updated_details = []
-        updated_replicates = []
-        for merge_header in merge_headers:
-            # Todo: need to check if a matching detail_edit already exists in the header_edit object
-            #       if it does, we'll have to remove the old detail_edit or update it
-            details = merge_header.discrete_detail_edits.all()
-            for detail in details:
-                detail.dis_header_edit = header
-                detail.batch = header.batch
-                updated_details.append(detail)
+    if bc_mission_edit and bc_mission != batch_mission_edit:
+        table_merge = MergeTables.MergeMissions(bc_mission_edit, batch_mission_edit)
+        table_merge.add_status_listener(status_update)
+        table_merge.merge_missions()
 
-                replicates = detail.discrete_replicate_edits.all()
-                for replicate in replicates:
-                    replicate.batch = header.batch
-                    updated_replicates.append(replicate)
+        # Todo: assume the merged completed successfully for now. Exception handling later
+        #       but if the merge completes successfully, then we'll want to swap the batch the user is looking at over
+        #       to the checked out mission that we just merged our new data into
+        return bc_mission_edit.batch.batch_seq
 
-        biochem_models.Bcdisreplicatedits.objects.using('biochem').bulk_update(updated_replicates, ['batch'])
-        biochem_models.Bcdiscretedtailedits.objects.using('biochem').bulk_update(updated_details, ['dis_header_edit', 'batch'])
-
-        pass
-    pass
-
-
-def merge_events(mission_0: biochem_models.Bcmissionedits, mission_1: biochem_models.Bcmissionedits):
-    for event in mission_1.event_edits.all():
-        matching_events = mission_0.event_edits.filter(sdate=event.sdate, stime=event.stime,
-                                                       collector_station_name__iexact=event.collector_station_name)
-        if not matching_events.exists():
-            continue
-
-        merge_headers(matching_events.first(), event)
-
-
-def merge_missions(mission_0: biochem_models.Bcmissionedits, mission_1: biochem_models.Bcmissionedits):
-    mission_0.data_center = mission_1.data_center
-    mission_0.name = mission_1.name
-    mission_0.leader = mission_1.leader
-    mission_0.sdate = mission_1.sdate
-    mission_0.edate = mission_1.edate
-    mission_0.institute = mission_1.institute
-    mission_0.platform = mission_1.platform
-    mission_0.protocol = mission_1.protocol
-    mission_0.geographic_region = mission_1.geographic_region
-    mission_0.collector_comment = mission_1.collector_comment
-    mission_0.data_manager_comment = mission_1.data_manager_comment
-
-    # additional comments stored in the more_comments table will have to be swapped to mission_0
-    # more_comment = mission_1.
-
-    mission_0.prod_created_date = mission_1.prod_created_date
-    mission_0.created_by = mission_1.created_by
-    mission_0.created_date = mission_1.created_date
-    mission_0.last_update_by = mission_1.last_update_by
-    mission_0.last_update_date = mission_1.last_update_date
-
-    mission_0.save()
-
-    merge_events(mission_0, mission_1)
-
-def merge_batch_proc(mission_id: int):
-    mission = core_models.Mission.objects.get(id=mission_id)
-    descriptor = mission.mission_descriptor
-
-    missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(descriptor=descriptor).order_by('mission_seq')
-    merge_missions(missions[0], missions[1])
+    return False
 
 
 def validation_proc(batch_id):
@@ -231,7 +195,8 @@ def biochem_validation1_procedure(request, batch_id):
     return form_biochem_batch.biochem_validation1_procedure(request, batch_id, validation_proc)
 
 
-def validation2_proc(batch_id, user):
+def validation2_proc(batch_id):
+    user = form_biochem_database.get_uploader()
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"validating mission data")
         cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_MISSION_ERRORS", str, [batch_id, user])
@@ -253,12 +218,13 @@ def biochem_validation2_procedure(request, batch_id):
     return form_biochem_batch.biochem_validation2_procedure(request, batch_id, validation2_proc)
 
 
-def biochem_checkin_procedure(request, mission_id, batch_id):
-    return form_biochem_batch.biochem_checkin_procedure(request, mission_id, batch_id, checkin_batch_proc)
+def biochem_checkin_procedure(request, batch_id):
+    return form_biochem_batch.biochem_checkin_procedure(request, batch_id, checkin_batch_proc)
 
 
-def biochem_merge_procedure(request, mission_id):
-    return form_biochem_batch.biochem_merge_procedure(request, mission_id, merge_batch_proc)
+def biochem_merge_procedure(request, database, mission_id, batch_id):
+    crispy_form = BiochemDiscreteBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
+    return form_biochem_batch.biochem_merge_procedure(request, crispy_form, batch_id, merge_batch_proc)
 
 
 def get_batch_info(request, database, mission_id, batch_id):
@@ -369,9 +335,9 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
         td_sample_type_method.string = "---"
         if replicate:
             td_sample_id.string = str(replicate.collector_sample_id)
-            td_sample_type.string = str(replicate.data_type_seq)
+            td_sample_type.string = str(replicate.data_type)
 
-            datatype = biochem_models.Bcdatatypes.objects.using('biochem').get(data_type_seq=replicate.data_type_seq)
+            datatype = biochem_models.Bcdatatypes.objects.using('biochem').get(data_type_seq=replicate.data_type.pk)
             td_sample_type_method.string = str(datatype.method)
 
         tr_header.append(td := soup.new_tag('td'))
@@ -397,12 +363,12 @@ def add_errors_to_table(soup, errors, table_name, table_key):
 
     for code in errors.values_list('data_type', flat=True).distinct():
         data_type_errors = errors.filter(
-            data_type_seq=code,
+            data_type=code,
         )
 
         key = data_type_errors.first()
         error = biochem_models.Bcerrors.objects.using('biochem').get(record_num_seq=getattr(key, table_key))
-        datatype = biochem_models.Bcdatatypes.objects.using('biochem').get(data_type_seq=key.data_type_seq)
+        datatype = biochem_models.Bcdatatypes.objects.using('biochem').get(data_type_seq=key.data_type.pk)
 
         table.append(tr_header := soup.new_tag('tr'))
 
@@ -611,7 +577,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
     data_error_details.append(get_data_errors_table(batch_id, swap_oob=swap_oob).find('div'))
 
 
-def sample_data_upload(database, mission: core_models.Mission, uploader: str, batch_id: int):
+def sample_data_upload(database, mission: core_models.Mission, batch_id: int):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem).delete()
     core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem).delete()
@@ -631,8 +597,8 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
         core_models.Error.objects.bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
-    form_biochem_database.upload_bcd_d_data(mission, uploader, batch_id)
+    form_biochem_database.upload_bcs_d_data(mission, batch_id)
+    form_biochem_database.upload_bcd_d_data(mission, batch_id)
 
     return batch_id
 
@@ -651,11 +617,8 @@ def upload_batch(request, database, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
-    db_id = caches['biochem_keys'].get('database_id')
-    connected_database = settingsdb_models.BcDatabaseConnection.objects.get(pk=db_id)
-
     # do we have an uploader?
-    uploader = connected_database.uploader if connected_database.uploader else connected_database.account_name
+    uploader = form_biochem_database.get_uploader()
 
     if not uploader:
         alert_soup = form_biochem_database.confirm_uploader(request)
@@ -681,7 +644,7 @@ def upload_batch(request, database, mission_id):
         # user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
         # bc_statn_data_errors = run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
 
-        sample_data_upload(database, mission, uploader, batch_id)
+        sample_data_upload(database, mission, batch_id)
 
         attrs = {
             'component_id': 'div_id_upload_biochem',
@@ -689,14 +652,8 @@ def upload_batch(request, database, mission_id):
             'message': _("Thank you for uploading"),
         }
 
-        form = BiochemDiscreteBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
-        html = render_crispy_form(form)
-        batch_form_soup = BeautifulSoup(html, 'html.parser')
-
-        select = batch_form_soup.find('select', attrs={'id': "control_id_database_select_biochem_batch_details"})
-        select.attrs['hx-swap-oob'] = 'true'
-        select.attrs['hx-trigger'] = 'load, change, reload_batch from:body'
-
+        discrete_batch_form = BiochemDiscreteBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
+        select = form_biochem_batch.set_selected_batch(discrete_batch_form)
         soup.append(select)
 
         if bc_statn_data_errors:
@@ -734,10 +691,8 @@ database_urls = [
 
     path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure, name="form_biochem_discrete_validation1"),
     path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_discrete_validation2"),
-    path(f'{prefix}/checkin/<int:mission_id>/<int:batch_id>/', biochem_checkin_procedure,
-         name="form_biochem_discrete_checkin"),
-    path(f'{prefix}/merge/<int:mission_id>/', biochem_merge_procedure,
-         name="form_biochem_discrete_merge"),
+    path(f'{prefix}/checkin/<int:batch_id>/', biochem_checkin_procedure, name="form_biochem_discrete_checkin"),
+    path(f'{db_prefix}/merge/<int:batch_id>/', biochem_merge_procedure, name="form_biochem_discrete_merge"),
     path(f'{prefix}/page/bcd/<int:batch_id>/<int:page>/', page_bcd, name="form_biochem_discrete_page_bcd"),
     path(f'{prefix}/page/bcs/<int:batch_id>/<int:page>/', page_bcs, name="form_biochem_discrete_page_bcs"),
     path(f'{prefix}/page/station_errors/<int:batch_id>/<int:page>/', page_data_station_errors,

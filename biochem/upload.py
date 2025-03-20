@@ -445,7 +445,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
     return bcs_objects_to_create, bcs_objects_to_update, updated_fields
 
 
-def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
+def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
                    bcd_d_model: Type[models.BcdD] = None) -> [[models.BcdD], [models.BcdD], [str]]:
 
     bcd_objects_to_create = []
@@ -589,7 +589,7 @@ def get_bcd_d_rows(database, uploader: str, samples: QuerySet[core_models.Discre
             bcd_objects_to_update.append(bcd_row)
 
     if len(errors) > 0:
-        core_models.Error.objects.using(database).bulk_create(errors)
+        core_models.Error.objects.bulk_create(errors)
 
     user_logger.info(_("Indexing Primary Keys"))
     compress_keys(bcd_objects_to_create, bcd_d_model, 'dis_data_num')

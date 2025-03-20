@@ -220,7 +220,8 @@ def get_batch(request, database, mission_id):
         'upload_url': 'core:form_biochem_plankton_upload_batch',
         'validate1_url': 'core:form_biochem_plankton_validation1',
         'validate2_url': 'core:form_biochem_plankton_validation2',
-        'checkin_url': 'core:form_biochem_plankton_checkin',
+        'validate2_url': 'core:form_biochem_plankton_validation2',
+        'merge_url': 'core:form_biochem_plankton_merge',
         'delete_url': 'core:form_biochem_plankton_delete',
         'add_tables_to_soup_proc': add_tables_to_soup
     }
@@ -520,8 +521,7 @@ def upload_batch(request, database, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
-    db_id = caches['biochem_keys'].get('database_id')
-    connected_database = settingsdb_models.BcDatabaseConnection.objects.get(pk=db_id)
+    connected_database = form_biochem_database.get_connected_database()
 
     # do we have an uploader?
     uploader = connected_database.uploader if connected_database.uploader else connected_database.account_name

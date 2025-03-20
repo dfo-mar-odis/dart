@@ -239,12 +239,12 @@ HANDLERS = {
 LOGGERS = (
     {
         "django": {
-            "handlers": ["console", "info_handler"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": True,
         },
         "django.request": {
-            "handlers": ['error_handler'],
+            "handlers": ['error_handler', "info_handler"],
             "level": "ERROR",
             "propagate": True,
         },
@@ -254,9 +254,9 @@ LOGGERS = (
             "propagate": True
         },
         "dart.debug": {
-            "handlers": ["info_handler"],
+            "handlers": ["console", "info_handler"],
             "level": "DEBUG",
-            "propagate": True
+            "propagate": False
         },
         "dart.test": {  # use this logger for unit testing
             "handlers": ["test_handler"],
