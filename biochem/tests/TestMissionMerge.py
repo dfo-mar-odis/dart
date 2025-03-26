@@ -1,7 +1,6 @@
 import datetime
 
 from django.test import TestCase, tag
-from django.conf import settings
 
 from biochem.tests import BCFactoryFloor
 from biochem import MergeTables
@@ -16,13 +15,13 @@ logger = logging.getLogger('dart.debug')
 # These models normally don't exist in the users' local database, they're unmanaged and therefore
 # have to be created locally for testing
 unmanaged_models = [
-    biochem_models.Bcbatches, biochem_models.Bcdatacenters,
+    biochem_models.Bcbatches, biochem_models.Bcdatacenters, biochem_models.Bcdatatypes,
     biochem_models.Bcmissions, biochem_models.Bcmissionedits,
     biochem_models.Bcevents, biochem_models.Bceventedits,
     biochem_models.Bcactivities, biochem_models.Bcactivityedits,
     biochem_models.Bcdiscretehedrs, biochem_models.Bcdiscretehedredits,
     biochem_models.Bcplanktnhedredits,
-    biochem_models.Bcdiscretedtailedits,
+    biochem_models.Bcdiscretedtailedits, biochem_models.Bcdiscretedtails, biochem_models.Bcdisreplicatedits,
     biochem_models.Bcplanktngenerledits,
     biochem_models.Bccommentedits,
 ]
@@ -512,18 +511,6 @@ class TestEventMerge(TestCase):
         self.assertEqual(event.activity_edits.count(), 1)
         self.assertEqual(getattr(activity, "batch"), self.mission_0.batch)
 
-    @tag('test_event_merge_event_exist_discrete_header_batch')
-    def test_event_merge_event_exist_discrete_header_batch(self):
-        args = (None, None, None)
-        event_0, event_1 = self.create_test_events(*args)
-        discrete_header = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=event_1)
-        self.assertEqual(getattr(discrete_header, "batch"), self.mission_1.batch)
-
-        event = self.merge_event_test(event_0.event_edt_seq)
-        discrete_header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=discrete_header.dis_headr_edt_seq)
-        self.assertEqual(event.discrete_header_edits.count(), 1)
-        self.assertEqual(getattr(discrete_header, "batch"), self.mission_0.batch)
-
     @tag('test_event_merge_event_exist_plankton_header_batch')
     def test_event_merge_event_exist_plankton_header_batch(self):
         args = (None, None, None)
@@ -547,6 +534,538 @@ class TestEventMerge(TestCase):
         more_comments = biochem_models.Bccommentedits.objects.get(comment_edt_seq=more_comments.comment_edt_seq)
         self.assertEqual(event.comment_edits.count(), 1)
         self.assertEqual(getattr(more_comments, "batch"), self.mission_0.batch)
+
+
+@tag('test_merge_bio_tables', 'test_discrete_header_merge')
+class TestDiscreteHeaderMerge(TestCase):
+
+    mission_0 = None
+    mission_1 = None
+
+    @classmethod
+    def setUpClass(cls):
+        utilities.create_model_table(unmanaged_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        utilities.delete_model_table(unmanaged_models)
+
+    def setUp(self):
+        descriptor = "MVP112025"
+        collector_event_id = "001"
+        self.bad_data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=23, name="BIO_INREVIEW")
+        self.mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
+        self.event_0 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_0, collector_event_id=collector_event_id)
+
+        self.mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
+        self.event_1 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1, collector_event_id=collector_event_id)
+
+    def merge_discrete_header_test(self, dis_header_seq):
+        mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_discrete_headers()
+
+        event = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=dis_header_seq)
+
+        return event
+
+    def create_test_discrete_header(self, header_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
+
+        kwargs0 = {}
+        kwargs1 = {}
+        if header_attribute is not None:
+            # provided two events, values from event 1 should be copied into event 0
+            kwargs0[header_attribute] = value1
+            kwargs1[header_attribute] = value2
+
+        if not data_center:
+            data_center = [BCFactoryFloor.BcDataCenterFactory(data_center_code=20, name="BIO")]
+
+        if header_attribute != 'collector_sample_id':
+            collector_event_id = "450000"
+            kwargs0['collector_sample_id'] = collector_event_id
+            kwargs1['collector_sample_id'] = collector_event_id
+
+        kwargs0['data_center'] = data_center[0]
+        kwargs1['data_center'] = data_center[1] if len(data_center) > 1 else data_center[0]
+
+        discrete_header_0 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_0, **kwargs0)
+        discrete_header_1 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_1, **kwargs1)
+
+        return discrete_header_0, discrete_header_1
+
+    # Collector Sample Id is being used as a natural primary key to match discrete headers
+    # across events per mission. No two events should use the same collector sample ID
+    # collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+
+    # Todo: The activity_edit is a bit complicated. It basically contains the event_seq, the mission_seq and
+    #  a code_pointer. The code_pointer is either DH for discrete data or PL for plankton data. The complexity
+    #  is first we have to check if the activity edit exists, create it if it doesn't and then point our discrete
+    #  header at it. If we're just updating and existing discrete header, it's not a problem.
+    # activity_edit = models.ForeignKey(Bcactivityedits, related_name='discrete_header_edits', blank=True, null=True,
+    #                                   db_column='activity_edt_seq', on_delete=models.CASCADE)
+
+    # If a discrete header didn't previously belong to an event then update the event_edt_seq to point to the
+    # event the header is getting attached to. Everything else can remain the same.
+    #
+    # event_edit = models.ForeignKey(Bceventedits, related_name='discrete_header_edits', blank=True, null=True,
+    #                                db_column='event_edt_seq', on_delete=models.CASCADE)
+    @tag('test_discrete_header_merge_does_not_exist_batch')
+    def test_discrete_header_merge_does_not_exist_batch(self):
+        # event_1 contains a Bcdiscreteedits object that doesn't exist in event_0
+        # the object should be reassigned to event_0 and removed from event_1
+        discrete_header = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_1)
+
+        mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_discrete_headers()
+
+        event = biochem_models.Bceventedits.objects.get(event_edt_seq=self.event_0.event_edt_seq)
+        updated_discrete_header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=discrete_header.dis_headr_edt_seq)
+
+        self.assertEqual(event.discrete_header_edits.count(), 1)
+        self.assertEqual(updated_discrete_header.batch.pk, event.batch.pk)
+
+    # gear_seq = models.IntegerField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_gear_seq')
+    def test_event_merge_discrete_header_gear_seq(self):
+        args = ("gear_seq", 100, 101)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # sdate = models.DateField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_sdate')
+    def test_event_merge_discrete_header_sdate(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("sdate", date0, date1)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
+
+    # edate = models.DateField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_edate')
+    def test_event_merge_discrete_header_edate(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("edate", date0, date1)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
+
+    # stime = models.IntegerField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_stime')
+    def test_event_merge_discrete_header_stime(self):
+        args = ("stime", 1100, 1200)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # etime = models.IntegerField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_etime')
+    def test_event_merge_discrete_header_etime(self):
+        args = ("etime", 1100, 1200)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # time_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_time_qc_code')
+    def test_event_merge_discrete_header_time_qc_code(self):
+        args = ("time_qc_code", "UN", "NU")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # slat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_slat')
+    def test_event_merge_discrete_header_slat(self):
+        args = ("slat", 41.2, 43.5)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # elat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_elat')
+    def test_event_merge_discrete_header_elat(self):
+        args = ("elat", 41.2, 43.5)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # slon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_slon')
+    def test_event_merge_discrete_header_slon(self):
+        args = ("slon", 41.2, 43.5)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # elon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_elon')
+    def test_event_merge_discrete_header_elon(self):
+        args = ("elon", 41.2, 43.5)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # position_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_position_qc_code')
+    def test_event_merge_discrete_header_position_qc_code(self):
+        args = ("position_qc_code", "UN", "NU")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # start_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_start_depth')
+    def test_event_merge_discrete_header_start_depth(self):
+        args = ("start_depth", 20.5, 100.5)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # end_depth = models.DecimalField(max_digits=7, decimal_places=2, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_end_depth')
+    def test_event_merge_discrete_header_end_depth(self):
+        args = ("end_depth", 10.5, 100.5)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # sounding = models.IntegerField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_sounding')
+    def test_event_merge_discrete_header_sounding(self):
+        args = ("sounding", 10, 20)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # collector_deployment_id = models.CharField(max_length=50, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_collector_deployment_id')
+    def test_event_merge_discrete_header_collector_deployment_id(self):
+        args = ("collector_deployment_id", "Test_0", "Test_1")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # collector = models.CharField(max_length=50, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_collector')
+    def test_event_merge_discrete_header_collector(self):
+        args = ("collector", "Ted", "Patrick")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # collector_comment = models.CharField(max_length=2000, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_collector_comment')
+    def test_event_merge_discrete_header_collector_comment(self):
+        args = ("collector_comment", "Some Comment", "Another Comment")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_data_manager_comment')
+    def test_event_merge_discrete_header_data_manager_comment(self):
+        args = ("data_manager_comment", "Some Comment", "Another Comment")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # responsible_group = models.CharField(max_length=50, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_responsible_group')
+    def test_event_merge_discrete_header_responsible_group(self):
+        args = ("responsible_group", "Some Comment", "Another Comment")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # shared_data = models.CharField(max_length=50, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_shared_data')
+    def test_event_merge_discrete_header_shared_data(self):
+        args = ("shared_data", "Some Comment", "Another Comment")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # prod_created_date = models.DateField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_prod_created_date')
+    def test_event_merge_discrete_header_prod_created_date(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("prod_created_date", date0, date1)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
+
+    # created_by = models.CharField(max_length=30, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_created_by')
+    def test_event_merge_discrete_header_created_by(self):
+        args = ("created_by", "ROBARF", "UPSONP")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # created_date = models.DateField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_created_date')
+    def test_event_merge_discrete_header_created_date(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("created_date", date0, date1)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
+
+    # last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    @tag('test_event_merge_discrete_header_last_update_by')
+    def test_event_merge_discrete_header_last_update_by(self):
+        args = ("last_update_by", "ROBARF", "UPSONP")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # last_update_date = models.DateField(blank=True, null=True)
+    @tag('test_event_merge_discrete_header_last_update_date')
+    def test_event_merge_discrete_header_last_update_date(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("last_update_date", date0, date1)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
+
+    # process_flag = models.CharField(max_length=3)
+    @tag('test_event_merge_discrete_header_process_flag')
+    def test_event_merge_discrete_header_process_flag(self):
+        args = ("process_flag", "EAR", "ECN")
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertEqual(getattr(dis_header, args[0]), args[2])
+
+    # batch = models.ForeignKey(Bcbatches, related_name='discrete_header_edits', db_column='batch_seq',
+    #                           blank=True, null=True, on_delete=models.CASCADE)
+    @tag('test_event_merge_discrete_header_batch')
+    def test_event_merge_discrete_header_batch(self):
+        # in the case of batches, the merged event should share the batch id with self.mission_0 as that would be the
+        # mission that was checked out from the archive that we're merging new data into.
+        args = (None, None, None)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
+        self.assertNotEqual(getattr(dis_header_1, "batch"), self.mission_0.batch)
+        self.assertEqual(getattr(dis_header, "batch"), self.mission_0.batch)
+
+
+@tag('test_merge_bio_tables', 'test_merge_discrete_details')
+class TestDiscreteDetailMerge(TestCase):
+
+    mission_0 = None
+    mission_1 = None
+
+    @classmethod
+    def setUpClass(cls):
+        utilities.create_model_table(unmanaged_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        utilities.delete_model_table(unmanaged_models)
+
+    def setUp(self):
+        descriptor = "MVP112025"
+        collector_event_id = "001"
+        discrete_header_sample_id = 450000
+        self.bad_data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=23, name="BIO_INREVIEW")
+        self.data_type = BCFactoryFloor.BcDataTypeFactory()
+
+        self.mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
+        self.event_0 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_0, collector_event_id=collector_event_id)
+        self.discrete_header_0 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_0, collector_sample_id=discrete_header_sample_id)
+
+        self.mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
+        self.event_1 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1, collector_event_id=collector_event_id)
+        self.discrete_header_1 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_1, collector_sample_id=discrete_header_sample_id)
+
+    def merge_discrete_details_test(self, dis_detail_seq):
+        mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_discrete_details()
+
+        dis_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=dis_detail_seq)
+
+        return dis_detail
+
+    def create_test_discrete_details(self, detail_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
+
+        kwargs0 = {}
+        kwargs1 = {}
+        if detail_attribute is not None:
+            # provided two events, values from event 1 should be copied into event 0
+            kwargs0[detail_attribute] = value1
+            kwargs1[detail_attribute] = value2
+
+        if not data_center:
+            data_center = [BCFactoryFloor.BcDataCenterFactory(data_center_code=20, name="BIO")]
+
+        if detail_attribute != 'collector_sample_id':
+            collector_event_id = "450000"
+            kwargs0['collector_sample_id'] = collector_event_id
+            kwargs1['collector_sample_id'] = collector_event_id
+
+        kwargs0['data_center'] = data_center[0]
+        kwargs1['data_center'] = data_center[1] if len(data_center) > 1 else data_center[0]
+
+        discrete_detail_0 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_0, **kwargs0)
+        discrete_detail_1 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_1, **kwargs1)
+
+        return discrete_detail_0, discrete_detail_1
+
+    @tag('test_merge_discrete_details_does_not_exist_batch')
+    def test_discrete_detail_merge_does_not_exist_batch(self):
+        # event_1 contains a Bcdiscreteedits object that doesn't exist in event_0
+        # the object should be reassigned to event_0 and removed from event_1
+        discrete_detail = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_1)
+
+        mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_discrete_details()
+
+        header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=self.discrete_header_0.dis_headr_edt_seq)
+        updated_discrete_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=discrete_detail.dis_detail_edt_seq)
+
+        self.assertEqual(header.discrete_detail_edits.count(), 1)
+        self.assertEqual(updated_discrete_detail.batch.pk, header.batch.pk)
+
+    # data_type = models.ForeignKey(Bcdatatypes, related_name='discrete_detail_edits', db_column='data_type_seq',
+    #                               blank=True, null=True, on_delete=models.DO_NOTHING)
+    @tag('test_merge_discrete_details_data_type')
+    def test_merge_discrete_details_data_type(self):
+        # if a detail object shares a sample ID, but has a different data type, these should be
+        # different entries.
+        data_type_0 = BCFactoryFloor.BcDataTypeFactory(data_type_seq=10001)
+        data_type_1 = BCFactoryFloor.BcDataTypeFactory(data_type_seq=10002)
+
+        discrete_detail_0 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_0, collector_sample_id=450001, data_type=data_type_0)
+        discrete_detail_1 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_1, collector_sample_id=450001, data_type=data_type_1)
+
+        mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_discrete_details()
+
+        header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=self.discrete_header_0.dis_headr_edt_seq)
+        updated_discrete_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=discrete_detail_1.dis_detail_edt_seq)
+
+        self.assertEqual(header.discrete_detail_edits.count(), 2)
+        self.assertEqual(updated_discrete_detail.batch.pk, header.batch.pk)
+
+   # data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
+    @tag('test_merge_discrete_details_data_value')
+    def test_merge_discrete_details_data_value(self):
+        args = ("data_value", 19.6, 25.5)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # data_flag = models.CharField(max_length=3, blank=True, null=True)
+    @tag('test_merge_discrete_details_data_flag')
+    def test_merge_discrete_details_data_flag(self):
+        args = ("data_flag", "yes", "no")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # Data is averaged by the Stage 2 validation procedure, it's not something that
+    # gets set by the application so should be left alone.
+    # averaged_data = models.CharField(max_length=1, blank=True, null=True)
+
+    # data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+    @tag('test_merge_discrete_details_data_qc_code')
+    def test_merge_discrete_details_data_qc_code(self):
+        args = ("data_qc_code", "4", "1")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # qc_flag = models.CharField(max_length=3, blank=True, null=True)
+    @tag('test_merge_discrete_details_qc_flag')
+    def test_merge_discrete_details_qc_flag(self):
+        args = ("qc_flag", "Yes", "No")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # detection_limit = models.DecimalField(max_digits=11, decimal_places=5, blank=True, null=True)
+    @tag('test_merge_discrete_details_detection_limit')
+    def test_merge_discrete_details_detection_limit(self):
+        args = ("detection_limit", 0.1, 2.5)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # detail_collector = models.CharField(max_length=50, blank=True, null=True)
+    @tag('test_merge_discrete_details_detail_collector')
+    def test_merge_discrete_details_detail_collector(self):
+        args = ("detail_collector", "TedF", "Upsonp")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # The collector sample ID is used as a combined natural key with the data type
+    # collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+
+    # prod_created_date = models.DateField(blank=True, null=True)
+    @tag('test_merge_discrete_details_prod_created_date')
+    def test_merge_discrete_details_prod_created_date(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("prod_created_date", date0, date1)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2].date())
+
+    # created_by = models.CharField(max_length=30, blank=True, null=True)
+    @tag('test_merge_discrete_details_created_by')
+    def test_merge_discrete_details_created_by(self):
+        args = ("created_by", "TedF", "Upsonp")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # created_date = models.DateField(blank=True, null=True)
+    @tag('test_merge_discrete_details_created_date')
+    def test_merge_discrete_details_created_date(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("created_date", date0, date1)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2].date())
+
+    # last_update_by = models.CharField(max_length=30, blank=True, null=True)
+    @tag('test_merge_discrete_details_last_update_by')
+    def test_merge_discrete_details_last_update_by(self):
+        args = ("last_update_by", "TedF", "Upsonp")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
+
+    # last_update_date = models.DateField(blank=True, null=True)
+    @tag('test_merge_discrete_details_last_update_date')
+    def test_merge_discrete_details_last_update_date(self):
+        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
+        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
+        args = ("last_update_date", date0, date1)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2].date())
+
+    # process_flag = models.CharField(max_length=3)
+    @tag('test_merge_discrete_details_process_flag')
+    def test_merge_discrete_details_process_flag(self):
+        args = ("process_flag", "EAR", "ECN")
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
+        self.assertEqual(getattr(dis_detail, args[0]), args[2])
 
 
 @tag('test_merge_bio_tables', 'test_discrete_header_merge')

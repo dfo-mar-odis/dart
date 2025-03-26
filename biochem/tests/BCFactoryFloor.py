@@ -66,6 +66,40 @@ class BcDiscreteHeaderEditsFactory(DjangoModelFactory):
     batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
 
 
+class BcDataTypeFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcdatatypes
+        django_get_or_create = ("data_type_seq",)
+
+    data_type_seq = 10001
+    data_center = factory.SubFactory(BcDataCenterFactory, data_center_code=20, name="BIO")
+
+    data_retrieval_seq = 10001
+    analysis_seq = 20001
+    preservation_seq = 30001
+    sample_handling_seq = 40001
+    storage_seq = 50001
+    unit_seq = 60001
+    description = "some description"
+    conversion_equation = "An equation"
+    originally_entered_by = "Upsonp"
+    method = "A method"
+    priority = 1
+    p_code = "asdf"
+    bodc_code = "ACodeOfSomeKind"
+
+
+class BcDiscreteDetailEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcdiscretedtailedits
+
+    dis_detail_edt_seq = factory.Sequence(lambda n: 600000000 + n)
+    dis_header_edit = factory.SubFactory(BcDiscreteHeaderEditsFactory)
+    data_type = factory.SubFactory(BcDataTypeFactory)
+    data_center = factory.lazy_attribute(lambda o: o.dis_header_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.dis_header_edit.batch)
+
+
 class BcPlanktonHeaderEditsFactory(DjangoModelFactory):
     class Meta:
         model = models.Bcplanktnhedredits

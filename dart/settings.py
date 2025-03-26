@@ -210,7 +210,7 @@ HANDLERS = {
         "formatter": "simple",
     },
     "info_handler": {
-        "class": "logging.handlers.RotatingFileHandler",
+        "class": "concurrent_log_handler.ConcurrentRotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/info.log",
         "mode": "a",
         "encoding": "utf-8",
@@ -244,7 +244,7 @@ LOGGERS = (
             "propagate": True,
         },
         "django.request": {
-            "handlers": ['error_handler', "info_handler"],
+            "handlers": ['error_handler'],
             "level": "ERROR",
             "propagate": True,
         },

@@ -52,10 +52,10 @@ def _merge_dictionaries(update_dict: dict, new_dict: dict) -> None:
 # }
 def _merge_objects(update_dict, current_object, new_object, field):
     logger.debug(f"Start Merge Objects '{field}': {time.perf_counter()}")
-    # if getattr(current_object, field) != getattr(new_object, field):
-    setattr(current_object, field, getattr(new_object, field))
-    update_dict[current_object._meta.model]['objects'][current_object.pk] = current_object
-    update_dict[current_object._meta.model]['fields'].update([field])
+    if getattr(current_object, field) != getattr(new_object, field):
+        setattr(current_object, field, getattr(new_object, field))
+        update_dict[current_object._meta.model]['objects'][current_object.pk] = current_object
+        update_dict[current_object._meta.model]['fields'].update([field])
     logger.debug(f"End Merge Objects '{field}': {time.perf_counter()}")
 
 
@@ -131,7 +131,136 @@ class MergeMissions:
 
         return update_dict
 
-    def get_update_events(self):
+    def get_update_discrete_details(self) -> dict:
+        update_dict: dict = {
+            models.Bcdiscretedtailedits: {
+                'objects': dict(),
+                'fields': set(),
+            },
+        }
+
+        details = models.Bcdiscretedtailedits.objects.using(self.database).filter(batch=self.mission_1.batch)
+
+        max_details = details.count()
+        for detail_index, detail in enumerate(details):
+            self.update_status("Merging Discrete Details", detail_index, max_details)
+            header = models.Bcdiscretehedredits.objects.using(self.database).get(
+                batch=self.mission_0.batch,
+                collector_sample_id=detail.dis_header_edit.collector_sample_id
+            )
+            try:
+                existing_detail = header.discrete_detail_edits.get(
+                    collector_sample_id=detail.collector_sample_id,
+                    data_type=detail.data_type
+                )
+                _merge_objects(update_dict, existing_detail, detail, 'data_value')
+                _merge_objects(update_dict, existing_detail, detail, 'data_flag')
+                _merge_objects(update_dict, existing_detail, detail, 'data_qc_code')
+                _merge_objects(update_dict, existing_detail, detail, 'qc_flag')
+                _merge_objects(update_dict, existing_detail, detail, 'detection_limit')
+                _merge_objects(update_dict, existing_detail, detail, 'detail_collector')
+                _merge_objects(update_dict, existing_detail, detail, 'prod_created_date')
+                _merge_objects(update_dict, existing_detail, detail, 'created_by')
+                _merge_objects(update_dict, existing_detail, detail, 'created_date')
+                _merge_objects(update_dict, existing_detail, detail, 'last_update_by')
+                _merge_objects(update_dict, existing_detail, detail, 'last_update_date')
+                _merge_objects(update_dict, existing_detail, detail, 'process_flag')
+
+            except models.Bcdiscretedtailedits.DoesNotExist:
+                # if the detail doesn't exist in the specified details list, then we'll update the dis_header_edit for
+                # the detail and update the Batch_ID. We'll have to update the batch id for all things attached
+                # to the detail as well.
+                detail.dis_header_edit = header
+                update_dict[models.Bcdiscretedtailedits]['fields'].update(['dis_header_edit'])
+
+                # update batch ids for all related objects that reference the event being merged
+                n_dict = self.get_update_reference_field("batch", detail, self.mission_0.batch)
+                _merge_dictionaries(update_dict, n_dict)
+
+        return update_dict
+
+
+    def merge_discrete_details(self):
+        self.update_status("Merging Discrete Details")
+
+        self.safety_check()
+
+        updated_objects: dict = self.get_update_discrete_details()
+
+        disregard_fields = {'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date'}
+        for key, update in updated_objects.items():
+            if len(update['objects']) > 0 and update['fields'] != disregard_fields:
+                key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
+
+
+    def get_update_discrete_headers(self) -> dict:
+        update_dict: dict = {
+            models.Bcdiscretehedredits: {
+                'objects': dict(),
+                'fields': set(),
+            },
+        }
+
+        headers = models.Bcdiscretehedredits.objects.using(self.database).filter(batch=self.mission_1.batch)
+        max_headers = headers.count()
+        for header_index, header in enumerate(headers):
+            self.update_status("Merging Discrete Header", header_index, max_headers)
+            event = self.mission_0.event_edits.get(collector_event_id=header.event_edit.collector_event_id)
+            try:
+                existing_header = event.discrete_header_edits.get(collector_sample_id=header.collector_sample_id)
+                _merge_objects(update_dict, existing_header, header, 'gear_seq')
+                _merge_objects(update_dict, existing_header, header, 'sdate')
+                _merge_objects(update_dict, existing_header, header, 'edate')
+                _merge_objects(update_dict, existing_header, header, 'stime')
+                _merge_objects(update_dict, existing_header, header, 'etime')
+                _merge_objects(update_dict, existing_header, header, 'time_qc_code')
+                _merge_objects(update_dict, existing_header, header, 'slat')
+                _merge_objects(update_dict, existing_header, header, 'elat')
+                _merge_objects(update_dict, existing_header, header, 'slon')
+                _merge_objects(update_dict, existing_header, header, 'elon')
+                _merge_objects(update_dict, existing_header, header, 'position_qc_code')
+                _merge_objects(update_dict, existing_header, header, 'start_depth')
+                _merge_objects(update_dict, existing_header, header, 'end_depth')
+                _merge_objects(update_dict, existing_header, header, 'sounding')
+                _merge_objects(update_dict, existing_header, header, 'collector_deployment_id')
+                _merge_objects(update_dict, existing_header, header, 'collector')
+                _merge_objects(update_dict, existing_header, header, 'collector_comment')
+                _merge_objects(update_dict, existing_header, header, 'data_manager_comment')
+                _merge_objects(update_dict, existing_header, header, 'responsible_group')
+                _merge_objects(update_dict, existing_header, header, 'shared_data')
+                _merge_objects(update_dict, existing_header, header, 'prod_created_date')
+                _merge_objects(update_dict, existing_header, header, 'created_by')
+                _merge_objects(update_dict, existing_header, header, 'created_date')
+                _merge_objects(update_dict, existing_header, header, 'last_update_by')
+                _merge_objects(update_dict, existing_header, header, 'last_update_date')
+                _merge_objects(update_dict, existing_header, header, 'process_flag')
+            except models.Bcdiscretehedredits.DoesNotExist:
+                # if the header doesn't exist in the specified event, then we'll update the event_edits for the
+                # header and update the Batch_ID. We'll have to update the batch id for all things attached
+                # to the header as well.
+                header.event_edit = event
+                update_dict[models.Bcdiscretehedredits]['fields'].update(['event_edit'])
+
+                # update batch ids for all related objects that reference the event being merged
+                n_dict = self.get_update_reference_field("batch", header, self.mission_0.batch)
+                _merge_dictionaries(update_dict, n_dict)
+
+        return update_dict
+
+    def merge_discrete_headers(self):
+        self.update_status("Merging Discrete Headers")
+
+        self.safety_check()
+
+        updated_objects: dict = self.get_update_discrete_headers()
+
+        disregard_fields = {'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date'}
+        for key, update in updated_objects.items():
+            if len(update['objects']) > 0 and update['fields'] != disregard_fields:
+                key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
+
+
+    def get_update_events(self) -> dict:
         update_dict: dict = {
             models.Bceventedits: {
                 'objects': dict(),
@@ -174,8 +303,8 @@ class MergeMissions:
                 # update batch ids for all related objects that reference the event being merged
                 # n_dict = self.get_update_reference_field("batch", event, self.mission_0.batch)
                 # _merge_dictionaries(update_dict, n_dict)
-                #
-                # # update event_edit objects for related objects that reference the event being merged
+
+                # update event_edit objects for related objects that reference the event being merged
                 # n_dict = self.get_update_reference_field("event_edit", event, existing_event)
                 # _merge_dictionaries(update_dict, n_dict)
 
@@ -207,8 +336,10 @@ class MergeMissions:
 
         updated_objects: dict = self.get_update_events()
 
+        # if objects weren't actively updated they'll still have these four fields marked as updated.
+        disregard_fields = {'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date'}
         for key, update in updated_objects.items():
-            if len(update['objects']) > 0:
+            if len(update['objects']) > 0 and update['fields'] != disregard_fields:
                 key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
 
     def merge_missions(self) -> None:
@@ -243,3 +374,6 @@ class MergeMissions:
 
         self.mission_0.save(using=self.database)
         self.merge_events()
+        self.merge_discrete_headers()
+        self.merge_discrete_details()
+
