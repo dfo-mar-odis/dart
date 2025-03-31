@@ -976,6 +976,27 @@ class Bcdisreplicatedits(models.Model):
         db_table = 'BCDISREPLICATEDITS'
 
 
+class Bcdiscretereplicteditsdel(models.Model):
+    discrete_replicate_seq = models.BigIntegerField(primary_key=True)
+    batch = models.ForeignKey(Bcbatches, related_name='discrete_replicate_edits_delete', db_column='batch_seq',
+                              blank=True, null=True, on_delete=models.CASCADE)
+    audit_delete = models.CharField(max_length=1, default='T', blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISCRETEREPLICTEDITSDEL'
+
+
+class Bccommenteditsdel(models.Model):
+    comment_seq = models.BigIntegerField(primary_key=True)
+    batch = models.ForeignKey(Bcbatches, related_name='discrete_comment_edits_delete', db_column='batch_seq',
+                              blank=True, null=True, on_delete=models.CASCADE)
+
+    class Meta:
+        managed = False
+        db_table = 'BCCOMMENTEDITSDEL'
+
+
 class Bcplanktnhedredits(models.Model):
     pl_headr_edt_seq = models.BigIntegerField(primary_key=True)
     plankton_seq = models.BigIntegerField(blank=True, null=True)

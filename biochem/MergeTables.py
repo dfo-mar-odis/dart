@@ -6,6 +6,7 @@ import logging
 
 logger = logging.getLogger('dart.debug')
 
+
 # _merge_dictionaries takes a left and right dictionary, they're assumed to be in the same format and that the
 # right dictionary is being merged *into* the left dictionary.
 #
@@ -34,11 +35,11 @@ def _merge_dictionaries(update_dict: dict, new_dict: dict) -> None:
             # if an object in the new dictionary already exists in the update_dict then we have to merge the
             # fields that are different in the new object into the update_dict object, otherwise we just override
             # whatever changes were already made to the object in the update_dict
-            for primary_key, new_object in new_dict[new_key]['objects'].items():
-                if primary_key not in update_dict[new_key]['objects'].keys():
-                    update_dict[new_key]['objects'][primary_key] = new_object
+            for primary_key, new_object in new_dict[new_key]['update_objects'].items():
+                if primary_key not in update_dict[new_key]['update_objects'].keys():
+                    update_dict[new_key]['update_objects'][primary_key] = new_object
                 elif hasattr(new_object, new_field):
-                    update_object = update_dict[new_key]['objects'][primary_key]
+                    update_object = update_dict[new_key]['update_objects'][primary_key]
                     setattr(update_object, new_field, getattr(new_object, new_field))
 
 
@@ -51,16 +52,12 @@ def _merge_dictionaries(update_dict: dict, new_dict: dict) -> None:
 #   }
 # }
 def _merge_objects(update_dict, current_object, new_object, field):
-    logger.debug(f"Start Merge Objects '{field}': {time.perf_counter()}")
-    if getattr(current_object, field) != getattr(new_object, field):
-        setattr(current_object, field, getattr(new_object, field))
-        update_dict[current_object._meta.model]['objects'][current_object.pk] = current_object
-        update_dict[current_object._meta.model]['fields'].update([field])
-    logger.debug(f"End Merge Objects '{field}': {time.perf_counter()}")
+    setattr(current_object, field, getattr(new_object, field))
+    update_dict[current_object._meta.model]['update_objects'][current_object.pk] = current_object
+    update_dict[current_object._meta.model]['fields'].update([field])
 
 
 class MergeMissions:
-
     status_listeners: [] = None
 
     database = None
@@ -69,6 +66,7 @@ class MergeMissions:
     mission_1: models.Bcmissionedits = None
 
     status = None
+
     def __init__(self, mission_0: models.Bcmissionedits, mission_1: models.Bcmissionedits, database='biochem'):
         self.database = database
         self.mission_0 = mission_0
@@ -116,7 +114,7 @@ class MergeMissions:
         setattr(bc_object, field, new_value)
         update_dict: dict = {
             bc_object._meta.model: {
-                'objects': {bc_object.pk: bc_object},
+                'update_objects': {bc_object.pk: bc_object},
                 'fields': {field},
             },
         }
@@ -131,40 +129,87 @@ class MergeMissions:
 
         return update_dict
 
+    def merge_update_objects(self, updated_objects: dict):
+        self.update_status("Merging Discrete Headers")
+
+        self.safety_check()
+
+        for key, update in updated_objects.items():
+            if len(update['update_objects']) > 0:
+                key.objects.using(self.database).bulk_update(list(update['update_objects'].values()),
+                                                             fields=update['fields'])
+
     def get_update_discrete_details(self) -> dict:
         update_dict: dict = {
             models.Bcdiscretedtailedits: {
-                'objects': dict(),
+                'update_objects': dict(),
                 'fields': set(),
             },
         }
 
-        details = models.Bcdiscretedtailedits.objects.using(self.database).filter(batch=self.mission_1.batch)
+        exclude_fields = ['dis_detail_edt_seq', 'discrete_detail', 'data_center', 'data_type', 'discrete', 'collector_sample_id', 'dis_header_edit', 'batch', 'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date']
+        check_fields = [f.name for f in models.Bcdiscretedtailedits._meta.fields if f.name not in exclude_fields]
 
+        details = models.Bcdiscretedtailedits.objects.using(self.database).filter(batch=self.mission_1.batch)
+        mission_1_headers = [detail.dis_header_edit.collector_sample_id for detail in details]
+        mission_0_headers = models.Bcdiscretehedredits.objects.using(self.database).filter(
+            batch=self.mission_0.batch,
+            collector_sample_id__in=mission_1_headers
+        )
         max_details = details.count()
+        delete_replicates = []
         for detail_index, detail in enumerate(details):
             self.update_status("Merging Discrete Details", detail_index, max_details)
-            header = models.Bcdiscretehedredits.objects.using(self.database).get(
-                batch=self.mission_0.batch,
-                collector_sample_id=detail.dis_header_edit.collector_sample_id
-            )
+            header = mission_0_headers.get(collector_sample_id=detail.dis_header_edit.collector_sample_id)
             try:
                 existing_detail = header.discrete_detail_edits.get(
                     collector_sample_id=detail.collector_sample_id,
                     data_type=detail.data_type
                 )
-                _merge_objects(update_dict, existing_detail, detail, 'data_value')
-                _merge_objects(update_dict, existing_detail, detail, 'data_flag')
-                _merge_objects(update_dict, existing_detail, detail, 'data_qc_code')
-                _merge_objects(update_dict, existing_detail, detail, 'qc_flag')
-                _merge_objects(update_dict, existing_detail, detail, 'detection_limit')
-                _merge_objects(update_dict, existing_detail, detail, 'detail_collector')
-                _merge_objects(update_dict, existing_detail, detail, 'prod_created_date')
-                _merge_objects(update_dict, existing_detail, detail, 'created_by')
-                _merge_objects(update_dict, existing_detail, detail, 'created_date')
-                _merge_objects(update_dict, existing_detail, detail, 'last_update_by')
-                _merge_objects(update_dict, existing_detail, detail, 'last_update_date')
-                _merge_objects(update_dict, existing_detail, detail, 'process_flag')
+                updated = False
+                fields = filter(lambda field: getattr(existing_detail, field, None) != getattr(detail, field, None), check_fields)
+                for field in fields:
+                    _merge_objects(update_dict, existing_detail, detail, field)
+                    updated = True
+
+                if updated:
+                    _merge_objects(update_dict, existing_detail, detail, 'last_update_by')
+                    _merge_objects(update_dict, existing_detail, detail, 'last_update_date')
+                    _merge_objects(update_dict, existing_detail, detail, 'process_flag')
+
+                # Replicates work differently than other Biochem discrete objects.
+                # There's no natural or combined primary key uniquely identifying an individual
+                # replicate all you have to go on is the order they appear in, which isn't ideal
+                # for merging.
+                #
+                # To Handle replicates we'll check the incoming details object, if the detail object didn't
+                # already exist then when it gets reassigned in the "Does Not Exist" exception, it's replicates
+                # automatically go with it. If the details object does already exist, we'll delete any replicates
+                # it already has, and then reassign the replicates from the incoming detail object.
+                # This makes the assumption that replicates will always be uploaded together and never just as
+                # a means to update an existing replicate, which I assume they have to be anyway because if
+                # they're not uploaded together, then the Biochem Stage 2 validation won't know how to
+                # or even that it's supposed to average them in the user edit tables.
+                if existing_detail.discrete_replicate_edits.exists():
+                    delete_replicates += list(existing_detail.discrete_replicate_edits.values_list(
+                        'discrete_replicate_seq', flat=True
+                    ))
+
+                if detail.discrete_replicate_edits.exists():
+
+                    if models.Bcdisreplicatedits not in update_dict:
+                        update_dict[models.Bcdisreplicatedits] = {
+                            'update_objects': dict(),
+                            'fields': set(),
+                        }
+
+                    for replicate in detail.discrete_replicate_edits.all():
+                        replicate.dis_detail_edit = existing_detail
+                        update_dict[models.Bcdisreplicatedits]['fields'].update(['dis_detail_edit'])
+
+                        # update batch ids for all related objects that reference the event being merged
+                        n_dict = self.get_update_reference_field("batch", replicate, self.mission_0.batch)
+                        _merge_dictionaries(update_dict, n_dict)
 
             except models.Bcdiscretedtailedits.DoesNotExist:
                 # if the detail doesn't exist in the specified details list, then we'll update the dis_header_edit for
@@ -177,63 +222,43 @@ class MergeMissions:
                 n_dict = self.get_update_reference_field("batch", detail, self.mission_0.batch)
                 _merge_dictionaries(update_dict, n_dict)
 
+        models.Bcdisreplicatedits.objects.using(self.database).filter(
+            discrete_replicate_seq__in=delete_replicates).delete()
         return update_dict
-
-
-    def merge_discrete_details(self):
-        self.update_status("Merging Discrete Details")
-
-        self.safety_check()
-
-        updated_objects: dict = self.get_update_discrete_details()
-
-        disregard_fields = {'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date'}
-        for key, update in updated_objects.items():
-            if len(update['objects']) > 0 and update['fields'] != disregard_fields:
-                key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
-
 
     def get_update_discrete_headers(self) -> dict:
         update_dict: dict = {
             models.Bcdiscretehedredits: {
-                'objects': dict(),
+                'update_objects': dict(),
                 'fields': set(),
             },
         }
 
+        exclude_fields = ['dis_headr_edt_seq', 'discrete', 'data_center', 'event', 'activity', 'collector_sample_id', 'event_edit', 'activity_edit', 'batch', 'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date']
+        check_fields = [f.name for f in models.Bcdiscretehedredits._meta.fields if f.name not in exclude_fields]
+
         headers = models.Bcdiscretehedredits.objects.using(self.database).filter(batch=self.mission_1.batch)
+        mission_1_events = self.mission_1.event_edits.values_list('collector_event_id', flat=True)
+        mission_0_events = {
+            mission.collector_event_id: mission for mission in
+            self.mission_0.event_edits.filter(collector_event_id__in=mission_1_events)
+        }
         max_headers = headers.count()
         for header_index, header in enumerate(headers):
             self.update_status("Merging Discrete Header", header_index, max_headers)
-            event = self.mission_0.event_edits.get(collector_event_id=header.event_edit.collector_event_id)
+            event = mission_0_events[header.event_edit.collector_event_id]
             try:
                 existing_header = event.discrete_header_edits.get(collector_sample_id=header.collector_sample_id)
-                _merge_objects(update_dict, existing_header, header, 'gear_seq')
-                _merge_objects(update_dict, existing_header, header, 'sdate')
-                _merge_objects(update_dict, existing_header, header, 'edate')
-                _merge_objects(update_dict, existing_header, header, 'stime')
-                _merge_objects(update_dict, existing_header, header, 'etime')
-                _merge_objects(update_dict, existing_header, header, 'time_qc_code')
-                _merge_objects(update_dict, existing_header, header, 'slat')
-                _merge_objects(update_dict, existing_header, header, 'elat')
-                _merge_objects(update_dict, existing_header, header, 'slon')
-                _merge_objects(update_dict, existing_header, header, 'elon')
-                _merge_objects(update_dict, existing_header, header, 'position_qc_code')
-                _merge_objects(update_dict, existing_header, header, 'start_depth')
-                _merge_objects(update_dict, existing_header, header, 'end_depth')
-                _merge_objects(update_dict, existing_header, header, 'sounding')
-                _merge_objects(update_dict, existing_header, header, 'collector_deployment_id')
-                _merge_objects(update_dict, existing_header, header, 'collector')
-                _merge_objects(update_dict, existing_header, header, 'collector_comment')
-                _merge_objects(update_dict, existing_header, header, 'data_manager_comment')
-                _merge_objects(update_dict, existing_header, header, 'responsible_group')
-                _merge_objects(update_dict, existing_header, header, 'shared_data')
-                _merge_objects(update_dict, existing_header, header, 'prod_created_date')
-                _merge_objects(update_dict, existing_header, header, 'created_by')
-                _merge_objects(update_dict, existing_header, header, 'created_date')
-                _merge_objects(update_dict, existing_header, header, 'last_update_by')
-                _merge_objects(update_dict, existing_header, header, 'last_update_date')
-                _merge_objects(update_dict, existing_header, header, 'process_flag')
+                fields = filter(lambda field: getattr(existing_header, field, None) != getattr(header, field, None), check_fields)
+                updated = False
+                for field in fields:
+                    _merge_objects(update_dict, existing_header, header, field)
+                    updated = True
+
+                if updated:
+                    _merge_objects(update_dict, existing_header, header, 'last_update_by')
+                    _merge_objects(update_dict, existing_header, header, 'last_update_date')
+                    _merge_objects(update_dict, existing_header, header, 'process_flag')
             except models.Bcdiscretehedredits.DoesNotExist:
                 # if the header doesn't exist in the specified event, then we'll update the event_edits for the
                 # header and update the Batch_ID. We'll have to update the batch id for all things attached
@@ -247,68 +272,60 @@ class MergeMissions:
 
         return update_dict
 
-    def merge_discrete_headers(self):
-        self.update_status("Merging Discrete Headers")
-
-        self.safety_check()
-
-        updated_objects: dict = self.get_update_discrete_headers()
-
-        disregard_fields = {'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date'}
-        for key, update in updated_objects.items():
-            if len(update['objects']) > 0 and update['fields'] != disregard_fields:
-                key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
-
-
     def get_update_events(self) -> dict:
         update_dict: dict = {
             models.Bceventedits: {
-                'objects': dict(),
+                'update_objects': dict(),
                 'fields': set(),
             },
         }
 
+        exclude_fields = ['event_edt_seq', 'event', 'data_center', 'mission', 'mission_edit', 'batch', 'collector_event_id', 'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date']
+        check_fields = [f.name for f in models.Bceventedits._meta.fields if f.name not in exclude_fields]
+
         events = self.mission_1.event_edits.all()
+        existing_events = {event.collector_event_id: event for event in self.mission_0.event_edits.filter(
+            collector_event_id__in=list(events.values_list('collector_event_id', flat=True)))}
+
         max_events = events.count()
+        delete_comments = []
         for event_number, event in enumerate(events):
             self.update_status("Merging Events", event_number, max_events)
 
-            try:
-                existing_event = self.mission_0.event_edits.get(collector_event_id=event.collector_event_id)
-                _merge_objects(update_dict, existing_event, event, 'sdate')
-                _merge_objects(update_dict, existing_event, event, 'edate')
-                _merge_objects(update_dict, existing_event, event, 'stime')
-                _merge_objects(update_dict, existing_event, event, 'etime')
-                _merge_objects(update_dict, existing_event, event, 'min_lat')
-                _merge_objects(update_dict, existing_event, event, 'max_lat')
-                _merge_objects(update_dict, existing_event, event, 'min_lon')
-                _merge_objects(update_dict, existing_event, event, 'max_lon')
-                _merge_objects(update_dict, existing_event, event, 'collector_station_name')
-                _merge_objects(update_dict, existing_event, event, 'utc_offset')
-                _merge_objects(update_dict, existing_event, event, 'collector_comment')
-                _merge_objects(update_dict, existing_event, event, 'data_manager_comment')
-                _merge_objects(update_dict, existing_event, event, 'more_comment')
-                _merge_objects(update_dict, existing_event, event, 'prod_created_date')
-                _merge_objects(update_dict, existing_event, event, 'created_by')
-                _merge_objects(update_dict, existing_event, event, 'created_date')
-                _merge_objects(update_dict, existing_event, event, 'last_update_by')
-                _merge_objects(update_dict, existing_event, event, 'last_update_date')
-                _merge_objects(update_dict, existing_event, event, 'process_flag')
+            if event.collector_event_id in existing_events:
+                existing_event = existing_events[event.collector_event_id]
+                fields = filter(lambda field: getattr(existing_event, field, None) != getattr(event, field, None), check_fields)
+                updated = False
+                for field in fields:
+                    _merge_objects(update_dict, existing_event, event, field)
+                    updated = True
 
-                # Todo: This type of merging doesn't take into account that a BCDiscreteHeaderEdit, BCPlanktonHeaderEdit,
-                #       BCActivityEdit or BCCommentEdit might already exist in the mission we're merging this event into.
-                #       If the object didn't already exist in the target mission, then this would be fine, but if it
-                #       does exist we'll have to merge the details
+                if updated:
+                    _merge_objects(update_dict, existing_event, event, 'last_update_by')
+                    _merge_objects(update_dict, existing_event, event, 'last_update_date')
+                    _merge_objects(update_dict, existing_event, event, 'process_flag')
 
-                # update batch ids for all related objects that reference the event being merged
-                # n_dict = self.get_update_reference_field("batch", event, self.mission_0.batch)
-                # _merge_dictionaries(update_dict, n_dict)
+                if existing_event.comment_edits.exists():
+                    delete_comments += list(existing_event.comment_edits.values_list(
+                        'comment_seq', flat=True
+                    ))
 
-                # update event_edit objects for related objects that reference the event being merged
-                # n_dict = self.get_update_reference_field("event_edit", event, existing_event)
-                # _merge_dictionaries(update_dict, n_dict)
+                if event.comment_edits.exists():
 
-            except models.Bceventedits.DoesNotExist:
+                    if models.Bccommentedits not in update_dict:
+                        update_dict[models.Bccommentedits] = {
+                            'update_objects': dict(),
+                            'fields': set(),
+                        }
+
+                    for comment in event.comment_edits.all():
+                        comment.event_edit = existing_event
+                        update_dict[models.Bccommentedits]['fields'].update(['event_edit'])
+
+                        # update batch ids for all related objects that reference the event being merged
+                        n_dict = self.get_update_reference_field("batch", comment, self.mission_0.batch)
+                        _merge_dictionaries(update_dict, n_dict)
+            else:
                 # if the event doesn't exist in the main mission, then we'll update the mission_edit for the
                 # event and update the Batch_ID. We'll have to update the batch id for all things attached
                 # to the mission as well.
@@ -319,28 +336,8 @@ class MergeMissions:
                 n_dict = self.get_update_reference_field("batch", event, self.mission_0.batch)
                 _merge_dictionaries(update_dict, n_dict)
 
+        models.Bccommentedits.objects.using(self.database).filter(comment_seq__in=delete_comments).delete()
         return update_dict
-
-    # Everything should be merged into mission_0, but the assumption I'm making is that
-    # mission_0 was previously loaded to Biochem and/or had merges completed already so it
-    # contains more data than mission_1.
-    #
-    # I'm assuming the user just uploaded mission_1 so it likely only contains a small subset
-    # of events and/or data, therefore it will be faster to iterate over mission_1, add events
-    # that don't exist in mission_0 or merge events that do exist in mission_0 rather than
-    # iterating over events in mission_0 that don't exist in mission_1
-    def merge_events(self):
-        self.update_status("Merging Events")
-
-        self.safety_check()
-
-        updated_objects: dict = self.get_update_events()
-
-        # if objects weren't actively updated they'll still have these four fields marked as updated.
-        disregard_fields = {'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date'}
-        for key, update in updated_objects.items():
-            if len(update['objects']) > 0 and update['fields'] != disregard_fields:
-                key.objects.using(self.database).bulk_update(list(update['objects'].values()), fields=update['fields'])
 
     def merge_missions(self) -> None:
         self.update_status("Merging Missions")
@@ -359,12 +356,21 @@ class MergeMissions:
         self.mission_0.collector_comment = self.mission_1.collector_comment
         self.mission_0.data_manager_comment = self.mission_1.data_manager_comment
 
-        # Todo: Additional comments stored in the more_comments table will have to be swapped to mission_0
-        #       This is complicated because we'll have to figure out of comments are added, or overridden
-        #       They won't have the same sequence numbers. My feeling right now is to assume more_comments
-        #       from mission_1 should replace more_comments in mission_0.
-        #
         self.mission_0.more_comment = self.mission_1.more_comment
+
+        # if additional comments exist in the BcCommentEdits table, they need to be deleted and replaced with
+        # comments coming from the incoming mission. If the incoming mission has no comments, it's assumed the
+        # additional comments are being deleted.
+        self.mission_0.comment_edits.all().delete()
+        if self.mission_1.comment_edits.exists():
+            update_comments = []
+            for comment in self.mission_1.comment_edits.all():
+                comment.mission_edit = self.mission_0
+                comment.batch = self.mission_0.batch
+                update_comments.append(comment)
+
+            models.Bccommentedits.objects.using(self.database).bulk_update(update_comments,
+                                                                           fields=['mission_edit', 'batch'])
 
         self.mission_0.prod_created_date = self.mission_1.prod_created_date
         self.mission_0.created_by = self.mission_1.created_by
@@ -373,7 +379,12 @@ class MergeMissions:
         self.mission_0.last_update_date = self.mission_1.last_update_date
 
         self.mission_0.save(using=self.database)
-        self.merge_events()
-        self.merge_discrete_headers()
-        self.merge_discrete_details()
 
+        self.update_status("Merging Events")
+        self.merge_update_objects(self.get_update_events())
+
+        self.update_status("Merging Discrete Headers")
+        self.merge_update_objects(self.get_update_discrete_headers())
+
+        self.update_status("Merging Discrete Details")
+        self.merge_update_objects(self.get_update_discrete_details())

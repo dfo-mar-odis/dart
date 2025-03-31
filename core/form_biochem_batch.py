@@ -506,6 +506,8 @@ def delete_batch(batch_id, label, bcd_model, bcs_model):
     response = None
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"Deleteing Batch {batch_id}")
+        response = cur.callproc("DELETES_PKG.DELETE_ARCHIVE_DELETES", [batch_id])
+        response = cur.callproc("DELETES_PKG.DELETE_EDITS_DELETES", [batch_id])
         response = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
 
     bcd_model.objects.using('biochem').filter(batch_seq=batch_id).delete()

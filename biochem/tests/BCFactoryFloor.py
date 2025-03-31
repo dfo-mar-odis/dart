@@ -95,9 +95,22 @@ class BcDiscreteDetailEditsFactory(DjangoModelFactory):
 
     dis_detail_edt_seq = factory.Sequence(lambda n: 600000000 + n)
     dis_header_edit = factory.SubFactory(BcDiscreteHeaderEditsFactory)
+    collector_sample_id = factory.lazy_attribute(lambda o: o.dis_header_edit.collector_sample_id)
     data_type = factory.SubFactory(BcDataTypeFactory)
     data_center = factory.lazy_attribute(lambda o: o.dis_header_edit.data_center)
     batch = factory.lazy_attribute(lambda o: o.dis_header_edit.batch)
+
+
+class BcDiscreteReplicateEditsFactory(DjangoModelFactory):
+    class Meta:
+        model = models.Bcdisreplicatedits
+
+    dis_repl_edt_seq = factory.Sequence(lambda n: 700000000 + n)
+    dis_detail_edit = factory.SubFactory(BcDiscreteDetailEditsFactory)
+    collector_sample_id = factory.lazy_attribute(lambda o: o.dis_detail_edit.collector_sample_id)
+    data_type = factory.lazy_attribute(lambda o: o.dis_detail_edit.data_type)
+    data_center = factory.lazy_attribute(lambda o: o.dis_detail_edit.data_center)
+    batch = factory.lazy_attribute(lambda o: o.dis_detail_edit.batch)
 
 
 class BcPlanktonHeaderEditsFactory(DjangoModelFactory):

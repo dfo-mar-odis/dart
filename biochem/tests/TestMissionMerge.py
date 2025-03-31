@@ -21,16 +21,17 @@ unmanaged_models = [
     biochem_models.Bcactivities, biochem_models.Bcactivityedits,
     biochem_models.Bcdiscretehedrs, biochem_models.Bcdiscretehedredits,
     biochem_models.Bcplanktnhedredits,
-    biochem_models.Bcdiscretedtailedits, biochem_models.Bcdiscretedtails, biochem_models.Bcdisreplicatedits,
+    biochem_models.Bcdiscretedtailedits, biochem_models.Bcdiscretedtails,
+    biochem_models.Bcdisreplicatedits, biochem_models.Bcdiscretereplicteditsdel,
     biochem_models.Bcplanktngenerledits,
-    biochem_models.Bccommentedits,
+    biochem_models.Bccommentedits, biochem_models.Bccommenteditsdel
 ]
 
 
 # this is a function that can be passed to the MergeTables object, merge tables will
 # call this function to report status updates
-def status_update(message: str, current: int = 0, max: int = 0):
-    logger.debug(f"{message}: {current}/{max}")
+def status_update(message: str, current: int = 0, max_count: int = 0):
+    logger.debug(f"{message}: {current}/{max_count}")
 
 
 @tag('test_merge_bio_tables', 'test_mission_merge')
@@ -47,7 +48,8 @@ class TestMissionMerge(TestCase):
     def setUp(self):
         pass
 
-    def merge_mission_test(self, mission_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
+    @staticmethod
+    def merge_mission_test(mission_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
         # provided two missions, values from mission 1 should be copied into mission 0
         kwargs0 = {mission_attribute: value1}
         kwargs1 = {mission_attribute: value2}
@@ -84,7 +86,7 @@ class TestMissionMerge(TestCase):
         data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=23, name="BIO_INREVIEW")
         args = ("name", "DY18402", "DY18402")
         try:
-            mission, mission_0, mission_1 = self.merge_mission_test(*args, data_center=[data_center])
+            self.merge_mission_test(*args, data_center=[data_center])
             self.fail("An exception should be raised, can't merge missions not from data center 20")
         except ValueError as ex:
             self.assertEqual(str(ex), "Can only merge missions with a data center of 20")
@@ -94,7 +96,7 @@ class TestMissionMerge(TestCase):
         # the mission descriptor between two missions must match or these missions cannot be merged
         args = ("descriptor", "AVA112024", "COM12022")
         try:
-            mission, mission_0, mission_1 = self.merge_mission_test(*args)
+            self.merge_mission_test(*args)
             self.fail("An exception should be raised, can't merge missions with different descriptors")
         except ValueError as ex:
             self.assertEqual(str(ex), "Cannot merge missions with different mission descriptors")
@@ -208,6 +210,48 @@ class TestMissionMerge(TestCase):
         mission, mission_0, mission_1 = self.merge_mission_test(*args)
         self.assertEqual(getattr(mission, args[0]), args[2])
 
+    @tag('test_mission_merge_copy', 'test_merge_mission_comment_edits')
+    def test_merge_mission_comment_edits(self):
+        # if a mission being merged has a reference to the BcCommentEdits table, the comments
+        # should be carried over to the mission we're updating
+        descriptor = "MVP112024"
+        data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=20, name="BIO")
+
+        mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor, data_center=data_center)
+        mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor, data_center=data_center)
+
+        new_comment = BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_1)
+
+        mission_merger = MergeTables.MergeMissions(mission_0, mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_missions()
+
+        updated_mission = biochem_models.Bcmissionedits.objects.get(mission_edt_seq=mission_0.mission_edt_seq)
+        self.assertEqual(updated_mission.comment_edits.count(), 1)
+        self.assertTrue(updated_mission.comment_edits.filter(comment_edt_seq=new_comment.comment_edt_seq).exists())
+
+    @tag('test_mission_merge_copy', 'test_merge_mission_existing_comment_edits')
+    def test_merge_mission_existing_comment_edits(self):
+        # if a mission being merged into has references to existing the BcCommentEdits,
+        # the existing comments should be removed and replaced with comments from the mission being merged
+        descriptor = "MVP112024"
+        data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=20, name="BIO")
+
+        mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor, data_center=data_center)
+        mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor, data_center=data_center)
+
+        BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_0)
+        BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_0)
+        new_comment = BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_1)
+
+        mission_merger = MergeTables.MergeMissions(mission_0, mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_missions()
+
+        updated_mission = biochem_models.Bcmissionedits.objects.get(mission_edt_seq=mission_0.mission_edt_seq)
+        self.assertEqual(updated_mission.comment_edits.count(), 1)
+        self.assertTrue(updated_mission.comment_edits.filter(comment_edt_seq=new_comment.comment_edt_seq).exists())
+
 
 @tag('test_merge_bio_tables', 'test_event_merge')
 class TestEventMerge(TestCase):
@@ -229,7 +273,7 @@ class TestEventMerge(TestCase):
         self.mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
         self.mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
 
-    def create_test_events(self, event_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
+    def create_test_events(self, event_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None, additional_attributes=None):
 
         kwargs0 = {}
         kwargs1 = {}
@@ -249,6 +293,11 @@ class TestEventMerge(TestCase):
         kwargs0['data_center'] = data_center[0]
         kwargs1['data_center'] = data_center[1] if len(data_center) > 1 else data_center[0]
 
+        if additional_attributes:
+            for attr in additional_attributes:
+                kwargs0[attr[0]] = attr[1]
+                kwargs1[attr[0]] = attr[2]
+
         event_0 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_0, **kwargs0)
         event_1 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1, **kwargs1)
 
@@ -257,7 +306,7 @@ class TestEventMerge(TestCase):
     def merge_event_test(self, event_seq):
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_events()
+        mission_merger.merge_update_objects(mission_merger.get_update_events())
 
         event = biochem_models.Bceventedits.objects.get(event_edt_seq=event_seq)
 
@@ -282,9 +331,9 @@ class TestEventMerge(TestCase):
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
 
-        event = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1)
+        BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1)
         try:
-            mission_merger.merge_events()
+            mission_merger.merge_update_objects(mission_merger.get_update_events())
             self.fail("An exception should be raised, Can only merge missions with a data center of 20")
         except ValueError as ex:
             self.assertEqual(str(ex), "Can only merge missions with a data center of 20")
@@ -294,7 +343,7 @@ class TestEventMerge(TestCase):
         # the mission descriptor between two missions must match or these missions cannot be merged
         # mission_1 contains a Bceventedits object that doesn't exist in mission_0
         # the object should be reassigned to mission_0 and removed from mission_1
-        event = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1)
+        BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1)
         bad_descriptor = "MVP112025_1"
         self.mission_0.descriptor = bad_descriptor
         self.mission_0.save()
@@ -303,7 +352,7 @@ class TestEventMerge(TestCase):
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
         try:
-            mission_merger.merge_events()
+            mission_merger.merge_update_objects(mission_merger.get_update_events())
             self.fail("An exception should be raised, can't merge missions with different descriptors")
         except ValueError as ex:
             self.assertEqual(str(ex), "Cannot merge missions with different mission descriptors")
@@ -319,7 +368,7 @@ class TestEventMerge(TestCase):
 
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_events()
+        mission_merger.merge_update_objects(mission_merger.get_update_events())
 
         mission = biochem_models.Bcmissionedits.objects.get(mission_edt_seq=self.mission_0.mission_edt_seq)
         updated_event = biochem_models.Bceventedits.objects.get(event_edt_seq=event.event_edt_seq)
@@ -441,51 +490,29 @@ class TestEventMerge(TestCase):
         event = self.merge_event_test(event_0.event_edt_seq)
         self.assertEqual(getattr(event, args[0]), args[2])
 
-    @tag('test_event_merge_event_exist_copy_data_prod_created_date')
-    def test_event_merge_event_exist_copy_data_prod_created_date(self):
-        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
-        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
-        args = ('prod_created_date', date0, date1)
-        event_0, event_1 = self.create_test_events(*args)
-        event = self.merge_event_test(event_0.event_edt_seq)
-        self.assertEqual(getattr(event, args[0]), args[2].date())
-
-    @tag('test_event_merge_event_exist_copy_data_created_by')
-    def test_event_merge_event_exist_copy_data_created_by(self):
-        args = ('created_by', "BugdonJ", "UpsonP")
-        event_0, event_1 = self.create_test_events(*args)
-        event = self.merge_event_test(event_0.event_edt_seq)
-        self.assertEqual(getattr(event, args[0]), args[2])
-
-    @tag('test_event_merge_event_exist_copy_data_created_date')
-    def test_event_merge_event_exist_copy_data_created_date(self):
-        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
-        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
-        args = ('created_date', date0, date1)
-        event_0, event_1 = self.create_test_events(*args)
-        event = self.merge_event_test(event_0.event_edt_seq)
-        self.assertEqual(getattr(event, args[0]), args[2].date())
-
     @tag('test_event_merge_event_exist_copy_data_last_update_by')
     def test_event_merge_event_exist_copy_data_last_update_by(self):
+        additional = [("data_manager_comment", "TedF", "Upsonp")]
         args = ('last_update_by', "BugdonJ", "UpsonP")
-        event_0, event_1 = self.create_test_events(*args)
+        event_0, event_1 = self.create_test_events(*args, additional_attributes=additional)
         event = self.merge_event_test(event_0.event_edt_seq)
         self.assertEqual(getattr(event, args[0]), args[2])
 
     @tag('test_event_merge_event_exist_copy_data_last_update_date')
     def test_event_merge_event_exist_copy_data_last_update_date(self):
+        additional = [("data_manager_comment", "TedF", "Upsonp")]
         date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
         date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
         args = ('last_update_date', date0, date1)
-        event_0, event_1 = self.create_test_events(*args)
+        event_0, event_1 = self.create_test_events(*args, additional_attributes=additional)
         event = self.merge_event_test(event_0.event_edt_seq)
         self.assertEqual(getattr(event, args[0]), args[2].date())
 
     @tag('test_event_merge_event_exist_copy_data_process_flag')
     def test_event_merge_event_exist_copy_data_process_flag(self):
+        additional = [("data_manager_comment", "TedF", "Upsonp")]
         args = ('process_flag', "EAR", "ECN")
-        event_0, event_1 = self.create_test_events(*args)
+        event_0, event_1 = self.create_test_events(*args, additional_attributes=additional)
         event = self.merge_event_test(event_0.event_edt_seq)
         self.assertEqual(getattr(event, args[0]), args[2])
 
@@ -499,29 +526,21 @@ class TestEventMerge(TestCase):
         self.assertNotEqual(getattr(event_1, "batch"), self.mission_0.batch)
         self.assertEqual(getattr(event, "batch"), self.mission_0.batch)
 
-    @tag('test_event_merge_event_exist_activities_batch')
-    def test_event_merge_event_exist_activities_batch(self):
-        args = (None, None, None)
-        event_0, event_1 = self.create_test_events(*args)
-        activity = BCFactoryFloor.BcActivityEditsFactory(event_edit=event_1)
-        self.assertEqual(getattr(activity, "batch"), self.mission_1.batch)
-
-        event = self.merge_event_test(event_0.event_edt_seq)
-        activity = biochem_models.Bcactivityedits.objects.get(activity_edt_seq=activity.activity_edt_seq)
-        self.assertEqual(event.activity_edits.count(), 1)
-        self.assertEqual(getattr(activity, "batch"), self.mission_0.batch)
-
-    @tag('test_event_merge_event_exist_plankton_header_batch')
-    def test_event_merge_event_exist_plankton_header_batch(self):
-        args = (None, None, None)
-        event_0, event_1 = self.create_test_events(*args)
-        plankton_header = BCFactoryFloor.BcPlanktonHeaderEditsFactory(event_edit=event_1)
-        self.assertEqual(getattr(plankton_header, "batch"), self.mission_1.batch)
-
-        event = self.merge_event_test(event_0.event_edt_seq)
-        plankton_header = biochem_models.Bcplanktnhedredits.objects.get(pl_headr_edt_seq=plankton_header.pl_headr_edt_seq)
-        self.assertEqual(event.plankton_header_edits.count(), 1)
-        self.assertEqual(getattr(plankton_header, "batch"), self.mission_0.batch)
+    # We don't need to worry about merging Event Activities. If an event exists and we're merging the existing
+    # event activity will be used and doesn't change. If we're adding an event, when the event.mission_event is updated
+    # the event activity created by the Biochem Stored Procedure will will go along with the event
+    #
+    # @tag('test_event_merge_event_exist_activities_batch')
+    # def test_event_merge_event_exist_activities_batch(self):
+    #     args = (None, None, None)
+    #     event_0, event_1 = self.create_test_events(*args)
+    #     activity = BCFactoryFloor.BcActivityEditsFactory(event_edit=event_1)
+    #     self.assertEqual(getattr(activity, "batch"), self.mission_1.batch)
+    #
+    #     event = self.merge_event_test(event_0.event_edt_seq)
+    #     activity = biochem_models.Bcactivityedits.objects.get(activity_edt_seq=activity.activity_edt_seq)
+    #     self.assertEqual(event.activity_edits.count(), 1)
+    #     self.assertEqual(getattr(activity, "batch"), self.mission_0.batch)
 
     @tag('test_event_merge_event_exist_more_comments_batch')
     def test_event_merge_event_exist_more_comments_batch(self):
@@ -563,13 +582,13 @@ class TestDiscreteHeaderMerge(TestCase):
     def merge_discrete_header_test(self, dis_header_seq):
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_discrete_headers()
+        mission_merger.merge_update_objects(mission_merger.get_update_discrete_headers())
 
         event = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=dis_header_seq)
 
         return event
 
-    def create_test_discrete_header(self, header_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
+    def create_test_discrete_header(self, header_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None, additional_attributes=None):
 
         kwargs0 = {}
         kwargs1 = {}
@@ -588,6 +607,11 @@ class TestDiscreteHeaderMerge(TestCase):
 
         kwargs0['data_center'] = data_center[0]
         kwargs1['data_center'] = data_center[1] if len(data_center) > 1 else data_center[0]
+
+        if additional_attributes:
+            for attr in additional_attributes:
+                kwargs0[attr[0]] = attr[1]
+                kwargs1[attr[0]] = attr[2]
 
         discrete_header_0 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_0, **kwargs0)
         discrete_header_1 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_1, **kwargs1)
@@ -618,7 +642,7 @@ class TestDiscreteHeaderMerge(TestCase):
 
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_discrete_headers()
+        mission_merger.merge_update_objects(mission_merger.get_update_discrete_headers())
 
         event = biochem_models.Bceventedits.objects.get(event_edt_seq=self.event_0.event_edt_seq)
         updated_discrete_header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=discrete_header.dis_headr_edt_seq)
@@ -790,57 +814,41 @@ class TestDiscreteHeaderMerge(TestCase):
         dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
         self.assertEqual(getattr(dis_header, args[0]), args[2])
 
+    # prod_created_date is handled by the biochem stored procedures
     # prod_created_date = models.DateField(blank=True, null=True)
-    @tag('test_event_merge_discrete_header_prod_created_date')
-    def test_event_merge_discrete_header_prod_created_date(self):
-        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
-        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
-        args = ("prod_created_date", date0, date1)
-        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
-        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
-        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
 
+    # keep the created by, only update last_updated and last_updated_by if an update occured
     # created_by = models.CharField(max_length=30, blank=True, null=True)
-    @tag('test_event_merge_discrete_header_created_by')
-    def test_event_merge_discrete_header_created_by(self):
-        args = ("created_by", "ROBARF", "UPSONP")
-        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
-        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
-        self.assertEqual(getattr(dis_header, args[0]), args[2])
 
+    # keep the created date, only update last_updated and last_updated_by if an update occured
     # created_date = models.DateField(blank=True, null=True)
-    @tag('test_event_merge_discrete_header_created_date')
-    def test_event_merge_discrete_header_created_date(self):
-        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
-        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
-        args = ("created_date", date0, date1)
-        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
-        dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
-        self.assertEqual(getattr(dis_header, args[0]), args[2].date())
 
     # last_update_by = models.CharField(max_length=30, blank=True, null=True)
     @tag('test_event_merge_discrete_header_last_update_by')
     def test_event_merge_discrete_header_last_update_by(self):
+        additional = [("shared_data", "TedF", "Upsonp")]
         args = ("last_update_by", "ROBARF", "UPSONP")
-        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args, additional_attributes=additional)
         dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
         self.assertEqual(getattr(dis_header, args[0]), args[2])
 
     # last_update_date = models.DateField(blank=True, null=True)
     @tag('test_event_merge_discrete_header_last_update_date')
     def test_event_merge_discrete_header_last_update_date(self):
+        additional = [("shared_data", "TedF", "Upsonp")]
         date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
         date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
         args = ("last_update_date", date0, date1)
-        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args, additional_attributes=additional)
         dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
         self.assertEqual(getattr(dis_header, args[0]), args[2].date())
 
     # process_flag = models.CharField(max_length=3)
     @tag('test_event_merge_discrete_header_process_flag')
     def test_event_merge_discrete_header_process_flag(self):
+        additional = [("shared_data", "TedF", "Upsonp")]
         args = ("process_flag", "EAR", "ECN")
-        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args)
+        dis_header_0, dis_header_1 = self.create_test_discrete_header(*args, additional_attributes=additional)
         dis_header = self.merge_discrete_header_test(dis_header_0.dis_headr_edt_seq)
         self.assertEqual(getattr(dis_header, args[0]), args[2])
 
@@ -889,13 +897,13 @@ class TestDiscreteDetailMerge(TestCase):
     def merge_discrete_details_test(self, dis_detail_seq):
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_discrete_details()
+        mission_merger.merge_update_objects(mission_merger.get_update_discrete_details())
 
         dis_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=dis_detail_seq)
 
         return dis_detail
 
-    def create_test_discrete_details(self, detail_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None):
+    def create_test_discrete_details(self, detail_attribute, value1, value2, data_center:[biochem_models.Bcdatacenters]=None, additional_attributes:list=None):
 
         kwargs0 = {}
         kwargs1 = {}
@@ -915,6 +923,11 @@ class TestDiscreteDetailMerge(TestCase):
         kwargs0['data_center'] = data_center[0]
         kwargs1['data_center'] = data_center[1] if len(data_center) > 1 else data_center[0]
 
+        if additional_attributes:
+            for attr in additional_attributes:
+                kwargs0[attr[0]] = attr[1]
+                kwargs0[attr[0]] = attr[2]
+
         discrete_detail_0 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_0, **kwargs0)
         discrete_detail_1 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_1, **kwargs1)
 
@@ -928,7 +941,7 @@ class TestDiscreteDetailMerge(TestCase):
 
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_discrete_details()
+        mission_merger.merge_update_objects(mission_merger.get_update_discrete_details())
 
         header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=self.discrete_header_0.dis_headr_edt_seq)
         updated_discrete_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=discrete_detail.dis_detail_edt_seq)
@@ -950,7 +963,7 @@ class TestDiscreteDetailMerge(TestCase):
 
         mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
         mission_merger.add_status_listener(status_update)
-        mission_merger.merge_discrete_details()
+        mission_merger.merge_update_objects(mission_merger.get_update_discrete_details())
 
         header = biochem_models.Bcdiscretehedredits.objects.get(dis_headr_edt_seq=self.discrete_header_0.dis_headr_edt_seq)
         updated_discrete_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=discrete_detail_1.dis_detail_edt_seq)
@@ -1013,63 +1026,63 @@ class TestDiscreteDetailMerge(TestCase):
     # The collector sample ID is used as a combined natural key with the data type
     # collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
 
+    # prod_created_date is handled by the BIO chem Store Procedures
     # prod_created_date = models.DateField(blank=True, null=True)
-    @tag('test_merge_discrete_details_prod_created_date')
-    def test_merge_discrete_details_prod_created_date(self):
-        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
-        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
-        args = ("prod_created_date", date0, date1)
-        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
-        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
-        self.assertEqual(getattr(dis_detail, args[0]), args[2].date())
 
+    # keep the created by, only update last_updated and last_updated_by if an update occured
     # created_by = models.CharField(max_length=30, blank=True, null=True)
-    @tag('test_merge_discrete_details_created_by')
-    def test_merge_discrete_details_created_by(self):
-        args = ("created_by", "TedF", "Upsonp")
-        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
-        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
-        self.assertEqual(getattr(dis_detail, args[0]), args[2])
 
+    # keep the created date, only update last_updated and last_updated_by if an update occured
     # created_date = models.DateField(blank=True, null=True)
-    @tag('test_merge_discrete_details_created_date')
-    def test_merge_discrete_details_created_date(self):
-        date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
-        date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
-        args = ("created_date", date0, date1)
-        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
-        dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
-        self.assertEqual(getattr(dis_detail, args[0]), args[2].date())
 
     # last_update_by = models.CharField(max_length=30, blank=True, null=True)
     @tag('test_merge_discrete_details_last_update_by')
     def test_merge_discrete_details_last_update_by(self):
+        # last updated, last updated by and process flag only get updated if some other update happens
+        additional = [("detail_collector", "TedF", "Upsonp")]
         args = ("last_update_by", "TedF", "Upsonp")
-        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args, additional_attributes=additional)
         dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
         self.assertEqual(getattr(dis_detail, args[0]), args[2])
 
     # last_update_date = models.DateField(blank=True, null=True)
     @tag('test_merge_discrete_details_last_update_date')
     def test_merge_discrete_details_last_update_date(self):
+        # last updated, last updated by and process flag only get updated if some other update happens
+        additional = [("detail_collector", "TedF", "Upsonp")]
         date0 = datetime.datetime.strptime('2009/01/01 00:00:00', "%Y/%m/%d %H:%M:%S")
         date1 = datetime.datetime.strptime('2010/02/02 00:00:00', "%Y/%m/%d %H:%M:%S")
         args = ("last_update_date", date0, date1)
-        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args, additional_attributes=additional)
         dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
         self.assertEqual(getattr(dis_detail, args[0]), args[2].date())
 
     # process_flag = models.CharField(max_length=3)
     @tag('test_merge_discrete_details_process_flag')
     def test_merge_discrete_details_process_flag(self):
+        # last updated, last updated by and process flag only get updated if some other update happens
+        additional = [("detail_collector", "TedF", "Upsonp")]
         args = ("process_flag", "EAR", "ECN")
-        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args)
+        dis_detail_0, dis_detail_1 = self.create_test_discrete_details(*args, additional_attributes=additional)
         dis_detail = self.merge_discrete_details_test(dis_detail_0.dis_detail_edt_seq)
         self.assertEqual(getattr(dis_detail, args[0]), args[2])
 
 
-@tag('test_merge_bio_tables', 'test_discrete_header_merge')
-class TestDiscreteHeaderMerge(TestCase):
+# Replicates work differently than other Biochem discrete objects.
+# There's no natural or combined primary key uniquely identifying an individual
+# replicate all you have to go on is the order they appear in, which isn't ideal
+# for merging.
+#
+# To Handle replicates we'll check the incoming details object, if the detail object didn't
+# already exist then when it gets reassigned in the "Does Not Exist" exception, it's replicates
+# automatically go with it. If the details object does already exist, we'll delete any replicates
+# it already has, and then reassign the replicates from the incoming detail object.
+# This makes the assumption that replicates will always be uploaded together and never just as
+# a means to update an existing replicate, which I assume they have to be anyway because if
+# they're not uploaded together, then the Biochem Stage 2 validation won't know how to
+# or even that it's supposed to average them in the user edit tables.
+@tag('test_merge_bio_tables', 'test_merge_discrete_replicates')
+class TestDiscreteReplicatesMerge(TestCase):
 
     mission_0 = None
     mission_1 = None
@@ -1084,12 +1097,65 @@ class TestDiscreteHeaderMerge(TestCase):
 
     def setUp(self):
         descriptor = "MVP112025"
-        collector_event_id = "2025"
+        collector_event_id = "001"
+        discrete_header_sample_id = 450000
         self.bad_data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=23, name="BIO_INREVIEW")
+        self.data_type = BCFactoryFloor.BcDataTypeFactory()
 
-        # two missions with the same descriptor sharing an identical event
         self.mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
-        self.event_0 = BCFactoryFloor.BcEventEditsFactory(mission=self.mission_0, collector_event_id=collector_event_id)
+        self.event_0 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_0, collector_event_id=collector_event_id)
+        self.discrete_header_0 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_0, collector_sample_id=discrete_header_sample_id)
+        self.discrete_details_0 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_0, collector_sample_id=discrete_header_sample_id)
 
         self.mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
-        self.event_1 = BCFactoryFloor.BcEventEditsFactory(mission=self.mission_1, collector_event_id=collector_event_id)
+        self.event_1 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1, collector_event_id=collector_event_id)
+        self.discrete_header_1 = BCFactoryFloor.BcDiscreteHeaderEditsFactory(event_edit=self.event_1, collector_sample_id=discrete_header_sample_id)
+        self.discrete_details_1 = BCFactoryFloor.BcDiscreteDetailEditsFactory(dis_header_edit=self.discrete_header_1, collector_sample_id=discrete_header_sample_id)
+
+    def merge_discrete_details_test(self, dis_detail_seq):
+        mission_merger = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        mission_merger.add_status_listener(status_update)
+        mission_merger.merge_update_objects(mission_merger.get_update_discrete_details())
+
+        dis_detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=dis_detail_seq)
+
+        return dis_detail
+
+    @tag('test_merge_discrete_replicates_does_not_exist_batch')
+    def test_merge_discrete_replicates_does_not_exist_batch(self):
+        # test that replicates attached to an incoming details object are reassigned to the details object that already
+        # existed, but didn't contain any replicates before a merge
+        discrete_replicate_1 = BCFactoryFloor.BcDiscreteReplicateEditsFactory(dis_detail_edit=self.discrete_details_1)
+        discrete_replicate_2 = BCFactoryFloor.BcDiscreteReplicateEditsFactory(dis_detail_edit=self.discrete_details_1)
+
+        detail = self.merge_discrete_details_test(self.discrete_details_0.dis_detail_edt_seq)
+        updated_discrete_replicate_1 = biochem_models.Bcdisreplicatedits.objects.get(dis_repl_edt_seq=discrete_replicate_1.dis_repl_edt_seq)
+        updated_discrete_replicate_2 = biochem_models.Bcdisreplicatedits.objects.get(dis_repl_edt_seq=discrete_replicate_2.dis_repl_edt_seq)
+
+        self.assertEqual(detail.discrete_replicate_edits.count(), 2)
+        self.assertEqual(updated_discrete_replicate_1.batch.pk, detail.batch.pk)
+        self.assertEqual(updated_discrete_replicate_2.batch.pk, detail.batch.pk)
+
+    @tag('test_merge_discrete_replicates_does_exist_batch')
+    def test_merge_discrete_replicates_does_exist_batch(self):
+        # if the Discrete Detail object the replicates are being attached to already has replicates, the
+        # existing replicates should be removed and replaced by the new replicates
+        old_replicate_1 = BCFactoryFloor.BcDiscreteReplicateEditsFactory(discrete_replicate_seq=101, dis_detail_edit=self.discrete_details_0)
+        old_replicate_2 = BCFactoryFloor.BcDiscreteReplicateEditsFactory(discrete_replicate_seq=102,dis_detail_edit=self.discrete_details_0)
+
+        discrete_replicate_1 = BCFactoryFloor.BcDiscreteReplicateEditsFactory(dis_detail_edit=self.discrete_details_1)
+        discrete_replicate_2 = BCFactoryFloor.BcDiscreteReplicateEditsFactory(dis_detail_edit=self.discrete_details_1)
+
+        detail = biochem_models.Bcdiscretedtailedits.objects.get(dis_detail_edt_seq=self.discrete_details_0.dis_detail_edt_seq)
+
+        self.assertEqual(detail.discrete_replicate_edits.count(), 2)
+        self.assertEqual(old_replicate_1.batch.pk, detail.batch.pk)
+        self.assertEqual(old_replicate_2.batch.pk, detail.batch.pk)
+
+        detail = self.merge_discrete_details_test(self.discrete_details_0.dis_detail_edt_seq)
+        updated_discrete_replicate_1 = biochem_models.Bcdisreplicatedits.objects.get(dis_repl_edt_seq=discrete_replicate_1.dis_repl_edt_seq)
+        updated_discrete_replicate_2 = biochem_models.Bcdisreplicatedits.objects.get(dis_repl_edt_seq=discrete_replicate_2.dis_repl_edt_seq)
+
+        self.assertEqual(detail.discrete_replicate_edits.count(), 2)
+        self.assertEqual(updated_discrete_replicate_1.batch.pk, detail.batch.pk)
+        self.assertEqual(updated_discrete_replicate_2.batch.pk, detail.batch.pk)
