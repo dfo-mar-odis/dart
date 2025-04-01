@@ -43,8 +43,9 @@ class BiochemDiscreteBatchForm(form_biochem_batch.BiochemBatchForm):
 
         batches = biochem_models.Bcbatches.objects.using('biochem').filter(
             name=mission.mission_descriptor,
+            activity_edits__data_pointer_code__iexact='DH'
             # batch_seq__in=batch_ids
-        ).order_by('-batch_seq')
+        ).distinct().order_by('-batch_seq')
         self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
 
 
@@ -52,6 +53,7 @@ def get_batches_form(request, database, mission_id, batch_id=0):
     batches_form_crispy = BiochemDiscreteBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
     form_url = reverse_lazy('core:form_biochem_discrete_refresh', args=(database, mission_id, batch_id))
     return form_biochem_batch.get_batches_form(request, batches_form_crispy, form_url)
+
 
 def refresh_batches_form(request, database, mission_id, batch_id):
     return HttpResponse(get_batches_form(request, database, mission_id, batch_id))
@@ -112,6 +114,7 @@ def checkout_existing_mission(mission: biochem_models.Bcmissionedits) -> biochem
             return user_missions.first().mission
 
     return None
+
 
 def checkin_batch_proc(batch_id: int):
     return_status = ''

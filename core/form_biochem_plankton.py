@@ -25,6 +25,8 @@ _page_limit = 50
 
 
 class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
+    database = None
+    mission_id = None
 
     def get_biochem_batch_url(self):
         return reverse_lazy('core:form_biochem_plankton_update_selected_batch', args=(self.database, self.mission_id))
@@ -41,8 +43,9 @@ class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
 
         batches = biochem_models.Bcbatches.objects.using('biochem').filter(
             name=mission.mission_descriptor,
-            batch_seq__in=batch_ids
-        ).order_by('-batch_seq')
+            activity_edits__data_pointer_code__iexact='PL'
+            # batch_seq__in=batch_ids
+        ).distinct().order_by('-batch_seq')
         self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
 
 

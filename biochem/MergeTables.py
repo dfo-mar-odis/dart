@@ -272,6 +272,9 @@ class MergeMissions:
 
         return update_dict
 
+    def get_update_plankton_header(self) -> dict:
+        pass
+
     def get_update_events(self) -> dict:
         update_dict: dict = {
             models.Bceventedits: {
