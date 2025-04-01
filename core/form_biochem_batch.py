@@ -260,6 +260,12 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
                 raise err
 
 
+# this is a function that can be passed to the MergeTables object, merge tables will
+# call this function to report status updates
+def status_update(message: str, current: int = 0, max: int = 0):
+    user_logger.info(f"{message}: {current}/{max}")
+
+
 def get_checkin_button(soup):
     icon = BeautifulSoup(load_svg('check-square'), 'html.parser').svg
     button = soup.new_tag('button')

@@ -53,11 +53,6 @@ def get_batches_form(request, database, mission_id, batch_id=0):
     form_url = reverse_lazy('core:form_biochem_discrete_refresh', args=(database, mission_id, batch_id))
     return form_biochem_batch.get_batches_form(request, batches_form_crispy, form_url)
 
-# this is a function that can be passed to the MergeTables object, merge tables will
-# call this function to report status updates
-def status_update(message: str, current: int = 0, max: int = 0):
-    user_logger.info(f"{message}: {current}/{max}")
-
 def refresh_batches_form(request, database, mission_id, batch_id):
     return HttpResponse(get_batches_form(request, database, mission_id, batch_id))
 
@@ -162,7 +157,7 @@ def merge_batch_proc(batch_id: int) -> int | None:
 
     if bc_mission_edit and bc_mission != batch_mission_edit:
         table_merge = MergeTables.MergeMissions(bc_mission_edit, batch_mission_edit)
-        table_merge.add_status_listener(status_update)
+        table_merge.add_status_listener(form_biochem_batch.status_update)
         table_merge.merge_missions()
 
         # Todo: assume the merged completed successfully for now. Exception handling later
