@@ -39,13 +39,22 @@ class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
         mission = core_models.Mission.objects.get(pk=self.mission_id)
         table_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
 
-        batch_ids = table_model.objects.using('biochem').all().values_list('batch_seq', flat=True).distinct()
+        batch_ids = table_model.objects.using('biochem').all().values_list('batch', flat=True).distinct()
 
-        batches = biochem_models.Bcbatches.objects.using('biochem').filter(
+        # get batches that exist in the "edit" tables
+        edit_batches = biochem_models.Bcbatches.objects.using('biochem').filter(
             name=mission.mission_descriptor,
             activity_edits__data_pointer_code__iexact='PL'
             # batch_seq__in=batch_ids
         ).distinct().order_by('-batch_seq')
+
+        self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in edit_batches]
+
+        # get batches that exist in the BCS/BCD tables, excluding batches in the edit tables
+        batches = biochem_models.Bcbatches.objects.using('biochem').filter(
+            plankton_station_edits__mission_descriptor__iexact=mission.mission_descriptor
+        ).exclude(pk__in=edit_batches).distinct().order_by('-batch_seq')
+
         self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
 
 
@@ -381,7 +390,7 @@ def get_data_error_summary_table(batch_id, swap_oob=True):
         if code not in validation_errors.keys():
             validation_errors[code] = biochem_models.Bcerrorcodes.objects.using('biochem').get(error_code=code)
 
-        err = biochem_models.Bcerrors.objects.using('biochem').filter(batch_seq=batch_id, error_code=code)
+        err = biochem_models.Bcerrors.objects.using('biochem').filter(batch=batch_id, error_code=code)
 
         table.append(tr_header := soup.new_tag('tr'))
 
@@ -413,7 +422,7 @@ def get_bcs_table(batch_id, page=0, swap_oob=True):
     table_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
 
     rows = table_model.objects.using('biochem').filter(
-        batch_seq=batch_id
+        batch=batch_id
     ).order_by('-plank_sample_key_value')[page_start:(page_start + _page_limit)]
 
     tr_header = None
@@ -458,7 +467,7 @@ def get_bcd_table(batch_id, page=0, swap_oob=True):
     table_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
 
     rows = table_model.objects.using('biochem').filter(
-        batch_seq=batch_id
+        batch=batch_id
     ).order_by('-plank_sample_key_value')[page_start:(page_start + _page_limit)]
 
     tr_header = None
@@ -539,7 +548,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
     data_error_details.append(get_data_errors_table(batch_id, swap_oob=swap_oob).find('div'))
 
 
-def sample_data_upload(database, mission: core_models.Mission, uploader: str, batch_id: int):
+def sample_data_upload( mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem_plankton).delete()
     core_models.Error.objects.filter(mission=mission,
@@ -551,8 +560,8 @@ def sample_data_upload(database, mission: core_models.Mission, uploader: str, ba
     # errors = validation.validate_plankton_for_biochem(mission=mission)
 
     # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_p_data(mission, uploader, batch_id)
-    form_biochem_database.upload_bcd_p_data(mission, uploader, batch_id)
+    form_biochem_database.upload_bcs_p_data(mission, uploader, batch)
+    form_biochem_database.upload_bcd_p_data(mission, uploader, batch)
 
 
 def upload_batch(request, database, mission_id):
@@ -589,12 +598,12 @@ def upload_batch(request, database, mission_id):
         uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
             request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
-        batch_id = form_biochem_database.get_mission_batch_id()
-        biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
+        batch_id = form_biochem_batch.get_mission_batch_id()
+        batch = biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
                                                                         username=uploader,
-                                                                        batch_seq=batch_id)
+                                                                        batch_seq=batch_id)[0]
 
-        sample_data_upload(database, mission, uploader, batch_id)
+        sample_data_upload(mission, uploader, batch)
         attrs = {
             'component_id': 'div_id_upload_biochem',
             'alert_type': 'success',

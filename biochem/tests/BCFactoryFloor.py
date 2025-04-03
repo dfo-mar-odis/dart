@@ -10,7 +10,7 @@ from biochem import models
 faker = Faker()
 
 
-class BcBatchesFactor(DjangoModelFactory):
+class BcBatchesFactory(DjangoModelFactory):
     class Meta:
         model = models.Bcbatches
 
@@ -31,7 +31,7 @@ class BcMissionEditsFactory(DjangoModelFactory):
 
     mission_edt_seq = factory.Sequence(lambda n: 200000000 + n)
     data_center = factory.SubFactory(BcDataCenterFactory, data_center_code=20, name="BIO")
-    batch = factory.SubFactory(BcBatchesFactor)
+    batch = factory.SubFactory(BcBatchesFactory)
 
     descriptor = factory.lazy_attribute(lambda o: faker.name())
 
@@ -118,6 +118,7 @@ class BcPlanktonHeaderEditsFactory(DjangoModelFactory):
         model = models.Bcplanktnhedredits
 
     pl_headr_edt_seq = factory.Sequence(lambda n: 500000000 + n)
+    plankton_seq = factory.Sequence(lambda n: 510000000 + n)
     event_edit = factory.SubFactory(BcEventEditsFactory)
     data_center = factory.lazy_attribute(lambda o: o.event_edit.data_center)
     batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
@@ -128,6 +129,7 @@ class BcMoreCommentEditsEventFactory(DjangoModelFactory):
         model = models.Bccommentedits
 
     comment_edt_seq = factory.Sequence(lambda n: 600000000 + n)
+    comment_seq = factory.Sequence(lambda n: 610000000 + n)
     event_edit = factory.SubFactory(BcEventEditsFactory)
     data_center = factory.lazy_attribute(lambda o: o.event_edit.data_center)
     batch = factory.lazy_attribute(lambda o: o.event_edit.batch)
@@ -185,3 +187,4 @@ class BcdDFactory(DjangoModelFactory):
     created_by = factory.lazy_attribute(lambda o: faker.word())
     created_date = datetime.datetime.now()
     data_center_code = 20  # 20 is BIO
+    batch=factory.SubFactory(BcBatchesFactory)

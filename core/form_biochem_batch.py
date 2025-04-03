@@ -502,6 +502,36 @@ def biochem_merge_procedure(request, biochem_form, batch_id, merge_proc):
     return response
 
 
+def get_mission_batch_id():
+    batch = None
+    try:
+        batch = biochem_models.Bcbatches.objects.using('biochem').order_by('batch_seq')
+        batch_seqs = list(batch.values_list('batch_seq', flat=True))
+
+        # find the first and last key in the set and use that to create a range, then subtract keys that are
+        # being used from the set. What is left are available keys that can be assigned to new rows being created
+        sort_seq = []
+        end = 0
+        if len(batch_seqs) > 0:
+            start, end = 1, batch_seqs[-1]
+            sort_seq = sorted(set(range(start, end)).difference(batch_seqs))
+
+        if len(sort_seq) > 0:
+            return sort_seq[0]
+
+        return end + 1
+
+    except django.utils.connection.ConnectionDoesNotExist as ex:
+        # if we're not connected, note it. The user may not be logged in or might be creating csv versions
+        # of the tables which will either be 1 or the batch_seq stored in the mission table
+        logger.exception(ex)
+    except django.db.utils.OperationalError as ex:
+        # if the bcbatches table doesn't exist, note it and return 1 to the user.
+        logger.exception(ex)
+
+    return 1
+
+
 def delete_batch(batch_id, label, bcd_model, bcs_model):
     unlock = False
     bcmission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_id=batch_id)
@@ -516,8 +546,8 @@ def delete_batch(batch_id, label, bcd_model, bcs_model):
         response = cur.callproc("DELETES_PKG.DELETE_EDITS_DELETES", [batch_id])
         response = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
 
-    bcd_model.objects.using('biochem').filter(batch_seq=batch_id).delete()
-    bcs_model.objects.using('biochem').filter(batch_seq=batch_id).delete()
+    bcd_model.objects.using('biochem').filter(batch=batch_id).delete()
+    bcs_model.objects.using('biochem').filter(batch=batch_id).delete()
     if unlock:
         unlock.delete()
 
@@ -697,7 +727,7 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
     # add a custom trigger event to the button so it can be called by other actions when appropriate
     delete_button.attrs['hx-trigger'] = 'click, delete_batch from:body'
 
-    unvalidated = bcd_model.objects.using('biochem').filter(batch_seq=batch_id, process_flag='NR').exists()
+    unvalidated = bcd_model.objects.using('biochem').filter(batch=batch_id, process_flag='NR').exists()
     if not unvalidated:
         icon = BeautifulSoup(load_svg('1-square-fill'), 'html.parser').svg
         validate1_button.find('svg').decompose()

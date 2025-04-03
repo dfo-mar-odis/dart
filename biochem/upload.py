@@ -114,7 +114,7 @@ def upload_db_rows(model, rows_to_create: [], rows_to_update: [], updated_fields
 
 
 # returns the rows to create, rows to update and fields to update
-def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name: str,
+def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: models.Bcbatches = None,
                    bcs_d_model: Type[models.BcsD] = None) -> [[models.BcsD], [models.BcsD], [str]]:
     user_logger.info("Creating/updating BCS table")
     bcs_objects_to_create = []
@@ -122,11 +122,10 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
 
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
-    batch = batch_name
     existing_samples = {}
-    if bcs_d_model:
+    if bcs_d_model and batch:
         existing_samples = {int(sample.dis_headr_collector_sample_id): sample for sample in
-                            bcs_d_model.objects.using('biochem').filter(batch_seq=batch)}
+                            bcs_d_model.objects.using('biochem').filter(batch=batch)}
 
     updated_fields = set()
     total_bottles = len(bottles)
@@ -219,7 +218,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
         updated_fields.add(updated_value(bcs_row, 'process_flag', 'NR'))
         updated_fields.add(updated_value(bcs_row, 'data_center_code', primary_data_center.data_center_code))
 
-        updated_fields.add(updated_value(bcs_row, 'batch_seq', batch))
+        bcs_row.batch = batch
 
         # remove the blank string from the updated_fields set, if there are still values in the set after that
         # then this record needs to be updated.
@@ -241,7 +240,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch_name:
     return [bcs_objects_to_create, bcs_objects_to_update, updated_fields]
 
 
-def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_name: str,
+def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: models.Bcbatches = None,
                    bcs_p_model: Type[models.BcsP] = None) -> [[models.BcsP], [models.BcsP], [str]]:
 
     bcs_objects_to_create = []
@@ -254,11 +253,10 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
     # mission = core_models.Mission.objects.get(pk=mission_id)
     # institute: bio_tables.models.BCDataCenter = mission.data_center
 
-    batch = batch_name
     existing_samples = {}
-    if bcs_p_model:
+    if bcs_p_model and batch:
         existing_samples = {sample.plank_sample_key_value: sample for sample in
-                            bcs_p_model.objects.using('biochem').filter(batch_seq=batch)}
+                            bcs_p_model.objects.using('biochem').filter(batch=batch)}
 
     total_bottles = len(bottles)
     for count, bottle in enumerate(bottles):
@@ -376,7 +374,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
             row_update.add(updated_value(bcs_row, 'process_flag', 'NR'))
             row_update.add(updated_value(bcs_row, 'data_center_code', institute.data_center_code))
 
-            row_update.add(updated_value(bcs_row, 'batch_seq', batch))
+            bcs_row.batch = batch
+            # row_update.add(updated_value(bcs_row, 'batch_seq', batch))
 
             # Maybe this should be averaged?
             row_update.add(updated_value(bcs_row, 'pl_headr_sounding', sounding))
@@ -445,7 +444,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch_n
     return bcs_objects_to_create, bcs_objects_to_update, updated_fields
 
 
-def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch_name: str,
+def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch: models.Bcbatches = None,
                    bcd_d_model: Type[models.BcdD] = None) -> [[models.BcdD], [models.BcdD], [str]]:
 
     bcd_objects_to_create = []
@@ -460,10 +459,14 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     tmp_table = 'biochem_tmp'
     tmp_model_manager = None
 
-    if bcd_d_model:
+    if bcd_d_model and batch:
         # copy the biochem data we're interested in looking at into an in-memory version of the database,
         # which will make queries much faster than doing them over a VPN to a datacenter across the country
-        existing_samples_qs = bcd_d_model.objects.using('biochem').filter(batch_seq=batch_name)
+        existing_samples_qs = bcd_d_model.objects.using('biochem').filter(batch=batch)
+        model = get_model('bcbatches', models.Bcbatches)
+        tmp_batch_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
+        tmp_batch_model_manager.bulk_create([batch])
+
         tmp_samples = [sample for sample in existing_samples_qs]
         model = get_model('tmp_bcd_d', models.BcdD)
         tmp_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
@@ -579,7 +582,8 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         updated_fields.add(updated_value(bcd_row, 'created_date', datetime.now().strftime("%Y-%m-%d")))
         updated_fields.add(updated_value(bcd_row, 'dis_sample_key_value', dis_sample_key_value))
 
-        updated_fields.add(updated_value(bcd_row, 'batch_seq', batch_name))
+        bcd_row.batch = batch
+        # updated_fields.add(updated_value(bcd_row, 'batch', batch.pk))
 
         updated_fields.remove('')
 
@@ -597,7 +601,8 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     return [bcd_objects_to_create, bcd_objects_to_update, updated_fields]
 
 
-def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.PlanktonSample], batch_name: str,
+def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.PlanktonSample],
+                   batch: models.Bcbatches = None,
                    bcd_p_model: Type[models.BcdP] = None) -> [[models.BcdP], [models.BcdP], [str]]:
 
     bcd_objects_to_create = []
@@ -612,10 +617,14 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
     tmp_table = 'biochem_tmp'
     tmp_model_manager = None
 
-    if bcd_p_model:
+    if bcd_p_model and batch:
         # copy the biochem data we're interested in looking at into an in-memory version of the database,
         # which will make queries much faster than doing them over a VPN to a datacenter across the country
-        existing_samples_qs = bcd_p_model.objects.using('biochem').filter(batch_seq=batch_name)
+        existing_samples_qs = bcd_p_model.objects.using('biochem').filter(batch=batch)
+        model = get_model('bcbatches', models.Bcbatches)
+        tmp_batch_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
+        tmp_batch_model_manager.bulk_create([batch])
+
         tmp_samples = [sample for sample in existing_samples_qs]
         model = get_model('tmp_bcd_p', models.BcdP)
         tmp_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
@@ -724,7 +733,8 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        row_update.add(updated_value(bcd_row, 'batch_seq', batch_name))
+        bcd_row.batch = batch
+        # row_update.add(updated_value(bcd_row, 'batch', batch))
 
         # mission descriptor
         # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code

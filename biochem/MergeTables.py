@@ -135,6 +135,9 @@ class MergeMissions:
         self.safety_check()
 
         for key, update in updated_objects.items():
+            if 'delete_objects' in update:
+                update['delete_objects'].delete()
+
             if len(update['update_objects']) > 0:
                 key.objects.using(self.database).bulk_update(list(update['update_objects'].values()),
                                                              fields=update['fields'])
@@ -145,6 +148,10 @@ class MergeMissions:
                 'update_objects': dict(),
                 'fields': set(),
             },
+            models.Bcdisreplicatedits: {
+                'update_objects': dict(),
+                'fields': set(),
+            }
         }
 
         exclude_fields = ['dis_detail_edt_seq', 'discrete_detail', 'data_center', 'data_type', 'discrete', 'collector_sample_id', 'dis_header_edit', 'batch', 'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date']
@@ -197,12 +204,6 @@ class MergeMissions:
 
                 if detail.discrete_replicate_edits.exists():
 
-                    if models.Bcdisreplicatedits not in update_dict:
-                        update_dict[models.Bcdisreplicatedits] = {
-                            'update_objects': dict(),
-                            'fields': set(),
-                        }
-
                     for replicate in detail.discrete_replicate_edits.all():
                         replicate.dis_detail_edit = existing_detail
                         update_dict[models.Bcdisreplicatedits]['fields'].update(['dis_detail_edit'])
@@ -222,8 +223,8 @@ class MergeMissions:
                 n_dict = self.get_update_reference_field("batch", detail, self.mission_0.batch)
                 _merge_dictionaries(update_dict, n_dict)
 
-        models.Bcdisreplicatedits.objects.using(self.database).filter(
-            discrete_replicate_seq__in=delete_replicates).delete()
+        update_dict[models.Bcdisreplicatedits]['delete_objects'] = (
+            models.Bcdisreplicatedits.objects.using(self.database).filter(discrete_replicate_seq__in=delete_replicates))
         return update_dict
 
     def get_update_discrete_headers(self) -> dict:
@@ -272,15 +273,20 @@ class MergeMissions:
 
         return update_dict
 
-    def get_update_plankton_header(self) -> dict:
-        pass
-
     def get_update_events(self) -> dict:
         update_dict: dict = {
             models.Bceventedits: {
                 'update_objects': dict(),
                 'fields': set(),
             },
+            models.Bccommentedits: {
+                'update_objects': dict(),
+                'fields': set(),
+            },
+            models.Bcplanktnhedredits: {
+                'update_objects': dict(),
+                'fields': set(),
+            }
         }
 
         exclude_fields = ['event_edt_seq', 'event', 'data_center', 'mission', 'mission_edit', 'batch', 'collector_event_id', 'last_update_by', 'last_update_date', 'process_flag', 'prod_created_date']
@@ -292,6 +298,7 @@ class MergeMissions:
 
         max_events = events.count()
         delete_comments = []
+        delete_plankton = []
         for event_number, event in enumerate(events):
             self.update_status("Merging Events", event_number, max_events)
 
@@ -308,19 +315,28 @@ class MergeMissions:
                     _merge_objects(update_dict, existing_event, event, 'last_update_date')
                     _merge_objects(update_dict, existing_event, event, 'process_flag')
 
+                if existing_event.plankton_header_edits.exists():
+                    delete_plankton += list(existing_event.plankton_header_edits.values_list(
+                        'plankton_seq', flat=True
+                    ))
+
+                if event.plankton_header_edits.exists():
+                    for plankton in event.plankton_header_edits.all():
+                        existing_activity = existing_event.activity_edits.get(batch=self.mission_0.batch, data_pointer_code='PL')
+                        plankton.event_edit = existing_event
+                        plankton.activity_edit = existing_activity
+                        update_dict[models.Bcplanktnhedredits]['fields'].update(['event_edit', 'activity_edit'])
+
+                        # update batch ids for all related objects that reference the event being merged
+                        n_dict = self.get_update_reference_field("batch", plankton, self.mission_0.batch)
+                        _merge_dictionaries(update_dict, n_dict)
+
                 if existing_event.comment_edits.exists():
                     delete_comments += list(existing_event.comment_edits.values_list(
                         'comment_seq', flat=True
                     ))
 
                 if event.comment_edits.exists():
-
-                    if models.Bccommentedits not in update_dict:
-                        update_dict[models.Bccommentedits] = {
-                            'update_objects': dict(),
-                            'fields': set(),
-                        }
-
                     for comment in event.comment_edits.all():
                         comment.event_edit = existing_event
                         update_dict[models.Bccommentedits]['fields'].update(['event_edit'])
@@ -339,7 +355,10 @@ class MergeMissions:
                 n_dict = self.get_update_reference_field("batch", event, self.mission_0.batch)
                 _merge_dictionaries(update_dict, n_dict)
 
-        models.Bccommentedits.objects.using(self.database).filter(comment_seq__in=delete_comments).delete()
+        update_dict[models.Bccommentedits]['delete_objects'] = (
+            models.Bccommentedits.objects.using(self.database).filter(comment_seq__in=delete_comments))
+        update_dict[models.Bcplanktnhedredits]['delete_objects'] = (
+            models.Bcplanktnhedredits.objects.using(self.database).filter(plankton_seq__in=delete_plankton))
         return update_dict
 
     def merge_missions(self) -> None:

@@ -5,6 +5,7 @@ from django.test import TestCase, tag
 from biochem.tests import BCFactoryFloor
 from biochem import MergeTables
 from biochem import models as biochem_models
+from core.views_sample_type import new_sample_type
 
 from settingsdb.tests import utilities
 
@@ -240,7 +241,7 @@ class TestMissionMerge(TestCase):
         mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor, data_center=data_center)
         mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor, data_center=data_center)
 
-        BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_0)
+        old_comment = BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_0)
         BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_0)
         new_comment = BCFactoryFloor.BcMoreCommentEditsMissionFactory(mission_edit=mission_1)
 
@@ -251,6 +252,9 @@ class TestMissionMerge(TestCase):
         updated_mission = biochem_models.Bcmissionedits.objects.get(mission_edt_seq=mission_0.mission_edt_seq)
         self.assertEqual(updated_mission.comment_edits.count(), 1)
         self.assertTrue(updated_mission.comment_edits.filter(comment_edt_seq=new_comment.comment_edt_seq).exists())
+
+        # The old comment shoul dhave been deleted
+        self.assertFalse(biochem_models.Bccommentedits.objects.filter(comment_edt_seq=old_comment.comment_edt_seq).exists())
 
 
 @tag('test_merge_bio_tables', 'test_event_merge')
@@ -554,6 +558,21 @@ class TestEventMerge(TestCase):
         self.assertEqual(event.comment_edits.count(), 1)
         self.assertEqual(getattr(more_comments, "batch"), self.mission_0.batch)
 
+    @tag('test_event_merge_event_exist_delete_more_comments_batch')
+    def test_event_merge_event_exist_delete_more_comments_batch(self):
+        args = (None, None, None)
+        event_0, event_1 = self.create_test_events(*args)
+        old_comment = BCFactoryFloor.BcMoreCommentEditsEventFactory(event_edit=event_0)
+        new_comment = BCFactoryFloor.BcMoreCommentEditsEventFactory(event_edit=event_1)
+        self.assertEqual(getattr(new_comment, "batch"), self.mission_1.batch)
+
+        event = self.merge_event_test(event_0.event_edt_seq)
+        more_comments = biochem_models.Bccommentedits.objects.get(comment_edt_seq=new_comment.comment_edt_seq)
+        self.assertEqual(event.comment_edits.count(), 1)
+        self.assertEqual(getattr(more_comments, "batch"), self.mission_0.batch)
+
+        old_comments = biochem_models.Bccommentedits.objects.filter(comment_edt_seq=old_comment.comment_edt_seq)
+        self.assertFalse(old_comments.exists())
 
 @tag('test_merge_bio_tables', 'test_discrete_header_merge')
 class TestDiscreteHeaderMerge(TestCase):
@@ -621,13 +640,6 @@ class TestDiscreteHeaderMerge(TestCase):
     # Collector Sample Id is being used as a natural primary key to match discrete headers
     # across events per mission. No two events should use the same collector sample ID
     # collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
-
-    # Todo: The activity_edit is a bit complicated. It basically contains the event_seq, the mission_seq and
-    #  a code_pointer. The code_pointer is either DH for discrete data or PL for plankton data. The complexity
-    #  is first we have to check if the activity edit exists, create it if it doesn't and then point our discrete
-    #  header at it. If we're just updating and existing discrete header, it's not a problem.
-    # activity_edit = models.ForeignKey(Bcactivityedits, related_name='discrete_header_edits', blank=True, null=True,
-    #                                   db_column='activity_edt_seq', on_delete=models.CASCADE)
 
     # If a discrete header didn't previously belong to an event then update the event_edt_seq to point to the
     # event the header is getting attached to. Everything else can remain the same.
@@ -1159,3 +1171,57 @@ class TestDiscreteReplicatesMerge(TestCase):
         self.assertEqual(detail.discrete_replicate_edits.count(), 2)
         self.assertEqual(updated_discrete_replicate_1.batch.pk, detail.batch.pk)
         self.assertEqual(updated_discrete_replicate_2.batch.pk, detail.batch.pk)
+
+
+@tag('test_merge_bio_tables', 'test_merge_plankton')
+class TestPlanktonHeaderMerge(TestCase):
+    # we won't be merging plankton. It's not a bunch of separate variables like Discrete data is, when it gets uploaded
+    # it's typically all or none. We'll keep the same process for merging mission and event data, but we'll remove old
+    # plankton headers and point the new plankton headers at the existing mission events that was just updated
+
+    @classmethod
+    def setUpClass(cls):
+        utilities.create_model_table(unmanaged_models)
+
+    @classmethod
+    def tearDownClass(cls):
+        utilities.delete_model_table(unmanaged_models)
+
+    def setUp(self):
+        descriptor = "MVP112025"
+        collector_event_id = "001"
+        discrete_header_sample_id = 450000
+        self.bad_data_center = BCFactoryFloor.BcDataCenterFactory(data_center_code=23, name="BIO_INREVIEW")
+        self.data_type = BCFactoryFloor.BcDataTypeFactory()
+
+        self.mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
+        self.event_0 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_0,
+                                                          collector_event_id=collector_event_id)
+        self.mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
+        self.event_1 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1,
+                                                          collector_event_id=collector_event_id)
+
+    @tag('test_merge_plankton_header_does_not_exist')
+    def test_merge_plankton_header_does_not_exist(self):
+        plankton_header = BCFactoryFloor.BcPlanktonHeaderEditsFactory(event_edit=self.event_1)
+
+        merge = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        plankton_headers = merge.get_update_events()
+        merge.merge_update_objects(plankton_headers)
+
+        updated_header = biochem_models.Bcplanktnhedredits.objects.using("default").get(pl_headr_edt_seq=plankton_header.pl_headr_edt_seq)
+        self.assertEqual(updated_header.batch.pk, self.mission_0.batch.pk)
+
+    @tag('test_merge_plankton_header_does_not_exist')
+    def test_merge_plankton_header_remove_existing(self):
+        old_plankton_header = BCFactoryFloor.BcPlanktonHeaderEditsFactory(event_edit=self.event_0)
+        new_plankton_header = BCFactoryFloor.BcPlanktonHeaderEditsFactory(event_edit=self.event_1)
+
+        merge = MergeTables.MergeMissions(self.mission_0, self.mission_1, database='default')
+        plankton_headers = merge.get_update_events()
+        merge.merge_update_objects(plankton_headers)
+
+        updated_header = biochem_models.Bcplanktnhedredits.objects.using("default").get(pl_headr_edt_seq=new_plankton_header.pl_headr_edt_seq)
+        old_header = biochem_models.Bcplanktnhedredits.objects.using("default").filter(pl_headr_edt_seq=old_plankton_header.pl_headr_edt_seq)
+        self.assertEqual(updated_header.batch.pk, self.mission_0.batch.pk)
+        self.assertFalse(old_header.exists())

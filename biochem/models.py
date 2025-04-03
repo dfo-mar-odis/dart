@@ -224,6 +224,17 @@ class Bcvolumemethods(models.Model):
         db_table = 'BCVOLUMEMETHODS'
 
 
+class Bcbatches(models.Model):
+    batch_seq = models.IntegerField(primary_key=True)
+    name = models.CharField(max_length=30)
+    description = models.CharField(max_length=250, blank=True, null=True)
+    username = models.CharField(max_length=30)
+
+    class Meta:
+        managed = False
+        db_table = 'BCBATCHES'
+
+
 # This matches the Biochem.BCDiscreteDataEdits table
 class BcdD(models.Model):
     dis_data_num = models.IntegerField(primary_key=True)
@@ -251,7 +262,8 @@ class BcdD(models.Model):
     # the application. Pl/SQL code is run on the table and this flag is set to 'DVE' depending on
     # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch_seq = models.IntegerField(blank=True, null=True)
+    batch = models.ForeignKey(Bcbatches, related_name='discrete_data_edits', db_column='batch_seq', blank=True, null=True,
+                              on_delete=models.CASCADE) #
     dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
@@ -338,7 +350,8 @@ class BcsD(models.Model):
     # the application. Pl/SQL code is run on the table and this flag is set to 'SVE' depending on
     # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch_seq = models.IntegerField(blank=True, null=True)
+    batch = models.ForeignKey(Bcbatches, related_name='discrete_station_edits', db_column='batch_seq', blank=True, null=True,
+                              on_delete=models.CASCADE) #
 
     class Meta:
         managed = False
@@ -396,7 +409,8 @@ class BcdP(models.Model):
     created_date = models.DateField()
     data_center_code = models.IntegerField(blank=True, null=True)
     process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch_seq = models.IntegerField(blank=True, null=True)
+    batch = models.ForeignKey(Bcbatches, related_name='plankton_data_edits', db_column='batch_seq', blank=True, null=True,
+                              on_delete=models.CASCADE) #
     pl_gen_modifier = models.CharField(max_length=50, blank=True, null=True)
     pl_gen_unit = models.IntegerField(blank=True, null=True)
 
@@ -486,7 +500,8 @@ class BcsP(models.Model):
     created_date = models.DateField()  # done
     data_center_code = models.IntegerField(blank=True, null=True)  # done
     process_flag = models.CharField(max_length=3, blank=True, null=True)  # done
-    batch_seq = models.IntegerField(blank=True, null=True)  # done
+    batch = models.ForeignKey(Bcbatches, related_name='plankton_station_edits', db_column='batch_seq', blank=True, null=True,
+                              on_delete=models.CASCADE) #
 
     class Meta:
         managed = False
@@ -528,17 +543,6 @@ class TestAzmpUploadBCD(models.Model):
     process_flag = models.CharField(max_length=3, blank=True, null=True)
     batch_seq = models.IntegerField(blank=True, null=True)
     dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
-
-
-class Bcbatches(models.Model):
-    batch_seq = models.IntegerField(primary_key=True)
-    name = models.CharField(max_length=30)
-    description = models.CharField(max_length=250, blank=True, null=True)
-    username = models.CharField(max_length=30)
-
-    class Meta:
-        managed = False
-        db_table = 'BCBATCHES'
 
 
 class Bcmissions(models.Model):

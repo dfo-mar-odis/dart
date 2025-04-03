@@ -12,7 +12,7 @@ from django.utils.translation import gettext as _
 
 from core.views import MissionMixin
 from core import models, forms, form_biochem_database, form_biochem_plankton
-from core.form_biochem_database import get_mission_batch_id
+from core.form_biochem_batch import get_mission_batch_id
 
 from biochem import models as biochem_models
 from biochem import upload
@@ -156,7 +156,6 @@ def download_samples(request, database, mission_id):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     mission = models.Mission.objects.get(pk=mission_id)
-    batch_name = f'{mission.start_date.strftime("%Y%m")}{mission.end_date.strftime("%Y%m")}'
 
     plankton_samples = models.PlanktonSample.objects.filter(
         bottle__event__mission=mission).values_list('pk', flat=True).distinct()
@@ -164,8 +163,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
-                                                   batch_name=mission.get_batch_name)
+    create, update, fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
 
     bcs_headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
 
@@ -197,8 +195,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=plankton_samples,
-                                                   batch_name=mission.get_batch_name)
+    create, update, fields = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=plankton_samples)
 
     bcd_headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
 

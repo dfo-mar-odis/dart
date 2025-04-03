@@ -226,7 +226,7 @@ HANDLERS = {
         "formatter": "verbose",
     },
     "error_handler": {
-        "class": "logging.handlers.RotatingFileHandler",
+        "class": "concurrent_log_handler.ConcurrentRotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/error.log",
         "mode": "a",
         "encoding": "utf-8",
