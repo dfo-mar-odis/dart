@@ -1197,6 +1197,7 @@ class TestPlanktonHeaderMerge(TestCase):
         self.mission_0 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
         self.event_0 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_0,
                                                           collector_event_id=collector_event_id)
+        self.activity_0 = BCFactoryFloor.BcActivityEditsFactory(event_edit=self.event_0, data_pointer_code="PL")
         self.mission_1 = BCFactoryFloor.BcMissionEditsFactory(descriptor=descriptor)
         self.event_1 = BCFactoryFloor.BcEventEditsFactory(mission_edit=self.mission_1,
                                                           collector_event_id=collector_event_id)
@@ -1211,6 +1212,7 @@ class TestPlanktonHeaderMerge(TestCase):
 
         updated_header = biochem_models.Bcplanktnhedredits.objects.using("default").get(pl_headr_edt_seq=plankton_header.pl_headr_edt_seq)
         self.assertEqual(updated_header.batch.pk, self.mission_0.batch.pk)
+
 
     @tag('test_merge_plankton_header_does_not_exist')
     def test_merge_plankton_header_remove_existing(self):

@@ -195,12 +195,9 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
     def tearDown(self):
-        delete_db = True
-        if delete_db:
-            delete_model(biochem_db, self.model)
-
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
 
+    @tag("test_data_marked_for_upload")
     def test_data_marked_for_upload(self):
         # provided a mission with data marked for Biochem upload the data should be pushed to the BioChem tables
         core_factory.BottleFactory.start_bottle_seq = 400000
@@ -224,10 +221,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
             type=oxy_sample_type
         )
 
-        batch_factory = biochem_factory.BcBatchesFactory
-        batch_factory._meta.database = 'biochem'
-        batch = batch_factory()
-        form_biochem_database.upload_bcd_d_data(self.mission, batch_id=batch.batch_seq)
+        form_biochem_database.upload_bcd_d_data(self.mission)
 
         self.model = upload.get_model(self.sample_database.bc_discrete_data_edits, bio_models.BcdD)
         # oxygen samples should have been added to the biochem db

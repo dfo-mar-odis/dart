@@ -61,6 +61,7 @@ def get_temp_space(model, tmp_db_name='biochem_tmp') -> Type[models.BcdD | model
 
     check_and_create_model(tmp_db_name, model)
     model.objects.using(tmp_db_name).delete()
+
     return model
 
 
@@ -464,8 +465,9 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         # which will make queries much faster than doing them over a VPN to a datacenter across the country
         existing_samples_qs = bcd_d_model.objects.using('biochem').filter(batch=batch)
         model = get_model('bcbatches', models.Bcbatches)
-        tmp_batch_model_manager = get_temp_space(model, tmp_table).objects.using(tmp_table)
-        tmp_batch_model_manager.bulk_create([batch])
+        batch_model = get_temp_space(model, tmp_table).objects.using(tmp_table)
+        batch_model.create(batch_seq = batch.batch_seq, name = batch.name,
+                           description = batch.description, username = batch.username)
 
         tmp_samples = [sample for sample in existing_samples_qs]
         model = get_model('tmp_bcd_d', models.BcdD)

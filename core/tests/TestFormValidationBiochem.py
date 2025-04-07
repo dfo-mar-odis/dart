@@ -86,8 +86,8 @@ class TestViewMissionSampleValidation(SimpleTestCase):
         self.setup_connection()
         self.get_batches_model()
 
-        bio_models.Bcbatches.objects.using(biochem_db).create(batch__batch_seq=1, name=self.test_name)
-        bio_models.Bcbatches.objects.using(biochem_db).create(batch__batch_seq=5, name=self.test_name)
+        bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=1, name=self.test_name)
+        bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=5, name=self.test_name)
         batch_id = get_mission_batch_id()
         self.assertEqual(2, batch_id)
 
