@@ -163,7 +163,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+    create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
 
     bcs_headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
 
@@ -195,7 +195,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_p_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=plankton_samples)
+    create = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=plankton_samples)
 
     bcd_headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
 

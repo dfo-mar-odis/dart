@@ -525,12 +525,11 @@ def upload_bcs_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches 
             # 4) upload only bottles that are new or were modified since the last biochem upload
             # send_user_notification_queue('biochem', _("Compiling BCS rows"))
             user_logger.info(_("Compiling BCS rows"))
-            create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch,
-                                                           bcs_d_model=bcs_d)
+            create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_d_model=bcs_d)
 
             # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
             user_logger.info(_("Creating/updating BCS Discrete rows"))
-            upload.upload_db_rows(bcs_d, create, update, fields)
+            upload.upload_db_rows(bcs_d, create)
 
 
 def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bio_models.Bcbatches = None):
@@ -553,12 +552,12 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bio_mo
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create, bcs_update, updated_fields = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
+        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
                                                                        batch=batch, bcs_p_model=bcs_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Plankton rows"))
-        upload.upload_db_rows(bcs_p, bcs_create, bcs_update, updated_fields)
+        upload.upload_db_rows(bcs_p, bcs_create)
 
 
 def upload_bcd_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches = None):
@@ -595,13 +594,12 @@ def upload_bcd_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches 
         # 4) upload only samples that are new or were modified since the last biochem upload
         message = _("Compiling BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
-        create, update, fields = upload.get_bcd_d_rows(uploader=uploader, samples=discreate_samples,
-                                                       batch=batch, bcd_d_model=bcd_d)
+        create = upload.get_bcd_d_rows(uploader=uploader, samples=discreate_samples, batch=batch, bcd_d_model=bcd_d)
 
         message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
         try:
-            upload.upload_db_rows(bcd_d, create, update, fields)
+            upload.upload_db_rows(bcd_d, create)
             uploaded = core_models.BioChemUpload.objects.filter(
                 type__mission=mission,
                 status=core_models.BioChemUploadStatus.upload
@@ -645,13 +643,12 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: bio_mo
         # 5) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCD Plankton rows"))
-        bcd_create, bcd_update, updated_fields = upload.get_bcd_p_rows(database=database, uploader=uploader,
-                                                                       samples=samples, batch=batch,
-                                                                       bcd_p_model=bcd_p)
+        bcd_create = upload.get_bcd_p_rows(database=database, uploader=uploader, samples=samples, batch=batch,
+                                           bcd_p_model=bcd_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCD Plankton rows"))
-        upload.upload_db_rows(bcd_p, bcd_create, bcd_update, updated_fields)
+        upload.upload_db_rows(bcd_p, bcd_create)
 
 
 def get_biochem_errors(request, database, **kwargs):

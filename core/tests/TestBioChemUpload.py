@@ -78,6 +78,7 @@ class TestGetBCSPRows(AbstractTestDatabase):
 
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
 
+    @tag('test_get_bcs_p_rows')
     def test_get_bcs_p_rows(self):
         core_factory.BottleFactory.start_bottle_seq = 400000
         bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=self.mission))
@@ -91,11 +92,9 @@ class TestGetBCSPRows(AbstractTestDatabase):
         batch_factory = biochem_factory.BcBatchesFactory
         batch_factory._meta.database = 'biochem'
         batch = batch_factory()
-        create_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles, batch, bcs_model)
+        create_rows = upload.get_bcs_p_rows("test_user", bottles, batch, bcs_model)
 
         self.assertEqual(len(create_rows), 1)
-        self.assertEqual(len(update_rows), 0)
-        self.assertEqual(len(update_fields), 0)
 
 
 @tag('biochem', 'biochem_upload')

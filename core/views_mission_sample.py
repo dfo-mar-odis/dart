@@ -576,7 +576,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
+    create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
 
     logger.info(f"Created {len(create)} BCD rows")
 
@@ -615,7 +615,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
+    create = upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
 
     bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
