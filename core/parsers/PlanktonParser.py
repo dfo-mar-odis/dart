@@ -315,17 +315,36 @@ def set_qc_flag(plankton: core_models.PlanktonSample, what_was_it: int, value):
             raise ValueError({'missing_value', 'what_was_it'})
 
 
+# the default pythong .isnumeric(), .isdecimal() functions can't tell if something like '68.61' is a number, stupid
+def is_number(s):
+    try:
+        float(s)
+    except ValueError:
+        return False
+
+    return True
+
+
 def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict,
                          existing_bottles: QuerySet, events: QuerySet,
                          start_pressure: float = None, end_pressure: float = None):
     if bottle_id in create_bottles.keys():
-        # We may have created a bottle in the last loop, but it's not in the database
-        # yet so get it from the created bottles dictionary
+        # use a recently created bottle if it exists
         bottle = create_bottles[bottle_id]
     elif (bottle := existing_bottles.filter(bottle_id=bottle_id)).exists():
-        # use an existing bottle if there's a net with the specified bottle ID
+        # use an existing bottle if one hasn't been recently created
         bottle = bottle.first()
     else:
+        # create a new bottle if it doesn't exist and hasn't been recently created bottles, then add the new
+        # bottle to the recently created bottles array
+        if start_pressure is None:
+            message = _("Missing depth")
+            raise ValueError(message)
+
+        if not is_number(start_pressure) or np.isnan(start_pressure):
+            message = _("Bad depth value")
+            raise ValueError(message)
+
         # if the ringnet bottle doesn't exist in the database or in the created bottles dictionary,
         # it needs to be created and added to the created bottles dictionary
         try:
@@ -334,18 +353,9 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict,
             message = _("Net event matching ID doesn't exist.")
             raise ValueError(message)
 
-        # in a case where the pressure is missing from the plankton data file we can use the
-        # sounding of the bottom event, if a bottom event exists.
-        if start_pressure is None or np.isnan(start_pressure):
-            action = event.actions.filter(type=core_models.ActionType.bottom)
-            if not action.exists():
-                raise ValueError(_("Missing depth for bottle and no sounding is attached to the matching event"))
-
-            start_pressure = action.first().sounding
-        event.sounding = start_pressure
         bottle = core_models.Bottle(bottle_id=bottle_id, event=event, pressure=start_pressure, closed=event.end_date)
 
-        if end_pressure is not None and not np.isnan(start_pressure):
+        if end_pressure is not None and not np.isnan(end_pressure):
             bottle.end_pressure = end_pressure
 
         create_bottles[bottle_id] = bottle
@@ -353,9 +363,6 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict,
     return bottle
 
 def write_plankton_data(filename, errors, create_bottles, create_plankton, update_plankton):
-    if len(errors) > 0:
-        core_models.FileError.objects.bulk_create(errors)
-
     if len(create_bottles) > 0:
         logger.info(_("Creating Net Bottles"))
         core_models.Bottle.objects.bulk_create(create_bottles.values())
@@ -371,6 +378,14 @@ def write_plankton_data(filename, errors, create_bottles, create_plankton, updat
                 try:
                     plankton.save()
                 except IntegrityError as ex1:
+                    message = str(ex1)
+                    message += " " + _("Bottle ID") + f" : {plankton.bottle.bottle_id}"
+                    message += " " + _("Event") + f" : {plankton.bottle.event.event_id}"
+
+                    err = core_models.FileError(mission=plankton.bottle.event.mission, file_name=filename, line=-1,
+                                            message=message, type=core_models.ErrorType.plankton)
+                    err.save()
+                    user_logger.error(message)
                     logger.error(_("Issue with plankton: ") + f"{plankton.bottle_id} - {plankton.taxa}")
 
     logger.info("Setting collector comments")
@@ -423,6 +438,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     update_plankton = {'objects': [], 'fields': set()}
     errors = []
     for line, row in dataframe.iterrows():
+        has_errors = False
         updated_fields = set("")
 
         # both the line and dataframe start at zero, but should start at 1 for human readability
@@ -463,7 +479,28 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             error.save()
-            continue
+            has_errors = True
+
+        if not bio_models.BCSex.objects.filter(pk=sex).exists():
+            error_message = _("Could not identify Biochem Sex code ") + str(sex)
+            message = (_("Line ") + str(line) + " " + error_message)
+            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+                                          type=core_models.ErrorType.plankton)
+            errors.append(error)
+
+            user_logger.error(message)
+            logger.error(message)
+            has_errors = True
+
+        if not bio_models.BCLifeHistory.objects.filter(pk=stage).exists():
+            error_message = _("Could not identify Biochem Life History code ") + str(stage)
+            message = (_("Line ") + str(line) + " " + error_message)
+            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+                                          type=core_models.ErrorType.plankton)
+            errors.append(error)
+            user_logger.error(message)
+            logger.error(message)
+            has_errors = True
 
         try:
             bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles, events, pressure)
@@ -479,6 +516,9 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
 
             user_logger.error(message)
             logger.error(message)
+            has_errors = True
+
+        if has_errors:
             continue
 
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
@@ -517,7 +557,10 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             plankton = create_plankton[plankton_key]
             set_qc_flag(plankton, what_was_it, value)
 
-    write_plankton_data(filename, errors, create_bottles, create_plankton, update_plankton)
+    if len(errors) > 0:
+        core_models.FileError.objects.bulk_create(errors)
+    else:
+        write_plankton_data(filename, errors, create_bottles, create_plankton, update_plankton)
 
 
 def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataframe: DataFrame, row_mapping=None):

@@ -23,8 +23,8 @@ from django_pandas.io import read_frame
 from biochem import upload
 from biochem import models as biochem_models
 
-from core import forms, form_biochem_database, form_biochem_discrete, validation
-from core.form_biochem_database import get_mission_batch_id
+from core import forms, form_biochem_database, form_biochem_discrete
+
 from core import models
 from core import views
 from core.form_sample_type_config import process_file
@@ -497,8 +497,6 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
 
 
 def biochem_upload_card(request, database, mission_id):
-    # upload_url = reverse_lazy("core:mission_samples_upload_biochem", args=(database, mission_id,))
-    # download_url = reverse_lazy("core:mission_samples_download_biochem", args=(database, mission_id,))
 
     button_url = reverse_lazy('core:mission_samples_update_bio_chem_buttons', args=(database, mission_id))
 
@@ -547,104 +545,6 @@ def biochem_batches_card(request, database, mission_id):
     biochem_card_wrapper.append(form_soup)
     return HttpResponse(soup)
 
-
-# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
-def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
-    # clear previous errors if there were any from the last upload attempt
-    mission.errors.filter(type=models.ErrorType.biochem).delete()
-    models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
-
-    # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
-    user_logger.info(_("Validating Sensor/Sample Datatypes"))
-    samples_types_for_upload = [bcupload.type for bcupload in
-                                models.BioChemUpload.objects.filter(type__mission=mission)]
-
-    # Todo: I'm running the standard DART based event/data validation here, but we probably should be running the
-    #  BioChem Validation from core.form_validation_biochem.run_biochem_validation()
-    errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
-
-    if errors:
-        # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
-        user_logger.info(_("Datatypes missing see errors"))
-        models.Error.objects.bulk_create(errors)
-
-    # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
-    form_biochem_database.upload_bcd_d_data(mission, uploader, batch_id)
-
-    return batch_id
-
-
-# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
-def upload_samples(request, database, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
-
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(div := soup.new_tag('div'))
-    div.attrs['id'] = "div_id_biochem_alert_biochem_db_details"
-    div.attrs['hx-swap-oob'] = 'true'
-
-    # are we connected?
-    if not form_biochem_database.is_connected():
-        alert_soup = forms.blank_alert("div_id_biochem_alert", _("Not Connected"), alert_type="danger")
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    # do we have an uploader?
-    alert_soup = form_biochem_database.confirm_uploader(request)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    try:
-        uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
-            request.POST['uploader'] if 'uploader' in request.POST else "N/A"
-
-        batch_id = get_mission_batch_id()
-        biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
-                                                                        username=uploader,
-                                                                        batch_seq=batch_id)
-
-        bc_statn_data_errors = []
-        # user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
-        # bc_statn_data_errors = run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
-
-        sample_data_upload(database, mission, uploader, batch_id)
-
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'success',
-            'message': _("Thank you for uploading"),
-        }
-        if bc_statn_data_errors:
-            bcd_rows = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
-            attrs['alert_type'] = 'warning'
-            attrs['message'] = _("Errors Present in Biochem Validation for batch") + f" : {batch_id}"
-            for error in bc_statn_data_errors:
-                err = biochem_models.Bcerrorcodes.objects.using('biochem').get(error_code=error[3])
-                data = bcd_rows.objects.using('biochem').get(dis_data_num=error[1])
-                attrs['message'] += f"\n{err.long_desc}\n- {data}"
-
-    except Exception as e:
-        logger.exception(e)
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': str(e),
-        }
-
-    alert_soup = forms.blank_alert(**attrs)
-    div.append(alert_soup)
-    response = HttpResponse(soup)
-    response['HX-Trigger'] = 'update_samples, biochem_db_connect'
-    return response
-
-
 def download_samples(request, database, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
@@ -673,11 +573,10 @@ def download_samples(request, database, mission_id):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     logger.info(f"Using uploader: {uploader}")
-    batch_id = 1
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch_name=batch_id)
+    create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
 
     logger.info(f"Created {len(create)} BCD rows")
 
@@ -716,8 +615,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcd_d_rows(database=database, uploader=uploader, samples=discrete_samples,
-                                                   batch_name=batch_id)
+    create = upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
 
     bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
@@ -814,8 +712,6 @@ mission_sample_urls = [
          name="mission_samples_add_sensor_to_upload"),
     path('<str:database>/sample/upload/sensor/<int:mission_id>/', biochem_upload_card,
          name="mission_samples_biochem_upload_card"),
-    path('<str:database>/sample/upload/biochem/<int:mission_id>/', upload_samples,
-         name="mission_samples_upload_biochem"),
     path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
          name="mission_samples_download_biochem"),
 

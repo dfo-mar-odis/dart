@@ -13,7 +13,7 @@ from django.utils.translation import gettext as _
 from core import form_biochem_pre_validation, views_mission_sample
 from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
-from core.form_biochem_database import get_mission_batch_id
+from core.form_biochem_batch import get_mission_batch_id
 
 from dart.tests.DartTestCase import DartTestCase
 

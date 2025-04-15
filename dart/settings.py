@@ -210,7 +210,7 @@ HANDLERS = {
         "formatter": "simple",
     },
     "info_handler": {
-        "class": "logging.handlers.RotatingFileHandler",
+        "class": "concurrent_log_handler.ConcurrentRotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/info.log",
         "mode": "a",
         "encoding": "utf-8",
@@ -226,7 +226,7 @@ HANDLERS = {
         "formatter": "verbose",
     },
     "error_handler": {
-        "class": "logging.handlers.RotatingFileHandler",
+        "class": "concurrent_log_handler.ConcurrentRotatingFileHandler",
         "filename": f"{BASE_DIR}/logs/error.log",
         "mode": "a",
         "encoding": "utf-8",
@@ -239,7 +239,7 @@ HANDLERS = {
 LOGGERS = (
     {
         "django": {
-            "handlers": ["console", "info_handler"],
+            "handlers": ["console"],
             "level": "INFO",
             "propagate": True,
         },
@@ -254,9 +254,9 @@ LOGGERS = (
             "propagate": True
         },
         "dart.debug": {
-            "handlers": ["info_handler"],
+            "handlers": ["console", "info_handler"],
             "level": "DEBUG",
-            "propagate": True
+            "propagate": False
         },
         "dart.test": {  # use this logger for unit testing
             "handlers": ["test_handler"],
