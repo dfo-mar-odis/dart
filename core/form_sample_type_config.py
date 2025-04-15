@@ -52,7 +52,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         model = settings_models.SampleTypeConfig
         fields = "__all__"
 
-    def find_header(self, data, file_type, tab):
+    def find_header(self, data, file_type, tab) -> int:
 
         # if the initial skip isn't set or is -1 then we'll scan the first 30 lines to see if we can
         # figure out what the header line is. Then the user can adjust it if it's incorrect.
@@ -66,6 +66,9 @@ class SampleTypeConfigForm(forms.ModelForm):
         for line, columns in data_frame.iterrows():
             if float([c for c in columns].count(np.nan) / column_count) < nan_tolerance:
                 return line + 1
+
+        return 0
+
 
     def get_column_headers(self, data, file_type, tab=0, skip=-1):
         if skip == -1:
