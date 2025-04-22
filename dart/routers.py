@@ -8,22 +8,31 @@ class PrimaryRouter:
     mission_databases = ['core', 'bio_tables']
 
     def db_for_read(self, model, **hints):
+        if model._meta.app_label == 'settingsdb':
+            return 'default'
+
         if 'mission_db' in settings.DATABASES:
             return 'mission_db' if model._meta.app_label in self.mission_databases else None
 
         return None
 
     def db_for_write(self, model, **hints):
+        if model._meta.app_label == 'settingsdb':
+            return 'default'
+
         if 'mission_db' in settings.DATABASES:
             return 'mission_db' if model._meta.app_label in self.mission_databases else None
 
         return None
 
     def allow_migrate(self, db, app_label, model_name=None, **hints):
+        if app_label == 'settingsdb':
+            return True
+
         if 'mission_db' in settings.DATABASES:
             return True if app_label in self.mission_databases else None
 
         return None
 
     def allow_relation(self, obj1, obj2, **hints):
-        return None
+        return True
