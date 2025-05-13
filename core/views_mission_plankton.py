@@ -47,7 +47,7 @@ def biochem_upload_card(request, mission_id):
     # upload_url = reverse_lazy("core:mission_samples_upload_biochem", args=(database, mission_id,))
     # download_url = reverse_lazy("core:mission_samples_download_biochem", args=(database, mission_id,))
 
-    button_url = reverse_lazy('core:mission_plankton_update_biochem_buttons', args=(mission_id))
+    button_url = reverse_lazy('core:mission_plankton_update_biochem_buttons', args=(mission_id,))
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_card_wrapper"))
@@ -205,13 +205,13 @@ def get_download_bcs_bcd_button(soup, mission_id):
     button.append(icon)
     button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
     button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
-    button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id))
+    button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id,))
     button.attrs['hx-swap'] = 'none'
 
     return button
 
 
-def get_biochem_buttons(request, database, mission_id):
+def get_biochem_buttons(request, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     soup.append(button_area := soup.new_tag('div'))
     button_area.attrs['id'] = form_biochem_database.get_biochem_additional_button_id()

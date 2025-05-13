@@ -343,7 +343,7 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
         td_taxa_name.string = "---"
         if plankton:
             plankton_hdr = biochem_models.Bcplanktnhedredits.objects.using('biochem').get(
-                pl_headr_edt_seq=plankton.pl_headr_edt_seq)
+                pl_headr_edt_seq=plankton.pl_header_edit.pk)
             td_sample_id.string = str(plankton_hdr.collector_sample_id)
 
             val = "---"
