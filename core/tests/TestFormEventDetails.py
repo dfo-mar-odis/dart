@@ -33,7 +33,7 @@ class TestMissionEventForm(DartTestCase):
         # on to the card body.
         # The add button points to the event card using hx-target, so the response to the add event
         # url should be a full card
-        url = reverse(self.add_event_url, args=('default', self.mission.pk))
+        url = reverse(self.add_event_url, args=(self.mission.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -60,7 +60,7 @@ class TestMissionEventForm(DartTestCase):
             'end_sample_id': 10
         }
 
-        url = reverse(self.add_event_url, args=('default', self.mission.pk))
+        url = reverse(self.add_event_url, args=(self.mission.pk,))
         response = self.client.post(url, kwargs)
 
         # make sure the event was created
@@ -100,10 +100,10 @@ class TestMissionEventForm(DartTestCase):
             'sample_id': 20,
             'end_sample_id': 400
         }
-        url = reverse(self.edit_event_url, args=('default', event.pk))
+        url = reverse(self.edit_event_url, args=(event.pk,))
         response = self.client.post(url, kwargs)
 
-        edited_event = models.Event.objects.using('default').get(pk=event.pk)
+        edited_event = models.Event.objects.get(pk=event.pk)
 
         self.assertEqual(edited_event.sample_id, kwargs['sample_id'])
         self.assertEqual(edited_event.end_sample_id, kwargs['end_sample_id'])
@@ -120,7 +120,7 @@ class TestMissionEventForm(DartTestCase):
 
         self.assertTrue(models.Event.objects.using('default').filter(pk=event.pk).exists())
 
-        url = reverse("core:form_event_delete_event", args=('default', event.pk))
+        url = reverse("core:form_event_delete_event", args=(event.pk,))
         response = self.client.post(url)
 
         self.assertFalse(models.Event.objects.using('default').filter(pk=event.pk).exists())
@@ -154,7 +154,7 @@ class TestMissionEventForm(DartTestCase):
             'type': action_vars.type
         }
 
-        url = reverse(self.add_action_url, args=('default', event.pk))
+        url = reverse(self.add_action_url, args=(event.pk,))
         response = self.client.post(url, kwargs)
 
         action = models.Action.objects.using('default').get(event=event, date_time=action_vars.date_time)
@@ -184,7 +184,7 @@ class TestMissionEventForm(DartTestCase):
         event = core_factory.CTDEventFactory()
         action = event.actions.first()
 
-        url = reverse(self.edit_action_url, args=('default', action.pk))
+        url = reverse(self.edit_action_url, args=(action.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -222,7 +222,7 @@ class TestMissionEventForm(DartTestCase):
             'type': deployed_action.type
         }
 
-        url = reverse(self.edit_action_url, args=('default', deployed_action.pk))
+        url = reverse(self.edit_action_url, args=(deployed_action.pk,))
         response = self.client.post(url, kwargs)
 
         updated_action = models.Action.objects.using('default').get(pk=deployed_action.pk)
@@ -254,7 +254,7 @@ class TestMissionEventForm(DartTestCase):
         event = core_factory.CTDEventFactory()
         deployed = event.actions.get(type=models.ActionType.deployed)
 
-        url = reverse(self.delete_action_url, args=('default', deployed.pk))
+        url = reverse(self.delete_action_url, args=(deployed.pk,))
         response = self.client.delete(url)
 
         deployed = event.actions.filter(pk=deployed.pk)
@@ -269,7 +269,7 @@ class TestMissionEventForm(DartTestCase):
         # the actions attached to the provided event
 
         event = core_factory.CTDEventFactory()
-        url = reverse(self.list_events_url, args=('default', event.pk))
+        url = reverse(self.list_events_url, args=(event.pk,))
 
         response = self.client.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
@@ -288,7 +288,7 @@ class TestMissionEventForm(DartTestCase):
         # to being loaded from an elog file, the row should contain an edit and a delete button
 
         event = core_factory.CTDEventFactory()
-        url = reverse(self.list_events_url, args=('default', event.pk, 'true'))
+        url = reverse(self.list_events_url, args=(event.pk, 'true',))
 
         response = self.client.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
@@ -302,13 +302,13 @@ class TestMissionEventForm(DartTestCase):
 
         for tr in trs:
             action_id = tr.attrs['id'].replace('action-', '')
-            edit_url = reverse(self.edit_action_url, args=('default', action_id))
+            edit_url = reverse(self.edit_action_url, args=(action_id,))
 
             button = tr.find('button', attrs={'name': 'edit_action'})
             self.assertIn('hx-get', button.attrs)
             self.assertEqual(button.attrs['hx-get'], edit_url)
 
-            delete_url = reverse(self.delete_action_url, args=('default', action_id))
+            delete_url = reverse(self.delete_action_url, args=(action_id,))
 
             button = tr.find('button', attrs={'name': 'delete_action'})
             self.assertIn('hx-delete', button.attrs)
@@ -327,7 +327,7 @@ class TestMissionEventForm(DartTestCase):
             "name": attachment.name
         }
 
-        url = reverse(self.add_attachment_url, args=('default', event.pk))
+        url = reverse(self.add_attachment_url, args=(event.pk,))
         response = self.client.post(url, kwargs)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -344,7 +344,7 @@ class TestMissionEventForm(DartTestCase):
         event = core_factory.CTDEventFactory()
         attachment = core_factory.AttachmentFactory(event=event)
 
-        url = reverse(self.edit_attachment_url, args=('default', attachment.pk))
+        url = reverse(self.edit_attachment_url, args=(attachment.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -377,7 +377,7 @@ class TestMissionEventForm(DartTestCase):
             'name': 'Fake_attachment_name'
         }
 
-        url = reverse(self.edit_attachment_url, args=('default', attachment.pk))
+        url = reverse(self.edit_attachment_url, args=(attachment.pk,))
         response = self.client.post(url, kwargs)
 
         updated_attachment = models.Attachment.objects.using('default').get(pk=attachment.pk)
@@ -407,7 +407,7 @@ class TestMissionEventForm(DartTestCase):
 
         self.assertTrue(event.attachments.filter(pk=attachment.pk).exists())
 
-        url = reverse("core:form_event_delete_attachment", args=('default', attachment.pk))
+        url = reverse("core:form_event_delete_attachment", args=(attachment.pk,))
         response = self.client.delete(url)
 
         self.assertFalse(event.attachments.filter(pk=attachment.pk).exists())
@@ -423,7 +423,7 @@ class TestMissionEventForm(DartTestCase):
         event = core_factory.CTDEventFactory()
         attachment = core_factory.AttachmentFactory(event=event)
 
-        url = reverse("core:form_event_list_attachment", args=('default', event.pk))
+        url = reverse("core:form_event_list_attachment", args=(event.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -443,7 +443,7 @@ class TestMissionEventForm(DartTestCase):
         event = core_factory.CTDEventFactory()
         attachment = core_factory.AttachmentFactory(event=event)
 
-        url = reverse("core:form_event_list_attachment", args=('default', event.pk, "True"))
+        url = reverse("core:form_event_list_attachment", args=(event.pk, "True",))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -457,13 +457,13 @@ class TestMissionEventForm(DartTestCase):
 
         for tr in trs:
             attachment_id = tr.attrs['id'].replace('attachment-', '')
-            edit_url = reverse(self.edit_attachment_url, args=('default', attachment_id))
+            edit_url = reverse(self.edit_attachment_url, args=(attachment_id,))
 
             button = tr.find('button', attrs={'name': 'edit_attachment'})
             self.assertIn('hx-get', button.attrs)
             self.assertEqual(button.attrs['hx-get'], edit_url)
 
-            delete_url = reverse("core:form_event_delete_attachment", args=('default', attachment_id))
+            delete_url = reverse("core:form_event_delete_attachment", args=(attachment_id,))
 
             button = tr.find('button', attrs={'name': 'delete_attachment'})
             self.assertIn('hx-delete', button.attrs)
@@ -475,7 +475,7 @@ class TestMissionEventForm(DartTestCase):
         # the GlobalStation model
 
         mission = core_factory.MissionFactory()
-        event_form = EventForm(database='default', initial={'mission': mission.pk})
+        event_form = EventForm(initial={'mission': mission.pk})
         # we have to chop off the first and last element of the choice list which will be 'none' and the 'new'
         stations = event_form.fields['global_station'].choices[1:-1]
         station_names = [station[1] for station in stations]
@@ -501,7 +501,7 @@ class TestMissionEventForm(DartTestCase):
             'sample_id': 1,
             'end_sample_id': 5,
         }
-        event_form = EventForm(database='default', data=event_data)
+        event_form = EventForm(data=event_data)
 
         self.assertFalse(models.Station.objects.using('default').filter(name=global_station.name).exists())
         self.assertTrue(event_form.is_valid())
@@ -513,7 +513,7 @@ class TestMissionEventForm(DartTestCase):
         # provided a database and event_id a get request to the load filter log url should return
         # an alert dialog to be swapped into the EventDetail card's message area.
         event = core_factory.CTDEventFactory()
-        url = reverse(self.filter_log_url, args=('default', event.pk))
+        url = reverse(self.filter_log_url, args=(event.pk,))
 
         response = self.client.get(url)
 

@@ -63,7 +63,6 @@ def _validate_bottles(mission) -> [core_models.Error]:
     logger_notifications.info(_("Validating Bottle Dates"))
 
     errors: [core_models.Error] = []
-    database = mission._state.db
     bottles = core_models.Bottle.objects.filter(event__mission=mission)
 
     bottle_count = len(bottles)
@@ -90,7 +89,7 @@ def validate_mission(mission: core_models.Mission) -> [core_models.Error]:
     return errors
 
 
-def run_biochem_validation(request, database, mission_id):
+def run_biochem_validation(request, mission_id):
 
     if request.method == 'GET':
         attrs = {
@@ -115,7 +114,7 @@ def run_biochem_validation(request, database, mission_id):
     return response
 
 
-def get_validation_errors(request, database, mission_id):
+def get_validation_errors(request, mission_id):
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(badge_error_count := soup.new_tag("div"))
@@ -137,6 +136,8 @@ def get_validation_errors(request, database, mission_id):
     # codes that should link the user back to the mission settings page to fix the issues.
     settings_codes = [BIOCHEM_CODES.DESCRIPTOR_MISSING.value, BIOCHEM_CODES.DATE_MISSING.value,
                       BIOCHEM_CODES.DATE_BAD_VALUES.value]
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    database = mission._state.db
     for error in errors:
         ul.append(li := soup.new_tag('li'))
         li.attrs = {'class': 'list-group-item'}
@@ -153,7 +154,7 @@ def get_validation_errors(request, database, mission_id):
     return response
 
 
-url_prefix = "<str:database>/<str:mission_id>"
+url_prefix = "<str:mission_id>"
 database_urls = [
     path(f'{url_prefix}/biochem/validation/run/', run_biochem_validation, name="form_biochem_pre_validation_run"),
     path(f'{url_prefix}/biochem/validation/', get_validation_errors, name="form_biochem_pre_validation_get_validation_errors"),

@@ -135,7 +135,6 @@ class MissionSettingsForm(forms.ModelForm):
         start_date_field = Field('start_date')
         end_date_field = Field('end_date')
         if self.instance.pk:
-            database = self.instance._state.db
             if models.Error.objects.filter(
                     code=BIOCHEM_CODES.DESCRIPTOR_MISSING.value).exists():
                 descriptor_field.attrs['class'] = descriptor_field.attrs.get('class', "") + " bg-danger-subtle"

@@ -20,7 +20,7 @@
             <div class="col">
                 <button class="btn btn-sm btn-primary" name="add_event" title="{% trans "Update event station/instrument details" %}"
                         hx-swap="outerHTML" hx-target="#div_id_card_event_details"
-                        hx-post="{% url 'core:form_event_edit_event' database event.pk %}">{% custom_icon 'arrow-clockwise' %}</button>
+                        hx-post="{% url 'core:form_event_edit_event' event.pk %}">{% custom_icon 'arrow-clockwise' %}</button>
             </div>
         </div>
     {% endif %}
@@ -57,7 +57,7 @@
     {% if event %}
     <div class="row">
         <div class="col">
-            <div class="table table-striped" hx-trigger="update_actions from:body" hx-get="{% url 'core:form_event_list_action' database event.pk 'True' %}">
+            <div class="table table-striped" hx-trigger="update_actions from:body" hx-get="{% url 'core:form_event_list_action' event.pk 'True' %}">
                 {% include 'core/partials/table_action.html' with editable=True %}
             </div>
         </div>
@@ -86,7 +86,7 @@
     {% if event %}
     <div class="row">
         <div class="col">
-            <div class="table table-striped" hx-trigger="update_attachments from:body" hx-get="{% url 'core:form_event_list_attachment' database event.pk 'True' %}">
+            <div class="table table-striped" hx-trigger="update_attachments from:body" hx-get="{% url 'core:form_event_list_attachment' event.pk 'True' %}">
                 {% include 'core/partials/table_attachment.html' with editable=True %}
             </div>
         </div>

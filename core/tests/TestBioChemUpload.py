@@ -112,7 +112,7 @@ class TestBioChemUpload(DartTestCase):
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
         self.mission_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url, {'add_sensor': 'true'})
 
@@ -134,7 +134,7 @@ class TestBioChemUpload(DartTestCase):
         core_models.BioChemUpload.objects.using('default').create(type_id=self.mission_sample_type.pk,
                                                                   status=core_models.BioChemUploadStatus.upload)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -152,7 +152,7 @@ class TestBioChemUpload(DartTestCase):
                                                                   status=core_models.BioChemUploadStatus.uploaded,
                                                                   upload_date=upload_date)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -172,7 +172,7 @@ class TestBioChemUpload(DartTestCase):
                                                                   status=core_models.BioChemUploadStatus.upload,
                                                                   upload_date=upload_date)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url)
 

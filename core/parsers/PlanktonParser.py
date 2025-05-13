@@ -1,15 +1,15 @@
-import datetime
 import logging
 import numpy as np
-from django.db import IntegrityError
 
 from pandas import DataFrame
 
+from django.db import IntegrityError
 from django.utils.translation import gettext as _
 from django.db.models import QuerySet
 
-import core.models
 from core import models as core_models
+from core.parsers import parser_utils
+
 from bio_tables import models as bio_models
 from dart.utils import updated_value
 
@@ -17,24 +17,6 @@ from settingsdb.models import FileConfiguration
 
 logger = logging.getLogger('dart')
 user_logger = logging.getLogger('dart.user')
-
-
-def _get_or_create_file_config(file_type, fields) -> QuerySet[FileConfiguration]:
-    existing_mappings = FileConfiguration.objects.filter(file_type=file_type)
-
-    create_mapping = []
-    for field in fields:
-        if not existing_mappings.filter(required_field=field[0]).exists():
-            mapping = FileConfiguration(file_type=file_type)
-            mapping.required_field = field[0]
-            mapping.mapped_field = field[1]
-            mapping.description = field[2]
-            create_mapping.append(mapping)
-
-    if len(create_mapping) > 0:
-        FileConfiguration.objects.bulk_create(create_mapping)
-
-    return existing_mappings
 
 
 def get_or_create_phyto_file_config() -> QuerySet[FileConfiguration]:
@@ -49,7 +31,7 @@ def get_or_create_phyto_file_config() -> QuerySet[FileConfiguration]:
               ('comments', "COMMENTS", _("Label identifying the comments column")),
               ]
 
-    return _get_or_create_file_config(file_type, fields)
+    return parser_utils._get_or_create_file_config(file_type, fields)
 
 
 def get_or_create_zoo_file_config() -> QuerySet[FileConfiguration]:
@@ -75,7 +57,7 @@ def get_or_create_zoo_file_config() -> QuerySet[FileConfiguration]:
               ('what_was_it', "WHAT_WAS_IT", _("Label identifying the 'what is it' column'")),
               ]
 
-    return _get_or_create_file_config(file_type, fields)
+    return parser_utils._get_or_create_file_config(file_type, fields)
 
 
 def get_or_create_bioness_file_config() -> QuerySet[FileConfiguration]:
@@ -103,7 +85,7 @@ def get_or_create_bioness_file_config() -> QuerySet[FileConfiguration]:
               ('what_was_it', "WHAT_WAS_IT", _("Label identifying the 'what is it' column'")),
               ]
 
-    return _get_or_create_file_config(file_type, fields)
+    return parser_utils._get_or_create_file_config(file_type, fields)
 
 
 def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: DataFrame):
@@ -349,7 +331,7 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict,
         # it needs to be created and added to the created bottles dictionary
         try:
             event = events.get(event_id=event_id, instrument__type=core_models.InstrumentType.net)
-        except core.models.Event.DoesNotExist as e:
+        except core_models.Event.DoesNotExist as e:
             message = _("Net event matching ID doesn't exist.")
             raise ValueError(message)
 

@@ -62,13 +62,13 @@ class TestMissionSamplesForm(DartTestCase):
         # Upon selecting files and clicking the submit button a get request should be made to
         # sample_upload_ctd that will return a loading dialog that will make a post request
         # to sample_upload_ctd with a websocket on it.
-        url = reverse('core:form_btl_upload_bottles', args=('default', self.mission.pk,))
+        url = reverse('core:form_btl_upload_bottles', args=(self.mission.pk,))
 
         attrs = {
             'alert_area_id': "div_id_alert_bottle_load",
             'message': _("Loading Bottles"),
             'logger': ctd.logger_notifications.name,
-            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=('default', self.mission.pk,)),
+            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(self.mission.pk,)),
             'hx-trigger': 'load'
         }
         alert = core_forms.websocket_post_request_alert(**attrs)
