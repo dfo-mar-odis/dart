@@ -74,7 +74,7 @@ class BottleLoadForm(CollapsableCardForm):
         return msg_row
 
     def get_refresh_url(self, hide_loaded: bool = False):
-        url = reverse_lazy("core:form_btl_reload_files", args=(self.database, self.mission.pk,))
+        url = reverse_lazy("core:form_btl_reload_files", args=(self.mission.pk,))
         if hide_loaded:
             url += '?hide_loaded=true'
 
@@ -83,7 +83,7 @@ class BottleLoadForm(CollapsableCardForm):
     def get_card_header(self):
         header = super().get_card_header()
 
-        url = reverse_lazy("core:form_btl_choose_bottle_dir", args=(self.database, self.mission.pk,))
+        url = reverse_lazy("core:form_btl_choose_bottle_dir", args=(self.mission.pk,))
         button_icon = load_svg('arrow-clockwise')
         button_attrs = {
             'id': f"{self.card_name}_refresh_files",
@@ -121,7 +121,7 @@ class BottleLoadForm(CollapsableCardForm):
         body = super().get_card_body()
 
         load_icon = load_svg("arrow-down-square")
-        url = reverse_lazy("core:form_btl_upload_bottles", args=(self.database, self.mission.pk,))
+        url = reverse_lazy("core:form_btl_upload_bottles", args=(self.mission.pk,))
         load_attrs = {
             'id': f"{self.card_name}_load_bottles",
             'hx-get': url,
@@ -153,12 +153,11 @@ class BottleLoadForm(CollapsableCardForm):
         body.fields.append(Field('hide_loaded', type="hidden"))
         return body
 
-    def __init__(self, mission, database=None, *args, **kwargs):
+    def __init__(self, mission, *args, **kwargs):
 
         self.mission = mission
-        self.database = database if database else self.mission._state.db
 
-        self.open_folder_url = reverse_lazy('core:form_btl_choose_bottle_dir', args=(self.database, self.mission.pk,))
+        self.open_folder_url = reverse_lazy('core:form_btl_choose_bottle_dir', args=(self.mission.pk,))
         super().__init__(card_name="bottle_load", card_title=_("Load Bottles"), *args, **kwargs)
 
         self.fields['dir_field'].label = False
@@ -185,7 +184,7 @@ class BottleLoadForm(CollapsableCardForm):
                 self.initial['dir_field'] = mission.bottle_directory
 
 
-def get_bottle_load_card(request, database, mission_id, **kwargs):
+def get_bottle_load_card(request, mission_id, **kwargs):
     context = {}
 
     initial = {}
@@ -232,8 +231,7 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
 
                 button_attrs = {
                     'class': "btn btn-danger btn-sm col-auto",
-                    'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(database, error.pk,
-                                                                                                index)),
+                    'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(error.pk, index,)),
                     'hx-target': f"#{li_error_id}",
                     'hx-confirm': _("Are you Sure?"),
                     'hx-swap': 'delete'
@@ -246,8 +244,8 @@ def get_bottle_load_card(request, database, mission_id, **kwargs):
     return bottle_load_soup
 
 
-def bottle_load_card(request, database, mission_id, **kwargs):
-    bottle_load_soup = get_bottle_load_card(request, database, mission_id, **kwargs)
+def bottle_load_card(request, mission_id, **kwargs):
+    bottle_load_soup = get_bottle_load_card(request, mission_id, **kwargs)
     first_elm = bottle_load_soup.find(recursive=False)
     form_id = first_elm.attrs['id']
     form_soup = BeautifulSoup(f'<form id="form_id_{form_id}"></form>', 'html.parser')
@@ -338,7 +336,7 @@ def load_ctd_files(mission):
     ctd.logger_notifications.info(f"Complete")
 
 
-def choose_bottle_dir(request, database, mission_id, **kwargs):
+def choose_bottle_dir(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
     if request.method == "POST" and 'dir_field' in request.POST:
         result = request.POST['dir_field']
@@ -349,17 +347,17 @@ def choose_bottle_dir(request, database, mission_id, **kwargs):
         mission.bottle_directory = result
         mission.save()
 
-    return reload_files(request, database, mission_id, **kwargs)
+    return reload_files(request, mission_id, **kwargs)
 
 
-def reload_files(request, database, mission_id, **kwargs):
-    soup = get_bottle_load_card(request, database, mission_id, collapsed=False, **kwargs)
+def reload_files(request, mission_id, **kwargs):
+    soup = get_bottle_load_card(request, mission_id, collapsed=False, **kwargs)
     response = HttpResponse(soup)
     response['HX-Trigger'] = 'update_samples, file_errors_updated'
     return response
 
 
-def upload_btl_files(request, database, mission_id, **kwargs):
+def upload_btl_files(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
     thread_name = "load_ctd_files"
@@ -369,7 +367,7 @@ def upload_btl_files(request, database, mission_id, **kwargs):
             'alert_area_id': "div_id_alert_bottle_load",
             'message': _("Loading Bottles"),
             'logger': ctd.logger_notifications.name,
-            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(database, mission_id,)),
+            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(mission_id,)),
             'hx-trigger': 'load'
         }
         alert = core.forms.websocket_post_request_alert(**attrs)
@@ -382,9 +380,9 @@ def upload_btl_files(request, database, mission_id, **kwargs):
             ctd.logger_notifications.info("Processing file %d/%d", item, counts)
             load_ctd_file(mission, file)
 
-        soup = get_bottle_load_card(request, database, mission_id, collapsed=False, **kwargs)
+        soup = get_bottle_load_card(request, mission_id, collapsed=False, **kwargs)
 
-        reload_url = reverse_lazy('core:form_btl_reload_files', args=(database, mission_id)) + "?hide_loaded=true"
+        reload_url = reverse_lazy('core:form_btl_reload_files', args=(mission_id,)) + "?hide_loaded=true"
         alert = core.forms.blank_alert(component_id="div_id_alert_bottle_load", message="Done", alert_type="success")
         div = soup.new_tag("div", id="div_id_alert_bottle_load", attrs={'hx-swap-oob': 'true'})
         div.attrs['hx-target'] = "#div_id_card_bottle_load"
@@ -400,14 +398,14 @@ def upload_btl_files(request, database, mission_id, **kwargs):
     return response
 
 
-def delete_log_file_errors(request, database, file_name):
+def delete_log_file_errors(request, file_name):
     models.FileError.objects.filter(file_name__iexact=file_name).delete()
 
     return HttpResponse()
 
 
 # ###### Bottle Load ###### #
-url_prefix = "<str:database>/bottleload"
+url_prefix = "bottleload"
 bottle_load_urls = [
     path(f'{url_prefix}/card/<int:mission_id>/', bottle_load_card, name="form_btl_card"),
 

@@ -69,15 +69,16 @@ class ElogDetails(GenericDetailView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['database'] = settings.DATABASES[self.object._state.db]['LOADED']
         context['file_config'] = elog.get_or_create_file_config()
         return context
 
 
-def hx_update_elog_config(request, database, mission_id):
+def hx_update_elog_config(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
     config = elog.get_or_create_file_config()
 
-    context = {'database': database, 'object': mission}
+    context = {'object': mission}
     if request.method == "POST":
         key = [key for key in request.POST.keys()][0]
         mapping = config.get(required_field=key)

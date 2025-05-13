@@ -21,7 +21,7 @@ class TestElogUpload(DartTestCase):
     def setUp(self) -> None:
         self.file_location = r'core/tests/sample_data/'
         self.mission = core_factory.MissionFactory(name="TestMission")
-        self.url = reverse_lazy(self.upload_elog_url, args=('default', self.mission.pk,))
+        self.url = reverse_lazy(self.upload_elog_url, args=(self.mission.pk,))
         self.client = Client()
 
     @tag('utils_elog_upload_test_elog_uplaod_missing_mid')

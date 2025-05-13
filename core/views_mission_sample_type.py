@@ -34,7 +34,7 @@ class SampleTypeDetails(GenericDetailView):
         if data_type_seq:
             initial['data_type_code'] = data_type_seq.data_type_seq
 
-        context['biochem_form'] = BioChemDataType(database=database, mission_sample_type=self.object)
+        context['biochem_form'] = BioChemDataType(mission_sample_type=self.object)
 
         context['reports'] = {key: reverse_lazy(views.reports[key], args=(database, self.object.mission.pk,)) for key in
                               views.reports.keys()}
@@ -42,7 +42,7 @@ class SampleTypeDetails(GenericDetailView):
         return context
 
 
-def sample_type_card(request, database, sample_type_id):
+def sample_type_card(request, sample_type_id):
     mission_sample_type = models.MissionSampleType.objects.get(pk=sample_type_id)
 
     sample_type_form = forms.CardForm(card_title=str(mission_sample_type), card_name="mission_sample_type")
@@ -50,8 +50,7 @@ def sample_type_card(request, database, sample_type_id):
     sample_type_soup = BeautifulSoup(sample_type_html, 'html.parser')
 
     card_body_div = sample_type_soup.find(id=sample_type_form.get_card_body_id())
-    card_body_div.attrs['hx-get'] = reverse_lazy("core:mission_sample_type_sample_list", args=(database,
-                                                                                               sample_type_id,))
+    card_body_div.attrs['hx-get'] = reverse_lazy("core:mission_sample_type_sample_list", args=(sample_type_id,))
     card_body_div.attrs['hx-trigger'] = 'load'
 
     form_soup = BeautifulSoup(f'<div id="div_id_{sample_type_form.get_card_name()}"></div>', 'html.parser')
@@ -68,11 +67,10 @@ def delete_config(request, config_id):
 
 
 # ###### Mission Sample ###### #
-url_prefix = "<str:database>/sampletype"
 mission_sample_type_urls = [
-    path(f'{url_prefix}/<int:pk>/', SampleTypeDetails.as_view(), name="mission_sample_type_details"),
+    path(f'<str:database>/sampletype/<int:pk>/', SampleTypeDetails.as_view(), name="mission_sample_type_details"),
 
-    path(f'{url_prefix}/card/<int:sample_type_id>/', sample_type_card, name="mission_sample_type_card"),
+    path(f'sampletype/card/<int:sample_type_id>/', sample_type_card, name="mission_sample_type_card"),
     path(f'sampletype/config/<int:config_id>/', delete_config, name="mission_sample_type_delete_config"),
 
 ]

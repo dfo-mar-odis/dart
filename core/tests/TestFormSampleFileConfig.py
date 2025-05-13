@@ -37,7 +37,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
     @tag('form_sample_config_test_form_exists')
     def test_form_exists(self):
-        url = reverse("core:form_sample_config_load", args=('default',)) + f"?mission={self.mission.pk}"
+        url = reverse("core:form_sample_config_load") + f"?mission={self.mission.pk}"
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -66,7 +66,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # first action is for a user to choose a file, which should send back an 'alert alert-info' element
         # stating that loading is taking place and will post the file to the 'load_sample_config' url
 
-        url = reverse("core:form_sample_config_load", args=('default',))
+        url = reverse("core:form_sample_config_load")
         response = self.client.get(url + "?sample_file=''")
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -84,7 +84,7 @@ class TestSampleFileConfiguration(DartTestCase):
     def test_input_file_no_config(self):
         # provided a file, if no configs are available the div_id_sample_type_holder
         # tag should contain a message that no configs were found and an empty div_id_loaded_samples_list
-        url = reverse("core:form_sample_config_load", args=('default',))
+        url = reverse("core:form_sample_config_load")
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
 
@@ -113,7 +113,7 @@ class TestSampleFileConfiguration(DartTestCase):
         setting = settings_factory.SampleTypeConfigFactory(file_type='xlsx', tab=0, skip=9,
                                                            sample_field="sample", value_field="o2_concentration(ml/l)")
 
-        url = reverse("core:form_sample_config_load", args=('default',))
+        url = reverse("core:form_sample_config_load")
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk})
 
@@ -140,7 +140,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # When the 'add' sample_type button is clicked an alert dialog should be swapped in indicating that a loading
         # operation is taking place, this is a get request so no file is needed. The alert will then call
         # new_sample_config with a post request to retrieve the details
-        url = reverse("core:form_sample_config_new", args=('default',))
+        url = reverse("core:form_sample_config_new")
 
         response = self.client.get(url)
 
@@ -150,8 +150,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         self.assertIsNotNone(message)
         self.assertEqual(message.attrs['hx-trigger'], 'load')
-        self.assertEqual(message.attrs['hx-post'], reverse("core:form_sample_config_new",
-                                                            args=('default',)))
+        self.assertEqual(message.attrs['hx-post'], reverse("core:form_sample_config_new"))
 
         alert = message.find('div')
         self.assertEqual(alert.text, "Loading")
@@ -160,7 +159,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # When the 'add' sample_type button is clicked if no file has been selected a message should be
         # swapped into the div_id_sample_type_holder tag saying no file has been selected
 
-        url = reverse("core:form_sample_config_new", args=('default',))
+        url = reverse("core:form_sample_config_new")
 
         # anything that requires access to a file will need to be a post method
         response = self.client.post(url, {'sample_file': ''})
@@ -181,12 +180,12 @@ class TestSampleFileConfiguration(DartTestCase):
         file_initial = {"skip": 10, "tab": 0}
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             expected_config_form = form_sample_type_config.SampleTypeConfigForm(
-                'default', file_type="xlsx", file_data=fp, initial=file_initial
+                file_type="xlsx", file_data=fp, initial=file_initial
             )
 
         expected_form_html = render_crispy_form(expected_config_form)
 
-        url = reverse("core:form_sample_config_new", args=('default',))
+        url = reverse("core:form_sample_config_new")
 
         # anything that requres accss to a file will need to be a post method
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
@@ -200,7 +199,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # After the form has been filled out and the user clicks the submit button the 'save_sample_config' url
         # should be called with a get request to get the saving alert
 
-        url = reverse("core:form_sample_config_save", args=('default',))
+        url = reverse("core:form_sample_config_save")
 
         response = self.client.get(url)
 
@@ -223,7 +222,7 @@ class TestSampleFileConfiguration(DartTestCase):
         file_type = 'xlsx'
         header = 9
 
-        url = reverse("core:form_sample_config_save", args=('default',))
+        url = reverse("core:form_sample_config_save")
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'file_type': file_type, 'tab': 0, 'skip': header,
@@ -253,7 +252,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         expected_sample_type_load_form_id = f'div_id_sample_config_card_{1}'
 
-        url = reverse("core:form_sample_config_save", args=('default',))
+        url = reverse("core:form_sample_config_save")
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'mission_id': self.mission.pk,
@@ -296,11 +295,11 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type=file_type,
         )
 
-        url = reverse("core:form_sample_config_new", args=('default', oxy_sample_type.pk,))
+        url = reverse("core:form_sample_config_new", args=(oxy_sample_type.pk,))
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             expected_config_form = form_sample_type_config.SampleTypeConfigForm(
-                database='default', file_type=file_type, file_data=fp, instance=oxy_sample_type_config
+                file_type=file_type, file_data=fp, instance=oxy_sample_type_config
             )
 
         expected_form_html = render_crispy_form(expected_config_form)
@@ -349,7 +348,7 @@ class TestSampleFileConfiguration(DartTestCase):
     def test_edit_sample_type_save_message(self):
         # if the new_sample_config url contains an argument with a 'config_id' the form should load with the
         # existing config and pass back a saving message pointing to the "sample_type/hx/save/" url
-        url = reverse("core:form_sample_config_save", args=('default',))
+        url = reverse("core:form_sample_config_save")
 
         response = self.client.get(url)
 
@@ -383,7 +382,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:form_sample_config_save", args=('default', oxy_sample_type_config.pk,))
+        url = reverse("core:form_sample_config_save", args=(oxy_sample_type_config.pk,))
 
         # anything that requires access to a file will need to be a post method
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
@@ -416,7 +415,7 @@ class TestSampleFileConfiguration(DartTestCase):
             file_type='xlsx',
         )
 
-        url = reverse("core:mission_samples_load_samples", args=('default',))
+        url = reverse("core:mission_samples_load_samples")
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -453,7 +452,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # SampleTypeConfigForm should be returned with the sample_type dropdown replaced
         # with a SampleTypeForm and a button to submit the new sample type
 
-        url = reverse("core:form_sample_config_new", args=('default',))
+        url = reverse("core:form_sample_config_new")
 
         response = self.client.get(url, {'sample_type': -1})
 
@@ -475,7 +474,7 @@ class TestSampleFileConfiguration(DartTestCase):
             long_name='Oxygen'
         )
 
-        url = reverse("core:form_sample_config_new", args=('default',))
+        url = reverse("core:form_sample_config_new")
 
         response = self.client.get(url, {'sample_type': oxy_sample_type.pk})
 
@@ -493,7 +492,7 @@ class TestSampleFileConfiguration(DartTestCase):
         # a SampleTypeConfigForm with the sample_type set to the new sample_type object that was
         # just created.
 
-        url = reverse("core:form_sample_config_save", args=('default',))
+        url = reverse("core:form_sample_config_save")
 
         with open(self.sample_oxy_xlsx_file, 'rb') as fp:
             response = self.client.post(url, {'sample_file': fp, 'new_sample': '',

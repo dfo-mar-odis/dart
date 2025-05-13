@@ -24,7 +24,7 @@ class TestFormBottleLoad(DartTestCase):
         # card
         mission = core_factory.MissionFactory()
 
-        url = reverse("core:form_btl_card", args=('default', mission.pk))
+        url = reverse("core:form_btl_card", args=(mission.pk,))
 
         response = self.client.get(url)
 
@@ -47,7 +47,7 @@ class TestFormBottleLoad(DartTestCase):
 
         mission = core_factory.MissionFactory(bottle_directory=btl_directory)
 
-        url = reverse("core:form_btl_card", args=('default', mission.pk))
+        url = reverse("core:form_btl_card", args=(mission.pk,))
 
         response = self.client.get(url)
 
@@ -72,7 +72,7 @@ class TestFormBottleLoad(DartTestCase):
 
         mission = core_factory.MissionFactory(bottle_directory=btl_directory)
 
-        url = reverse("core:form_btl_reload_files", args=('default', mission.pk))
+        url = reverse("core:form_btl_reload_files", args=(mission.pk,))
         response = self.client.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
 
@@ -89,7 +89,7 @@ class TestFormBottleLoad(DartTestCase):
         btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
         mission = core_factory.MissionFactory(bottle_directory=btl_directory)
 
-        url = reverse("core:form_btl_reload_files", args=('default', mission.pk))
+        url = reverse("core:form_btl_reload_files", args=(mission.pk,))
         response = self.client.get(url)
         soup = BeautifulSoup(response.content, "html.parser")
 
@@ -103,7 +103,7 @@ class TestFormBottleLoad(DartTestCase):
         btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
         mission = core_factory.MissionFactory(bottle_directory=btl_directory)
 
-        url = reverse("core:form_btl_reload_files", args=('default', mission.pk))
+        url = reverse("core:form_btl_reload_files", args=(mission.pk,))
         response = self.client.get(url, {'hide_loaded': 'true'})
         soup = BeautifulSoup(response.content, "html.parser")
 
@@ -117,7 +117,7 @@ class TestFormBottleLoad(DartTestCase):
         btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
         mission = core_factory.MissionFactory(bottle_directory=btl_directory)
 
-        url = reverse("core:form_btl_upload_bottles", args=('default', mission.pk))
+        url = reverse("core:form_btl_upload_bottles", args=(mission.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -144,7 +144,7 @@ class TestFormBottleLoad(DartTestCase):
                                               end_date=datetime.strptime("2022-10-20", "%Y-%m-%d"))
         event = core_factory.CTDEventFactory(mission=mission, event_id=1)
 
-        url = reverse("core:form_btl_upload_bottles", args=('default', mission.pk))
+        url = reverse("core:form_btl_upload_bottles", args=(mission.pk,))
         response = self.client.post(url, {'files': [btl_file]})
         self.assertIn('Hx-Trigger', response.headers)
         self.assertEqual(response.headers['Hx-Trigger'], 'update_samples')
@@ -159,7 +159,7 @@ class TestFormBottleLoad(DartTestCase):
         self.assertEqual(root.attrs['hx-trigger'], 'load')
 
         self.assertIn('hx-get', root.attrs)
-        url = reverse('core:form_btl_reload_files', args=('default', mission.pk)) + "?hide_loaded=true"
+        url = reverse('core:form_btl_reload_files', args=(mission.pk,)) + "?hide_loaded=true"
         self.assertEqual(root.attrs['hx-get'], url)
 
         self.assertIn('hx-target', root.attrs)
@@ -173,7 +173,7 @@ class TestFormBottleLoad(DartTestCase):
 
         btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
         mission = core_factory.MissionFactory(bottle_directory=os.path.join("c:", "nowhere"))
-        url = reverse("core:form_btl_choose_bottle_dir", args=('default', mission.pk))
+        url = reverse("core:form_btl_choose_bottle_dir", args=(mission.pk,))
         response = self.client.post(url, {"dir_field": btl_directory})
 
         soup = BeautifulSoup(response.content, 'html.parser')

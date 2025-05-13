@@ -40,7 +40,7 @@ class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
     @tag("template_mission_sample_type_test_initial_template")
     def test_initial_template(self):
 
-        biochem_data_type_form = BioChemDataType('default', self.mission_sample_type)
+        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
         context = {
             'database': 'default',
             'mission_sample_type': self.mission_sample_type,
@@ -63,7 +63,7 @@ class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
     def test_initial_template_delete_btn(self):
         # the delete sample type button should point to the delete url in the Form_mission_sample_type module
         # it should have an hx-confirm on it to make sure the user isn't accidentally deleting the sample type
-        biochem_data_type_form = BioChemDataType('default', self.mission_sample_type)
+        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
         context = {
             'database': 'default',
             'mission_sample_type': self.mission_sample_type,
@@ -86,7 +86,7 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
         # provided a database and the mission_sample_type the BioChemDataType form should
         # set the default values on the form for the biochem data type, and start/end bottle ids
 
-        biochem_data_type_form = BioChemDataType('default', self.mission_sample_type)
+        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
 
         self.assertEqual(biochem_data_type_form.fields['start_sample'].initial, self.start_bottle)
         self.assertEqual(biochem_data_type_form.fields['end_sample'].initial, self.end_bottle)
@@ -106,7 +106,7 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
             'end_sample': (self.end_bottle - 2),
             'data_type_code': 90000000
         }
-        biochem_data_type_form = BioChemDataType('default', self.mission_sample_type, initial=initial)
+        biochem_data_type_form = BioChemDataType(self.mission_sample_type, initial=initial)
 
         self.assertEqual(biochem_data_type_form.fields['start_sample'].initial, initial['start_sample'])
         self.assertEqual(biochem_data_type_form.fields['end_sample'].initial, initial['end_sample'])
@@ -143,7 +143,7 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         table_card = soup.find(id="div_id_data_display")
         self.assertIsNotNone(table_card)
 
-        url = reverse("core:mission_sample_type_card", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:mission_sample_type_card", args=(self.mission_sample_type.pk,))
         self.assertIn('hx-get', table_card.attrs)
         self.assertEqual(table_card.attrs['hx-get'], url)
 
@@ -155,7 +155,7 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         # give a database and a mission_sample_type id, calling the set row url as a get request should
         # return a save/load alert that contains an hx-post url calling the same url on hx-trigger='load'
 
-        url = reverse("core:form_mission_sample_type_set_row", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:form_mission_sample_type_set_row", args=(self.mission_sample_type.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -180,24 +180,24 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
             'data_type_code': 90000001
         }
 
-        url = reverse("core:form_mission_sample_type_set_row", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:form_mission_sample_type_set_row", args=(self.mission_sample_type.pk,))
         response = self.client.post(url, post_vars)
 
         # the start and end bottles should be unchanged, they should be none, because the mission_sample_type.data_type
         # will be used for them for the BioChem upload
-        start_sample = core_models.DiscreteSampleValue.objects.using('default').get(
+        start_sample = core_models.DiscreteSampleValue.objects.get(
             sample__bottle__bottle_id=self.start_bottle)
         self.assertEqual(start_sample.datatype, None)
 
-        end_sample = core_models.DiscreteSampleValue.objects.using('default').get(
+        end_sample = core_models.DiscreteSampleValue.objects.get(
             sample__bottle__bottle_id=self.end_bottle)
         self.assertEqual(end_sample.datatype, None)
 
-        start_sample = core_models.DiscreteSampleValue.objects.using('default').get(
+        start_sample = core_models.DiscreteSampleValue.objects.get(
             sample__bottle__bottle_id=post_vars['start_sample'])
         self.assertEqual(start_sample.datatype.pk, post_vars['data_type_code'])
 
-        end_sample = core_models.DiscreteSampleValue.objects.using('default').get(
+        end_sample = core_models.DiscreteSampleValue.objects.get(
             sample__bottle__bottle_id=post_vars['end_sample'])
         self.assertEqual(end_sample.datatype.pk, post_vars['data_type_code'])
 
@@ -210,7 +210,7 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         # give a database and a mission_sample_type id, calling the set mission url as a get request should
         # return a save/load alert that contains an hx-post url calling the same url on hx-trigger='load'
 
-        url = reverse("core:form_mission_sample_type_set_mission", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:form_mission_sample_type_set_mission", args=(self.mission_sample_type.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -233,10 +233,10 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
             'data_type_code': 90000001
         }
 
-        url = reverse("core:form_mission_sample_type_set_mission", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:form_mission_sample_type_set_mission", args=(self.mission_sample_type.pk,))
         response = self.client.post(url, post_vars)
 
-        sample_type = core_models.MissionSampleType.objects.using('default').get(pk=self.mission_sample_type.pk)
+        sample_type = core_models.MissionSampleType.objects.get(pk=self.mission_sample_type.pk)
         self.assertEqual(sample_type.datatype.pk, post_vars['data_type_code'])
 
         # the function call itself should return a reloaded sample list
@@ -247,7 +247,7 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
     def test_delete_sample_type_get(self):
         # provided a database and a mission_sample_type id, this get request should return a save/load alert
         # with hx-post=url and hx-trigger='load'
-        url = reverse("core:form_mission_sample_type_delete", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:form_mission_sample_type_delete", args=(self.mission_sample_type.pk,))
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -268,13 +268,13 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         # All sample view (A.K.A view_mission_sample.py) using an HX-Redirect
         expected_redirect = reverse("core:mission_samples_sample_details",
                                     args=('default', self.mission_sample_type.mission.pk))
-        url = reverse("core:form_mission_sample_type_delete", args=('default', self.mission_sample_type.pk))
+        url = reverse("core:form_mission_sample_type_delete", args=(self.mission_sample_type.pk,))
         response = self.client.post(url)
 
-        samples = core_models.Sample.objects.using('default').filter(type=self.mission_sample_type)
+        samples = core_models.Sample.objects.filter(type=self.mission_sample_type)
         self.assertFalse(samples.exists())
 
-        sample_type = core_models.MissionSampleType.objects.using('default').filter(pk=self.mission_sample_type.pk)
+        sample_type = core_models.MissionSampleType.objects.filter(pk=self.mission_sample_type.pk)
         self.assertFalse(sample_type.exists())
 
         self.assertIn('Hx-Redirect', response.headers)

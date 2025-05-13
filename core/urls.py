@@ -16,9 +16,8 @@ urlpatterns = [
     path('mission/<str:database>/update/<int:pk>/', views.MissionUpdateView.as_view(), name="mission_edit"),
 
     # ###### Elog configuration ###### #
-    path(f'{url_prefix}/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
-    path(f'{url_prefix}/update/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
-
+    path(f'elog/<int:pk>/', views.ElogDetails.as_view(), name="elog_config"),
+    path(f'elog/update/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
 ]
 
 urlpatterns.extend(views_mission_event.mission_event_urls)
