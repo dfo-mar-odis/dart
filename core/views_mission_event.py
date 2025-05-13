@@ -58,10 +58,9 @@ class ValidationEventCard(forms.CardForm):
         header.fields[0].fields.append(buttons)
 
         icon = load_svg('x-square')
-        database = self.event._state.db
         attrs = {
             'title': _("Remove Error"),
-            'hx-delete': reverse_lazy('core:mission_event_delete_event_errors', args=(database, self.event.pk,)),
+            'hx-delete': reverse_lazy('core:mission_event_delete_event_errors', args=(self.event.pk,)),
             'hx-target': f"#{self.get_card_id()}",
             'hx-confirm': _("Are you Sure?"),
             'hx-swap': 'delete'
@@ -77,7 +76,6 @@ class ValidationEventCard(forms.CardForm):
 
         soup = BeautifulSoup("", "html.parser")
         soup.append(ul := soup.new_tag('ul', attrs={'class': "list-group"}))
-        database = self.event._state.db
         for error in validation_errors:
             li_error_id = f'li_error_{error.pk}'
             ul.append(li := soup.new_tag('li', attrs={'class': "list-group-item", 'id': li_error_id}))
@@ -88,7 +86,7 @@ class ValidationEventCard(forms.CardForm):
 
             button_attrs = {
                 'class': "btn btn-danger btn-sm col-auto",
-                'hx-delete': reverse_lazy('core:mission_event_delete_event_error', args=(database, error.pk,)),
+                'hx-delete': reverse_lazy('core:mission_event_delete_event_error', args=(error.pk,)),
                 'hx-target': f"#{li_error_id}",
                 'hx-confirm': _("Are you Sure?"),
                 'hx-swap': 'delete'
@@ -102,7 +100,6 @@ class ValidationEventCard(forms.CardForm):
 
     def __init__(self, event, database=None, *args, **kwargs):
         self.event = event
-        self.database = database if database else event._state.db
         title = _("Event") + f" {event.event_id} : {event.mission.start_date} - {event.mission.end_date}"
         if event.station:
             title += f": {event.station}"
@@ -124,7 +121,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         header.fields[0].fields.append(buttons)
 
         btn_attrs = {
-            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.database, self.mission.pk,)),
+            'hx-get': reverse_lazy("core:mission_events_revalidate", args=(self.mission.pk,)),
             'hx-swap': 'none',
             'title': _("Re-run event validation")
         }
@@ -156,7 +153,6 @@ class ValidateEventsCard(forms.CollapsableCardForm):
 
     def __init__(self, mission, database=None, *args, **kwargs):
         self.mission = mission
-        self.database = database if database else mission._state.db
 
         super().__init__(card_name="event_validation", card_title=_("Event Validation"), *args, **kwargs)
 
@@ -211,10 +207,9 @@ class ValidationFileCard(forms.CardForm):
         header.fields[0].fields.append(buttons)
 
         icon = load_svg('x-square')
-        database = self.mission._state.db
         attrs = {
             'title': _("Remove Error"),
-            'hx-delete': reverse_lazy('core:mission_event_delete_log_file_errors', args=(database, self.file_name,)),
+            'hx-delete': reverse_lazy('core:mission_event_delete_log_file_errors', args=(self.file_name,)),
             'hx-target': f"#{self.get_card_id()}",
             'hx-confirm': _("Are you Sure?"),
             'hx-swap': 'delete'
@@ -269,7 +264,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         super().__init__(card_name="file_validation", card_title=_("File Issues"), *args, **kwargs)
 
 
-def get_validation_card(request, database, mission_id, **kwargs):
+def get_validation_card(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
     validation_card = ValidateEventsCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
@@ -281,7 +276,7 @@ def get_validation_card(request, database, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
-def get_file_validation_card(request, database, mission_id, **kwargs):
+def get_file_validation_card(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
     validation_card = ValidateFileCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
@@ -293,7 +288,7 @@ def get_file_validation_card(request, database, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
-def revalidate_events(request, database, mission_id):
+def revalidate_events(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == "GET":
@@ -303,23 +298,23 @@ def revalidate_events(request, database, mission_id):
             'logger': validation.logger_notifications.name,
             'message': _("Revalidating"),
             'hx-trigger': 'load',
-            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(database, mission_id,)),
+            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(mission_id,)),
         }
         return HttpResponse(forms.websocket_post_request_alert(**attrs))
 
     validation.validate_mission(mission)
-    response = get_validation_card(request, database, mission_id, swap=True, collapsed=False)
+    response = get_validation_card(request, mission_id, swap=True, collapsed=False)
     response['HX-Trigger'] = 'event_updated'
     return response
 
 
-def delete_log_file_errors(request, database, file_name):
+def delete_log_file_errors(request, file_name):
     models.FileError.objects.filter(file_name__iexact=file_name).delete()
 
     return HttpResponse()
 
 
-def delete_log_file_error(request, database, error_id, uuid):
+def delete_log_file_error(request, error_id, uuid):
     error = models.FileError.objects.get(id=error_id)
     file_name = error.file_name
     error.delete()
@@ -334,13 +329,13 @@ def delete_log_file_error(request, database, error_id, uuid):
     return HttpResponse(soup)
 
 
-def delete_event_errors(request, database, event_id):
+def delete_event_errors(request, event_id):
     models.ValidationError.objects.filter(event_id=event_id).delete()
 
     return HttpResponse()
 
 
-def delete_event_error(request, database, error_id):
+def delete_event_error(request, error_id):
     error = models.ValidationError.objects.get(id=error_id)
     event_id = error.event.pk
     error.delete()
@@ -359,16 +354,14 @@ path_prefix = '<str:database>/mission'
 mission_event_urls = [
     path(f'{path_prefix}/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
     path(f'{path_prefix}/event/<int:pk>/<int:mission_id>/', EventDetails.as_view(), name="mission_events_details"),
-    path(f'{path_prefix}/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
-    path(f'{path_prefix}/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
-    path(f'{path_prefix}/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
+    path(f'mission/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
+    path(f'mission/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
+    path(f'mission/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
 
-    path(f'{path_prefix}/event/log/<str:file_name>/', delete_log_file_errors,
-         name="mission_event_delete_log_file_errors"),
-    path(f'{path_prefix}/event/log/error/<int:error_id>/<int:uuid>/', delete_log_file_error,
-         name="mission_event_delete_log_file_error"),
-    path(f'{path_prefix}/event/event/<int:event_id>/', delete_event_errors, name="mission_event_delete_event_errors"),
-    path(f'{path_prefix}/event/error/<int:error_id>/', delete_event_error, name="mission_event_delete_event_error"),
+    path(f'mission/event/log/<str:file_name>/', delete_log_file_errors, name="mission_event_delete_log_file_errors"),
+    path(f'mission/event/log/error/<int:error_id>/<int:uuid>/', delete_log_file_error, name="mission_event_delete_log_file_error"),
+    path(f'mission/event/event/<int:event_id>/', delete_event_errors, name="mission_event_delete_event_errors"),
+    path(f'mission/event/error/<int:error_id>/', delete_event_error, name="mission_event_delete_event_error"),
 ]
 
 mission_event_urls += form_event_details.event_detail_urls

@@ -19,12 +19,13 @@ from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
+from django.conf import settings
 
 from biochem import upload
 from biochem import models as biochem_models
 
-from core import forms, form_biochem_database, form_biochem_discrete, validation
-from core.form_biochem_database import get_mission_batch_id
+from core import forms, form_biochem_database, form_biochem_discrete
+
 from core import models
 from core import views
 from core.form_sample_type_config import process_file
@@ -42,7 +43,7 @@ logger = logging.getLogger('dart')
 user_logger = logger.getChild('user')
 
 
-def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Mission, sampletype_id: int):
+def get_sensor_table_button(soup: BeautifulSoup, mission: models.Mission, sampletype_id: int):
     sampletype = mission.mission_sample_types.get(pk=sampletype_id)
 
     sensor: QuerySet[models.BioChemUpload] = sampletype.uploads.all()
@@ -78,6 +79,7 @@ def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Missi
             else:
                 button_colour = 'btn-primary'
 
+    database = settings.DATABASES[mission._state.db]['LOADED'] if 'LOADED' in settings.DATABASES[mission._state.db] else 'default'
     button = soup.new_tag("a")
     button.string = f'{sampletype.name}'
     button.attrs['id'] = f'button_id_sample_type_details_{sampletype.pk}'
@@ -89,7 +91,7 @@ def get_sensor_table_button(soup: BeautifulSoup, database, mission: models.Missi
     return button
 
 
-def get_sensor_table_upload_checkbox(soup: BeautifulSoup, database,
+def get_sensor_table_upload_checkbox(soup: BeautifulSoup,
                                      mission: models.Mission,
                                      sample_type_id):
     sample_type = mission.mission_sample_types.get(pk=sample_type_id)
@@ -105,7 +107,7 @@ def get_sensor_table_upload_checkbox(soup: BeautifulSoup, database,
     check.attrs['hx-swap'] = 'outerHTML'
     check.attrs['hx-target'] = f"#{check.attrs['id']}"
     check.attrs['hx-post'] = reverse_lazy('core:mission_samples_add_sensor_to_upload',
-                                          args=(database, mission.pk, sample_type.pk,))
+                                          args=(mission.pk, sample_type.pk,))
 
     if enabled:
         if sample_type.uploads.exists() and sample_type.uploads.first().status != models.BioChemUploadStatus.delete:
@@ -141,7 +143,7 @@ class SampleDetails(GenericDetailView):
         return context
 
 
-def get_file_error_card(request, database, mission_id):
+def get_file_error_card(request, mission_id):
     soup = BeautifulSoup("", "html.parser")
 
     mission = models.Mission.objects.get(pk=mission_id)
@@ -173,7 +175,7 @@ def get_file_error_card(request, database, mission_id):
                 div.append(msg_div := soup.new_tag('div'))
                 msg_div.string = msg
 
-            url = reverse_lazy('core:mission_samples_delete_file_error', args=(database, error.pk))
+            url = reverse_lazy('core:mission_samples_delete_file_error', args=(error.pk,))
             btn_attrs = {
                 'class': 'btn btn-danger btn-sm col-auto',
                 'hx-delete': url,
@@ -194,14 +196,14 @@ def get_file_error_card(request, database, mission_id):
     return HttpResponse(soup)
 
 
-def load_samples(request, database):
+def load_samples(request):
     # Either delete a file configuration or load the samples from the sample file
 
     if request.method == "GET":
 
         soup = BeautifulSoup(f'', 'html.parser')
 
-        url = reverse_lazy("core:mission_samples_load_samples", args=(database,))
+        url = reverse_lazy("core:mission_samples_load_samples")
         attrs = {
             'alert_area_id': f'div_id_sample_type_holder',
             'message': _("Loading"),
@@ -295,7 +297,7 @@ def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
     return column
 
 
-def list_samples(request, database, mission_id):
+def list_samples(request, mission_id):
     page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
     page_start = page_limit * page
@@ -341,7 +343,7 @@ def list_samples(request, database, mission_id):
         available_sensors = [c[0] for c in df.columns.values]
         sensor_order = sensors.order_by('is_sensor', 'priority', 'pk')
         df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensor_order if sensor.pk in available_sensors]]
-        table_soup = format_all_sensor_table(df, database, mission)
+        table_soup = format_all_sensor_table(df, mission)
     except Exception as ex:
         logger.exception(ex)
 
@@ -357,7 +359,7 @@ def list_samples(request, database, mission_id):
     table_body = table.find('tbody')
     table_body.attrs['id'] = "tbody_id_sample_table"
 
-    url = reverse_lazy('core:mission_samples_sample_list', args=(database, mission.pk,))
+    url = reverse_lazy('core:mission_samples_sample_list', args=(mission.pk,))
     last_tr = table_body.find_all('tr')[-2]
     last_tr.attrs['hx-target'] = '#tbody_id_sample_table'
     last_tr.attrs['hx-trigger'] = 'intersect once'
@@ -380,7 +382,7 @@ def list_samples(request, database, mission_id):
     return response
 
 
-def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission) -> BeautifulSoup:
+def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> BeautifulSoup:
     # start by replacing nan values with '---'
     df.fillna('---', inplace=True)
 
@@ -438,7 +440,7 @@ def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission)
 
         sampletype_id = int(column.string)
 
-        button = get_sensor_table_button(soup, database, mission, sampletype_id)
+        button = get_sensor_table_button(soup, mission, sampletype_id)
 
         # clear the column string and add the button instead
         column.string = ''
@@ -448,7 +450,7 @@ def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission)
         upload = soup.new_tag('th')
         upload.attrs = column.attrs
 
-        check = get_sensor_table_upload_checkbox(soup, database, mission, sampletype_id)
+        check = get_sensor_table_upload_checkbox(soup, mission, sampletype_id)
         upload.append(check)
         upload_row.append(upload)
 
@@ -458,11 +460,11 @@ def format_all_sensor_table(df: pd.DataFrame, database, mission: models.Mission)
     return soup
 
 
-def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
+def add_sensor_to_upload(request, mission_id, sensor_id, **kwargs):
     soup = BeautifulSoup('', 'html.parser')
     mission = models.Mission.objects.get(pk=mission_id)
     if request.method == 'POST':
-        button = get_sensor_table_button(soup, database, mission, sensor_id)
+        button = get_sensor_table_button(soup, mission, sensor_id)
         button.attrs['hx-swap-oob'] = 'true'
 
         upload_sensors: QuerySet[models.BioChemUpload] = \
@@ -481,7 +483,7 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
                 else:
                     sensor.delete()
 
-        check = get_sensor_table_upload_checkbox(soup, database, mission, sensor_id)
+        check = get_sensor_table_upload_checkbox(soup, mission, sensor_id)
         soup.append(check)
         soup.append(button)
 
@@ -496,11 +498,9 @@ def add_sensor_to_upload(request, database, mission_id, sensor_id, **kwargs):
     return Http404("You shouldn't be here")
 
 
-def biochem_upload_card(request, database, mission_id):
-    # upload_url = reverse_lazy("core:mission_samples_upload_biochem", args=(database, mission_id,))
-    # download_url = reverse_lazy("core:mission_samples_download_biochem", args=(database, mission_id,))
+def biochem_upload_card(request, mission_id):
 
-    button_url = reverse_lazy('core:mission_samples_update_bio_chem_buttons', args=(database, mission_id))
+    button_url = reverse_lazy('core:mission_samples_update_bio_chem_buttons', args=(mission_id,))
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_card_wrapper"))
@@ -510,7 +510,7 @@ def biochem_upload_card(request, database, mission_id):
     # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
     biochem_card_wrapper.attrs['hx-swap'] = 'none'
 
-    form_soup = form_biochem_database.get_database_connection_form(request, database, mission_id)
+    form_soup = form_biochem_database.get_database_connection_form(request, mission_id)
     biochem_card_wrapper.append(form_soup)
 
     responce = HttpResponse(soup)
@@ -518,7 +518,7 @@ def biochem_upload_card(request, database, mission_id):
     return responce
 
 
-def biochem_batches_card(request, database, mission_id):
+def biochem_batches_card(request, mission_id):
 
     # The first time we get into this function will be a GET request from the mission_samples.html template asking
     # to put the UI component on the web page.
@@ -527,7 +527,7 @@ def biochem_batches_card(request, database, mission_id):
     # request that should update the Batch selection drop down and then fire a trigger to clear the tables
 
     soup = BeautifulSoup('', 'html.parser')
-    form_soup = form_biochem_discrete.get_batches_form(request, database, mission_id)
+    form_soup = form_biochem_discrete.get_batches_form(request, mission_id)
 
     if request.method == "POST":
         batch_div = form_soup.find('div', {"id": "div_id_selected_batch"})
@@ -547,105 +547,7 @@ def biochem_batches_card(request, database, mission_id):
     biochem_card_wrapper.append(form_soup)
     return HttpResponse(soup)
 
-
-# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
-def sample_data_upload(database, mission: models.Mission, uploader: str, batch_id: int):
-    # clear previous errors if there were any from the last upload attempt
-    mission.errors.filter(type=models.ErrorType.biochem).delete()
-    models.Error.objects.filter(mission=mission, type=models.ErrorType.biochem).delete()
-
-    # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
-    user_logger.info(_("Validating Sensor/Sample Datatypes"))
-    samples_types_for_upload = [bcupload.type for bcupload in
-                                models.BioChemUpload.objects.filter(type__mission=mission)]
-
-    # Todo: I'm running the standard DART based event/data validation here, but we probably should be running the
-    #  BioChem Validation from core.form_validation_biochem.run_biochem_validation()
-    errors = validation.validate_samples_for_biochem(mission=mission, sample_types=samples_types_for_upload)
-
-    if errors:
-        # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
-        user_logger.info(_("Datatypes missing see errors"))
-        models.Error.objects.bulk_create(errors)
-
-    # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_d_data(mission, uploader, batch_id)
-    form_biochem_database.upload_bcd_d_data(mission, uploader, batch_id)
-
-    return batch_id
-
-
-# TODO: Remove this function once testing is complete for refactoring it to the form_biochem_discrete module
-def upload_samples(request, database, mission_id):
-    mission = models.Mission.objects.get(pk=mission_id)
-
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(div := soup.new_tag('div'))
-    div.attrs['id'] = "div_id_biochem_alert_biochem_db_details"
-    div.attrs['hx-swap-oob'] = 'true'
-
-    # are we connected?
-    if not form_biochem_database.is_connected():
-        alert_soup = forms.blank_alert("div_id_biochem_alert", _("Not Connected"), alert_type="danger")
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    # do we have an uploader?
-    alert_soup = form_biochem_database.confirm_uploader(request)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    try:
-        uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
-            request.POST['uploader'] if 'uploader' in request.POST else "N/A"
-
-        batch_id = get_mission_batch_id()
-        biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
-                                                                        username=uploader,
-                                                                        batch_seq=batch_id)
-
-        bc_statn_data_errors = []
-        # user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
-        # bc_statn_data_errors = run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
-
-        sample_data_upload(database, mission, uploader, batch_id)
-
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'success',
-            'message': _("Thank you for uploading"),
-        }
-        if bc_statn_data_errors:
-            bcd_rows = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
-            attrs['alert_type'] = 'warning'
-            attrs['message'] = _("Errors Present in Biochem Validation for batch") + f" : {batch_id}"
-            for error in bc_statn_data_errors:
-                err = biochem_models.Bcerrorcodes.objects.using('biochem').get(error_code=error[3])
-                data = bcd_rows.objects.using('biochem').get(dis_data_num=error[1])
-                attrs['message'] += f"\n{err.long_desc}\n- {data}"
-
-    except Exception as e:
-        logger.exception(e)
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': str(e),
-        }
-
-    alert_soup = forms.blank_alert(**attrs)
-    div.append(alert_soup)
-    response = HttpResponse(soup)
-    response['HX-Trigger'] = 'update_samples, biochem_db_connect'
-    return response
-
-
-def download_samples(request, database, mission_id):
+def download_samples(request, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
     div.attrs = {
@@ -673,11 +575,10 @@ def download_samples(request, database, mission_id):
         request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     logger.info(f"Using uploader: {uploader}")
-    batch_id = 1
 
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch_name=batch_id)
+    create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
 
     logger.info(f"Created {len(create)} BCD rows")
 
@@ -716,8 +617,7 @@ def download_samples(request, database, mission_id):
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
-    create, update, fields = upload.get_bcd_d_rows(database=database, uploader=uploader, samples=discrete_samples,
-                                                   batch_name=batch_id)
+    create = upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
 
     bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
 
@@ -758,7 +658,7 @@ def download_samples(request, database, mission_id):
     return HttpResponse(soup)
 
 
-def get_biochem_buttons(request, database, mission_id):
+def get_biochem_buttons(request, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     soup.append(button_area := soup.new_tag('div'))
     button_area.attrs['id'] = form_biochem_database.get_biochem_additional_button_id()
@@ -771,60 +671,40 @@ def get_biochem_buttons(request, database, mission_id):
     download_button.attrs['class'] = 'btn btn-sm btn-primary'
     download_button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
     download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_download_biochem",
-                                                   args=(database, mission_id))
+                                                   args=(mission_id,))
     download_button.attrs['hx-swap'] = 'none'
-
-    # TODO: This now belongs to the form_biochem_discrete and form_biochem_plankton modules
-    #       Remove when testing is complete
-    # icon = BeautifulSoup(load_svg('database-add'), 'html.parser').svg
-    # button_area.append(download_button := soup.new_tag('button'))
-    # download_button.append(icon)
-    # download_button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
-    # download_button.attrs['title'] = _("Upload selected Sensors/Samples to Database")
-    # download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_upload_biochem",
-    #                                                args=(database, mission_id))
-    # download_button.attrs['hx-swap'] = 'none'
 
     return HttpResponse(soup)
 
 
-def delete_file_error(request, database, error_id):
+def delete_file_error(request, error_id):
     models.FileError.objects.filter(id=error_id).delete()
 
     return HttpResponse()
 
 
 # ###### Mission Sample ###### #
-url_prefix = "<str:database>/sample"
 mission_sample_urls = [
-    path(f'{url_prefix}/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
+    path(f'<str:database>/sample/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
 
     # used to reload elements on the sample form if a GET htmx request
-    path(f'{url_prefix}/sample/file_errors/<int:mission_id>/', get_file_error_card,
-         name="mission_samples_get_file_errors"),
+    path(f'sample/file_errors/<int:mission_id>/', get_file_error_card, name="mission_samples_get_file_errors"),
 
     # load samples using a given sample type configuration file configuration
-    path(f'{url_prefix}/sample/load/', load_samples, name="mission_samples_load_samples"),
+    path(f'sample/load/', load_samples, name="mission_samples_load_samples"),
 
     # ###### sample details ###### #
 
-    path('<str:database>/sample/list/<int:mission_id>/', list_samples, name="mission_samples_sample_list"),
+    path('sample/list/<int:mission_id>/', list_samples, name="mission_samples_sample_list"),
 
-    path('<str:database>/sample/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload,
-         name="mission_samples_add_sensor_to_upload"),
-    path('<str:database>/sample/upload/sensor/<int:mission_id>/', biochem_upload_card,
-         name="mission_samples_biochem_upload_card"),
-    path('<str:database>/sample/upload/biochem/<int:mission_id>/', upload_samples,
-         name="mission_samples_upload_biochem"),
-    path('<str:database>/sample/download/biochem/<int:mission_id>/', download_samples,
-         name="mission_samples_download_biochem"),
+    path('sample/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload, name="mission_samples_add_sensor_to_upload"),
+    path('sample/upload/sensor/<int:mission_id>/', biochem_upload_card, name="mission_samples_biochem_upload_card"),
+    path('sample/download/biochem/<int:mission_id>/', download_samples, name="mission_samples_download_biochem"),
 
-    path(f'{url_prefix}/batch/<int:mission_id>/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
+    path(f'sample/batch/<int:mission_id>/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
 
-    path(f'{url_prefix}/sample/error/<int:error_id>/', delete_file_error,
-         name="mission_samples_delete_file_error"),
+    path(f'sample/sample/error/<int:error_id>/', delete_file_error, name="mission_samples_delete_file_error"),
 
-    path(f'{url_prefix}/sample/biochem/<int:mission_id>/', get_biochem_buttons,
-         name="mission_samples_update_bio_chem_buttons"),
+    path(f'sample/sample/biochem/<int:mission_id>/', get_biochem_buttons, name="mission_samples_update_bio_chem_buttons"),
 
 ]

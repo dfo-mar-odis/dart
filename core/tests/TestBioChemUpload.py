@@ -18,6 +18,7 @@ from biochem import upload
 from biochem import models as bio_models
 from biochem.tests import BCFactoryFloor as biochem_factory
 
+from settingsdb.tests import utilities
 from settingsdb.tests import SettingsFactoryFloor as settings_factory
 
 from bio_tables import models as bio_tables_models
@@ -60,6 +61,8 @@ class AbstractTestDatabase(DartTestCase):
 class TestGetBCSPRows(AbstractTestDatabase):
 
     def setUp(self):
+        utilities.create_model_table([bio_models.Bcbatches], 'biochem')
+
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
         sample_database = settings_factory.BcDatabaseConnection()
@@ -73,6 +76,9 @@ class TestGetBCSPRows(AbstractTestDatabase):
         if delete_db:
             delete_model(biochem_db, self.bio_model)
 
+        utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
+
+    @tag('test_get_bcs_p_rows')
     def test_get_bcs_p_rows(self):
         core_factory.BottleFactory.start_bottle_seq = 400000
         bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=self.mission))
@@ -83,13 +89,12 @@ class TestGetBCSPRows(AbstractTestDatabase):
         bottles = core_models.Bottle.objects.all()
         bcs_model = self.bio_model
 
-        create_rows, update_rows, update_fields = upload.get_bcs_p_rows("test_user", bottles,
-                                                                        self.mission.get_batch_name,
-                                                                        bcs_model)
+        batch_factory = biochem_factory.BcBatchesFactory
+        batch_factory._meta.database = 'biochem'
+        batch = batch_factory()
+        create_rows = upload.get_bcs_p_rows("test_user", bottles, batch, bcs_model)
 
         self.assertEqual(len(create_rows), 1)
-        self.assertEqual(len(update_rows), 0)
-        self.assertEqual(len(update_fields), 0)
 
 
 @tag('biochem', 'biochem_upload')
@@ -107,7 +112,7 @@ class TestBioChemUpload(DartTestCase):
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
         self.mission_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url, {'add_sensor': 'true'})
 
@@ -129,7 +134,7 @@ class TestBioChemUpload(DartTestCase):
         core_models.BioChemUpload.objects.using('default').create(type_id=self.mission_sample_type.pk,
                                                                   status=core_models.BioChemUploadStatus.upload)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -147,7 +152,7 @@ class TestBioChemUpload(DartTestCase):
                                                                   status=core_models.BioChemUploadStatus.uploaded,
                                                                   upload_date=upload_date)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -167,7 +172,7 @@ class TestBioChemUpload(DartTestCase):
                                                                   status=core_models.BioChemUploadStatus.upload,
                                                                   upload_date=upload_date)
 
-        url = reverse(self.checkbox_url, args=('default', self.mission.pk, self.mission_sample_type.pk,))
+        url = reverse(self.checkbox_url, args=(self.mission.pk, self.mission_sample_type.pk,))
 
         response = self.client.post(url)
 
@@ -181,12 +186,17 @@ class TestBioChemUpload(DartTestCase):
 class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
     def setUp(self):
+        utilities.create_model_table([bio_models.Bcbatches], 'biochem')
 
         self.sample_database = settings_factory.BcDatabaseConnection()
         caches['biochem_keys'].set('database_id', self.sample_database.pk, 3600)
 
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
+    def tearDown(self):
+        utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
+
+    @tag("test_data_marked_for_upload")
     def test_data_marked_for_upload(self):
         # provided a mission with data marked for Biochem upload the data should be pushed to the BioChem tables
         core_factory.BottleFactory.start_bottle_seq = 400000
@@ -210,14 +220,14 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
             type=oxy_sample_type
         )
 
-        form_biochem_database.upload_bcd_d_data(self.mission, 'upsonp')
+        form_biochem_database.upload_bcd_d_data(self.mission)
 
-        model = upload.get_model(self.sample_database.bc_discrete_data_edits, bio_models.BcdD)
+        self.model = upload.get_model(self.sample_database.bc_discrete_data_edits, bio_models.BcdD)
         # oxygen samples should have been added to the biochem db
-        self.assertTrue(model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
+        self.assertTrue(self.model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
 
         # salt samples should not have been added to the biochem db
-        self.assertFalse(model.objects.using(biochem_db).filter(dis_detail_data_type_seq=salt_seq))
+        self.assertFalse(self.model.objects.using(biochem_db).filter(dis_detail_data_type_seq=salt_seq))
 
         # When uploaded the BioChemUpload entry should be marked as 'uploaded' and the uploaded date
         # should be set
@@ -231,6 +241,7 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
     database_bcd_table_name = "tm15502"
 
     def setUp(self):
+        utilities.create_model_table([bio_models.Bcbatches], 'biochem')
         # I know it's a complicated setup, but to test BioChem deletion and updating existing samples
         # we need to load a fake Biochem database with data and it has to sync with data that Dart will
         # supposedly have.
@@ -245,6 +256,8 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
 
         # Setup factoryboy to use the model we linked to the in-memory biochem db BCD table
         bcd_factory = biochem_factory.BcdDFactory
+        batch_factory = biochem_factory.BcBatchesFactory
+        batch_factory._meta.database = 'biochem'
 
         self.model = upload.get_model(sample_database.bc_discrete_data_edits, bio_models.BcdD)
         upload.create_model(biochem_db, self.model)
@@ -257,33 +270,36 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
         # bottles are attached to an event
         event = core_factory.CTDEventFactory(mission=self.mission)
         bottles = core_factory.BottleFactory.create_batch(10, event=event)
-
+        batch = batch_factory()
+        batch_2 = batch_factory()
         # create the rows in the biochem in-memory DB and add the sensor values to the bottles for the mission db
         for index, bottle in enumerate(bottles):
             sample = core_factory.SampleFactory(bottle=bottle, type=self.oxy_sample_type)
             core_factory.DiscreteValueFactory(sample=sample, value=3.9)
             bcd_factory.create(dis_detail_data_type_seq=oxy_seq, data_type_method='O2_Winkler_Auto',
-                               dis_detail_collector_samp_id=bottle.bottle_id, batch_seq=self.mission.get_batch_name)
+                               dis_detail_collector_samp_id=bottle.bottle_id, batch=batch)
             if index == 0:
                 # we need to make sure there's at least one replicate.
                 sample = core_factory.SampleFactory(bottle=bottle, type=self.oxy_sample_type)
                 core_factory.DiscreteValueFactory(sample=sample, value=3.9, replicate=2)
                 bcd_factory.create(dis_detail_data_type_seq=oxy_seq, data_type_method='O2_Winkler_Auto',
-                                   dis_detail_collector_samp_id=bottle.bottle_id, batch_seq=self.mission.get_batch_name)
+                                   dis_detail_collector_samp_id=bottle.bottle_id, batch=batch)
 
         bcd_factory.create_batch(10,
                                  dis_detail_data_type_seq=oxy_seq,
                                  data_type_method='O2_Winkler_Auto',
-                                 batch_seq=2)  # simulate data created from another source
+                                 batch=batch_2)  # simulate data created from another source
         bcd_factory.create_batch(10,
                                  dis_detail_data_type_seq=salt_seq,
                                  data_type_method='Salinity_Sal_PSS',
-                                 batch_seq=self.mission.get_batch_name)
+                                 batch=batch)
 
     def tearDown(self):
         delete_db = True
         if delete_db:
             delete_model(biochem_db, self.model)
+
+        utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
 
     def test_db_creation(self):
         # This is just to test that the biochem DB was created and data added to the specified

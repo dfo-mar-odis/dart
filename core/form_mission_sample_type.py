@@ -13,6 +13,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
+from django.conf import settings
 
 from bio_tables import models as bio_models
 from core import models as core_models
@@ -32,7 +33,7 @@ class BioChemDataType(forms.Form):
     start_sample = forms.IntegerField(label=_("Start"))
     end_sample = forms.IntegerField(label=_("End"))
 
-    def __init__(self, database, mission_sample_type: core_models.MissionSampleType, *args, **kwargs):
+    def __init__(self, mission_sample_type: core_models.MissionSampleType, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         mission = mission_sample_type.mission
@@ -86,7 +87,7 @@ class BioChemDataType(forms.Form):
 
         self.helper = FormHelper(self)
 
-        reload_form_url = reverse_lazy('core:form_mission_sample_type_set_get', args=(database, mission_sample_type.pk))
+        reload_form_url = reverse_lazy('core:form_mission_sample_type_set_get', args=(mission_sample_type.pk,))
 
         data_type_filter = Field('data_type_filter', css_class="form-control form-control-sm")
         data_type_filter.attrs['hx-get'] = reload_form_url
@@ -218,7 +219,7 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
     return soup
 
 
-def list_samples(request, database, mission_sample_type_id):
+def list_samples(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     page = int(request.GET.get('page', 0) or 0)
@@ -284,7 +285,7 @@ def list_samples(request, database, mission_sample_type_id):
     last_tr.attrs['hx-target'] = 'this'
     last_tr.attrs['hx-trigger'] = 'intersect once'
     last_tr.attrs['hx-get'] = reverse_lazy('core:mission_sample_type_sample_list',
-                                           args=(database, mission_sample_type_id,)) + f"?page={page + 1}"
+                                           args=(mission_sample_type_id,)) + f"?page={page + 1}"
     last_tr.attrs['hx-swap'] = "afterend"
 
     # finally, align all text in each column to the center of the cell
@@ -300,7 +301,7 @@ def list_samples(request, database, mission_sample_type_id):
     return response
 
 
-def update_sample_type_row(request, database, mission_sample_type_id):
+def update_sample_type_row(request, mission_sample_type_id):
 
     if request.method == "GET":
         url = request.path
@@ -337,11 +338,11 @@ def update_sample_type_row(request, database, mission_sample_type_id):
         value.datatype = data_type
     core_models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['datatype'])
 
-    response = list_samples(request, database, sample_type.pk)
+    response = list_samples(request, sample_type.pk)
     return response
 
 
-def update_sample_type_mission(request, database, mission_sample_type_id):
+def update_sample_type_mission(request, mission_sample_type_id):
     if request.method == "GET":
         url = request.path
         attrs = {
@@ -369,16 +370,16 @@ def update_sample_type_mission(request, database, mission_sample_type_id):
     sample_type.datatype = data_type
     sample_type.save()
 
-    response = list_samples(request, database, sample_type.pk)
+    response = list_samples(request, sample_type.pk)
     return response
 
 
-def update_sample_type(request, database, mission_sample_type_id):
+def update_sample_type(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
     if request.method == "GET":
         # if the GET request is empty populate the form with the default values
         if len(request.GET) <= 0:
-            biochem_form = BioChemDataType(database=database, mission_sample_type=mission_sample_type)
+            biochem_form = BioChemDataType(mission_sample_type=mission_sample_type)
             html = render_crispy_form(biochem_form)
             return HttpResponse(html)
 
@@ -391,19 +392,17 @@ def update_sample_type(request, database, mission_sample_type_id):
             'hx-select-oob': '#table_id_sample_table'
         }
         if 'apply_data_type_row' in request.GET:
-            attrs['hx-post'] = reverse_lazy('core:form_mission_sample_type_set_row', args=(database,
-                                                                                           mission_sample_type.pk))
+            attrs['hx-post'] = reverse_lazy('core:form_mission_sample_type_set_row', args=(mission_sample_type.pk,))
             soup = core_forms.save_load_component(**attrs)
             return HttpResponse(soup)
         elif 'apply_data_type_sensor' in request.GET:
-            attrs['hx-post'] = reverse_lazy('core:form_mission_sample_type_set_mission', args=(database,
-                                                                                               mission_sample_type.pk))
+            attrs['hx-post'] = reverse_lazy('core:form_mission_sample_type_set_mission', args=(mission_sample_type.pk,))
             soup = core_forms.save_load_component(**attrs)
             return HttpResponse(soup)
 
         if 'data_type_filter' in request.GET:
             initial = {'data_type_filter': request.GET['data_type_filter']}
-            biochem_form = BioChemDataType(database=database, mission_sample_type=mission_sample_type, initial=initial)
+            biochem_form = BioChemDataType(mission_sample_type=mission_sample_type, initial=initial)
             html = render_crispy_form(biochem_form)
             return HttpResponse(html)
 
@@ -417,12 +416,12 @@ def update_sample_type(request, database, mission_sample_type_id):
             'data_type_code': data_type_code,
             'data_type_description': data_type_code,
         }
-        biochem_form = BioChemDataType(database=database, mission_sample_type=mission_sample_type, initial=initial)
+        biochem_form = BioChemDataType(mission_sample_type=mission_sample_type, initial=initial)
         html = render_crispy_form(biochem_form)
         return HttpResponse(html)
 
 
-def sample_delete(request, database, mission_sample_type_id):
+def sample_delete(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     if request.method == "GET":
@@ -441,6 +440,8 @@ def sample_delete(request, database, mission_sample_type_id):
         msg_div.append(alert)
         return HttpResponse(soup)
 
+    database = settings.DATABASES[mission_sample_type.mission._state.db]['LOADED'] if (
+            'LOADED' in settings.DATABASES[mission_sample_type.mission._state.db]) else 'default'
     mission_sample_url = reverse_lazy('core:mission_samples_sample_details',
                                       args=(database, mission_sample_type.mission.pk,))
     mission_sample_type.samples.all().delete()
@@ -451,7 +452,7 @@ def sample_delete(request, database, mission_sample_type_id):
     return response
 
 
-url_prefix = "<str:database>/sample_type"
+url_prefix = "sample_type"
 sample_type_urls = [
     path(f'{url_prefix}/<int:mission_sample_type_id>/', update_sample_type,
          name="form_mission_sample_type_set_get"),  # mission_samples_update_sample_type
