@@ -55,20 +55,20 @@ class TestFormBioChemDatabase(DartTestCase):
         input_row = soup.find(id=input_id)
         self.assertIsNotNone(input_row)
         self.assertIn('hx-trigger', input_row.attrs)
-        self.assertEquals('database_selection_changed from:body', input_row.attrs['hx-trigger'])
+        self.assertEqual('database_selection_changed from:body', input_row.attrs['hx-trigger'])
 
         selected_db = soup.find(id="control_id_database_select_biochem_db_details")
         selection_change_url = reverse(self.update_db_selection_url, args=('default', self.mission.pk))
 
         self.assertIsNotNone(selected_db)
         self.assertIn('hx-get', selected_db.attrs)
-        self.assertEquals(selection_change_url, selected_db.attrs['hx-get'])
+        self.assertEqual(selection_change_url, selected_db.attrs['hx-get'])
 
         self.assertIn('hx-target', selected_db.attrs)
-        self.assertEquals(f'#{input_id}', selected_db.attrs['hx-target'])
+        self.assertEqual(f'#{input_id}', selected_db.attrs['hx-target'])
 
         self.assertIn('hx-swap', selected_db.attrs)
-        self.assertEquals('outerHTML', selected_db.attrs['hx-swap'])
+        self.assertEqual('outerHTML', selected_db.attrs['hx-swap'])
 
     @tag('form_biochem_database_test_tns_name')
     def test_tns_name(self):
@@ -112,7 +112,7 @@ class TestFormBioChemDatabase(DartTestCase):
         # the response should contain a 'Hx-Trigger'="biochem_db_update" to let pages using the form know they can
         # modify the form if addtional buttons are required.
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response['Hx-Trigger'], 'biochem_db_update')
+        self.assertEqual(response['Hx-Trigger'], 'biochem_db_update')
 
     @tag('form_biochem_database_test_add_database_post')
     def test_add_database_post(self):
@@ -140,7 +140,7 @@ class TestFormBioChemDatabase(DartTestCase):
         # the response should contain a 'Hx-Trigger'="biochem_db_update" to let pages using the form know they can
         # modify the form if addtional buttons are required.
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals('database_selection_changed, biochem_db_update', response.headers['Hx-Trigger'])
+        self.assertEqual('database_selection_changed, biochem_db_update', response.headers['Hx-Trigger'])
 
         new_db = settingsdb.models.BcDatabaseConnection.objects.last()
 
@@ -177,7 +177,7 @@ class TestFormBioChemDatabase(DartTestCase):
         # the response should contain a 'Hx-Trigger'="biochem_db_update" to let pages using the form know they can
         # modify the form if addtional buttons are required.
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response['Hx-Trigger'], 'biochem_db_update')
+        self.assertEqual(response['Hx-Trigger'], 'biochem_db_update')
 
     @tag('form_biochem_database_test_db_selection_changed_get')
     def test_db_selection_changed_get(self):
@@ -210,13 +210,13 @@ class TestFormBioChemDatabase(DartTestCase):
         btn = soup.find(id="btn_id_connect_biochem_db_details")
         self.assertIsNotNone(btn)
         self.assertIn('hx-swap-oob', btn.attrs)
-        self.assertEquals('true', btn.attrs['hx-swap-oob'])
+        self.assertEqual('true', btn.attrs['hx-swap-oob'])
 
         self.assertIn('hx-post', btn.attrs)
-        self.assertEquals(url, btn.attrs['hx-post'])
+        self.assertEqual(url, btn.attrs['hx-post'])
 
         self.assertIn('hx-trigger', btn.attrs)
-        self.assertEquals('load', btn.attrs['hx-trigger'])
+        self.assertEqual('load', btn.attrs['hx-trigger'])
 
         pass
 

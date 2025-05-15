@@ -32,7 +32,7 @@ class FixStationParser:
 
     def _get_priority(self, sensor_description: str) -> [int, str]:
         """given a sensor description, with units removed, find, remove and return the priority and remaining string"""
-        priority_pattern = ", (\d)"
+        priority_pattern = r", (\d)"
         priority = re.findall(priority_pattern, sensor_description)
         priority = priority[0] if priority else 1
         return int(priority), re.sub(priority_pattern, "", sensor_description)
@@ -117,7 +117,7 @@ class FixStationParser:
             else:
                 raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
 
-            if (btl := core_models.Bottle.objects.using(self.database).exclude(event=self.event).filter(
+            if (btl := core_models.Bottle.objects.exclude(event=self.event).filter(
                     bottle_id=bottle_id)).exists():
                 # if the bottle exists for an event other than the current event
                 if not (btl.first().event == self.event):
@@ -145,10 +145,10 @@ class FixStationParser:
                 bottles_added += 1
 
         if len(create_bottles) > 0:
-            core_models.Bottle.objects.using(self.database).bulk_create(create_bottles)
+            core_models.Bottle.objects.bulk_create(create_bottles)
 
         if len(update_bottles) > 0:
-            core_models.Bottle.objects.using(self.database).bulk_update(update_bottles, update_fields)
+            core_models.Bottle.objects.bulk_update(update_bottles, update_fields)
 
     def parse_sensor(self, sensor: str) -> [str, int, str, str]:
         """given a sensor description parse out the type, priority and units """
@@ -164,7 +164,7 @@ class FixStationParser:
         # Sbeox0ML/L -> Sbeox (Sea-bird oxygen), 0 (primary sensor), ML/L
         # many sensors follow this format, the ones that don't are likely located, in greater detail, in
         # the ROS file configuration
-        details = re.match("(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
+        details = re.match(r"(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
         if not details:
             raise Exception(f"Sensor '{sensor}' does not follow the expected naming convention")
 
@@ -183,7 +183,7 @@ class FixStationParser:
         """given a ROS file create sensors objects from the config portion of the file"""
 
         summary = ctd.rosette_summary(self.ros_stream)
-        sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
+        sensor_headings = re.findall(r"# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
         existing_sensors = GlobalSampleType.objects.filter(is_sensor=True).values_list('short_name',
                                                                                        flat=True).distinct()
@@ -272,7 +272,7 @@ class FixStationParser:
         new_discrete_samples: [core_models.DiscreteSampleValue] = []
         update_discrete_samples: [core_models.DiscreteSampleValue] = []
 
-        bottles = core_models.Bottle.objects.using(self.database).filter(event=self.event)
+        bottles = core_models.Bottle.objects.filter(event=self.event)
 
         # make global sample types local to this mission to be attached to samples when they're created
         logger.info("Creating local sample types")
@@ -312,7 +312,7 @@ class FixStationParser:
             for column in column_headers:
                 sample_type = sample_types[column.lower()]
 
-                if (sample := core_models.Sample.objects.using(self.database).filter(bottle=bottle,
+                if (sample := core_models.Sample.objects.filter(bottle=bottle,
                                                                                      type=sample_type)).exists():
                     sample = sample.first()
                     if utils.updated_value(sample, 'file', file_name):
@@ -330,19 +330,19 @@ class FixStationParser:
 
         if len(new_samples) > 0:
             logger.info("Creating CTD samples for file" + f" : {file_name}")
-            core_models.Sample.objects.using(self.database).bulk_create(new_samples)
+            core_models.Sample.objects.bulk_create(new_samples)
 
         if len(update_samples) > 0:
             logger.info("Creating CTD samples for file" + f" : {file_name}")
-            core_models.Sample.objects.using(self.database).bulk_update(update_samples, ['file'])
+            core_models.Sample.objects.bulk_update(update_samples, ['file'])
 
         if len(new_discrete_samples) > 0:
             logger.info("Adding values to samples" + f" : {file_name}")
-            core_models.DiscreteSampleValue.objects.using(self.database).bulk_create(new_discrete_samples)
+            core_models.DiscreteSampleValue.objects.bulk_create(new_discrete_samples)
 
         if len(update_discrete_samples) > 0:
             logger.info("Updating sample values" + f" : {file_name}")
-            core_models.DiscreteSampleValue.objects.using(self.database).bulk_update(update_discrete_samples, ['value'])
+            core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
     def _convert_to_decimal_deg(self, direction, hours, minutes=0):
         lat_lon = float(hours) + (float(minutes) / 60.0)

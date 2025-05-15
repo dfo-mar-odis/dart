@@ -95,6 +95,11 @@ def sync_table(bio_table_model, biochem_model, field_map, database='default'):
                 bc_field_name = field if type(field) is str else field[1]
                 bt_field_name = field if type(field) is str else field[0]
                 biochem_val = getattr(data, bc_field_name)
+
+                # if the data is an object, then we want it's primary key
+                if hasattr(biochem_val, 'pk'):
+                    biochem_val = biochem_val.pk
+
                 setattr(bc, bt_field_name, biochem_val)
             new_data.append(bc)
         else:
@@ -105,6 +110,11 @@ def sync_table(bio_table_model, biochem_model, field_map, database='default'):
                 bt_field_name = field if type(field) is str else field[0]
                 current = getattr(bc, bt_field_name)
                 new = getattr(data, bc_field_name)
+
+                # if the data is an object, then we want it's primary key
+                if hasattr(new, 'pk'):
+                    new = new.pk
+
                 if current != new:
                     setattr(bc, bt_field_name, new)
                     updated_fields.add(bt_field_name)
@@ -139,8 +149,8 @@ def get_mapped_fields(dart_table_model, bio_chem_model) -> list:
     dart_table_fields: list = [field.__dict__['name'] for field in dart_table_model._meta.get_fields()
                                if 'name' in field.__dict__]
 
-    bio_chem_fields: list = [field.__dict__['name'] for field in bio_chem_model._meta.get_fields()
-                             if 'name' in field.__dict__]
+    bio_chem_fields: dict = {field.__dict__['column']: field.__dict__['name'] for
+                             field in bio_chem_model._meta.get_fields() if 'column' in field.__dict__}
 
     # remove the primary key from the fields
     dart_table_fields.remove(dart_table_model._meta.pk.name)
@@ -151,9 +161,9 @@ def get_mapped_fields(dart_table_model, bio_chem_model) -> list:
         if type(dart_table_model._meta.get_field(field)) is ForeignKey:
             # check to see if the field is in the bio_chem_model. if not it probably has '_seq' on the end of it
             if field in bio_chem_fields:
-                mapped_fields.append((f'{field}_id', field))
+                mapped_fields.append((f'{field}_id', bio_chem_fields[field]))
             elif f'{field}_seq' in bio_chem_fields:
-                mapped_fields.append((f'{field}_id', f'{field}_seq'))
+                mapped_fields.append((f'{field}_id', bio_chem_fields[f'{field}_seq']))
             else:
                 raise ValueError(f"Could not map field {field} for {dart_table_model.__name__}")
 

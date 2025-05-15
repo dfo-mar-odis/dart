@@ -32,7 +32,7 @@ def get_event_number_nfl(data_frame: pandas.DataFrame):
     metadata = getattr(data_frame, "_metadata")
 
     # for the NFL Region uses the CTD number to link a BTL file to an Elog event.
-    event_number = re.search('CTD NUMBER: (\d+)\n', metadata['header'])[1]
+    event_number = re.search(r'CTD NUMBER: (\d+)\n', metadata['header'])[1]
     if len(str(event_number)) > 3:
         event_number = int(str(event_number)[-3:])
     return int(event_number)
@@ -44,12 +44,12 @@ def get_event_number_bio(data_frame: pandas.DataFrame):
 
     # for the Atlantic Region the last three digits of the bottle file name contains the elog event number,
     # but if there's a 'event_number' in the header use that instead.
-    event_number = re.search('event_number: *(\d+)\n', metadata['header'], re.IGNORECASE)
+    event_number = re.search(r'event_number: *(\d+)\n', metadata['header'], re.IGNORECASE)
     if event_number and (event_number := event_number[1]).isnumeric():
         event_number = int(str(event_number)[-3:])
         return int(event_number)
 
-    event_number = re.search(".*(?:\D|^)(\d+)", metadata['name'])[1]
+    event_number = re.search(r".*(?:\D|^)(\d+)", metadata['name'])[1]
     if len(str(event_number)) > 3:
         event_number = int(str(event_number)[-3:])
         return int(event_number)
@@ -76,7 +76,7 @@ def _get_units(sensor_description: str) -> [str, str]:
 
 def _get_priority(sensor_description: str) -> [int, str]:
     """given a sensor description, with units removed, find, remove and return the priority and remaining string"""
-    priority_pattern = ", (\d)"
+    priority_pattern = r", (\d)"
     priority = re.findall(priority_pattern, sensor_description)
     priority = priority[0] if priority else 1
     return int(priority), re.sub(priority_pattern, "", sensor_description)
@@ -102,7 +102,7 @@ def process_ros_sensors(sensors: [str], ros_file: str):
     """given a ROS file create sensors objects from the config portion of the file"""
 
     summary = ctd.rosette_summary(ros_file)
-    sensor_headings = re.findall("# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
+    sensor_headings = re.findall(r"# name \d+ = (.*?)\n", getattr(summary, '_metadata')['config'])
 
     existing_sensors = settings_models.GlobalSampleType.objects.filter(
         is_sensor=True).values_list('short_name', flat=True).distinct()
@@ -149,7 +149,7 @@ def parse_sensor_name(sensor: str) -> [str, int, str]:
     # Sbeox0ML/L -> Sbeox (Sea-bird oxygen), 0 (primary sensor), ML/L
     # many sensors follow this format, the ones that don't are likely located, in greater detail, in
     # the ROS file configuration
-    details = re.match("(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
+    details = re.match(r"(\D\D*)(\d{0,1})([A-Z]*.*)", sensor).groups()
     if not details:
         raise Exception(f"Sensor '{sensor}' does not follow the expected naming convention")
 
@@ -291,11 +291,11 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         valid = validation.validate_bottle_sample_range(event=event, bottle_id=bottle_id)
         errors += valid
 
-        if core_models.Bottle.objects.using(database).filter(event=event, bottle_number=bottle_number).exists():
+        if core_models.Bottle.objects.filter(event=event, bottle_number=bottle_number).exists():
             # If a bottle already exists for this event then we'll update its fields rather than
             # creating a whole new bottle. Reason being there may be samples attached to bottles that are
             # being reloaded from a calibrated bottle file post mission.
-            b = core_models.Bottle.objects.using(database).get(event=event, bottle_number=bottle_number)
+            b = core_models.Bottle.objects.get(event=event, bottle_number=bottle_number)
 
             check_fields = {'bottle_id': bottle_id, 'date_time': date, 'pressure': pressure,
                             'latitude': latitude, 'longitude': longitude}
@@ -309,12 +309,12 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
                                             bottle_id=bottle_id, latitude=latitude, longitude=longitude)
             b_create.append(new_bottle)
 
-    core_models.Bottle.objects.using(database).bulk_create(b_create)
+    core_models.Bottle.objects.bulk_create(b_create)
     if len(b_update['data']) > 0:
-        core_models.Bottle.objects.using(database).bulk_update(objs=b_update['data'], fields=b_update['fields'])
+        core_models.Bottle.objects.bulk_update(objs=b_update['data'], fields=b_update['fields'])
 
     if len(errors) > 0:
-        core_models.ValidationError.objects.using(database).bulk_create(errors)
+        core_models.ValidationError.objects.bulk_create(errors)
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
@@ -354,7 +354,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         drop_rows = data_frame_avg.shape[0] - (event.total_samples + 1)
         data_frame_avg = data_frame_avg[:-drop_rows]
 
-    bottles = core_models.Bottle.objects.using(database).filter(event=event)
+    bottles = core_models.Bottle.objects.filter(event=event)
 
     # make global sample types local to this mission to be attached to samples when they're created
     logger.info("Creating local sample types")
@@ -407,7 +407,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
         bottle = bottles.get(bottle_id=bottle_id)
         for column in column_headers:
-            if (sample := core_models.Sample.objects.using(database).filter(bottle=bottle,
+            if (sample := core_models.Sample.objects.filter(bottle=bottle,
                                                                             type=sample_types[column])).exists():
                 sample = sample.first()
                 if updated_value(sample, 'file', file_name):
@@ -425,19 +425,19 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
     if len(new_samples) > 0:
         logger.info("Creating CTD samples for file" + f" : {file_name}")
-        core_models.Sample.objects.using(database).bulk_create(new_samples)
+        core_models.Sample.objects.bulk_create(new_samples)
 
     if len(update_samples) > 0:
         logger.info("Creating CTD samples for file" + f" : {file_name}")
-        core_models.Sample.objects.using(database).bulk_update(update_samples, ['file'])
+        core_models.Sample.objects.bulk_update(update_samples, ['file'])
 
     if len(new_discrete_samples) > 0:
         logger.info("Adding values to samples" + f" : {file_name}")
-        core_models.DiscreteSampleValue.objects.using(database).bulk_create(new_discrete_samples)
+        core_models.DiscreteSampleValue.objects.bulk_create(new_discrete_samples)
 
     if len(update_discrete_samples) > 0:
         logger.info("Updating sample values" + f" : {file_name}")
-        core_models.DiscreteSampleValue.objects.using(database).bulk_update(update_discrete_samples, ['value'])
+        core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
     for ms_type in mission.mission_sample_types.all():
         if bcu := ms_type.uploads.first():
@@ -469,10 +469,10 @@ def read_btl(mission: core_models.Mission, btl_file: str):
     data_frame = ctd.from_btl(btl_file)
 
     file_name = data_frame._metadata['name']
-    if (errors := core_models.FileError.objects.using(database).filter(file_name=file_name)).exists():
+    if (errors := core_models.FileError.objects.filter(file_name=file_name)).exists():
         errors.delete()
 
-    if (errors := core_models.FileError.objects.using(database).filter(file_name=btl_file)).exists():
+    if (errors := core_models.FileError.objects.filter(file_name=btl_file)).exists():
         errors.delete()
 
     if file_name not in btl_file:
@@ -480,7 +480,7 @@ def read_btl(mission: core_models.Mission, btl_file: str):
         message += f" {btl_file} =/= {file_name}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save(using=database)
+        err.save()
         raise ValueError(message)
 
     event_number = get_event_number_bio(data_frame=data_frame)
@@ -491,14 +491,14 @@ def read_btl(mission: core_models.Mission, btl_file: str):
         message = _("Could not find matching event for event number") + f" : {event_number}"
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save(using=database)
+        err.save()
         raise ex
 
     if event.instrument.type != core_models.InstrumentType.ctd:
         message = "Event_Number" + f" : {event_number} - " + _("not a CTD event, check the event number in the BTL file is correct.")
         err = core_models.FileError(mission=mission, message=message, line=-1, type=core_models.ErrorType.bottle,
                                     file_name=btl_file)
-        err.save(using=database)
+        err.save()
         raise ValueError("Bad Event number")
 
     # These are columns we either have no use for or we will specifically call and use later

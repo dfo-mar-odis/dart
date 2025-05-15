@@ -12,7 +12,7 @@ from core import models as core_models
 
 @tag('parsers', 'FilterLogParser')
 class TestFilterLogParser(TestCase):
-    fixtures = ['biochem_fixtures', 'default_settings_fixtures']
+    fixtures = ['default_biochem_fixtures', 'default_settings_fixtures']
 
     def setUp(self):
         self.station_hl_2 = core_factory.StationFactory(name="HL_02")
@@ -25,7 +25,7 @@ class TestFilterLogParser(TestCase):
     @tag('FilterLogParser_test_bottle_creation')
     def test_bottle_creation(self):
         # the sample file contains 19 bottles for HL_02
-        self.assertEquals(19, core_models.Bottle.objects.using('default').count())
+        self.assertEqual(19, core_models.Bottle.objects.using('default').count())
 
     @tag('FilterLogParser_test_oxygen_exists')
     def test_oxygen_exists(self):
@@ -35,7 +35,7 @@ class TestFilterLogParser(TestCase):
 
 @tag('parsers', 'FilterLogParser')
 class TestFilterLogParser(TestCase):
-    fixtures = ['biochem_fixtures', 'default_settings_fixtures']
+    fixtures = ['default_biochem_fixtures', 'default_settings_fixtures']
 
     def setUp(self):
         self.station_sv = core_factory.StationFactory(name="Shediac Valley")

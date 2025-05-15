@@ -55,7 +55,7 @@ class TestFormBottleLoad(DartTestCase):
 
         bottle_dir_field = soup.find(id="id_dir_field")
         self.assertIsNotNone(bottle_dir_field)
-        self.assertEquals(bottle_dir_field.attrs['value'], btl_directory)
+        self.assertEqual(bottle_dir_field.attrs['value'], btl_directory)
 
         files_field = soup.find(id="id_files")
         self.assertIsNotNone(files_field)
@@ -108,7 +108,7 @@ class TestFormBottleLoad(DartTestCase):
         soup = BeautifulSoup(response.content, "html.parser")
 
         show_hide_field = soup.find(id="id_hide_loaded")
-        self.assertEquals(show_hide_field.attrs['value'], 'true')
+        self.assertEqual(show_hide_field.attrs['value'], 'true')
 
     @tag('form_btl_load_test_upload_btl_files_get')
     def test_upload_btl_files_get(self):
@@ -126,8 +126,8 @@ class TestFormBottleLoad(DartTestCase):
         self.assertIsNotNone(alert)
         self.assertIn('hx-post', alert.attrs)
         self.assertIn('hx-trigger', alert.attrs)
-        self.assertEquals(alert.attrs['hx-post'], url)
-        self.assertEquals(alert.attrs['hx-trigger'], 'load')
+        self.assertEqual(alert.attrs['hx-post'], url)
+        self.assertEqual(alert.attrs['hx-trigger'], 'load')
 
     @tag('form_btl_load_test_upload_btl_files_post')
     def test_upload_btl_files_post(self):
@@ -147,7 +147,7 @@ class TestFormBottleLoad(DartTestCase):
         url = reverse("core:form_btl_upload_bottles", args=('default', mission.pk))
         response = self.client.post(url, {'files': [btl_file]})
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response.headers['Hx-Trigger'], 'update_samples')
+        self.assertEqual(response.headers['Hx-Trigger'], 'update_samples')
 
         samples = models.Sample.objects.using('default').all()
         self.assertTrue(samples.exists())
@@ -156,14 +156,14 @@ class TestFormBottleLoad(DartTestCase):
         root = soup.find(recursive=False)
         self.assertIsNotNone(root)
         self.assertIn('hx-trigger', root.attrs)
-        self.assertEquals(root.attrs['hx-trigger'], 'load')
+        self.assertEqual(root.attrs['hx-trigger'], 'load')
 
         self.assertIn('hx-get', root.attrs)
         url = reverse('core:form_btl_reload_files', args=('default', mission.pk)) + "?hide_loaded=true"
-        self.assertEquals(root.attrs['hx-get'], url)
+        self.assertEqual(root.attrs['hx-get'], url)
 
         self.assertIn('hx-target', root.attrs)
-        self.assertEquals(root.attrs['hx-target'], '#div_id_card_bottle_load')
+        self.assertEqual(root.attrs['hx-target'], '#div_id_card_bottle_load')
 
     @tag('form_btl_load_test_choose_btl_directory_post')
     def test_choose_btl_directory_post(self):
@@ -179,4 +179,4 @@ class TestFormBottleLoad(DartTestCase):
         soup = BeautifulSoup(response.content, 'html.parser')
 
         input = soup.find(id="id_dir_field")
-        self.assertEquals(input.attrs['value'], btl_directory)
+        self.assertEqual(input.attrs['value'], btl_directory)

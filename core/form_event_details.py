@@ -1,6 +1,8 @@
 import datetime
 import io
 import time
+import re
+import numpy as np
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -236,8 +238,8 @@ class EventForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
 
         self.fields['station'].required = False
-        self.fields['mission'].queryset = models.Mission.objects.using(self.database).all()
-        self.mission = models.Mission.objects.using(self.database).first()  # There's only ever one mission per DB
+        self.fields['mission'].queryset = models.Mission.objects.all()
+        self.mission = models.Mission.objects.first()  # There's only ever one mission per DB
 
         self.helper = FormHelper(self)
 
@@ -270,7 +272,7 @@ class EventForm(forms.ModelForm):
             apply_attrs['hx-target'] = "#div_id_card_event_details"
 
             if 'station' in self.initial:
-                station = models.Station.objects.using(self.database).get(pk=self.initial['station'])
+                station = models.Station.objects.get(pk=self.initial['station'])
                 gl_station = settings_models.GlobalStation.objects.filter(name__iexact=station.name)
                 if gl_station.exists():
                     self.fields['global_station'].initial = gl_station.first().pk
@@ -287,7 +289,7 @@ class EventForm(forms.ModelForm):
         self.fields['global_station'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_stations',
                                                                             args=(self.database,))
 
-        instruments = models.Instrument.objects.using(self.database).all().order_by("name")
+        instruments = models.Instrument.objects.all().order_by("name")
         self.fields['instrument'].queryset = instruments
 
         self.fields['instrument'].choices = [(None, '--------')]
@@ -347,7 +349,7 @@ class EventForm(forms.ModelForm):
 
         gl_station_id = self.cleaned_data['global_station']
         gl_station = settings_models.GlobalStation.objects.get(pk=gl_station_id)
-        if (n_station := models.Station.objects.using(self.database).filter(name__iexact=gl_station.name)).exists():
+        if (n_station := models.Station.objects.filter(name__iexact=gl_station.name)).exists():
             instance.station = n_station.first()
         else:
             n_station = models.Station(name=gl_station.name)
@@ -363,6 +365,9 @@ class ActionForm(forms.ModelForm):
         attrs={'type': 'datetime-local', 'max': "9999-12-31 12:59:59",
                'value': datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")}))
 
+    latitude = forms.CharField(widget=forms.TextInput())
+    longitude = forms.CharField(widget=forms.TextInput())
+
     class Meta:
         model = models.Action
         fields = ['id', 'event', 'type', 'date_time', 'sounding', 'latitude', 'longitude', 'comment']
@@ -371,7 +376,7 @@ class ActionForm(forms.ModelForm):
         }
 
     def __init__(self, event, database=None, *args, **kwargs):
-        self.database = database if database else event.mission.name
+        self.database = database if database else event.mission._state.db
 
         super().__init__(*args, **kwargs)
 
@@ -412,7 +417,14 @@ class ActionForm(forms.ModelForm):
             action_id_element = Hidden('id', self.instance.pk)
 
         station_name = event.station.name
-        if (global_station := settings_models.GlobalStation.objects.filter(name=station_name)).exists():
+        if event.actions.count() > 0:
+            action = event.actions.last()
+            self.fields['sounding'].initial = action.sounding
+            self.fields['latitude'].initial = action.latitude
+            self.fields['longitude'].initial = action.longitude
+            self.fields['date_time'].widget.attrs['value'] = action.date_time.strftime("%Y-%m-%d %H:%M:%S")
+
+        elif (global_station := settings_models.GlobalStation.objects.filter(name=station_name)).exists():
             global_station = global_station.first()
             if self.initial.get("sounding", -1) == -1:
                 if global_station.sounding:
@@ -454,6 +466,52 @@ class ActionForm(forms.ModelForm):
         )
         self.helper.form_show_labels = False
 
+    def clean_longitude(self):
+        data = self.cleaned_data['longitude']
+        if re.match(r'(-{0,1}\d{1,3} \d{1,2}.*\d+( [Ee]|[Ww])*)', data):
+            lon_split: [str] = data.split(' ')
+            lon = float(lon_split[0])
+            negative = False
+            if lon < 0:
+                lon *= -1
+                negative = True
+
+            if len(lon_split) > 1:
+                lon += float(lon_split[1])/60
+            if negative or (len(lon_split) > 2 and lon_split[2].upper() == 'W'):
+                lon *= -1
+            return str(np.round(lon, models.Action.longitude.field.decimal_places))
+
+        try:
+            lon = float(data)
+            return str(np.round(lon, models.Action.longitude.field.decimal_places))
+        except ValueError:
+            message = _("Longitude is badly formatted. Must be in decimal degrees, or degree minutes with 'W' or 'E'.")
+            raise forms.ValidationError(message)
+
+    def clean_latitude(self):
+        data = self.cleaned_data['latitude']
+        if re.match(r'(-{0,1}\d{1,2} \d{1,2}\.*\d+( [Nn]|[Ss])*)', data):
+            lat_split: [str] = data.split(' ')
+            lat = float(lat_split[0])
+            negative = False
+            if lat < 0:
+                lat *= -1
+                negative = True
+
+            if len(lat_split) > 1:
+                lat += float(lat_split[1])/60
+            if negative or (len(lat_split) > 2 and lat_split[2].upper() == 'S'):
+                lat *= -1
+            return str(np.round(lat, models.Action.latitude.field.decimal_places))
+
+        try:
+            lat = float(data)
+            return str(np.round(lat, models.Action.latitude.field.decimal_places))
+        except ValueError:
+            message = _("Latitude is badly formatted. Must be in decimal degrees, or degree minutes with 'N' or 'S'.")
+            raise forms.ValidationError(message)
+
     def save(self, commit=True):
         instance = super().save(False)
         instance.save(using=self.database)
@@ -470,7 +528,7 @@ class AttachmentForm(forms.ModelForm):
 
     def __init__(self, event, database=None, *args, **kwargs):
 
-        self.database = database if database else event.mission.name
+        self.database = database if database else event.mission._state.db
 
         super().__init__(*args, **kwargs)
 
@@ -649,7 +707,7 @@ def update_instruments(request, database):
             instrument_type = int(request.POST['instrument_type'])
 
         if instrument_name and instrument_type > 0:
-            instruments = models.Instrument.objects.using(database).filter(
+            instruments = models.Instrument.objects.filter(
                 name=instrument_name,
                 type=instrument_type
             )
@@ -657,8 +715,8 @@ def update_instruments(request, database):
                 mission_dict['instrument'] = instruments[0].id
             else:
                 new_instrument = models.Instrument(name=instrument_name, type=instrument_type)
-                new_instrument.save(using=database)
-                mission_dict['instrument'] = models.Instrument.objects.using(database).get(
+                new_instrument.save()
+                mission_dict['instrument'] = models.Instrument.objects.get(
                     name=instrument_name,
                     type=instrument_type
                 )
@@ -703,7 +761,7 @@ def create_replace_table(soup, tr_html):
 def deselect_event(soup, database):
     if caches['default'].touch("selected_event"):
         old_event_id = caches['default'].get('selected_event')
-        old_event = models.Event.objects.using(database).get(pk=old_event_id)
+        old_event = models.Event.objects.get(pk=old_event_id)
         tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
                                          context={"database": database, "event": old_event})
         table = create_replace_table(soup, tr_html)
@@ -711,7 +769,7 @@ def deselect_event(soup, database):
 
 
 def add_event(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup("", "html.parser")
 
@@ -780,7 +838,7 @@ def add_event(request, database, mission_id, **kwargs):
 
 
 def edit_event(request, database, event_id):
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
 
     # we don't need the edit and delete buttons on the EventDetail card if we're editing
     class NoDeleteEditEventDetails(EventDetails):
@@ -829,7 +887,7 @@ def selected_details(request, database, event_id):
 
     caches['default'].set('selected_event', event_id, 3600)
 
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
                                      context={"database": database, "event": event, 'selected': 'true'})
     # table = create_replace_table(soup, tr_html)
@@ -851,7 +909,7 @@ def get_selected_event(request, database):
         soup.append(card)
         return HttpResponse(soup)
 
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     details_html = render_to_string("core/partials/event_details.html", context={"database": database, "event": event})
     details_soup = BeautifulSoup(details_html, 'html.parser')
 
@@ -864,7 +922,7 @@ def get_selected_event(request, database):
     event_details_content = details_soup.find(id='div_event_content_id')
     card_details_content.append(event_details_content)
 
-    samples = models.MissionSampleType.objects.using(database).filter(is_sensor=False)
+    samples = models.MissionSampleType.objects.filter(is_sensor=False)
     bottles = event.bottles.all()
     bottle_list = {bottle: [sample.type for sample in bottle.samples.all()] for bottle in bottles}
 
@@ -880,7 +938,7 @@ def get_selected_event(request, database):
 
 
 def delete_details(request, database, event_id):
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     mission = event.mission
 
     if caches['default'].touch('selected_event'):
@@ -909,7 +967,7 @@ def delete_details(request, database, event_id):
 
 
 def list_action(request, database, event_id, editable=False):
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     context = {'database': database, 'event': event, 'editable': editable}
     response = HttpResponse(render_to_string('core/partials/table_action.html', context=context))
     return response
@@ -929,7 +987,7 @@ def render_action_form(soup, action_form):
 
 
 def add_action(request, database, event_id):
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
 
     soup = BeautifulSoup('', 'html.parser')
     if request.method == "POST":
@@ -956,7 +1014,7 @@ def add_action(request, database, event_id):
 
 def edit_action(request, database, action_id):
     try:
-        action = models.Action.objects.using(database).get(pk=action_id)
+        action = models.Action.objects.get(pk=action_id)
     except models.Action.DoesNotExist:
         event_id = request.POST.get('event', None)
         return add_action(request, database, event_id)
@@ -981,12 +1039,12 @@ def edit_action(request, database, action_id):
 
 
 def delete_action(request, database, action_id):
-    models.Action.objects.using(database).get(pk=action_id).delete()
+    models.Action.objects.get(pk=action_id).delete()
     return HttpResponse()
 
 
 def list_attachment(request, database, event_id, editable=False):
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     context = {'database': database, 'event': event, 'editable': editable}
     return HttpResponse(render_to_string('core/partials/table_attachment.html', context=context))
 
@@ -1004,7 +1062,7 @@ def render_attachment_form(soup, attachment_form):
 
 
 def add_attachment(request, database, event_id):
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "POST":
@@ -1026,7 +1084,7 @@ def add_attachment(request, database, event_id):
 
 
 def edit_attachment(request, database, attachment_id):
-    attachment = models.Attachment.objects.using(database).get(pk=attachment_id)
+    attachment = models.Attachment.objects.get(pk=attachment_id)
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "POST":
@@ -1049,7 +1107,7 @@ def edit_attachment(request, database, attachment_id):
 
 
 def delete_attachment(request, database, attachment_id):
-    models.Attachment.objects.using(database).get(pk=attachment_id).delete()
+    models.Attachment.objects.get(pk=attachment_id).delete()
     return HttpResponse()
 
 
@@ -1068,14 +1126,14 @@ def load_filter_log(request, database, event_id):
         }
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     time.sleep(2)
     file = request.FILES['filter_log']
     FilterLogParser.parse(event, file.name, file)
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(msg_area := soup.new_tag("div", id="div_id_card_message_area_event_details"))
-    if models.FileError.objects.using(database).filter(file_name=file.name).exists():
+    if models.FileError.objects.filter(file_name=file.name).exists():
         attrs = {
             'component_id': "div_id_card_message_area_event_details_alert",
             'message': _("Issues Processing File"),
@@ -1109,7 +1167,7 @@ def load_bottle_file(request, database, event_id):
         }
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
-    event = models.Event.objects.using(database).get(pk=event_id)
+    event = models.Event.objects.get(pk=event_id)
     time.sleep(2)
     files = request.FILES.getlist('bottle_files')
 
@@ -1145,7 +1203,7 @@ def load_bottle_file(request, database, event_id):
             msg_area.append(core_forms.blank_alert(**attrs))
             err = models.FileError(mission=event.mission, file_name=btl_file, line=-1, message=message,
                                         type=models.ErrorType.event)
-            err.save(using=database)
+            err.save()
             trigger = "event_updated"
 
     # we have to clear the file input or when the user clicks the button to load the same file, nothing will happen
@@ -1160,7 +1218,7 @@ def load_bottle_file(request, database, event_id):
 
 
 def import_elog_events(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
         if 'andes_event' in request.GET:
@@ -1213,7 +1271,7 @@ def import_elog_events(request, database, mission_id, **kwargs):
 
 
 def list_events(request, database, mission_id, **kwargs):
-    mission = models.Mission.objects.using(database).get(pk=mission_id)
+    mission = models.Mission.objects.get(pk=mission_id)
 
     tr_html = render_to_string('core/partials/table_event.html', context={'database': database, 'mission': mission})
 

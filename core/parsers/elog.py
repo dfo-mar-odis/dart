@@ -288,7 +288,7 @@ def parse_files(mission, files):
         file_error.type = core_models.ErrorType.event
         file_errors.append(file_error)
 
-    core_models.FileError.objects.using(database).bulk_create(file_errors)
+    core_models.FileError.objects.bulk_create(file_errors)
 
 
 def process_stations(mission: core_models.Mission, station_queue: [str]) -> None:
@@ -299,7 +299,7 @@ def process_stations(mission: core_models.Mission, station_queue: [str]) -> None
     # we have to track stations that have been added, but not yet created in the database
     # in case there are duplicate stations in the station_queue
     added_stations = set()
-    existing_stations = core_models.Station.objects.using(database).all()
+    existing_stations = core_models.Station.objects.all()
     station_count = len(station_queue)
     for index, station in enumerate(station_queue):
         logger_notifications.info(_("Processing Stations") + " : %d/%d", (index + 1), station_count)
@@ -308,7 +308,7 @@ def process_stations(mission: core_models.Mission, station_queue: [str]) -> None
             added_stations.add(stn)
             stations.append(core_models.Station(name=stn))
 
-    core_models.Station.objects.using(database).bulk_create(stations)
+    core_models.Station.objects.bulk_create(stations)
 
 
 def get_instrument_type(instrument_name: str) -> core_models.InstrumentType:
@@ -321,6 +321,9 @@ def get_instrument_type(instrument_name: str) -> core_models.InstrumentType:
         instrument_type = core_models.InstrumentType[instrument_name.lower()].value
         return instrument_type
     except KeyError:
+        if instrument_name.upper() == "BIONESS":
+            return core_models.InstrumentType.net
+
         if instrument_name.upper() == "RINGNET":
             return core_models.InstrumentType.net
 
@@ -357,7 +360,10 @@ def get_instrument(name, attachments):
     instrument_name = name.upper()
     instrument_type = get_instrument_type(instrument_name=name)
     if instrument_type == core_models.InstrumentType.net:
-        instrument_name = get_net_mesh_size(name, attachments)
+        if instrument_name.upper() == "BIONESS":
+            instrument_name = instrument_name.upper()
+        else:
+            instrument_name = get_net_mesh_size(name, attachments)
 
     instrument = core_models.Instrument(name=instrument_name, type=instrument_type)
 
@@ -373,7 +379,7 @@ def process_instruments(mission: core_models.Mission, instrument_queue: [(str, s
 
     # track created instruments that are not yet in the DB, no duplications
     added_instruments = set()
-    existing_instruments = core_models.Instrument.objects.using(database).all()
+    existing_instruments = core_models.Instrument.objects.all()
     instrument_count = len(instrument_queue)
     for index, instrument in enumerate(instrument_queue):
         logger_notifications.info(_("Processing Instruments") + " : %d/%d", (index + 1), instrument_count)
@@ -385,7 +391,7 @@ def process_instruments(mission: core_models.Mission, instrument_queue: [(str, s
                 instruments.append(instrument_tmp)
                 added_instruments.add(key)
 
-    core_models.Instrument.objects.using(database).bulk_create(instruments)
+    core_models.Instrument.objects.bulk_create(instruments)
 
 
 def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
@@ -397,8 +403,8 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
     existing_events = mission.events.all()
 
     # hopefully stations and instruments were created in bulk before hand
-    stations = core_models.Station.objects.using(database).all()
-    instruments = core_models.Instrument.objects.using(database).all()
+    stations = core_models.Station.objects.all()
+    instruments = core_models.Instrument.objects.all()
 
     # messge objects are 'actions', and event can have multiple actions. Track event_ids for events we've just
     # created and only add events to the new_events queue if they haven't been previously processed
@@ -528,10 +534,10 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
             errors.append((mid, message, ex,))
 
     if len(create_events) > 0:
-        core_models.Event.objects.using(database).bulk_create(create_events.values())
+        core_models.Event.objects.bulk_create(create_events.values())
 
     if len(update_events) > 0:
-        core_models.Event.objects.using(database).bulk_update(objs=update_events, fields=update_fields)
+        core_models.Event.objects.bulk_update(objs=update_events, fields=update_fields)
 
     return errors
 
@@ -600,7 +606,7 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
             attached_str = buffer.pop(mapped_fields['attached'])
 
             # if the time|position doesn't exist report the issue to the user, it may not have been set by mistake
-            if re.search(".*\|.*\|.*\|.*", buffer[mapped_fields['time_position']]) is None:
+            if re.search(r".*\|.*\|.*\|.*", buffer[mapped_fields['time_position']]) is None:
                 raise ValueError({'message': _("Badly formatted or missing Time|Position") + f"  $@MID@$ {mid}",
                                   'key': 'time_position',
                                   'expected': mapped_fields['time_position']})
@@ -690,10 +696,10 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
-    core_models.Attachment.objects.using(database).bulk_create(create_attachments)
-    core_models.Action.objects.using(database).bulk_create(create_actions)
+    core_models.Attachment.objects.bulk_create(create_attachments)
+    core_models.Action.objects.bulk_create(create_actions)
     if update_actions['fields']:
-        core_models.Action.objects.using(database).bulk_update(objs=update_actions['objects'],
+        core_models.Action.objects.bulk_update(objs=update_actions['objects'],
                                                                fields=update_actions['fields'])
 
     return errors
@@ -704,7 +710,7 @@ def get_create_and_update_variables(mission: core_models.Mission, action: core_m
     variables_to_create = []
     variables_to_update = []
     for key, value in buffer.items():
-        variable = core_models.VariableName.objects.using(database).get_or_create(name=key)[0]
+        variable = core_models.VariableName.objects.get_or_create(name=key)[0]
         filtered_variables = action.variables.filter(name=variable)
         if not filtered_variables.exists():
             new_variable = core_models.VariableField(action=action, name=variable, value=value)
@@ -728,7 +734,7 @@ def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -
     fields_update = []
 
     existing_actions = {str(action.mid): action for action in
-                        core_models.Action.objects.using(database).filter(event__mission=mission)}
+                        core_models.Action.objects.filter(event__mission=mission)}
 
     elog_configuration = get_or_create_file_config()
     required_fields = ['lead_scientist', 'protocol', 'cruise', 'platform']
@@ -763,7 +769,7 @@ def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -
             if update_mission:
                 if (lead_scientists and lead_scientists.strip() != '') and mission.lead_scientist == 'N/A':
                     mission.lead_scientist = lead_scientists
-                    mission.save(using=database)
+                    mission.save()
 
                 if (protocol and protocol.strip() != '') and mission.protocol == 'N/A':
                     # make sure the protocal isn't more than 50 characters if it's not 'AZMP' or 'AZOMP'
@@ -781,7 +787,7 @@ def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -
                     mission.platform = platform
 
                 if update_mission:
-                    mission.save(using=database)
+                    mission.save()
 
                 update_mission = False
                 if mission.platform == 'N/A' or mission.protocol == 'N/A':
@@ -801,7 +807,7 @@ def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -
             logger.exception(ex)
             errors.append((mid, message, ex,))
 
-    core_models.VariableField.objects.using(database).bulk_create(fields_create)
-    core_models.VariableField.objects.using(database).bulk_update(objs=fields_update, fields=['value'])
+    core_models.VariableField.objects.bulk_create(fields_create)
+    core_models.VariableField.objects.bulk_update(objs=fields_update, fields=['value'])
 
     return errors

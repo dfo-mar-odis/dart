@@ -50,17 +50,17 @@ class TestSampleFileConfiguration(DartTestCase):
         # a div_id_sample_type_holder object for messages (empty) and a div_id_loaded_sample_type object
         # for loaded configurations (empty
         elm: bs4.Tag = form.findChildren()[0]
-        self.assertEquals(elm.attrs['name'], 'mission_id')
-        self.assertEquals(elm.attrs['value'], str(self.mission.pk))
+        self.assertEqual(elm.attrs['name'], 'mission_id')
+        self.assertEqual(elm.attrs['value'], str(self.mission.pk))
 
         elm = elm.find_next_sibling()
-        self.assertEquals(elm.attrs['class'], ['row'])
+        self.assertEqual(elm.attrs['class'], ['row'])
 
         elm = elm.find_next_sibling()
-        self.assertEquals(elm.attrs['id'], 'div_id_sample_type_holder')
+        self.assertEqual(elm.attrs['id'], 'div_id_sample_type_holder')
 
         elm = elm.find_next_sibling()
-        self.assertEquals(elm.attrs['id'], 'div_id_loaded_sample_type')
+        self.assertEqual(elm.attrs['id'], 'div_id_loaded_sample_type')
 
     def test_input_field(self):
         # first action is for a user to choose a file, which should send back an 'alert alert-info' element
@@ -74,11 +74,11 @@ class TestSampleFileConfiguration(DartTestCase):
         message = soup.find(id="div_id_loaded_sample_type_message")
 
         self.assertIsNotNone(message)
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-post'], url)
 
         alert = message.find('div')
-        self.assertEquals(alert.text, "Loading")
+        self.assertEqual(alert.text, "Loading")
 
     @tag('form_sample_config_test_input_file_no_config')
     def test_input_file_no_config(self):
@@ -93,8 +93,8 @@ class TestSampleFileConfiguration(DartTestCase):
         msg_div = samples_list.findChild('div')
 
         self.assertIsNotNone(msg_div)
-        self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-info', 'mt-2'])
-        self.assertEquals(msg_div.string, "No File Configurations Found")
+        self.assertEqual(msg_div.attrs['class'], ['alert', 'alert-info', 'mt-2'])
+        self.assertEqual(msg_div.string, "No File Configurations Found")
 
         # the check-square upload button should be on the page, but disabled
         upload_btn = soup.find('button', {'name': 'upload_samples'})
@@ -149,12 +149,12 @@ class TestSampleFileConfiguration(DartTestCase):
         message = soup.find(id="div_id_loaded_sample_type_message")
 
         self.assertIsNotNone(message)
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], reverse("core:form_sample_config_new",
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-post'], reverse("core:form_sample_config_new",
                                                             args=('default',)))
 
         alert = message.find('div')
-        self.assertEquals(alert.text, "Loading")
+        self.assertEqual(alert.text, "Loading")
 
     def test_new_blank_form_no_file(self):
         # When the 'add' sample_type button is clicked if no file has been selected a message should be
@@ -171,8 +171,8 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertIsNotNone(div)
         msg_div = div.findChild('div')
         self.assertIsNotNone(msg_div)
-        self.assertEquals(msg_div.attrs['class'], ['alert', 'alert-warning', 'mt-2'])
-        self.assertEquals(msg_div.string, "File is required before adding sample")
+        self.assertEqual(msg_div.attrs['class'], ['alert', 'alert-warning', 'mt-2'])
+        self.assertEqual(msg_div.string, "File is required before adding sample")
 
     @tag('form_sample_config_test_new_blank_form_with_file')
     def test_new_blank_form_with_file(self):
@@ -193,7 +193,7 @@ class TestSampleFileConfiguration(DartTestCase):
             response = self.client.post(url, {'sample_file': fp})
 
         returned_content = response.content.decode('utf-8')
-        self.assertEquals(returned_content, expected_form_html)
+        self.assertEqual(returned_content, expected_form_html)
 
     @tag('form_sample_config_test_submit_new_sample_type_get')
     def test_submit_new_sample_type_get(self):
@@ -210,11 +210,11 @@ class TestSampleFileConfiguration(DartTestCase):
         message = soup.find(id="div_id_loaded_sample_type_message")
 
         self.assertIsNotNone(message)
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-post'], url)
 
         alert = message.find('div')
-        self.assertEquals(alert.text, "Saving")
+        self.assertEqual(alert.text, "Saving")
 
     def test_submit_new_sample_type_invalid(self):
         # If a submitted form is invalid the form should be returned with errors
@@ -268,7 +268,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         sample_type_load_card = div_id_loaded_samples_list.find(id=expected_sample_type_load_form_id)
         self.assertIsNotNone(sample_type_load_card)
-        self.assertEquals(len(sample_type_load_card.find_next_siblings()), 0)
+        self.assertEqual(len(sample_type_load_card.find_next_siblings()), 0)
 
         # the response should also include a #button_id_load_samples element as an hx-swap-oob to enable
         # the upload button if it was previously disabled because there was no configuration
@@ -310,7 +310,7 @@ class TestSampleFileConfiguration(DartTestCase):
             response = self.client.post(url, {'sample_file': fp})
 
         returned_content = response.content.decode('utf-8')
-        self.assertEquals(returned_content, expected_form_html)
+        self.assertEqual(returned_content, expected_form_html)
 
     def test_edit_sample_type_update_message(self):
         # if the new_sample_config url contains an argument with a 'config_id' the form should load with the
@@ -340,11 +340,11 @@ class TestSampleFileConfiguration(DartTestCase):
         message = soup.find(id="div_id_loaded_sample_type_message")
 
         self.assertIsNotNone(message)
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-post'], url)
 
         alert = message.find('div')
-        self.assertEquals(alert.text, "Saving")
+        self.assertEqual(alert.text, "Saving")
 
     def test_edit_sample_type_save_message(self):
         # if the new_sample_config url contains an argument with a 'config_id' the form should load with the
@@ -359,11 +359,11 @@ class TestSampleFileConfiguration(DartTestCase):
         message = soup.find(id="div_id_loaded_sample_type_message")
 
         self.assertIsNotNone(message)
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-post'], url)
 
         alert = message.find('div')
-        self.assertEquals(alert.text, "Saving")
+        self.assertEqual(alert.text, "Saving")
 
     def test_edit_sample_type_update(self):
         # if the new_sample_config url contains an argument with a 'sample_type' id the form should load with the
@@ -396,7 +396,7 @@ class TestSampleFileConfiguration(DartTestCase):
                                          'value_field': oxy_sample_type_config.value_field, })
 
         sample_type = settings_models.SampleTypeConfig.objects.get(pk=oxy_sample_type_config.pk)
-        self.assertEquals(sample_type.tab, 0)
+        self.assertEqual(sample_type.tab, 0)
 
     def test_load_samples_get(self):
         # clicking the load button should add a loading websocket alert to the SampleTypeLoadForm message area
@@ -425,11 +425,11 @@ class TestSampleFileConfiguration(DartTestCase):
         message = soup.find(id=f"div_id_sample_type_holder_alert")
 
         self.assertIsNotNone(message)
-        self.assertEquals(message.attrs['hx-trigger'], 'load')
-        self.assertEquals(message.attrs['hx-post'], url)
+        self.assertEqual(message.attrs['hx-trigger'], 'load')
+        self.assertEqual(message.attrs['hx-post'], url)
 
         alert = message.find('div')
-        self.assertEquals(alert.text, "Loading")
+        self.assertEqual(alert.text, "Loading")
 
     # in the event the user select the 'New Sample Type' option from the sample_type drop down
     # the drop down should be replaced with a SampleTypeForm allowing the user to create a new
@@ -445,7 +445,7 @@ class TestSampleFileConfiguration(DartTestCase):
 
         response = self.client.get(url)
 
-        self.assertEquals(response.content.decode('utf-8'), expected_html)
+        self.assertEqual(response.content.decode('utf-8'), expected_html)
 
     @tag('form_sample_config_test_new_sample_type_on_config')
     def test_new_sample_type_on_config(self):
@@ -485,7 +485,7 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertIsNotNone(sample_type)
         selected = sample_type.find('option', selected=True)
         self.assertIsNotNone(selected)
-        self.assertEquals(int(selected.attrs['value']), oxy_sample_type.pk)
+        self.assertEqual(int(selected.attrs['value']), oxy_sample_type.pk)
 
     def test_new_sample_type_on_config_save(self):
         # if the 'core:form_sample_config_save' url recieves a POST containing the 'new_sample'
@@ -508,4 +508,4 @@ class TestSampleFileConfiguration(DartTestCase):
         self.assertIsNotNone(sample_type)
         selected = sample_type.find('option', selected=True)
         self.assertIsNotNone(selected)
-        self.assertEquals(int(selected.attrs['value']), oxy_sample_type.pk)
+        self.assertEqual(int(selected.attrs['value']), oxy_sample_type.pk)

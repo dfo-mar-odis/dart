@@ -13,9 +13,9 @@ logger_notifications = logging.getLogger('dart.user.validation')
 
 def validate_mission(mission: core_models.Mission):
     database = mission._state.db
-    events = core_models.Event.objects.using(database).filter(mission=mission)
+    events = core_models.Event.objects.filter(mission=mission)
 
-    core_models.ValidationError.objects.using(database).filter(event__mission=mission,
+    core_models.ValidationError.objects.filter(event__mission=mission,
                                                                type=core_models.ErrorType.validation).delete()
     errors = []
     events_count = len(events)
@@ -23,7 +23,7 @@ def validate_mission(mission: core_models.Mission):
         logger_notifications.info(_("Validating Event") + " : %d/%d", (index+1), events_count)
         errors += validate_event(event)
 
-    core_models.ValidationError.objects.using(database).bulk_create(errors)
+    core_models.ValidationError.objects.bulk_create(errors)
 
 
 def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
@@ -76,7 +76,7 @@ def validate_event(event: core_models.Event) -> [core_models.ValidationError]:
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
-    dup_events = core_models.Event.objects.using(database).filter(
+    dup_events = core_models.Event.objects.filter(
         event_id=event.event_id,
         station=event.station,
         instrument=event.instrument
@@ -159,7 +159,7 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
         validation_errors.append(err)
     elif event.mission.start_date < datetime.strptime("2024-01-01", '%Y-%m-%d').date():
         if event.attachments.filter(name__iexact='76um').exists():
-            ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
+            ctd_events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd)
             if not ctd_events.filter(end_sample_id=event.sample_id).exists():
                 message = _("No CTD event with matching surface bottle. "
                             "Check the deck sheet to confirm this is a surface bottle")
@@ -171,7 +171,7 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
                 err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
                 validation_errors.append(err)
         elif event.attachments.filter(name__iexact='202um').exists():
-            ctd_events = core_models.Event.objects.using(database).filter(instrument__type=core_models.InstrumentType.ctd)
+            ctd_events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd)
             if not ctd_events.filter(sample_id=event.sample_id).exists():
                 message = _("No CTD event with matching bottom bottle. "
                             "Check the deck sheet to confirm this is a bottom bottle")

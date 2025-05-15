@@ -1,16 +1,16 @@
 # Requirements
-* Python 3.10, 3.11, 3.12
+* Python 3.13+
 * Git
 * C++ Visual Build Tools - required for oracle connections
 
 # Installation
-1. Before installation you must have Python 3.10 and [Git](https://git-scm.com/) installed.
-2. If you have a python 3.13 or later you will requier Dart in the 4.1.x branch instead of this version. You can check your python verion by opening a command window and typing `python -V`
+1. Before installation you must have Python 3.13 and [Git](https://git-scm.com/) installed.
+2. If you have a python version of between 3.10 and 3.12 you will requier Dart in the 4.0.x branch instead of this version. You can check your python verion by opening a command window and typing `python -V`
 
 ## Windows
 1. Open a windows file explorer and navigate to the directory you wish to install DART
 1. In the address bar, where the current working directory is specified, type `cmd`
-1. In the command window type `git clone https://github.com/dfo-mar-odis/dart`
+1. In the command window type `git -b 4.1.x clone https://github.com/dfo-mar-odis/dart`
 1. When the application has been checked out, type 'cd dart' to change to the dart project directory
 1. Type `start_dart.bat` to start the application for the first time.
 

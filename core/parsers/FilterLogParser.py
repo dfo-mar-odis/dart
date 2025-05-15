@@ -85,7 +85,7 @@ def parse(event: core_models.Event, filename: str, stream: io.BytesIO):
     values = []
     count = station_tab.shape[0]
 
-    core_models.FileError.objects.using(database).filter(file_name=filename).delete()
+    core_models.FileError.objects.filter(file_name=filename).delete()
     file_errors = []
 
     for row, data in station_tab.iterrows():
@@ -110,14 +110,14 @@ def parse(event: core_models.Event, filename: str, stream: io.BytesIO):
         add_sample_type(bottle=bottle, short_name='prDM', samples=samples, values=values, value=pressure_value)
 
     if len(file_errors) > 0:
-        core_models.FileError.objects.using(database).bulk_create(file_errors)
+        core_models.FileError.objects.bulk_create(file_errors)
         return
 
     if len(bottles) > 0:
-        core_models.Bottle.objects.using(database).bulk_create(bottles)
+        core_models.Bottle.objects.bulk_create(bottles)
 
     bottle_ids = station_tab[get_mapping('bottles')].to_list()
-    core_models.DiscreteSampleValue.objects.using(database).filter(sample__bottle__bottle_id__in=bottle_ids,
+    core_models.DiscreteSampleValue.objects.filter(sample__bottle__bottle_id__in=bottle_ids,
                                                                    sample__type__is_sensor=False).delete()
     count = station_tab.shape[0]
     for row, data in station_tab.iterrows():
@@ -172,10 +172,10 @@ def parse(event: core_models.Event, filename: str, stream: io.BytesIO):
             add_sample_type(bottle=bottle, short_name='zea', samples=samples, values=values)
 
     if len(samples) > 0:
-        core_models.Sample.objects.using(database).bulk_create(samples)
+        core_models.Sample.objects.bulk_create(samples)
 
     if len(values) > 0:
-        core_models.DiscreteSampleValue.objects.using(database).bulk_create(values)
+        core_models.DiscreteSampleValue.objects.bulk_create(values)
 
     bottles = event.bottles.order_by('bottle_id')
     event.sample_id = bottles.first().bottle_id

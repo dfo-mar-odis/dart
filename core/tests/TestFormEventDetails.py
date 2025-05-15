@@ -11,7 +11,7 @@ from dart.tests.DartTestCase import DartTestCase
 
 @tag('forms', 'form_mission_event')
 class TestMissionEventForm(DartTestCase):
-    fixtures = ['biochem_fixtures', 'default_settings_fixtures']
+    fixtures = ['default_biochem_fixtures', 'default_settings_fixtures']
 
     add_event_url = "core:form_event_add_event"
     edit_event_url = "core:form_event_edit_event"
@@ -67,24 +67,24 @@ class TestMissionEventForm(DartTestCase):
         # using *.get(event_id=1) will throw a DoesNotExist exception if it wasn't created
         new_event = models.Event.objects.using('default').get(mission=self.mission, event_id=1)
         new_station = models.Station.objects.using('default').get(name__iexact=station.name)
-        self.assertEquals(new_event.station.pk, new_station.pk)
-        self.assertEquals(new_event.instrument.pk, instrument.pk)
-        self.assertEquals(new_event.sample_id, kwargs['sample_id'])
-        self.assertEquals(new_event.end_sample_id, kwargs['end_sample_id'])
+        self.assertEqual(new_event.station.pk, new_station.pk)
+        self.assertEqual(new_event.instrument.pk, instrument.pk)
+        self.assertEqual(new_event.sample_id, kwargs['sample_id'])
+        self.assertEqual(new_event.end_sample_id, kwargs['end_sample_id'])
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
         event_edit_form = soup.find(id="event_form_id")
         self.assertIsNotNone(event_edit_form)
-        self.assertEquals(event_edit_form.name, 'form')
+        self.assertEqual(event_edit_form.name, 'form')
 
         action_form = soup.find(id="actions_form_id")
         self.assertIsNotNone(action_form)
-        self.assertEquals(action_form.name, 'form')
+        self.assertEqual(action_form.name, 'form')
 
         attachment_form = soup.find(id="attachments_form_id")
         self.assertIsNotNone(attachment_form)
-        self.assertEquals(attachment_form.name, 'form')
+        self.assertEqual(attachment_form.name, 'form')
 
     @tag('form_mission_event_test_edit_event_post')
     def test_edit_event_post(self):
@@ -105,10 +105,10 @@ class TestMissionEventForm(DartTestCase):
 
         edited_event = models.Event.objects.using('default').get(pk=event.pk)
 
-        self.assertEquals(edited_event.sample_id, kwargs['sample_id'])
-        self.assertEquals(edited_event.end_sample_id, kwargs['end_sample_id'])
+        self.assertEqual(edited_event.sample_id, kwargs['sample_id'])
+        self.assertEqual(edited_event.end_sample_id, kwargs['end_sample_id'])
         new_station = models.Station.objects.using('default').get(name__iexact=station.name)
-        self.assertEquals(edited_event.station.pk, new_station.pk)
+        self.assertEqual(edited_event.station.pk, new_station.pk)
 
     @tag('form_mission_event_test_delete_event_post')
     def test_delete_event_post(self):
@@ -131,12 +131,12 @@ class TestMissionEventForm(DartTestCase):
         self.assertIn('hx-swap-oob', new_detail_card.attrs)
 
         self.assertIn('Hx-Trigger', response.headers)
-        self.assertEquals(response.headers['Hx-Trigger'], 'event_updated')
+        self.assertEqual(response.headers['Hx-Trigger'], 'event_updated')
 
         # we'll also return a table and table row using an hx-swap-oob to delete the event from the selection table
         event_row = soup.find(id=f"event-{event.pk}")
         self.assertIn('hx-swap', event_row.attrs)
-        self.assertEquals(event_row.attrs['hx-swap'], 'delete')
+        self.assertEqual(event_row.attrs['hx-swap'], 'delete')
 
     @tag('form_mission_event_test_add_action_post')
     def test_add_action_post(self):
@@ -158,23 +158,23 @@ class TestMissionEventForm(DartTestCase):
         response = self.client.post(url, kwargs)
 
         action = models.Action.objects.using('default').get(event=event, date_time=action_vars.date_time)
-        self.assertEquals(action.latitude, action_vars.latitude)
-        self.assertEquals(action.longitude, action_vars.longitude)
-        self.assertEquals(action.type, action_vars.type)
+        self.assertEqual(action.latitude, action_vars.latitude)
+        self.assertEqual(action.longitude, action_vars.longitude)
+        self.assertEqual(action.type, action_vars.type)
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
         action_form = soup.find(id="actions_form_id")
         self.assertIsNotNone(action_form)
-        self.assertEquals(action_form.name, 'form')
+        self.assertEqual(action_form.name, 'form')
 
         action_table = soup.find(id="tbody_id_action_table")  # should be the tbody tag
         self.assertIsNotNone(action_table)
-        self.assertEquals(action_table.name, 'tbody')
+        self.assertEqual(action_table.name, 'tbody')
 
         # tbody should contain one tr tag
         tr_tags = action_table.find_all('tr')
-        self.assertEquals(len(tr_tags), 1)
+        self.assertEqual(len(tr_tags), 1)
 
     @tag('form_mission_event_test_edit_action_get')
     def test_edit_action_get(self):
@@ -190,20 +190,20 @@ class TestMissionEventForm(DartTestCase):
         soup = BeautifulSoup(response.content, "html.parser")
         action_form = soup.find(id="actions_form_id")
         self.assertIsNotNone(action_form)
-        self.assertEquals(action_form.name, 'form')
+        self.assertEqual(action_form.name, 'form')
 
         type_select = action_form.find(id="id_action_type_field")
         self.assertIsNotNone(type_select)
-        self.assertEquals(type_select.name, 'select')
+        self.assertEqual(type_select.name, 'select')
 
         type_select_value = type_select.find(selected=True)
-        self.assertEquals(int(type_select_value.attrs['value']), action.type)
+        self.assertEqual(int(type_select_value.attrs['value']), action.type)
 
         # The action form should also have an hx-post with the edit action url
         submit = action_form.find('button', attrs={"name": "add_action"})
         self.assertIsNotNone(submit)
         self.assertIn("hx-post", submit.attrs)
-        self.assertEquals(submit.attrs['hx-post'], url)
+        self.assertEqual(submit.attrs['hx-post'], url)
 
     @tag('form_mission_event_test_edit_action_post')
     def test_edit_action_post(self):
@@ -226,8 +226,8 @@ class TestMissionEventForm(DartTestCase):
         response = self.client.post(url, kwargs)
 
         updated_action = models.Action.objects.using('default').get(pk=deployed_action.pk)
-        self.assertEquals(updated_action.latitude, kwargs['latitude'])
-        self.assertEquals(updated_action.longitude, kwargs['longitude'])
+        self.assertEqual(updated_action.latitude, kwargs['latitude'])
+        self.assertEqual(updated_action.longitude, kwargs['longitude'])
 
         soup = BeautifulSoup(response.content, "html.parser")
         action_form = soup.find(id="actions_form_id")
@@ -238,12 +238,12 @@ class TestMissionEventForm(DartTestCase):
 
         selected_type = type_field.find(selected=True)
         self.assertIsNotNone(selected_type)
-        self.assertEquals(selected_type.attrs['value'], "")
+        self.assertEqual(selected_type.attrs['value'], "")
 
         # because of how HTMX handles tables the
         replacement_row = soup.find(id=f"action-{ deployed_action.pk }")
         self.assertIsNotNone(replacement_row)
-        self.assertEquals(replacement_row.name, 'tr')
+        self.assertEqual(replacement_row.name, 'tr')
         self.assertIn('hx-swap-oob', replacement_row.attrs)
 
     @tag('form_mission_event_test_delete_action_post')
@@ -261,7 +261,7 @@ class TestMissionEventForm(DartTestCase):
         self.assertFalse(deployed.exists())
 
         soup = BeautifulSoup(response.content, "html.parser")
-        self.assertEquals(soup.prettify(), '')
+        self.assertEqual(soup.prettify(), '')
 
     @tag('form_mission_event_test_form_event_list_action_get')
     def test_form_event_list_action_get(self):
@@ -279,7 +279,7 @@ class TestMissionEventForm(DartTestCase):
 
         action_table_body = action_table.find('tbody')
         trs = action_table_body.find_all('tr')
-        self.assertEquals(len(trs), event.actions.count())
+        self.assertEqual(len(trs), event.actions.count())
 
     @tag('form_mission_event_test_form_event_list_action_get_editable')
     def test_form_event_list_action_get_editable(self):
@@ -298,7 +298,7 @@ class TestMissionEventForm(DartTestCase):
 
         action_table_body = action_table.find('tbody')
         trs = action_table_body.find_all('tr')
-        self.assertEquals(len(trs), event.actions.count())
+        self.assertEqual(len(trs), event.actions.count())
 
         for tr in trs:
             action_id = tr.attrs['id'].replace('action-', '')
@@ -306,13 +306,13 @@ class TestMissionEventForm(DartTestCase):
 
             button = tr.find('button', attrs={'name': 'edit_action'})
             self.assertIn('hx-get', button.attrs)
-            self.assertEquals(button.attrs['hx-get'], edit_url)
+            self.assertEqual(button.attrs['hx-get'], edit_url)
 
             delete_url = reverse(self.delete_action_url, args=('default', action_id))
 
             button = tr.find('button', attrs={'name': 'delete_action'})
             self.assertIn('hx-delete', button.attrs)
-            self.assertEquals(button.attrs['hx-delete'], delete_url)
+            self.assertEqual(button.attrs['hx-delete'], delete_url)
 
     @tag('form_mission_event_test_add_attachment_post')
     def test_add_attachment_post(self):
@@ -334,7 +334,7 @@ class TestMissionEventForm(DartTestCase):
         attachment_form = soup.find(id="attachments_form_id")
         self.assertIsNotNone(attachment_form)
         attachment_text = attachment_form.find(id="id_attachment_name_field")
-        self.assertEquals(attachment_text.text, "")
+        self.assertEqual(attachment_text.text, "")
 
     @tag('form_mission_event_test_edit_attachment_get')
     def test_edit_attachment_get(self):
@@ -350,18 +350,18 @@ class TestMissionEventForm(DartTestCase):
         soup = BeautifulSoup(response.content, "html.parser")
         attachment_form = soup.find(id="attachments_form_id")
         self.assertIsNotNone(attachment_form)
-        self.assertEquals(attachment_form.name, 'form')
+        self.assertEqual(attachment_form.name, 'form')
 
         attachment_name = attachment_form.find(id="id_attachment_name_field")
         self.assertIsNotNone(attachment_name)
-        self.assertEquals(attachment_name.name, 'input')
-        self.assertEquals(attachment_name.attrs['value'], attachment.name)
+        self.assertEqual(attachment_name.name, 'input')
+        self.assertEqual(attachment_name.attrs['value'], attachment.name)
 
         # The action form should also have an hx-post with the edit action url
         submit = attachment_form.find('button', attrs={"name": "add_attachment"})
         self.assertIsNotNone(submit)
         self.assertIn("hx-post", submit.attrs)
-        self.assertEquals(submit.attrs['hx-post'], url)
+        self.assertEqual(submit.attrs['hx-post'], url)
 
     @tag('form_mission_event_test_edit_attachment_post')
     def test_edit_attachment_post(self):
@@ -381,7 +381,7 @@ class TestMissionEventForm(DartTestCase):
         response = self.client.post(url, kwargs)
 
         updated_attachment = models.Attachment.objects.using('default').get(pk=attachment.pk)
-        self.assertEquals(updated_attachment.name, kwargs['name'])
+        self.assertEqual(updated_attachment.name, kwargs['name'])
 
         soup = BeautifulSoup(response.content, "html.parser")
         action_form = soup.find(id="attachments_form_id")
@@ -394,7 +394,7 @@ class TestMissionEventForm(DartTestCase):
         # because of how HTMX handles tables the
         replacement_row = soup.find(id=f"attachment-{ attachment.pk }")
         self.assertIsNotNone(replacement_row)
-        self.assertEquals(replacement_row.name, 'tr')
+        self.assertEqual(replacement_row.name, 'tr')
         self.assertIn('hx-swap-oob', replacement_row.attrs)
 
     @tag('form_mission_event_test_delete_attachment_post')
@@ -413,7 +413,7 @@ class TestMissionEventForm(DartTestCase):
         self.assertFalse(event.attachments.filter(pk=attachment.pk).exists())
 
         soup = BeautifulSoup(response.content, "html.parser")
-        self.assertEquals(soup.prettify(), '')
+        self.assertEqual(soup.prettify(), '')
 
     @tag('form_mission_event_list_attachment_get')
     def test_list_attachment_get(self):
@@ -433,7 +433,7 @@ class TestMissionEventForm(DartTestCase):
 
         att_table_body = att_table.find('tbody')
         trs = att_table_body.find_all('tr')
-        self.assertEquals(len(trs), event.attachments.count())
+        self.assertEqual(len(trs), event.attachments.count())
 
     @tag('form_mission_event_list_attachment_get_editable')
     def test_list_attachment_get_editable(self):
@@ -453,7 +453,7 @@ class TestMissionEventForm(DartTestCase):
 
         att_table_body = att_table.find('tbody')
         trs = att_table_body.find_all('tr')
-        self.assertEquals(len(trs), event.attachments.count())
+        self.assertEqual(len(trs), event.attachments.count())
 
         for tr in trs:
             attachment_id = tr.attrs['id'].replace('attachment-', '')
@@ -461,13 +461,13 @@ class TestMissionEventForm(DartTestCase):
 
             button = tr.find('button', attrs={'name': 'edit_attachment'})
             self.assertIn('hx-get', button.attrs)
-            self.assertEquals(button.attrs['hx-get'], edit_url)
+            self.assertEqual(button.attrs['hx-get'], edit_url)
 
             delete_url = reverse("core:form_event_delete_attachment", args=('default', attachment_id))
 
             button = tr.find('button', attrs={'name': 'delete_attachment'})
             self.assertIn('hx-delete', button.attrs)
-            self.assertEquals(button.attrs['hx-delete'], delete_url)
+            self.assertEqual(button.attrs['hx-delete'], delete_url)
 
     @tag("form_mission_event_test_global_stations")
     def test_global_stations(self):
@@ -525,7 +525,7 @@ class TestMissionEventForm(DartTestCase):
 
         msg_area_alert = soup.find(id="div_id_card_message_area_event_details_alert")
         self.assertIn('hx-post', msg_area_alert.attrs)
-        self.assertEquals(url, msg_area_alert.attrs['hx-post'])
+        self.assertEqual(url, msg_area_alert.attrs['hx-post'])
 
         self.assertIn('hx-trigger', msg_area_alert.attrs)
-        self.assertEquals('load', msg_area_alert.attrs['hx-trigger'])
+        self.assertEqual('load', msg_area_alert.attrs['hx-trigger'])

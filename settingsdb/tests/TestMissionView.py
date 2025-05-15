@@ -15,6 +15,10 @@ from core import models as core_models
 from settingsdb import models as settings_models
 from settingsdb import utils
 
+import logging
+
+logger = logging.getLogger('dart')
+
 fake_location = "./test_db"
 fake_db_name = 'fake_db'
 
@@ -32,7 +36,7 @@ class TestMissionView(DartTestCase):
         (settingsdb := settings_models.LocalSetting(database_location=fake_location, connected=True)).save()
         utils.add_database(fake_db_name)
 
-        core_models.Mission(name=fake_db_name).save(using=fake_db_name)
+        core_models.Mission(name=fake_db_name).save()
 
     @classmethod
     def tearDownClass(cls):
@@ -54,7 +58,7 @@ class TestMissionView(DartTestCase):
 
     def setUp(self) -> None:
         self.client = Client()
-        self.mission = core_models.Mission.objects.using(fake_db_name).first()
+        self.mission = core_models.Mission.objects.first()
 
     @tag("mission_view_test_list_missions_get")
     def test_list_missions_get(self):
@@ -70,18 +74,21 @@ class TestMissionView(DartTestCase):
         # be swapped onto the page under the tables. There should be 2 table rows, one for the headings, one for the
         # mission
         trs = soup.find_all('tr')
-        self.assertEquals(len(trs), 2)
+        for tr in trs:
+            logger.info(tr)
+
+        self.assertEqual(len(trs), 2)
 
         mission_row = soup.find(id=f"tr_id_mission_{self.mission.name}")
         self.assertIsNotNone(mission_row)
 
         edit_mission_url = reverse("core:mission_edit", args=(fake_db_name, self.mission.pk))
         edit_settings_link = mission_row.find('a', id="a_id_edit_mission")
-        self.assertEquals(edit_settings_link.attrs['href'], edit_mission_url)
+        self.assertEqual(edit_settings_link.attrs['href'], edit_mission_url)
 
         edit_events_url = reverse("core:mission_events_details", args=(fake_db_name, self.mission.pk))
         edit_events_link = mission_row.find('a', id="a_id_edit_mission_events")
-        self.assertEquals(edit_events_link.attrs['href'], edit_events_url)
+        self.assertEqual(edit_events_link.attrs['href'], edit_events_url)
 
 
 @tag("mission_view", "mission_view_ui")
@@ -104,13 +111,13 @@ class TestMissionViewUI(DartTestCase):
 
         # the selection element needs to have an hx-trigger="changed" on it
         self.assertIn('hx-trigger', mission_select.attrs)
-        self.assertEquals(mission_select.attrs['hx-trigger'], 'change')
+        self.assertEqual(mission_select.attrs['hx-trigger'], 'change')
 
         self.assertIn('hx-get', mission_select.attrs)
-        self.assertEquals(mission_select.attrs['hx-get'], reverse('settingsdb:update_mission_directory'))
+        self.assertEqual(mission_select.attrs['hx-get'], reverse('settingsdb:update_mission_directory'))
 
         self.assertIn('hx-swap', mission_select.attrs)
-        self.assertEquals(mission_select.attrs['hx-swap'], 'outerHTML')
+        self.assertEqual(mission_select.attrs['hx-swap'], 'outerHTML')
 
     @tag("mission_view_ui_test_missions_directory_update_get")
     def test_missions_directory_update_get(self):
@@ -140,7 +147,7 @@ class TestMissionViewUI(DartTestCase):
         new_directory = r"C:\new_location\\"
         response = self.client.post(url, {'directory': new_directory})
 
-        options = settings_models.LocalSetting.objects.using('default').filter(database_location__iexact=new_directory)
+        options = settings_models.LocalSetting.objects.filter(database_location__iexact=new_directory)
         self.assertTrue(options.exists())
         pass
 

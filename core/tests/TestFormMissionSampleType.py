@@ -53,11 +53,11 @@ class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
         # initially the start and end bottle should be filled in
         start_input = soup.find(id="id_start_sample")
         self.assertIsNotNone(start_input)
-        self.assertEquals(int(start_input.attrs['value']), self.start_bottle)
+        self.assertEqual(int(start_input.attrs['value']), self.start_bottle)
 
         end_input = soup.find(id="id_end_sample")
         self.assertIsNotNone(end_input)
-        self.assertEquals(int(end_input.attrs['value']), self.end_bottle)
+        self.assertEqual(int(end_input.attrs['value']), self.end_bottle)
 
     @tag("template_mission_sample_type_test_initial_template_delete_btn")
     def test_initial_template_delete_btn(self):
@@ -88,12 +88,12 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
 
         biochem_data_type_form = BioChemDataType('default', self.mission_sample_type)
 
-        self.assertEquals(biochem_data_type_form.fields['start_sample'].initial, self.start_bottle)
-        self.assertEquals(biochem_data_type_form.fields['end_sample'].initial, self.end_bottle)
-        self.assertEquals(biochem_data_type_form.fields['data_type_description'].initial,
+        self.assertEqual(biochem_data_type_form.fields['start_sample'].initial, self.start_bottle)
+        self.assertEqual(biochem_data_type_form.fields['end_sample'].initial, self.end_bottle)
+        self.assertEqual(biochem_data_type_form.fields['data_type_description'].initial,
                           self.mission_sample_type.datatype.pk)
 
-        self.assertEquals(biochem_data_type_form.fields['data_type_code'].initial,
+        self.assertEqual(biochem_data_type_form.fields['data_type_code'].initial,
                           self.mission_sample_type.datatype.pk)
 
     @tag("form_biochem_data_type_test_initial")
@@ -108,10 +108,10 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
         }
         biochem_data_type_form = BioChemDataType('default', self.mission_sample_type, initial=initial)
 
-        self.assertEquals(biochem_data_type_form.fields['start_sample'].initial, initial['start_sample'])
-        self.assertEquals(biochem_data_type_form.fields['end_sample'].initial, initial['end_sample'])
-        self.assertEquals(biochem_data_type_form.fields['data_type_description'].initial, initial['data_type_code'])
-        self.assertEquals(biochem_data_type_form.fields['data_type_code'].initial, initial['data_type_code'])
+        self.assertEqual(biochem_data_type_form.fields['start_sample'].initial, initial['start_sample'])
+        self.assertEqual(biochem_data_type_form.fields['end_sample'].initial, initial['end_sample'])
+        self.assertEqual(biochem_data_type_form.fields['data_type_description'].initial, initial['data_type_code'])
+        self.assertEqual(biochem_data_type_form.fields['data_type_code'].initial, initial['data_type_code'])
 
 
 @tag("forms", "mission_sample_type", "form_mission_sample_type")
@@ -145,10 +145,10 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
 
         url = reverse("core:mission_sample_type_card", args=('default', self.mission_sample_type.pk))
         self.assertIn('hx-get', table_card.attrs)
-        self.assertEquals(table_card.attrs['hx-get'], url)
+        self.assertEqual(table_card.attrs['hx-get'], url)
 
         self.assertIn('hx-trigger', table_card.attrs)
-        self.assertEquals(table_card.attrs['hx-trigger'], 'load')
+        self.assertEqual(table_card.attrs['hx-trigger'], 'load')
 
     @tag("form_mission_sample_type_test_set_row_sample_type_get")
     def test_set_row_sample_type_get(self):
@@ -162,12 +162,12 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         alert = soup.find(id="div_id_data_type_message")
         self.assertIsNotNone(alert)
         self.assertIn('hx-swap-oob', alert.attrs)
-        self.assertEquals(alert.attrs['hx-swap-oob'], 'true')
+        self.assertEqual(alert.attrs['hx-swap-oob'], 'true')
 
         alert = soup.find(id="div_id_data_type_message_alert")
         self.assertIsNotNone(alert)
         self.assertIn('hx-post', alert.attrs)
-        self.assertEquals(alert['hx-post'], url)
+        self.assertEqual(alert['hx-post'], url)
 
     @tag("form_mission_sample_type_test_set_row_sample_type_post")
     def test_set_row_sample_type_post(self):
@@ -187,19 +187,19 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         # will be used for them for the BioChem upload
         start_sample = core_models.DiscreteSampleValue.objects.using('default').get(
             sample__bottle__bottle_id=self.start_bottle)
-        self.assertEquals(start_sample.datatype, None)
+        self.assertEqual(start_sample.datatype, None)
 
         end_sample = core_models.DiscreteSampleValue.objects.using('default').get(
             sample__bottle__bottle_id=self.end_bottle)
-        self.assertEquals(end_sample.datatype, None)
+        self.assertEqual(end_sample.datatype, None)
 
         start_sample = core_models.DiscreteSampleValue.objects.using('default').get(
             sample__bottle__bottle_id=post_vars['start_sample'])
-        self.assertEquals(start_sample.datatype.pk, post_vars['data_type_code'])
+        self.assertEqual(start_sample.datatype.pk, post_vars['data_type_code'])
 
         end_sample = core_models.DiscreteSampleValue.objects.using('default').get(
             sample__bottle__bottle_id=post_vars['end_sample'])
-        self.assertEquals(end_sample.datatype.pk, post_vars['data_type_code'])
+        self.assertEqual(end_sample.datatype.pk, post_vars['data_type_code'])
 
         # the function call itself should return a reloaded sample list
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -217,12 +217,12 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         alert = soup.find(id="div_id_data_type_message")
         self.assertIsNotNone(alert)
         self.assertIn('hx-swap-oob', alert.attrs)
-        self.assertEquals(alert.attrs['hx-swap-oob'], 'true')
+        self.assertEqual(alert.attrs['hx-swap-oob'], 'true')
 
         alert = soup.find(id="div_id_data_type_message_alert")
         self.assertIsNotNone(alert)
         self.assertIn('hx-post', alert.attrs)
-        self.assertEquals(alert['hx-post'], url)
+        self.assertEqual(alert['hx-post'], url)
 
     @tag("form_mission_sample_type_test_set_mission_sample_type_post")
     def test_set_mission_sample_type_post(self):
@@ -237,7 +237,7 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         response = self.client.post(url, post_vars)
 
         sample_type = core_models.MissionSampleType.objects.using('default').get(pk=self.mission_sample_type.pk)
-        self.assertEquals(sample_type.datatype.pk, post_vars['data_type_code'])
+        self.assertEqual(sample_type.datatype.pk, post_vars['data_type_code'])
 
         # the function call itself should return a reloaded sample list
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -254,12 +254,12 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         alert = soup.find(id="div_id_data_type_message")
         self.assertIsNotNone(alert)
         self.assertIn('hx-swap-oob', alert.attrs)
-        self.assertEquals(alert.attrs['hx-swap-oob'], 'true')
+        self.assertEqual(alert.attrs['hx-swap-oob'], 'true')
 
         alert = soup.find(id="div_id_data_type_message_alert")
         self.assertIsNotNone(alert)
         self.assertIn('hx-post', alert.attrs)
-        self.assertEquals(alert['hx-post'], url)
+        self.assertEqual(alert['hx-post'], url)
 
     @tag("form_mission_sample_type_test_delete_sample_type_post")
     def test_delete_sample_type_post(self):
@@ -278,4 +278,4 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         self.assertFalse(sample_type.exists())
 
         self.assertIn('Hx-Redirect', response.headers)
-        self.assertEquals(expected_redirect, response.headers['Hx-Redirect'])
+        self.assertEqual(expected_redirect, response.headers['Hx-Redirect'])
