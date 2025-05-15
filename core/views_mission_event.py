@@ -2,7 +2,9 @@ from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Div, HTML, Row, Column
 from crispy_forms.utils import render_crispy_form
+
 from django.core.cache import caches
+from django.conf import settings
 from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
@@ -173,7 +175,6 @@ class ValidationFileCard(forms.CardForm):
 
         soup = BeautifulSoup("", "html.parser")
         soup.append(ul := soup.new_tag('ul', attrs={'class': "list-group"}))
-        database = self.mission._state.db
         for error in errors:
             li_error_id = f'li_file_error_{error.pk}'
             ul.append(li := soup.new_tag('li', attrs={'class': "list-group-item", 'id': li_error_id}))
@@ -184,8 +185,7 @@ class ValidationFileCard(forms.CardForm):
 
             button_attrs = {
                 'class': "btn btn-danger btn-sm col-auto",
-                'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(database, error.pk,
-                                                                                            self.uuid)),
+                'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(error.pk, self.uuid)),
                 'hx-target': f"#{li_error_id}",
                 'hx-confirm': _("Are you Sure?"),
                 'hx-swap': 'delete'

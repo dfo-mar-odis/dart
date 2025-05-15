@@ -168,10 +168,10 @@ def parse_events(mission: core_models.Mission, file_name: str, samples: list[dic
                     if len(bottles) > 1:  # > 1 bottle, this is a multinet
                         end_sample_id = bottles[-1].get(config.get(required_field='bottle_id').mapped_field, None)
 
-                if 'mesh_size_um' in bottles[0]:
-                    add_attachments[int(event_id)] = (
-                        str(bottles[0].get(config.get(required_field='mesh_size').mapped_field, None)) + "um"
-                    )
+                    if 'mesh_size_um' in bottles[0]:
+                        add_attachments[int(event_id)] = (
+                            str(bottles[0].get(config.get(required_field='mesh_size').mapped_field, None)) + "um"
+                        )
 
             if sample_id:
                 try:

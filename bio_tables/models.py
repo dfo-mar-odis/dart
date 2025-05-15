@@ -119,7 +119,7 @@ class BCDataType(models.Model):
     bodc_code = models.CharField(max_length=50, blank=True, null=True, verbose_name=_("BODC Code"))
 
     def __str__(self):
-        return f'{self.data_type_seq}: {self.description}'
+        return f'{self.data_type_seq} : {self.method} : {self.description}'
 
 
 class BCNatnlTaxonCode(models.Model):
