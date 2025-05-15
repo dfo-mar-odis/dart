@@ -1,7 +1,9 @@
+import easygui
+
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Field, Layout, Row, Column
+from crispy_forms.layout import Field, Layout, Row, Column, Div
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
@@ -12,12 +14,15 @@ from django_pandas.io import read_frame
 
 from core import models as core_models
 from core import forms as core_forms
+from core.forms import CollapsableCardForm
 from core.parsers.PlanktonParser import parse_zooplankton, parse_phytoplankton, parse_zooplankton_bioness
 
 from core.parsers.SampleParser import get_excel_dataframe
+from core.parsers.BionessParser import parse_bioness
 
 from dart.utils import load_svg
 
+import os
 import logging
 
 debug_logger = logging.getLogger('dart.debug')
@@ -29,16 +34,15 @@ class PlanktonForm(forms.Form):
     header = forms.IntegerField(label="Header Line")
     tab = forms.IntegerField(label="Tab")
 
-    def __init__(self, database, mission, *args, **kwargs):
+    def __init__(self, mission, *args, **kwargs):
         self.mission = mission
-        self.database = database
 
         super().__init__(*args, **kwargs)
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
 
-        url = reverse_lazy("core:form_plankton_load_plankton", args=(database, mission.pk,))
+        url = reverse_lazy("core:form_plankton_load_plankton", args=(mission.pk,))
         tab_field = Field('tab')
         tab_field.attrs['hx-post'] = url
         tab_field.attrs['hx-swap'] = "none"
@@ -49,7 +53,7 @@ class PlanktonForm(forms.Form):
         header_field.attrs['hx-swap'] = "none"
         header_field.attrs['class'] = "form-control form-control-sm"
 
-        importurl = reverse_lazy("core:form_plankton_import_plankton", args=(database, mission.pk,))
+        importurl = reverse_lazy("core:form_plankton_import_plankton", args=(mission.pk,))
         button_attrs = {
             'title': _('Import'),
             'name': 'import',
@@ -71,7 +75,36 @@ class PlanktonForm(forms.Form):
         )
 
 
-def load_plankton(request, database, mission_id):
+class MultinetLoadForm(CollapsableCardForm):
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        load_icon = load_svg("arrow-down-square")
+        url = reverse_lazy("core:form_plankton_upload_multinet", args=(self.database, self.mission.pk,))
+        load_attrs = {
+            'id': f"{self.card_name}_load_bottles",
+            'hx-get': url,
+            'hx-swap': 'none'
+        }
+        load_btn = StrictButton(load_icon, css_class="btn btn-primary btn-sm mb-2", **load_attrs)
+
+        button_row = Row(
+            Column(load_btn, css_class="col-auto"),
+        )
+
+        body.fields.append(button_row)
+
+        return body
+
+    def __init__(self, mission, *args, **kwargs):
+
+        self.mission = mission
+
+        super().__init__(card_name="multinet_load", card_title=_("Load Multinet Files"), *args, **kwargs)
+
+
+def load_plankton(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
@@ -165,7 +198,7 @@ def load_plankton(request, database, mission_id):
             }
             table_div = core_forms.blank_alert(**attrs)
 
-        form = PlanktonForm(database=database, mission=mission, data=dict_vals)
+        form = PlanktonForm(mission=mission, data=dict_vals)
         form_html = render_crispy_form(form)
 
         form_soup = BeautifulSoup(form_html, 'html.parser')
@@ -182,13 +215,13 @@ def load_plankton(request, database, mission_id):
     return HttpResponse(soup)
 
 
-def import_plankton(request, database, mission_id):
+def import_plankton(request, mission_id):
 
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
         # you can only get the file though a POST request
-        url = reverse_lazy('core:form_plankton_import_plankton', args=(database, mission.pk,))
+        url = reverse_lazy('core:form_plankton_import_plankton', args=(mission.pk,))
         component_id = "div_id_plankton_message"
         attrs = {
             'component_id': component_id,
@@ -292,7 +325,7 @@ def import_plankton(request, database, mission_id):
         file_input.attrs['name'] = "plankton_file"
         file_input.attrs['accept'] = ".xls,.xlsx,.xlsm"
         file_input.attrs['hx-trigger'] = "change"
-        file_input.attrs['hx-get'] = reverse_lazy('core:form_plankton_load_plankton', args=(database, mission_id,))
+        file_input.attrs['hx-get'] = reverse_lazy('core:form_plankton_load_plankton', args=(mission_id,))
         file_input.attrs['hx-swap'] = "none"
 
         soup.append(file_input)
@@ -318,7 +351,7 @@ def import_plankton(request, database, mission_id):
     return response
 
 
-def list_plankton(request, database, mission_id):
+def list_plankton(request, mission_id):
 
     mission = core_models.Mission.objects.get(pk=mission_id)
 
@@ -326,7 +359,7 @@ def list_plankton(request, database, mission_id):
     div = soup.new_tag('div')
     div.attrs['id'] = "div_id_plankton_data_table"
     div.attrs['hx-trigger'] = 'update_samples from:body'
-    div.attrs['hx-get'] = reverse_lazy('core:form_plankton_list_plankton', args=(database, mission.pk,))
+    div.attrs['hx-get'] = reverse_lazy('core:form_plankton_list_plankton', args=(mission.pk,))
     div.attrs['hx-swap-oob'] = 'true'
     div.attrs['class'] = 'vertical-scrollbar'
     soup.append(div)
@@ -363,7 +396,7 @@ def list_plankton(request, database, mission_id):
         table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
         trs = table.find('tbody').find_all('tr')
         if len(trs) > 0:
-            url = reverse_lazy('core:form_plankton_list_plankton', args=(database, mission.pk,))
+            url = reverse_lazy('core:form_plankton_list_plankton', args=(mission.pk,))
             last_tr = trs[-1]
             last_tr.attrs['hx-trigger'] = 'intersect once'
             last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
@@ -386,9 +419,50 @@ def list_plankton(request, database, mission_id):
     return HttpResponse(soup)
 
 
-url_prefix = "<str:database>/plankton"
+def get_multinet_load_card(request, mission_id, **kwargs):
+    context = {}
+
+    initial = {}
+    if 'hide_loaded' in request.GET:
+        initial = {'hide_loaded': "true"}
+
+    collapsed = False if 'collapsed' in kwargs else True
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    multinet_load_form = MultinetLoadForm(mission=mission, collapsed=collapsed, initial=initial)
+    multinet_load_html = render_crispy_form(multinet_load_form, context=context)
+    multinet_load_soup = BeautifulSoup(multinet_load_html, 'html.parser')
+
+    return multinet_load_soup
+
+
+def get_multinet_data_card(request, mission_id, **kwargs):
+    multinet_load_soup = get_multinet_load_card(request, mission_id, **kwargs)
+    first_elm = multinet_load_soup.find(recursive=False)
+    form_id = first_elm.attrs['id']
+    form_soup = BeautifulSoup(f'<form id="form_id_{form_id}"></form>', 'html.parser')
+    form = form_soup.find('form')
+    form.append(multinet_load_soup)
+
+    return HttpResponse(form_soup)
+
+
+def upload_multinet(request, mission_id, **kwargs):
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    result = easygui.fileopenbox("Open multinet file", "Multinet", default="*", filetypes="*.T**", multiple=True)
+
+    if result:
+        for file in result:
+            parse_bioness(mission, file)
+
+    return HttpResponse()
+
+url_prefix = "plankton"
 plankton_urls = [
+    path(f'{url_prefix}/card/<int:mission_id>/', get_multinet_data_card, name="form_plankton_multinet_card"),
+    path(f'{url_prefix}/multinet/<int:mission_id>/', upload_multinet, name="form_plankton_upload_multinet"),
+
     path(f'{url_prefix}/load/<int:mission_id>/', load_plankton, name="form_plankton_load_plankton"),
     path(f'{url_prefix}/import/<int:mission_id>/', import_plankton, name="form_plankton_import_plankton"),
     path(f'{url_prefix}/list/<int:mission_id>/', list_plankton, name="form_plankton_list_plankton"),
+
 ]

@@ -12,6 +12,7 @@ from crispy_forms.layout import Layout, Field, Column, Hidden, Row, Div
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
+from django.conf import settings
 from django.http import HttpResponse, Http404
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
@@ -52,7 +53,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         model = settings_models.SampleTypeConfig
         fields = "__all__"
 
-    def find_header(self, data, file_type, tab):
+    def find_header(self, data, file_type, tab) -> int:
 
         # if the initial skip isn't set or is -1 then we'll scan the first 30 lines to see if we can
         # figure out what the header line is. Then the user can adjust it if it's incorrect.
@@ -66,6 +67,9 @@ class SampleTypeConfigForm(forms.ModelForm):
         for line, columns in data_frame.iterrows():
             if float([c for c in columns].count(np.nan) / column_count) < nan_tolerance:
                 return line + 1
+
+        return 0
+
 
     def get_column_headers(self, data, file_type, tab=0, skip=-1):
         if skip == -1:
@@ -110,7 +114,7 @@ class SampleTypeConfigForm(forms.ModelForm):
     def clean_skip(self):
         return self.cleaned_data['skip']-1
 
-    def __init__(self, database, file_type=None, *args, **kwargs):
+    def __init__(self, file_type=None, *args, **kwargs):
 
         tabs = None
         self.file_data = None
@@ -153,7 +157,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.fields['sample_type'].choices = sample_type_choices
 
         hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:form_sample_config_new', args=(database,)),
+            'hx-post': reverse_lazy('core:form_sample_config_new'),
             'hx-select': "#div_id_fields_row",
             'hx-target': "#div_id_fields_row",
             'hx-swap': "outerHTML",
@@ -183,7 +187,7 @@ class SampleTypeConfigForm(forms.ModelForm):
         if self.instance.pk:
             config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
 
-        url = reverse_lazy('core:form_sample_config_new', args=(database,))
+        url = reverse_lazy('core:form_sample_config_new')
         hx_sample_type_attrs = {
             'hx_get': url,
             'hx_trigger': 'change',
@@ -225,7 +229,7 @@ class SampleTypeConfigForm(forms.ModelForm):
             'css_class': "btn btn-primary btn-sm ms-2",
             'name': "add_sample_type",
             'title': _("Add as new configuration"),
-            'hx_get': reverse_lazy("core:form_sample_config_save", args=(database,)),
+            'hx_get': reverse_lazy("core:form_sample_config_save"),
             'hx_target': "#button_row",
             'hx_select': "#div_id_loaded_sample_type_message",
         }
@@ -234,14 +238,14 @@ class SampleTypeConfigForm(forms.ModelForm):
         button_row.fields[0].insert(0, button_new)
 
         if self.instance.pk:
-            attrs['hx_get'] = reverse_lazy("core:form_sample_config_save", args=(database, self.instance.pk,))
+            attrs['hx_get'] = reverse_lazy("core:form_sample_config_save", args=(self.instance.pk,))
             attrs['name'] = "update_sample_type"
             attrs['title'] = _("Update existing configuration")
             attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
             button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
             button_row.fields[0].insert(0, button_update)
 
-        attrs['hx_get'] = reverse_lazy("core:form_sample_config_load", args=(database,))
+        attrs['hx_get'] = reverse_lazy("core:form_sample_config_load")
         attrs['name'] = "reload"
         attrs['title'] = _("Cancel")
         attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
@@ -251,21 +255,21 @@ class SampleTypeConfigForm(forms.ModelForm):
         self.helper[0].layout.fields.append(button_row)
 
 
-def get_upload_button(database):
+def get_upload_button():
     soup = BeautifulSoup("", "html.parser")
     load_button = soup.new_tag("button", attrs={'id': 'button_id_load_samples', 'class': "btn btn-primary",
                                                 'name': 'upload_samples'})
     icon = BeautifulSoup(load_svg('check-square'), "html.parser").svg
     load_button.append(icon)
-    load_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_load_samples", args=(database,))
+    load_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_load_samples")
     load_button.attrs['hx-swap'] = "none"
 
     return load_button
 
 
-def get_sample_config_form(database, sample_type, **kwargs):
+def get_sample_config_form(sample_type, **kwargs):
     if sample_type == -1:
-        config_form = render_crispy_form(SampleTypeConfigForm(database=database))
+        config_form = render_crispy_form(SampleTypeConfigForm())
         soup = BeautifulSoup(config_form, 'html.parser')
 
         # Drop the current existing dropdown from the form and replace it with a new sample type form
@@ -284,7 +288,7 @@ def get_sample_config_form(database, sample_type, **kwargs):
         sample_drop_div.append(new_form_div)
 
         # add a back button to the forms button_row/button_column
-        url = reverse_lazy('core:form_sample_config_new', args=(database,)) + "?sample_type="
+        url = reverse_lazy('core:form_sample_config_new') + "?sample_type="
         back_button = soup.new_tag('button')
         back_button.attrs = {
             'id': 'id_new_sample_back',
@@ -302,20 +306,19 @@ def get_sample_config_form(database, sample_type, **kwargs):
         # redirect the submit button to this forms save function
         submit_button = sample_drop_div.find(id="button_id_new_sample_type_submit")
 
-        url = reverse_lazy('core:form_sample_config_save', args=(database,))
+        url = reverse_lazy('core:form_sample_config_save')
         submit_button.attrs['hx-target'] = '#div_id_sample_type'
         submit_button.attrs['hx-select'] = '#div_id_sample_type'
         submit_button.attrs['hx-swap'] = 'outerHTML'
         submit_button.attrs['hx-post'] = url
     else:
-        config_form = render_crispy_form(SampleTypeConfigForm(database=database, file_type="",
-                                                              initial={'sample_type': sample_type}))
+        config_form = render_crispy_form(SampleTypeConfigForm(file_type="", initial={'sample_type': sample_type}))
         soup = BeautifulSoup(config_form, 'html.parser')
 
     return soup
 
 
-def save_sample_config(request, database, **kwargs):
+def save_sample_config(request, **kwargs):
     # Validate and save the mission form once the user has filled out the details
     #
     # Template: 'core/partials/form_sample_type.html template
@@ -326,10 +329,10 @@ def save_sample_config(request, database, **kwargs):
     if request.method == "GET":
         if 'config_id' in kwargs and 'update_sample_type' in request.GET:
             sample_type = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            url = reverse_lazy("core:form_sample_config_save", args=(database, sample_type.pk,))
+            url = reverse_lazy("core:form_sample_config_save", args=(sample_type.pk,))
             oob_select = f"#div_id_sample_type_holder"
         else:
-            url = reverse_lazy("core:form_sample_config_save", args=(database,))
+            url = reverse_lazy("core:form_sample_config_save")
             oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
 
         attrs = {
@@ -353,10 +356,10 @@ def save_sample_config(request, database, **kwargs):
             sample_form = core_forms.SampleTypeForm(request.POST)
             if sample_form.is_valid():
                 sample_type = sample_form.save()
-                soup = get_sample_config_form(database, sample_type=sample_type.pk)
+                soup = get_sample_config_form(sample_type=sample_type.pk)
                 return HttpResponse(soup)
 
-            soup = get_sample_config_form(database, sample_type=-1, sample_type_form=sample_form)
+            soup = get_sample_config_form(sample_type=-1, sample_type_form=sample_form)
             return HttpResponse(soup)
 
         # mission_id is a hidden field in the 'core/partials/form_sample_type.html' template, if it's needed
@@ -373,10 +376,10 @@ def save_sample_config(request, database, **kwargs):
         initial = {'tab': tab, 'skip': skip}
         if 'config_id' in kwargs:
             config = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
+            sample_type_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data,
                                                            data=request.POST, instance=config)
         else:
-            sample_type_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
+            sample_type_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data,
                                                            data=request.POST, initial=initial)
 
         if sample_type_config_form.is_valid():
@@ -384,7 +387,7 @@ def save_sample_config(request, database, **kwargs):
             # the load form is immutable to the user it just allows them the delete, send for edit or load the
             # sample into the mission
             html = render_to_string('core/partials/card_sample_config.html',
-                                    context={'database': database, 'sample_config': sample_config})
+                                    context={'sample_config': sample_config})
             soup = BeautifulSoup(html, 'html.parser')
 
             div_id = f"div_id_sample_config_card_{sample_config.id}"
@@ -398,7 +401,7 @@ def save_sample_config(request, database, **kwargs):
                 new_root.append(div)
                 soup.append(new_root)
 
-                upload_btn = get_upload_button(database)
+                upload_btn = get_upload_button()
                 upload_btn.attrs['hx-swap-oob'] = 'true'
                 soup.append(upload_btn)
 
@@ -408,17 +411,17 @@ def save_sample_config(request, database, **kwargs):
         return HttpResponse(html)
 
 
-def new_sample_config(request, database, **kwargs):
+def new_sample_config(request, **kwargs):
     if request.method == "GET":
 
         if 'sample_type' in request.GET:
             sample_type = int(request.GET.get('sample_type', 0) or 0)
-            soup = get_sample_config_form(database, sample_type, **kwargs)
+            soup = get_sample_config_form(sample_type, **kwargs)
             return HttpResponse(soup)
 
         # return a loading alert that calls this methods post request
         # Let's make some soup
-        url = reverse_lazy("core:form_sample_config_new", args=(database,))
+        url = reverse_lazy("core:form_sample_config_new")
 
         attrs = {
             'component_id': "div_id_loaded_sample_type_message",
@@ -447,7 +450,7 @@ def new_sample_config(request, database, **kwargs):
 
         if 'config_id' in kwargs:
             config = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            sample_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data, instance=config)
+            sample_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data, instance=config)
         else:
             tab = int(request.POST.get('tab', 0) or 0)
             skip = int(request.POST.get('skip', 0) or -1)  # -1 means the header row needs to be auto-located
@@ -455,7 +458,7 @@ def new_sample_config(request, database, **kwargs):
 
             if 'sample_type' in kwargs:
                 file_initial['sample_type'] = kwargs['sample_type']
-            sample_config_form = SampleTypeConfigForm(database, file_type=file_type, file_data=data,
+            sample_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data,
                                                       initial=file_initial)
 
         html = render_crispy_form(sample_config_form)
@@ -480,10 +483,8 @@ def process_file(file) -> [str, str, str]:
     return file_name, file_type, data
 
 
-def load_sample_config(request, database, **kwargs):
-    context = {
-        'database': database
-    }
+def load_sample_config(request, **kwargs):
+    context = { }
 
     if request.method == "GET":
         if 'reload' in request.GET:
@@ -496,7 +497,7 @@ def load_sample_config(request, database, **kwargs):
 
         if loading:
             # Let's make some soup
-            url = reverse_lazy("core:form_sample_config_load", args=(database,))
+            url = reverse_lazy("core:form_sample_config_load")
 
             soup = BeautifulSoup('', "html.parser")
 
@@ -528,14 +529,17 @@ def load_sample_config(request, database, **kwargs):
         if request.htmx:
             # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
             # field after the Datatype_filter has been triggered.
-            sample_config_form = SampleTypeConfigForm(database, file_type="", initial=request.GET)
+            sample_config_form = SampleTypeConfigForm(file_type="", initial=request.GET)
             html = render_crispy_form(sample_config_form)
             return HttpResponse(html)
 
         if mission_id is None:
             raise Http404(_("Mission does not exist"))
 
-        context['mission'] = models.Mission.objects.get(pk=mission_id)
+        mission = models.Mission.objects.get(pk=mission_id)
+        context['mission'] = mission
+        context['database'] = settings.DATABASES[mission._state.db]['LOADED'] if (
+                'LOADED' in settings.DATABASES[mission._state.db]) else 'default'
         html = render_to_string("core/mission_samples.html", request=request, context=context)
         return HttpResponse(html)
     elif request.method == "POST":
@@ -546,7 +550,7 @@ def load_sample_config(request, database, **kwargs):
             return HttpResponse(html)
 
         if 'config' in kwargs:
-            return new_sample_config(database, request, config=kwargs['config'])
+            return new_sample_config(request, config=kwargs['config'])
 
         mission_id = request.POST['mission_id']
         file = request.FILES['sample_file']
@@ -566,7 +570,7 @@ def load_sample_config(request, database, **kwargs):
         soup.append(div_sample_type := soup.new_tag("div", id='div_id_loaded_sample_type'))
         div_sample_type.attrs['hx-swap-oob'] = "true"
 
-        file_error_url = reverse_lazy("core:mission_samples_get_file_errors", args=(database, mission_id,))
+        file_error_url = reverse_lazy("core:mission_samples_get_file_errors", args=(mission_id,))
         file_error_url += f"?file_name={file_name}"
         div_error_list = soup.new_tag('div')
         div_error_list.attrs['id'] = "div_id_error_list"
@@ -583,13 +587,12 @@ def load_sample_config(request, database, **kwargs):
         div_sample_type.append(button_row := soup.new_tag("div", attrs={'class': "row"}))
         button_row.append(soup.new_tag("div", attrs={'class': "col"}))
         button_row.append(button_col := soup.new_tag("div", attrs={'class': "col-auto"}))
-        button_col.append(load_button := get_upload_button(database))
+        button_col.append(load_button := get_upload_button())
 
         if file_configs:
 
             for config in file_configs:
-                html = render_to_string('core/partials/card_sample_config.html', context={'database': database,
-                                                                                          'sample_config': config})
+                html = render_to_string('core/partials/card_sample_config.html', context={'sample_config': config})
                 sample_type = BeautifulSoup(html, 'html.parser')
                 div_sample_type_list.append(sample_type.find("div"))
         else:
@@ -607,7 +610,7 @@ def load_sample_config(request, database, **kwargs):
         return HttpResponse(soup)
  
     
-url_prefix = "<str:database>/sample_config"
+url_prefix = "sample_config"
 sample_type_config_urls = [
     path(f'{url_prefix}/', load_sample_config, name="form_sample_config_load"),
     path(f'{url_prefix}/<int:config>/', load_sample_config, name="form_sample_config_load"),

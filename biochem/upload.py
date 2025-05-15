@@ -503,7 +503,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     return bcd_objects_to_create
 
 
-def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.PlanktonSample],
+def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
                    batch: models.Bcbatches = None,
                    bcd_p_model: Type[models.BcdP] = None) -> [models.BcdP]:
 
@@ -621,7 +621,7 @@ def get_bcd_p_rows(database, uploader: str, samples: QuerySet[core_models.Plankt
         bcd_objects_to_create.append(bcd_row)
 
     if len(errors) > 0:
-        core_models.Error.objects.using(database).bulk_create(errors)
+        core_models.Error.objects.bulk_create(errors)
 
     user_logger.info(_("Indexing Primary Keys"))
     compress_keys(bcd_objects_to_create, bcd_p_model, 'plank_data_num')

@@ -1,6 +1,6 @@
 @echo off
 
-set dart_version=4.1.4
+set dart_version=4.1.5
 
 if not exist ".\logs\" (
   mkdir logs

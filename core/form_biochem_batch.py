@@ -98,8 +98,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
             'hx-trigger': 'change, reload_batch from:body'
         }
         batch_select = Column(
-            Field('selected_batch', template=self.field_template, **batch_select_attributes,
-                  wrapper_class="col-auto"),
+            Field('selected_batch', template=self.field_template, wrapper_class="col-auto", **batch_select_attributes),
             id=f"div_id_batch_select_{self.card_name}",
             css_class="col-auto"
         )
@@ -236,8 +235,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         self.fields['selected_batch'].choices += [(db.batch, f"{db.batch}: {db.name}") for db in batches]
 
     # at a minimum a mission_id and what happens when the upload button are pressed must be supplied in
-    def __init__(self, *args, database, mission_id, batch_id=None, **kwargs):
-        self.database = database
+    def __init__(self, *args, mission_id, batch_id=None, **kwargs):
         self.mission_id = mission_id
         self.batch_id = batch_id if batch_id else 0
         super().__init__(*args, **kwargs, card_name="biochem_batch_details", card_title=_("Biochem Batches"))
@@ -489,8 +487,7 @@ def biochem_merge_procedure(request, biochem_form, batch_id, merge_proc):
     div.append(core_forms.blank_alert(**attrs))
 
     if merged_id:
-        updated_biochem_form = type(biochem_form)(database=biochem_form.database,
-                                                  mission_id=biochem_form.mission_id, batch_id=merged_id)
+        updated_biochem_form = type(biochem_form)(mission_id=biochem_form.mission_id, batch_id=merged_id)
         selected = set_selected_batch(updated_biochem_form)
         soup.append(selected)
 
@@ -675,7 +672,7 @@ def get_error_alert(batch_id, message):
     return core_forms.blank_alert(**attrs)
 
 
-def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
+def get_batch(request, mission_id, bcd_model, stage1_valid_proc,
               upload_url, validate1_url, validate2_url, checkin_url, merge_url, delete_url, add_tables_to_soup_proc):
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div_alert_area := soup.new_tag('div'))
@@ -707,7 +704,7 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
     soup.append(checkin_button := get_checkin_button(soup))
     soup.append(delete_button := get_delete_button(soup))
 
-    upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(database, mission_id,))
+    upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(mission_id,))
 
     validate1_button.attrs['disabled'] = 'disabled'
     validate2_button.attrs['disabled'] = 'disabled'
@@ -755,15 +752,15 @@ def get_batch(request, database, mission_id, bcd_model, stage1_valid_proc,
     validate1_button.attrs['hx-get'] = reverse_lazy(validate1_url, args=(batch_id,))
     validate2_button.attrs['hx-get'] = reverse_lazy(validate2_url, args=(batch_id,))
     checkin_button.attrs['hx-get'] = reverse_lazy(checkin_url, args=(batch_id,))
-    merge_button.attrs['hx-get'] = reverse_lazy(merge_url, args=(database, mission_id, batch_id,))
-    delete_button.attrs['hx-get'] = reverse_lazy(delete_url, args=(database, mission_id, batch_id,))
+    merge_button.attrs['hx-get'] = reverse_lazy(merge_url, args=(mission_id, batch_id,))
+    delete_button.attrs['hx-get'] = reverse_lazy(delete_url, args=(mission_id, batch_id,))
 
     add_tables_to_soup_proc(soup, batch_id)
     response = HttpResponse(soup)
     return response
 
 
-def get_batch_info(request, database, mission_id, batch_id, upload_url, add_tables_to_soup_proc):
+def get_batch_info(request, mission_id, batch_id, upload_url, add_tables_to_soup_proc):
     soup = BeautifulSoup('', 'html.parser')
 
     soup.append(upload_button := get_upload_button(soup))
@@ -772,7 +769,7 @@ def get_batch_info(request, database, mission_id, batch_id, upload_url, add_tabl
     soup.append(checkin_button := get_checkin_button(soup))
     soup.append(delete_button := get_delete_button(soup))
 
-    upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(database, mission_id))
+    upload_button.attrs['hx-get'] = reverse_lazy(upload_url, args=(mission_id,))
 
     if not batch_id:
         validate1_button.attrs['disabled'] = 'disabled'

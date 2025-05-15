@@ -25,15 +25,13 @@ _page_limit = 50
 
 
 class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
-    database = None
     mission_id = None
 
     def get_biochem_batch_url(self):
-        return reverse_lazy('core:form_biochem_plankton_update_selected_batch', args=(self.database, self.mission_id))
+        return reverse_lazy('core:form_biochem_plankton_update_selected_batch', args=(self.mission_id,))
 
     def get_biochem_batch_clear_url(self):
-        return reverse_lazy('core:form_biochem_plankton_get_batch',
-                            args=(self.database, self.mission_id, self.batch_id))
+        return reverse_lazy('core:form_biochem_plankton_get_batch', args=(self.mission_id, self.batch_id,))
 
     def get_batch_choices(self):
         mission = core_models.Mission.objects.get(pk=self.mission_id)
@@ -58,14 +56,14 @@ class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
         self.fields['selected_batch'].choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
 
 
-def get_batches_form(request, database, mission_id, batch_id=0):
-    batches_form_crispy = BiochemPlanktonBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
-    form_url = reverse_lazy('core:form_biochem_plankton_refresh', args=(database, mission_id, batch_id))
+def get_batches_form(request, mission_id, batch_id=0):
+    batches_form_crispy = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id)
+    form_url = reverse_lazy('core:form_biochem_plankton_refresh', args=(mission_id, batch_id,))
     return form_biochem_batch.get_batches_form(request, batches_form_crispy, form_url)
 
 
-def refresh_batches_form(request, database, mission_id, batch_id):
-    return HttpResponse(get_batches_form(request, database, mission_id, batch_id))
+def refresh_batches_form(request, mission_id, batch_id):
+    return HttpResponse(get_batches_form(request, mission_id, batch_id))
 
 
 def delete_plankton_proc(batch_id):
@@ -75,8 +73,8 @@ def delete_plankton_proc(batch_id):
     form_biochem_batch.delete_batch(batch_id, 'PLANKTON', bcd_p, bcs_p)
 
 
-def run_biochem_delete_procedure(request, database, mission_id, batch_id):
-    crispy_form = BiochemPlanktonBatchForm(database=database, mission_id=mission_id)
+def run_biochem_delete_procedure(request, mission_id, batch_id):
+    crispy_form = BiochemPlanktonBatchForm(mission_id=mission_id)
     return form_biochem_batch.run_biochem_delete_procedure(request, crispy_form, batch_id, delete_plankton_proc)
 
 
@@ -235,14 +233,14 @@ def biochem_checkin_procedure(request, batch_id):
     return form_biochem_batch.biochem_checkin_procedure(request, batch_id, checkin_batch_proc)
 
 
-def biochem_merge_procedure(request, database, mission_id, batch_id):
-    crispy_form = BiochemPlanktonBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
+def biochem_merge_procedure(request, mission_id, batch_id):
+    crispy_form = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id)
     return form_biochem_batch.biochem_merge_procedure(request, crispy_form, batch_id, merge_batch_proc)
 
 
-def get_batch_info(request, database, mission_id, batch_id):
+def get_batch_info(request, mission_id, batch_id):
     upload_url = "core:form_biochem_plankton_upload_batch"
-    return form_biochem_batch.get_batch_info(request, database, mission_id, batch_id, upload_url, add_tables_to_soup)
+    return form_biochem_batch.get_batch_info(request, mission_id, batch_id, upload_url, add_tables_to_soup)
 
 
 def stage1_valid_proc(batch_id):
@@ -265,12 +263,11 @@ def stage1_valid_proc(batch_id):
     return not mission_valid and not event_valid and not plkhedr_valid and not plkdtai_valid and not plkfreq_valid and not plkgen_valid and not plkindi_valid
 
 
-def get_batch(request, database, mission_id):
+def get_batch(request, mission_id):
     bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
 
     attrs = {
         'request': request,
-        'database': database,
         'mission_id': mission_id,
         'bcd_model': bcd_model,
         'stage1_valid_proc': stage1_valid_proc,
@@ -346,7 +343,7 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
         td_taxa_name.string = "---"
         if plankton:
             plankton_hdr = biochem_models.Bcplanktnhedredits.objects.using('biochem').get(
-                pl_headr_edt_seq=plankton.pl_headr_edt_seq)
+                pl_headr_edt_seq=plankton.pl_header_edit.pk)
             td_sample_id.string = str(plankton_hdr.collector_sample_id)
 
             val = "---"
@@ -564,7 +561,7 @@ def sample_data_upload( mission: core_models.Mission, uploader: str, batch: bioc
     form_biochem_database.upload_bcd_p_data(mission, uploader, batch)
 
 
-def upload_batch(request, database, mission_id):
+def upload_batch(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', 'html.parser')
@@ -609,7 +606,7 @@ def upload_batch(request, database, mission_id):
             'alert_type': 'success',
             'message': _("Thank you for uploading"),
         }
-        form = BiochemPlanktonBatchForm(database=database, mission_id=mission_id, batch_id=batch_id)
+        form = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id)
         html = render_crispy_form(form)
         batch_form_soup = BeautifulSoup(html, 'html.parser')
 
@@ -636,17 +633,17 @@ def upload_batch(request, database, mission_id):
 prefix = 'biochem/plankton'
 db_prefix = f'<str:database>/<int:mission_id>/{prefix}'
 database_urls = [
-    path(f'{db_prefix}/upload/', upload_batch, name="form_biochem_plankton_upload_batch"),
-    path(f'{db_prefix}/batch/', get_batch, name="form_biochem_plankton_update_selected_batch"),
-    path(f'{db_prefix}/batch/<int:batch_id>/', get_batch_info, name="form_biochem_plankton_get_batch"),
-    path(f'{db_prefix}/delete/<int:batch_id>/', run_biochem_delete_procedure, name="form_biochem_plankton_delete"),
-    path(f'{db_prefix}/form/<int:batch_id>/', refresh_batches_form, name="form_biochem_plankton_refresh"),
+    path(f'<int:mission_id>/{prefix}/upload/', upload_batch, name="form_biochem_plankton_upload_batch"),
+    path(f'<int:mission_id>/{prefix}/batch/', get_batch, name="form_biochem_plankton_update_selected_batch"),
+    path(f'<int:mission_id>/{prefix}/batch/<int:batch_id>/', get_batch_info, name="form_biochem_plankton_get_batch"),
+    path(f'<int:mission_id>/{prefix}/delete/<int:batch_id>/', run_biochem_delete_procedure, name="form_biochem_plankton_delete"),
+    path(f'<int:mission_id>/{prefix}/form/<int:batch_id>/', refresh_batches_form, name="form_biochem_plankton_refresh"),
 
     path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure, name="form_biochem_plankton_validation1"),
     path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_plankton_validation2"),
     path(f'{prefix}/checkin/<int:batch_id>/', biochem_checkin_procedure,
          name="form_biochem_plankton_checkin"),
-    path(f'{db_prefix}/merge/<int:batch_id>/', biochem_merge_procedure, name="form_biochem_plankton_merge"),
+    path(f'<int:mission_id>/{prefix}/merge/<int:batch_id>/', biochem_merge_procedure, name="form_biochem_plankton_merge"),
     path(f'{prefix}/page/bcd/<int:batch_id>/<int:page>/', page_bcd, name="form_biochem_plankton_page_bcd"),
     path(f'{prefix}/page/bcs/<int:batch_id>/<int:page>/', page_bcs, name="form_biochem_plankton_page_bcs"),
     path(f'{prefix}/page/station_errors/<int:batch_id>/<int:page>/', page_data_station_errors,

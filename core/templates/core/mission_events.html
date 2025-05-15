@@ -26,9 +26,9 @@
     <span hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% include 'core/partials/card_event_row.html' %}
     <div class="mb-2" id="div_id_trip_events"></div>
-    <div class="mb-2" id="div_id_mission_event_validation" hx-trigger="load" hx-get="{% url 'core:mission_events_validation' database object.pk %}">
+    <div class="mb-2" id="div_id_mission_event_validation" hx-trigger="load" hx-get="{% url 'core:mission_events_validation' object.pk %}">
     </div>
-    <div class="mb-2" id="div_id_mission_file_validation" hx-trigger="load, event_updated from:body" hx-get="{% url 'core:mission_file_validation' database object.pk %}">
+    <div class="mb-2" id="div_id_mission_file_validation" hx-trigger="load, event_updated from:body" hx-get="{% url 'core:mission_file_validation' object.pk %}">
     </div>
     </span>
 {% endblock %}

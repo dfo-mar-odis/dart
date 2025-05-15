@@ -45,7 +45,7 @@ class EventDetails(core_forms.CardForm):
             'id': button_id,
             'name': 'delete_event',
             'title': _("Delete Event"),
-            'hx-post': reverse_lazy("core:form_event_delete_event", args=(self.database, self.event.pk,)),
+            'hx-post': reverse_lazy("core:form_event_delete_event", args=(self.event.pk,)),
             'hx-confirm': _("Are you sure?"),
             'hx-swap': 'none'
         }
@@ -61,7 +61,7 @@ class EventDetails(core_forms.CardForm):
             'id': button_id,
             'name': 'edit_event',
             'title': _("Edit Event"),
-            'hx-get': reverse_lazy("core:form_event_edit_event", args=(self.database, self.event.pk,)),
+            'hx-get': reverse_lazy("core:form_event_edit_event", args=(self.event.pk,)),
             'hx-swap': 'outerHTML',
             'hx-target': f'#{self.get_card_id()}'
         }
@@ -77,7 +77,7 @@ class EventDetails(core_forms.CardForm):
             'id': button_id,
             'name': 'new_event',
             'title': _("New Event"),
-            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.database, self.mission.pk,)),
+            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.mission.pk,)),
             'hx-swap': 'outerHTML',
             'hx-target': f"#{self.get_card_id()}"
         }
@@ -93,7 +93,7 @@ class EventDetails(core_forms.CardForm):
             'id': button_id,
             'name': 'copy_event',
             'title': _("Copy Station and Instrument"),
-            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.database, self.mission.pk, self.event.pk,)),
+            'hx-get': reverse_lazy("core:form_event_add_event", args=(self.mission.pk, self.event.pk,)),
             'hx-swap': 'outerHTML',
             'hx-target': f"#{self.get_card_id()}"
         }
@@ -105,7 +105,7 @@ class EventDetails(core_forms.CardForm):
         # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('plastic-bottle-icon')
         button_id = f'btn_id_bottle_file_{self.card_name}'
-        url = reverse_lazy("core:form_event_fix_station_bottle", args=(self.database, self.event.pk,))
+        url = reverse_lazy("core:form_event_fix_station_bottle", args=(self.event.pk,))
         button = HTML(
             f'<span>'
             f'<label for="{button_id}" class ="btn btn-primary btn-sm" title="{_("Load Bottle File")}">'
@@ -180,16 +180,14 @@ class EventDetails(core_forms.CardForm):
             'hx-trigger': 'event_selected from:body',
             'hx-target': f'#{self.get_card_id()}',
             'hx-swap': "outerHTML",
-            'hx-get': reverse_lazy("core:form_event_get_selected_event", args=(self.database,))
+            'hx-get': reverse_lazy("core:form_event_get_selected_event")
         })
         return card
 
-    def __init__(self, event=None, mission=None, database=None, editing=False, *args, **kwargs):
+    def __init__(self, event=None, mission=None, editing=False, *args, **kwargs):
         self.event = event
         self.mission = mission if mission else event.mission
         self.editing = editing
-
-        self.database = database if database else self.mission._state.db
 
         super().__init__(card_name='event_details', card_title=_("Event Details"), *args, **kwargs)
 
@@ -231,9 +229,7 @@ class EventForm(forms.ModelForm):
     def get_station_input_id():
         return "id_event_station_field"
 
-    def __init__(self, database=None, *args, **kwargs):
-
-        self.database = database
+    def __init__(self, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -266,7 +262,7 @@ class EventForm(forms.ModelForm):
             self.fields['global_station'].initial = gl_station.pk
         elif self.mission:
             # When adding an event we'll swap the whole card the form appears on.
-            submit_url = reverse_lazy('core:form_event_add_event', args=(self.database, self.mission.pk,))
+            submit_url = reverse_lazy('core:form_event_add_event', args=(self.mission.pk,))
             apply_attrs['hx-post'] = submit_url
             apply_attrs['hx-swap'] = "outerHTML"
             apply_attrs['hx-target'] = "#div_id_card_event_details"
@@ -286,8 +282,7 @@ class EventForm(forms.ModelForm):
         self.fields['global_station'].widget.attrs["hx-swap"] = 'outerHTML'
         self.fields['global_station'].widget.attrs["hx-trigger"] = 'change'
         self.fields['global_station'].widget.attrs["hx-target"] = f'#{self.get_station_input_id()}'
-        self.fields['global_station'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_stations',
-                                                                            args=(self.database,))
+        self.fields['global_station'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_stations')
 
         instruments = models.Instrument.objects.all().order_by("name")
         self.fields['instrument'].queryset = instruments
@@ -299,8 +294,7 @@ class EventForm(forms.ModelForm):
         self.fields['instrument'].widget.attrs["hx-swap"] = 'outerHTML'
         self.fields['instrument'].widget.attrs["hx-trigger"] = 'change'
         self.fields['instrument'].widget.attrs["hx-target"] = f'#{self.get_instrument_input_id()}'
-        self.fields['instrument'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_instruments',
-                                                                        args=(self.database,))
+        self.fields['instrument'].widget.attrs["hx-get"] = reverse_lazy('core:form_event_update_instruments')
 
         self.helper.layout = Layout(
             Hidden('mission', self.initial.get('mission', '1')),
@@ -353,10 +347,10 @@ class EventForm(forms.ModelForm):
             instance.station = n_station.first()
         else:
             n_station = models.Station(name=gl_station.name)
-            n_station.save(using=self.database)
+            n_station.save()
             instance.station = n_station
 
-        instance.save(using=self.database)
+        instance.save()
         return instance
 
 
@@ -375,8 +369,7 @@ class ActionForm(forms.ModelForm):
             'event': forms.HiddenInput()
         }
 
-    def __init__(self, event, database=None, *args, **kwargs):
-        self.database = database if database else event.mission._state.db
+    def __init__(self, event, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -389,9 +382,9 @@ class ActionForm(forms.ModelForm):
         self.helper.form_tag = False
 
         if self.instance.pk:
-            url = reverse_lazy('core:form_event_edit_action', args=(self.database, self.instance.pk))
+            url = reverse_lazy('core:form_event_edit_action', args=(self.instance.pk,))
         else:
-            url = reverse_lazy('core:form_event_add_action', args=(self.database, event.pk))
+            url = reverse_lazy('core:form_event_add_action', args=(event.pk,))
 
         apply_attrs = {
             'name': 'add_action',
@@ -405,7 +398,7 @@ class ActionForm(forms.ModelForm):
         clear_attrs = {
             'name': 'clear_action',
             'title': _('Clear'),
-            'hx-get': reverse_lazy('core:form_event_add_action', args=(self.database, event.pk,)),
+            'hx-get': reverse_lazy('core:form_event_add_action', args=(event.pk,)),
             'hx-swap': "none"
             # 'hx-target': "#actions_form_id",
         }
@@ -512,10 +505,10 @@ class ActionForm(forms.ModelForm):
             message = _("Latitude is badly formatted. Must be in decimal degrees, or degree minutes with 'N' or 'S'.")
             raise forms.ValidationError(message)
 
-    def save(self, commit=True):
-        instance = super().save(False)
-        instance.save(using=self.database)
-        return instance
+    # def save(self, commit=True):
+    #     instance = super().save(False)
+    #     instance.save(using=self.database)
+    #     return instance
 
 
 class AttachmentForm(forms.ModelForm):
@@ -526,9 +519,7 @@ class AttachmentForm(forms.ModelForm):
             'event': forms.HiddenInput()
         }
 
-    def __init__(self, event, database=None, *args, **kwargs):
-
-        self.database = database if database else event.mission._state.db
+    def __init__(self, event, *args, **kwargs):
 
         super().__init__(*args, **kwargs)
 
@@ -542,9 +533,9 @@ class AttachmentForm(forms.ModelForm):
         self.helper.form_tag = False
 
         if self.instance.pk:
-            url = reverse_lazy('core:form_event_edit_attachment', args=(self.database, self.instance.pk))
+            url = reverse_lazy('core:form_event_edit_attachment', args=(self.instance.pk,))
         else:
-            url = reverse_lazy('core:form_event_add_attachment', args=(self.database, event.pk,))
+            url = reverse_lazy('core:form_event_add_attachment', args=(event.pk,))
 
         apply_attrs = {
             'name': 'add_attachment',
@@ -559,7 +550,7 @@ class AttachmentForm(forms.ModelForm):
         clear_attrs = {
             'name': 'clear_attachment',
             'title': _('Clear'),
-            'hx-get': reverse_lazy('core:form_event_add_attachment', args=(self.database, event.pk,)),
+            'hx-get': reverse_lazy('core:form_event_add_attachment', args=(event.pk,)),
             'hx-swap': 'none'
             # 'hx-target': "#attachments_form_id",
             # 'hx-swap': "outerHTML"
@@ -582,10 +573,10 @@ class AttachmentForm(forms.ModelForm):
         )
         self.helper.form_show_labels = False
 
-    def save(self, commit=True):
-        instance = super().save(False)
-        instance.save(using=self.database)
-        return instance
+    # def save(self, commit=True):
+    #     instance = super().save(False)
+    #     instance.save(using=self.database)
+    #     return instance
 
 
 def update_stations(request, database):
@@ -646,7 +637,7 @@ def update_stations(request, database):
         return HttpResponse(soup)
 
 
-def update_instruments(request, database):
+def update_instruments(request):
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "GET":
@@ -688,7 +679,7 @@ def update_instruments(request, database):
 
             return HttpResponse(soup)
 
-        event_form = EventForm(database=database, data=request.GET)
+        event_form = EventForm(data=request.GET)
         html = render_crispy_form(event_form)
         form_soup = BeautifulSoup(html, "html.parser")
         instrument_soup = form_soup.find(id="id_event_instrument_field")
@@ -721,7 +712,7 @@ def update_instruments(request, database):
                     type=instrument_type
                 )
 
-        mission_form = EventForm(database=database, data=mission_dict)
+        mission_form = EventForm(data=mission_dict)
         html = render_crispy_form(mission_form)
 
         form_soup = BeautifulSoup(html, 'html.parser')
@@ -758,17 +749,16 @@ def create_replace_table(soup, tr_html):
     return table
 
 
-def deselect_event(soup, database):
+def deselect_event(soup):
     if caches['default'].touch("selected_event"):
         old_event_id = caches['default'].get('selected_event')
         old_event = models.Event.objects.get(pk=old_event_id)
-        tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
-                                         context={"database": database, "event": old_event})
+        tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row', context={"event": old_event})
         table = create_replace_table(soup, tr_html)
         soup.append(table)
 
 
-def add_event(request, database, mission_id, **kwargs):
+def add_event(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup("", "html.parser")
@@ -776,12 +766,12 @@ def add_event(request, database, mission_id, **kwargs):
     # we don't need the edit and delete buttons on the EventDetail card if we're editing
     card_form = NoDeleteEditEventDetails(mission=mission)
 
-    context = {"database": database}
+    context = {}
 
     event_id = None
     if request.method == "POST":
         event_id = request.POST.get('event_id')
-        event_form = EventForm(database=database, data=request.POST)
+        event_form = EventForm(data=request.POST)
 
         if event_form.is_valid():
             # if the form is valid create the new event and return blank Action, Attachment *and* Event forms
@@ -791,21 +781,20 @@ def add_event(request, database, mission_id, **kwargs):
 
             action_form = ActionForm(event=event)
             attachments_form = AttachmentForm(event=event)
-            event_form = EventForm(database=database, instance=event)
+            event_form = EventForm(instance=event)
             context = {
-                "database": database,
                 "event": event,
                 "actionform": action_form,
                 "attachmentform": attachments_form
             }
 
             # deselected the old event from the event selection table, select the newly created event
-            deselect_event(soup, database)
+            deselect_event(soup)
             caches['default'].set("selected_event", event.pk, 3600)
 
             # create an out of band swap for the newly added event to put it in the page's event selection table
             tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
-                                             context={'database': database, 'event': event, 'selected': 'true'})
+                                             context={'event': event, 'selected': 'true'})
             table = create_append_table(soup, 'event_table_body', tr_html)
             soup.append(table)
 
@@ -820,7 +809,7 @@ def add_event(request, database, mission_id, **kwargs):
             initial['station'] = copy_event.station.pk
             initial['instrument'] = copy_event.instrument.pk
 
-        event_form = EventForm(database=database, initial=initial)
+        event_form = EventForm(initial=initial)
 
     card_html = render_crispy_form(card_form)
     card_soup = BeautifulSoup(card_html, 'html.parser')
@@ -837,7 +826,7 @@ def add_event(request, database, mission_id, **kwargs):
     return HttpResponse(soup)
 
 
-def edit_event(request, database, event_id):
+def edit_event(request, event_id):
     event = models.Event.objects.get(pk=event_id)
 
     # we don't need the edit and delete buttons on the EventDetail card if we're editing
@@ -851,21 +840,21 @@ def edit_event(request, database, event_id):
         def get_delete_button(self):
             return None
 
-    card_form = NoDeleteEditEventDetails(event=event, database=database)
+    card_form = NoDeleteEditEventDetails(event=event)
 
     event_form = None
     if request.method == "GET":
-        event_form = EventForm(database=database, instance=event)
+        event_form = EventForm(instance=event)
     elif request.method == "POST":
-        event_form = EventForm(database=database, instance=event, data=request.POST)
+        event_form = EventForm(instance=event, data=request.POST)
         if event_form.is_valid():
             event_form.save()
 
-    action_form = ActionForm(event=event, database=database)
-    attachments_form = AttachmentForm(event=event, database=database)
+    action_form = ActionForm(event=event)
+    attachments_form = AttachmentForm(event=event)
 
     form_html = render_to_string('core/partials/event_edit_form.html',
-                                 context={'database': database, "event_form": event_form, "event": event,
+                                 context={"event_form": event_form, "event": event,
                                           "actionform": action_form, "attachmentform": attachments_form})
 
     form_soup = BeautifulSoup(form_html, 'html.parser')
@@ -879,17 +868,17 @@ def edit_event(request, database, event_id):
     return HttpResponse(card_soup)
 
 
-def selected_details(request, database, event_id):
+def selected_details(request, event_id):
     soup = BeautifulSoup('', 'html.parser')
 
     if caches['default'].get('selected_event', -1) != event_id:
-        deselect_event(soup, database)
+        deselect_event(soup)
 
     caches['default'].set('selected_event', event_id, 3600)
 
     event = models.Event.objects.get(pk=event_id)
     tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
-                                     context={"database": database, "event": event, 'selected': 'true'})
+                                     context={"event": event, 'selected': 'true'})
     # table = create_replace_table(soup, tr_html)
     soup.append(BeautifulSoup("<table><tbody>" + tr_html + "</tbody></table>", 'html.parser'))
     response = HttpResponse(soup)
@@ -897,12 +886,12 @@ def selected_details(request, database, event_id):
     return response
 
 
-def get_selected_event(request, database):
+def get_selected_event(request):
 
     soup = BeautifulSoup('', 'html.parser')
     event_id = caches['default'].get('selected_event', -1)
     if event_id == -1:
-        card_details = EventDetails(database=database)
+        card_details = EventDetails()
         card_details_html = render_crispy_form(card_details)
         card_details_soup = BeautifulSoup(card_details_html, 'html.parser')
         card = card_details_soup.find(id=card_details.get_card_id())
@@ -910,10 +899,10 @@ def get_selected_event(request, database):
         return HttpResponse(soup)
 
     event = models.Event.objects.get(pk=event_id)
-    details_html = render_to_string("core/partials/event_details.html", context={"database": database, "event": event})
+    details_html = render_to_string("core/partials/event_details.html", context={"event": event})
     details_soup = BeautifulSoup(details_html, 'html.parser')
 
-    card_details = EventDetails(event=event, database=database)
+    card_details = EventDetails(event=event)
     card_details_html = render_crispy_form(card_details)
     card_details_soup = BeautifulSoup(card_details_html, 'html.parser')
     card = card_details_soup.find(id=card_details.get_card_id())
@@ -937,7 +926,7 @@ def get_selected_event(request, database):
     return HttpResponse(soup)
 
 
-def delete_details(request, database, event_id):
+def delete_details(request, event_id):
     event = models.Event.objects.get(pk=event_id)
     mission = event.mission
 
@@ -946,7 +935,7 @@ def delete_details(request, database, event_id):
 
     event.delete()
 
-    card = EventDetails(mission=mission, database=database)
+    card = EventDetails(mission=mission)
     html = render_crispy_form(card)
 
     soup = BeautifulSoup(html, 'html.parser')
@@ -966,9 +955,9 @@ def delete_details(request, database, event_id):
     return response
 
 
-def list_action(request, database, event_id, editable=False):
+def list_action(request, event_id, editable=False):
     event = models.Event.objects.get(pk=event_id)
-    context = {'database': database, 'event': event, 'editable': editable}
+    context = {'event': event, 'editable': editable}
     response = HttpResponse(render_to_string('core/partials/table_action.html', context=context))
     return response
 
@@ -986,17 +975,17 @@ def render_action_form(soup, action_form):
     return HttpResponse(soup)
 
 
-def add_action(request, database, event_id):
+def add_action(request, event_id):
     event = models.Event.objects.get(pk=event_id)
 
     soup = BeautifulSoup('', 'html.parser')
     if request.method == "POST":
-        action_form = ActionForm(event=event, database=database, data=request.POST)
+        action_form = ActionForm(event=event, data=request.POST)
 
         if action_form.is_valid():
             action = action_form.save()
             table_html = render_to_string('core/partials/table_action.html',
-                                          context={'database': database, 'event': event, "editable": "true"})
+                                          context={'event': event, "editable": "true"})
             table_soup = BeautifulSoup(table_html, 'html.parser')
             table_soup.find(id="action_table_id").attrs['hx-swap-oob'] = 'true'
             soup.append(table_soup)
@@ -1004,48 +993,48 @@ def add_action(request, database, event_id):
             #                                  context={'database': database, 'action': action, "editable": "true"})
             # soup.append(create_append_table(soup, "tbody_id_action_table", tr_html))
 
-            action_form = ActionForm(event=event, database=database)
+            action_form = ActionForm(event=event)
     else:
         # if this is a get request we'll just send back a blank form
-        action_form = ActionForm(event=event, database=database)
+        action_form = ActionForm(event=event)
 
     return render_action_form(soup, action_form)
 
 
-def edit_action(request, database, action_id):
+def edit_action(request, action_id):
     try:
         action = models.Action.objects.get(pk=action_id)
     except models.Action.DoesNotExist:
         event_id = request.POST.get('event', None)
-        return add_action(request, database, event_id)
+        return add_action(request, event_id)
 
     soup = BeautifulSoup('', 'html.parser')
     if request.method == "POST":
-        action_form = ActionForm(event=action.event, database=database, instance=action, data=request.POST)
+        action_form = ActionForm(event=action.event, instance=action, data=request.POST)
 
         if action_form.is_valid():
             action = action_form.save()
 
             tr_html = render_block_to_string('core/partials/table_action.html', 'action_row_block',
-                                             context={'database': database, 'action': action, "editable": "true"})
+                                             context={'action': action, "editable": "true"})
             soup.append(create_replace_table(soup, tr_html))
 
-            action_form = ActionForm(event=action.event, database=database)
+            action_form = ActionForm(event=action.event)
     else:
         # if this is a get request we'll just send back form populated with the object
-        action_form = ActionForm(event=action.event, database=database, instance=action)
+        action_form = ActionForm(event=action.event, instance=action)
 
     return render_action_form(soup, action_form)
 
 
-def delete_action(request, database, action_id):
+def delete_action(request, action_id):
     models.Action.objects.get(pk=action_id).delete()
     return HttpResponse()
 
 
-def list_attachment(request, database, event_id, editable=False):
+def list_attachment(request, event_id, editable=False):
     event = models.Event.objects.get(pk=event_id)
-    context = {'database': database, 'event': event, 'editable': editable}
+    context = {'event': event, 'editable': editable}
     return HttpResponse(render_to_string('core/partials/table_attachment.html', context=context))
 
 
@@ -1061,57 +1050,56 @@ def render_attachment_form(soup, attachment_form):
     return HttpResponse(soup)
 
 
-def add_attachment(request, database, event_id):
+def add_attachment(request, event_id):
     event = models.Event.objects.get(pk=event_id)
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "POST":
-        attachment_form = AttachmentForm(event=event, database=database, data=request.POST)
+        attachment_form = AttachmentForm(event=event, data=request.POST)
 
         if attachment_form.is_valid():
             attachment = attachment_form.save()
 
             tr_html = render_block_to_string('core/partials/table_attachment.html', 'attachments_row_block',
-                                             context={"database": database, "atta": attachment, "editable": "true"})
+                                             context={"atta": attachment, "editable": "true"})
             soup.append(create_append_table(soup, "tbody_attachment_table_id", tr_html))
 
-            attachment_form = AttachmentForm(event=event, database=database)
+            attachment_form = AttachmentForm(event=event)
     else:
         # if this is a get request we'll just send back a blank form
-        attachment_form = AttachmentForm(event=event, database=database)
+        attachment_form = AttachmentForm(event=event)
 
     return render_attachment_form(soup, attachment_form)
 
 
-def edit_attachment(request, database, attachment_id):
+def edit_attachment(request, attachment_id):
     attachment = models.Attachment.objects.get(pk=attachment_id)
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "POST":
-        attachment_form = AttachmentForm(event=attachment.event, database=database,
-                                         instance=attachment, data=request.POST)
+        attachment_form = AttachmentForm(event=attachment.event, instance=attachment, data=request.POST)
 
         if attachment_form.is_valid():
             attachment = attachment_form.save()
 
             tr_html = render_block_to_string('core/partials/table_attachment.html', 'attachments_row_block',
-                                             context={"database": database, "atta": attachment, "editable": "true"})
+                                             context={"atta": attachment, "editable": "true"})
             soup.append(create_replace_table(soup, tr_html))
 
-            attachment_form = AttachmentForm(event=attachment.event, database=database)
+            attachment_form = AttachmentForm(event=attachment.event)
     else:
         # if this is a get request we'll just send back a blank form
-        attachment_form = AttachmentForm(event=attachment.event, database=database, instance=attachment)
+        attachment_form = AttachmentForm(event=attachment.event, instance=attachment)
 
     return render_attachment_form(soup, attachment_form)
 
 
-def delete_attachment(request, database, attachment_id):
+def delete_attachment(request, attachment_id):
     models.Attachment.objects.get(pk=attachment_id).delete()
     return HttpResponse()
 
 
-def load_filter_log(request, database, event_id):
+def load_filter_log(request, event_id):
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == 'GET':
@@ -1152,7 +1140,7 @@ def load_filter_log(request, database, event_id):
     return response
 
 
-def load_bottle_file(request, database, event_id):
+def load_bottle_file(request, event_id):
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == 'GET':
@@ -1217,7 +1205,7 @@ def load_bottle_file(request, database, event_id):
     return response
 
 
-def import_elog_events(request, database, mission_id, **kwargs):
+def import_elog_events(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
@@ -1250,7 +1238,7 @@ def import_elog_events(request, database, mission_id, **kwargs):
     # If we don't clear the input element here and the user tries to reload the same file, nothing will happen
     # and the user will be left clicking the button endlessly wondering why it won't load the file
     event_form = render_block_to_string('core/partials/card_event_row.html', 'event_import_form',
-                                        context={'database': database, 'mission': mission})
+                                        context={'mission': mission})
 
     soup = BeautifulSoup('', 'html.parser')
 
@@ -1259,7 +1247,7 @@ def import_elog_events(request, database, mission_id, **kwargs):
     # Now that events are reloaded we should trigger a validation of the events
     msg_div = event_form_soup.find(id="div_id_event_message_area")
     alert_area = msg_div.find(id="div_id_event_alert")
-    alert_area.attrs['hx-get'] = reverse_lazy("core:mission_events_revalidate", args=(database, mission.pk,))
+    alert_area.attrs['hx-get'] = reverse_lazy("core:mission_events_revalidate", args=(mission.pk,))
     alert_area.attrs['hx-trigger'] = 'load'
     msg_div.attrs['hx-swap-oob'] = 'true'
 
@@ -1270,41 +1258,40 @@ def import_elog_events(request, database, mission_id, **kwargs):
     return response
 
 
-def list_events(request, database, mission_id, **kwargs):
+def list_events(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
-    tr_html = render_to_string('core/partials/table_event.html', context={'database': database, 'mission': mission})
+    tr_html = render_to_string('core/partials/table_event.html', context={'mission': mission})
 
     return HttpResponse(tr_html)
 
 
-url_prefix = "<str:database>/event"
 event_detail_urls = [
-    path(f'{url_prefix}/selected/<int:event_id>/', selected_details, name="form_event_selected_event"),
-    path(f'{url_prefix}/selected/', get_selected_event, name="form_event_get_selected_event"),
+    path(f'event/selected/<int:event_id>/', selected_details, name="form_event_selected_event"),
+    path(f'event/selected/', get_selected_event, name="form_event_get_selected_event"),
 
-    path(f'{url_prefix}/station/new/', update_stations, name="form_event_update_stations"),
-    path(f'{url_prefix}/instrument/new/', update_instruments, name="form_event_update_instruments"),
+    path(f'event/station/new/', update_stations, name="form_event_update_stations"),
+    path(f'event/instrument/new/', update_instruments, name="form_event_update_instruments"),
 
-    path(f'{url_prefix}/event/import/<int:mission_id>/', import_elog_events, name="form_event_import_events_elog"),
-    path(f'{url_prefix}/event/list/<int:mission_id>/', list_events, name="form_event_get_events"),
-    path(f'{url_prefix}/new/<int:mission_id>/', add_event, name="form_event_add_event"),
-    path(f'{url_prefix}/new/<int:mission_id>/<int:event>/', add_event, name="form_event_add_event"),
-    path(f'{url_prefix}/edit/<int:event_id>/', edit_event, name="form_event_edit_event"),
-    path(f'{url_prefix}/delete/<int:event_id>/', delete_details, name="form_event_delete_event"),
+    path(f'event/event/import/<int:mission_id>/', import_elog_events, name="form_event_import_events_elog"),
+    path(f'event/event/list/<int:mission_id>/', list_events, name="form_event_get_events"),
+    path(f'event/new/<int:mission_id>/', add_event, name="form_event_add_event"),
+    path(f'event/new/<int:mission_id>/<int:event>/', add_event, name="form_event_add_event"),
+    path(f'event/edit/<int:event_id>/', edit_event, name="form_event_edit_event"),
+    path(f'event/delete/<int:event_id>/', delete_details, name="form_event_delete_event"),
 
-    path(f'{url_prefix}/action/list/<int:event_id>/', list_action, name="form_event_list_action"),
-    path(f'{url_prefix}/action/list/<int:event_id>/<str:editable>/', list_action, name="form_event_list_action"),
-    path(f'{url_prefix}/action/new/<int:event_id>/', add_action, name="form_event_add_action"),
-    path(f'{url_prefix}/action/edit/<int:action_id>/', edit_action, name="form_event_edit_action"),
-    path(f'{url_prefix}/action/delete/<int:action_id>/', delete_action, name="form_event_delete_action"),
+    path(f'event/action/list/<int:event_id>/', list_action, name="form_event_list_action"),
+    path(f'event/action/list/<int:event_id>/<str:editable>/', list_action, name="form_event_list_action"),
+    path(f'event/action/new/<int:event_id>/', add_action, name="form_event_add_action"),
+    path(f'event/action/edit/<int:action_id>/', edit_action, name="form_event_edit_action"),
+    path(f'event/action/delete/<int:action_id>/', delete_action, name="form_event_delete_action"),
 
-    path(f'{url_prefix}/attachment/list/<int:event_id>/', list_attachment, name="form_event_list_attachment"),
-    path(f'{url_prefix}/attachment/list/<int:event_id>/<str:editable>/', list_attachment, name="form_event_list_attachment"),
-    path(f'{url_prefix}/attachment/new/<int:event_id>/', add_attachment, name="form_event_add_attachment"),
-    path(f'{url_prefix}/attachment/edit/<int:attachment_id>/', edit_attachment, name="form_event_edit_attachment"),
-    path(f'{url_prefix}/attachment/delete/<int:attachment_id>/', delete_attachment, name="form_event_delete_attachment"),
+    path(f'event/attachment/list/<int:event_id>/', list_attachment, name="form_event_list_attachment"),
+    path(f'event/attachment/list/<int:event_id>/<str:editable>/', list_attachment, name="form_event_list_attachment"),
+    path(f'event/attachment/new/<int:event_id>/', add_attachment, name="form_event_add_attachment"),
+    path(f'event/attachment/edit/<int:attachment_id>/', edit_attachment, name="form_event_edit_attachment"),
+    path(f'event/attachment/delete/<int:attachment_id>/', delete_attachment, name="form_event_delete_attachment"),
 
-    path(f'{url_prefix}/fixstation/<int:event_id>/', load_filter_log, name="form_event_fix_station_filter_log"),
-    path(f'{url_prefix}/fixstation/btl/<int:event_id>/', load_bottle_file, name="form_event_fix_station_bottle"),
+    path(f'event/fixstation/<int:event_id>/', load_filter_log, name="form_event_fix_station_filter_log"),
+    path(f'event/fixstation/btl/<int:event_id>/', load_bottle_file, name="form_event_fix_station_bottle"),
 ]

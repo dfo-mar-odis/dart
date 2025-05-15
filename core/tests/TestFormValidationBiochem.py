@@ -132,7 +132,7 @@ class TestFormBioChemDatabase(DartTestCase):
         core_models.Error.objects.create(mission=self.mission, message="Something went wrong",
                                          type=core_models.ErrorType.biochem)
 
-        response = self.client.get(reverse(self.get_errors_url, args=('default', self.mission.pk)))
+        response = self.client.get(reverse(self.get_errors_url, args=(self.mission.pk,)))
         soup = BeautifulSoup(response.content, 'html.parser')
         self.assertIsNotNone(soup.find("ul"))
 
@@ -140,7 +140,7 @@ class TestFormBioChemDatabase(DartTestCase):
     def test_initial_validate_url_get(self):
         # on the first call to the form_biochem_pre_validation_run url a websocket message dialog should be sent
         # back that contains hx-trigger=='load' and hx-post attributes to trigger the actual validation process
-        response = self.client.get(reverse(self.run_validation_url, args=('default', self.mission.pk)))
+        response = self.client.get(reverse(self.run_validation_url, args=(self.mission.pk,)))
         logger.debug(response.headers)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -154,7 +154,7 @@ class TestFormBioChemDatabase(DartTestCase):
         # Upon completion the form_biochem_pre_validation_run url called as a post method, should return a
         # hx-trigger=='biochem_validation_update' action to notify listeners they should update their
         # list of BioChem validation issues
-        response = self.client.post(reverse(self.run_validation_url, args=('default', self.mission.pk)))
+        response = self.client.post(reverse(self.run_validation_url, args=(self.mission.pk,)))
         logger.debug(response.headers)
 
         self.assertIn('HX-Trigger', response.headers)
