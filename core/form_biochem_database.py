@@ -806,8 +806,12 @@ def select_database(request, mission_id):
 
 def connect(database_id, password):
     message = None
-    bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
-    settings.DATABASES['biochem'] = bc_database.connect(password=password)
+    try:
+        bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
+        settings.DATABASES['biochem'] = bc_database.connect(password=password)
+    except settings_models.BcDatabaseConnection.DoesNotExist:
+        settings.DATABASES['biochem'] = None
+
     connection_success = False
 
     # we don't care about the table name in this case, we're just checking the connection
@@ -939,8 +943,11 @@ def is_connected():
     elif 'biochem' not in settings.DATABASES:
         return False
 
-    database = settings_models.BcDatabaseConnection.objects.get(pk=selected_database).name.upper()
-    return settings.DATABASES['biochem']['NAME'].upper() == database
+    try:
+        database = settings_models.BcDatabaseConnection.objects.get(pk=selected_database).name.upper()
+        return settings.DATABASES['biochem']['NAME'].upper() == database
+    except settings_models.BcDatabaseConnection.DoesNotExist:
+        return False
 
 
 def sync_biochem(request, mission_id, *kwargs):
