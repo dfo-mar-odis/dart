@@ -10,6 +10,7 @@
 *.cpython*
 *.accdb
 *.mo
+*.bak
 
 # Packages #
 ############
