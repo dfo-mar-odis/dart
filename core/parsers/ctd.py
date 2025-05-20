@@ -262,27 +262,26 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         validation_err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(validation_err)
 
-    for row in bottle_data.iterrows():
-        line = skipped_rows + row[0] + 1
-        bottle_number = row[1][dataframe_dict['bottle_number']]
-
+    bottle_number = 0
+    for line, row in bottle_data.iterrows():
+        bottle_number += 1
         bottle_id = bottle_number + event.sample_id - 1
 
         # if the Bottle S/N column is present then use that values as the bottle ID
         if 'bottle_id' in dataframe_dict.keys() and \
-                dataframe_dict['bottle_id'] in row[1] and not np.isnan(row[1][dataframe_dict['bottle_id']]):
-            bottle_id = int(row[1][dataframe_dict['bottle_id']])
+                dataframe_dict['bottle_id'] in row and not np.isnan(row[dataframe_dict['bottle_id']]):
+            bottle_id = int(row[dataframe_dict['bottle_id']])
 
-        date = row[1][dataframe_dict['date']]
-        pressure = row[1][dataframe_dict['pressure']]
+        date = row[dataframe_dict['date']]
+        pressure = row[dataframe_dict['pressure']]
 
         latitude = event.actions.first().latitude
         if "latitude" in dataframe_dict.keys():
-            latitude = row[1][dataframe_dict["latitude"]]
+            latitude = row[dataframe_dict["latitude"]]
 
         longitude = event.actions.first().longitude
         if "longitude" in dataframe_dict.keys():
-            longitude = row[1][dataframe_dict["longitude"]]
+            longitude = row[dataframe_dict["longitude"]]
 
         # assume UTC time if a timezone isn't set
         if not hasattr(date, 'timezone'):
@@ -319,7 +318,6 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):
     mission = event.mission
-    database = mission._state.db
 
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     file_name = data_frame._metadata['name'] + ".BTL"
@@ -372,14 +370,15 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         sample_type.name: sample_type for sample_type in mission.mission_sample_types.all()
     }
 
-    for row in data_frame_avg.iterrows():
-        bottle_number = row[1]["bottle"]
+    bottle_number = 0
+    for item, row in data_frame_avg.iterrows():
+        bottle_number += 1 # row["bottle"]
         bottle_id = bottle_number + event.sample_id - 1
 
         # if the Bottle S/N column is present then use that values as the bottle ID
-        if 'bottle_' in row[1]:
+        if 'bottle_' in row:
             try:
-                bottle_id = int(row[1]['bottle_'])
+                bottle_id = int(row['bottle_'])
             except ValueError as ex:
                 logger.exception(ex)
                 message = _("There was an error parsing a bottle id - ")
@@ -403,24 +402,25 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
                     message += f"\n{action.get_type_display()} : {action.comment}"
 
             logger.warning(message)
+            core_models.FileError(mission=mission, file_name=file_name, line=skipped_rows, message=message,
+                                  type=core_models.ErrorType.validation).save()
             continue
 
         bottle = bottles.get(bottle_id=bottle_id)
         for column in column_headers:
-            if (sample := core_models.Sample.objects.filter(bottle=bottle,
-                                                                            type=sample_types[column])).exists():
+            if (sample := core_models.Sample.objects.filter(bottle=bottle, type=sample_types[column])).exists():
                 sample = sample.first()
                 if updated_value(sample, 'file', file_name):
                     update_samples.append(sample)
 
                 discrete_value = sample.discrete_values.all().first()
-                new_value = row[1][column.lower()]
+                new_value = row[column.lower()]
                 if updated_value(discrete_value, 'value', new_value):
                     update_discrete_samples.append(discrete_value)
             else:
                 sample = core_models.Sample(bottle=bottle, type=sample_types[column], file=file_name)
                 new_samples.append(sample)
-                discrete_value = core_models.DiscreteSampleValue(sample=sample, value=row[1][column.lower()])
+                discrete_value = core_models.DiscreteSampleValue(sample=sample, value=row[column.lower()])
                 new_discrete_samples.append(discrete_value)
 
     if len(new_samples) > 0:
@@ -465,14 +465,21 @@ def get_elog_event_bio(mission: core_models.Mission, event_number: int) -> core_
 
 
 def read_btl(mission: core_models.Mission, btl_file: str):
-    database = mission._state.db
-    data_frame = ctd.from_btl(btl_file)
-
-    file_name = data_frame._metadata['name']
-    if (errors := core_models.FileError.objects.filter(file_name=file_name)).exists():
+    if (errors := core_models.FileError.objects.filter(file_name__icontains=btl_file)).exists():
         errors.delete()
 
-    if (errors := core_models.FileError.objects.filter(file_name=btl_file)).exists():
+    try:
+        data_frame = ctd.from_btl(btl_file)
+    except Exception as ex:
+        message = _("Unknown Error reading BTL file: ") + str(ex)
+        if str(ex) == 'Must have equal len keys and value when setting with an iterable':
+            message = _("There might be an issue with the header columns in the bottle file: ") + str(ex)
+
+        core_models.FileError(mission=mission, file_name=btl_file, line=0, message=message).save()
+        raise ex
+
+    file_name = data_frame._metadata['name']
+    if (errors := core_models.FileError.objects.filter(file_name__icontains=file_name)).exists():
         errors.delete()
 
     if file_name not in btl_file:
