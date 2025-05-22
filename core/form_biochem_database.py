@@ -353,7 +353,12 @@ def confirm_uploader(request):
         return alert_soup
 
     soup = BeautifulSoup('', 'html.parser')
-    has_uploader = 'uploader' in request.POST and request.POST['uploader']
+
+    has_uploader = False
+    if is_connected() and (database := get_connected_database()):
+        has_uploader = database.uploader if database.uploader else database.account_name
+
+    # has_uploader = 'uploader' in request.POST and request.POST['uploader']
     if 'uploader2' not in request.POST and not has_uploader:
         message_component_id = 'div_id_upload_biochem'
         attrs = {
@@ -475,7 +480,7 @@ def confirm_descriptor(request, mission):
         return soup
 
 
-def get_connected_database():
+def get_connected_database() -> settings_models.BcDatabaseConnection:
     database_id = caches['biochem_keys'].get('database_id', None)
     if not database_id:
         raise DatabaseError("Not connected to a database")
@@ -804,8 +809,17 @@ def select_database(request, mission_id):
     return response
 
 
-def connect(database_id, password):
+def connect(database_id, password) -> None | str:
     message = None
+    if not database_id:
+        caches['biochem_keys'].delete('database_id')
+        caches['biochem_keys'].delete('pwd')
+        return None
+
+    if not password:
+        caches['biochem_keys'].delete('pwd')
+        return None
+
     try:
         bc_database = settings_models.BcDatabaseConnection.objects.get(pk=database_id)
         settings.DATABASES['biochem'] = bc_database.connect(password=password)
@@ -890,7 +904,10 @@ def validate_connection(request, mission_id):
         password = request.POST['db_password']
         message = connect(database_id, password)
 
-        connection_button.attrs['class'] = 'btn btn-success btn-sm'
+        connection_button.attrs['class'] = 'btn btn-primary btn-sm'
+        if is_connected():
+            connection_button.attrs['class'] = 'btn btn-success btn-sm'
+
         if message:
             connection_button.attrs['class'] = 'btn btn-danger btn-sm'
             alert_soup = core_forms.blank_alert(component_id="div_id_upload_biochem", alert_type="danger",

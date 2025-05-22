@@ -1,8 +1,13 @@
+import csv
 import logging
+import os
 
 from datetime import datetime
+from pathlib import Path
+
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
+from django.conf import settings
 
 from django.db import connections
 from django.http import HttpResponse
@@ -27,11 +32,40 @@ _page_limit = 50
 class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
     mission_id = None
 
-    def get_biochem_batch_url(self):
-        return reverse_lazy('core:form_biochem_plankton_update_selected_batch', args=(self.mission_id,))
+    def get_download_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_download_batch', args=(self.mission_id,))
+        return super().get_download_button(url)
+
+    def get_upload_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_upload_batch', args=(self.mission_id,))
+        return super().get_upload_button(url)
+
+    def get_validate_stage1_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_validation1', args=(self.batch_id,))
+        return super().get_validate_stage1_button(url)
+
+    def get_validate_stage2_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_validation2', args=(self.batch_id,))
+        return super().get_validate_stage2_button(url)
+
+    def get_merge_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_merge', args=(self.mission_id, self.batch_id,))
+        return super().get_merge_button(url)
+
+    def get_checkin_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_checkin', args=(self.batch_id,))
+        return super().get_checkin_button(url)
+
+    def get_delete_button(self, url=None):
+        url = url if url else reverse_lazy('core:form_biochem_plankton_delete', args=(self.mission_id, self.batch_id,))
+        return super().get_delete_button(url)
 
     def get_biochem_batch_clear_url(self):
         return reverse_lazy('core:form_biochem_plankton_get_batch', args=(self.mission_id, self.batch_id,))
+
+    def get_batch_select(self, url=None):
+        url = reverse_lazy('core:form_biochem_plankton_update_selected_batch', args=(self.mission_id,))
+        return super().get_batch_select(url)
 
     def get_batch_choices(self):
         mission = core_models.Mission.objects.get(pk=self.mission_id)
@@ -74,8 +108,32 @@ def delete_plankton_proc(batch_id):
 
 
 def run_biochem_delete_procedure(request, mission_id, batch_id):
-    crispy_form = BiochemPlanktonBatchForm(mission_id=mission_id)
-    return form_biochem_batch.run_biochem_delete_procedure(request, crispy_form, batch_id, delete_plankton_proc)
+
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(div_alert_area := soup.new_tag('div'))
+
+    div_alert_area.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
+    div_alert_area.attrs['hx-swap-oob'] = 'true'
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': 'div_id_biochem_batch',
+            'message': _("Loading Batch"),
+            'logger': user_logger.name,
+            'alert_type': 'info',
+            'hx-post': request.path,
+            'hx-trigger': "load",
+            'hx-swap': 'none'
+        }
+        div_alert_area.append(core_forms.websocket_post_request_alert(**attrs))
+
+        return HttpResponse(soup)
+
+    delete_plankton_proc(batch_id)
+
+    response = HttpResponse(soup)
+    response['Hx-Trigger'] = 'refresh_form'
+    return response
 
 
 def checkout_existing_mission(mission: biochem_models.Bcmissionedits) -> biochem_models.Bcmissions | None:
@@ -239,8 +297,12 @@ def biochem_merge_procedure(request, mission_id, batch_id):
 
 
 def get_batch_info(request, mission_id, batch_id):
-    upload_url = "core:form_biochem_plankton_upload_batch"
-    return form_biochem_batch.get_batch_info(request, mission_id, batch_id, upload_url, add_tables_to_soup)
+    batch_from = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id)
+
+    soup = form_biochem_batch.get_batch_info(batch_from)
+    add_tables_to_soup(soup, batch_id, False)
+
+    return HttpResponse(soup)
 
 
 def stage1_valid_proc(batch_id):
@@ -264,23 +326,39 @@ def stage1_valid_proc(batch_id):
 
 
 def get_batch(request, mission_id):
-    bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
 
-    attrs = {
-        'request': request,
-        'mission_id': mission_id,
-        'bcd_model': bcd_model,
-        'stage1_valid_proc': stage1_valid_proc,
-        'upload_url': 'core:form_biochem_plankton_upload_batch',
-        'validate1_url': 'core:form_biochem_plankton_validation1',
-        'validate2_url': 'core:form_biochem_plankton_validation2',
-        'checkin_url': 'core:form_biochem_plankton_checkin',
-        'merge_url': 'core:form_biochem_plankton_merge',
-        'delete_url': 'core:form_biochem_plankton_delete',
-        'add_tables_to_soup_proc': add_tables_to_soup
-    }
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(div_alert_area := soup.new_tag('div'))
 
-    return form_biochem_batch.get_batch(**attrs)
+    div_alert_area.attrs['id'] = BiochemPlanktonBatchForm.get_batch_alert_area_id()
+    div_alert_area.attrs['hx-swap-oob'] = 'true'
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': 'div_id_biochem_batch',
+            'message': _("Loading Batch"),
+            'logger': user_logger.name,
+            'alert_type': 'info',
+            'hx-post': request.path,
+            'hx-trigger': "load",
+            'hx-swap': 'none'
+        }
+        div_alert_area.append(core_forms.websocket_post_request_alert(**attrs))
+
+        return HttpResponse(soup)
+
+    div_alert_area.attrs['hx-swap'] = 'innerHTML'
+
+    batch_id = request.POST.get('selected_batch', None)
+    batch_form = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id, swap_oob=True)
+
+    bcd_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
+
+    soup = form_biochem_batch.get_batch(soup, batch_form, bcd_model, stage1_valid_proc)
+
+    add_tables_to_soup(soup, batch_form.batch_id)
+
+    return HttpResponse(soup)
 
 
 def page_data_station_errors(request, batch_id, page):
@@ -630,10 +708,117 @@ def upload_batch(request, mission_id):
     return response
 
 
+def download_batch(request, mission_id):
+    soup = BeautifulSoup('', 'html.parser')
+    div = soup.new_tag('div')
+    div.attrs = {
+        'id': BiochemPlanktonBatchForm.get_batch_alert_area_id(),
+        'hx-swap-oob': 'true'
+    }
+    soup.append(div)
+
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
+    bottles = core_models.Bottle.objects.filter(event__in=events)
+
+    alert_soup = form_biochem_database.confirm_uploader(request)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    logger.info("Creating BCS/BCD files")
+    uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
+        request.POST['uploader'] if 'uploader' in request.POST else "N/A"
+
+    logger.info(f"Using uploader: {uploader}")
+
+    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+
+    logger.info(f"Created {len(create)} BCD rows")
+
+    bcs_headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
+
+    file_name = f'{mission.name}_BCS_P.csv'
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
+
+            writer = csv.writer(f)
+            writer.writerow(bcs_headers)
+
+            for bcs_row in create:
+                row = [getattr(bcs_row, header, '') for header in bcs_headers]
+                writer.writerow(row)
+    except PermissionError as e:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Could not save report, the file may be opened and/or locked"),
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
+        div.append(alert_soup)
+        logger.exception(e)
+        return HttpResponse(soup)
+
+    plankton_samples = core_models.PlanktonSample.objects.filter(sample__bottle__event__mission=mission)
+
+    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create = upload.get_bcd_p_rows(uploader=uploader, samples=plankton_samples)
+
+    bcd_headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
+
+    file_name = f'{mission.name}_BCD_P.csv'
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    try:
+        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
+
+            writer = csv.writer(f)
+            writer.writerow(bcd_headers)
+
+            for idx, bcs_row in enumerate(create):
+                row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
+                       header in bcd_headers]
+                writer.writerow(row)
+    except PermissionError as e:
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("Could not save report, the file may be opened and/or locked"),
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
+        div.append(alert_soup)
+        logger.exception(e)
+        return HttpResponse(soup)
+
+    attrs = {
+        'component_id': 'div_id_upload_biochem',
+        'alert_type': 'success',
+        'message': _("Success - Reports saved at : ") + f'{report_path}',
+    }
+    alert_soup = core_forms.blank_alert(**attrs)
+
+    div.append(alert_soup)
+
+    return HttpResponse(soup)
+
+
 prefix = 'biochem/plankton'
 db_prefix = f'<str:database>/<int:mission_id>/{prefix}'
-database_urls = [
+urls = [
     path(f'<int:mission_id>/{prefix}/upload/', upload_batch, name="form_biochem_plankton_upload_batch"),
+    path(f'<int:mission_id>/{prefix}/download/', download_batch, name="form_biochem_plankton_download_batch"),
     path(f'<int:mission_id>/{prefix}/batch/', get_batch, name="form_biochem_plankton_update_selected_batch"),
     path(f'<int:mission_id>/{prefix}/batch/<int:batch_id>/', get_batch_info, name="form_biochem_plankton_get_batch"),
     path(f'<int:mission_id>/{prefix}/delete/<int:batch_id>/', run_biochem_delete_procedure, name="form_biochem_plankton_delete"),
