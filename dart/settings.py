@@ -57,7 +57,11 @@ ALLOWED_HOSTS = ['*']
 
 ASGI_APPLICATION = 'dart.asgi.application'
 
-TNS_NAMES = scripts.get_tns_file()
+TNS_NAMES = {}
+try:
+    TNS_NAMES = scripts.get_tns_file()
+except Exception as ex:
+    print("Could not load TNS Names File")
 
 # These apps are part of the core functionality for DART
 # --- Please do not modify unless you know what you're doing ---
