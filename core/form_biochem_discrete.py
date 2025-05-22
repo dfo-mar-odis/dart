@@ -1,6 +1,8 @@
 import csv
 import logging
 import os
+import subprocess
+
 from datetime import datetime
 from pathlib import Path
 
@@ -854,6 +856,9 @@ def download_batch(request, mission_id):
         div.append(alert_soup)
         logger.exception(e)
         return HttpResponse(soup)
+
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
 
     attrs = {
         'component_id': 'div_id_upload_biochem',
