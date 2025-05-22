@@ -1,17 +1,13 @@
-import csv
 import io
 import time
-from pathlib import Path
 
 import numpy as np
-import os
 
 import bs4
 import pandas as pd
 from bs4 import BeautifulSoup
 
 from crispy_forms.utils import render_crispy_form
-from django.conf import settings
 
 from django.db.models import Max, QuerySet
 from django.http import HttpResponse, Http404
@@ -20,9 +16,6 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
-
-from biochem import upload
-from biochem import models as biochem_models
 
 from core import forms, form_biochem_database, form_biochem_discrete
 
@@ -507,7 +500,6 @@ def biochem_upload_card(request, mission_id):
     biochem_card_wrapper.attrs['class'] = "mb-2"
     biochem_card_wrapper.attrs['hx-get'] = button_url
     biochem_card_wrapper.attrs['hx-trigger'] = 'load, biochem_db_update from:body'
-    # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
     biochem_card_wrapper.attrs['hx-swap'] = 'none'
 
     form_soup = form_biochem_database.get_database_connection_form(request, mission_id)
@@ -541,122 +533,10 @@ def biochem_batches_card(request, mission_id):
     biochem_card_wrapper.attrs['class'] = "mb-2"
     biochem_card_wrapper.attrs['hx-trigger'] = 'biochem_db_connect from:body'
     biochem_card_wrapper.attrs['hx-post'] = request.path
-    # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
     biochem_card_wrapper.attrs['hx-swap'] = 'none'
 
     biochem_card_wrapper.append(form_soup)
     return HttpResponse(soup)
-
-def download_samples(request, mission_id):
-    soup = BeautifulSoup('', 'html.parser')
-    div = soup.new_tag('div')
-    div.attrs = {
-        'id': "div_id_biochem_alert_biochem_db_details",
-        'hx-swap-oob': 'true'
-    }
-    soup.append(div)
-
-    mission = models.Mission.objects.get(pk=mission_id)
-    events = mission.events.filter(instrument__type=models.InstrumentType.ctd)
-    bottles = models.Bottle.objects.filter(event__in=events)
-
-    alert_soup = form_biochem_database.confirm_uploader(request)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    logger.info("Creating BCS/BCD files")
-    uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
-        request.POST['uploader'] if 'uploader' in request.POST else "N/A"
-
-    logger.info(f"Using uploader: {uploader}")
-
-    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
-    # only the objects being created will be returned.
-    create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
-
-    logger.info(f"Created {len(create)} BCD rows")
-
-    bcs_headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
-
-    file_name = f'{mission.name}_BCS_D.csv'
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
-
-    try:
-        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
-
-            writer = csv.writer(f)
-            writer.writerow(bcs_headers)
-
-            for bcs_row in create:
-                row = [getattr(bcs_row, header, '') for header in bcs_headers]
-                writer.writerow(row)
-    except PermissionError as e:
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': _("Could not save report, the file may be opened and/or locked"),
-        }
-        alert_soup = forms.blank_alert(**attrs)
-        div.append(alert_soup)
-        logger.exception(e)
-        return HttpResponse(soup)
-
-    data_types = models.BioChemUpload.objects.filter(
-        type__mission=mission).values_list('type', flat=True).distinct()
-
-    discrete_samples = models.DiscreteSampleValue.objects.filter(
-        sample__bottle__event__mission=mission)
-    discrete_samples = discrete_samples.filter(sample__type_id__in=data_types)
-
-    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
-    # only the objects being created will be returned.
-    create = upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
-
-    bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
-
-    file_name = f'{mission.name}_BCD_D.csv'
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
-
-    try:
-        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
-
-            writer = csv.writer(f)
-            writer.writerow(bcd_headers)
-
-            for idx, bcs_row in enumerate(create):
-                row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
-                       header in bcd_headers]
-                writer.writerow(row)
-    except PermissionError as e:
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': _("Could not save report, the file may be opened and/or locked"),
-        }
-        alert_soup = forms.blank_alert(**attrs)
-        div.append(alert_soup)
-        logger.exception(e)
-        return HttpResponse(soup)
-
-    attrs = {
-        'component_id': 'div_id_upload_biochem',
-        'alert_type': 'success',
-        'message': _("Success - Reports saved at : ") + f'{report_path}',
-    }
-    alert_soup = forms.blank_alert(**attrs)
-
-    div.append(alert_soup)
-
-    return HttpResponse(soup)
-
 
 def get_biochem_buttons(request, mission_id):
     soup = BeautifulSoup('', 'html.parser')
@@ -664,15 +544,6 @@ def get_biochem_buttons(request, mission_id):
     button_area.attrs['id'] = form_biochem_database.get_biochem_additional_button_id()
     button_area.attrs['class'] = 'col-auto align-self-center'
     button_area.attrs['hx-swap-oob'] = 'true'
-
-    icon = BeautifulSoup(load_svg('arrow-down-square'), 'html.parser').svg
-    button_area.append(download_button := soup.new_tag('button'))
-    download_button.append(icon)
-    download_button.attrs['class'] = 'btn btn-sm btn-primary'
-    download_button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
-    download_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_download_biochem",
-                                                   args=(mission_id,))
-    download_button.attrs['hx-swap'] = 'none'
 
     return HttpResponse(soup)
 
@@ -699,7 +570,6 @@ mission_sample_urls = [
 
     path('sample/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload, name="mission_samples_add_sensor_to_upload"),
     path('sample/upload/sensor/<int:mission_id>/', biochem_upload_card, name="mission_samples_biochem_upload_card"),
-    path('sample/download/biochem/<int:mission_id>/', download_samples, name="mission_samples_download_biochem"),
 
     path(f'sample/batch/<int:mission_id>/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
 

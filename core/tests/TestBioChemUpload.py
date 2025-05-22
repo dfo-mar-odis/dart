@@ -2,11 +2,9 @@ import datetime
 
 from django.conf import settings
 from django.core.cache import caches
-from django.db import connections
 from django.test import tag
 from django.urls import reverse
 
-import core.models
 from biochem.models import BcsP
 from dart.tests.DartTestCase import DartTestCase
 
@@ -36,11 +34,6 @@ fake_mission = 'TM15502'
 
 oxy_seq = 90000203
 salt_seq = 90000105
-
-
-def delete_model(database_name: str, model):
-    with connections[database_name].schema_editor() as editor:
-        editor.delete_model(model)
 
 
 class AbstractTestDatabase(DartTestCase):
@@ -74,7 +67,7 @@ class TestGetBCSPRows(AbstractTestDatabase):
     def tearDown(self):
         delete_db = True
         if delete_db:
-            delete_model(biochem_db, self.bio_model)
+            utilities.delete_model(biochem_db, self.bio_model)
 
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
 
@@ -297,7 +290,7 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
     def tearDown(self):
         delete_db = True
         if delete_db:
-            delete_model(biochem_db, self.model)
+            utilities.delete_model(biochem_db, self.model)
 
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
 
