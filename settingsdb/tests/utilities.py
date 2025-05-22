@@ -2,6 +2,10 @@ from django.db import connections
 from django.db.models.base import ModelBase
 
 
+def delete_model(database_name: str, model):
+    with connections[database_name].schema_editor() as editor:
+        editor.delete_model(model)
+
 def create_model_table(unmanaged_models: list[ModelBase], db_alias: str = "default") -> None:
 
     connection = connections[db_alias]
