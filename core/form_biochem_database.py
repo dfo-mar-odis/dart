@@ -555,8 +555,7 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bio_mo
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles,
-                                                                       batch=batch, bcs_p_model=bcs_p)
+        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_p_model=bcs_p)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Plankton rows"))
@@ -707,7 +706,15 @@ def get_database_connection_form(request, mission_id):
     form = form_soup.find('form')
     form.append(database_form_soup)
 
-    return form_soup
+    soup = BeautifulSoup('', 'html.parser')
+    soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_card_wrapper"))
+    biochem_card_wrapper.attrs['class'] = "mb-2 mt-2"
+
+    biochem_card_wrapper.append(form_soup)
+
+    responce = HttpResponse(soup)
+    responce['Hx-Trigger'] = "biochem_db_connect"
+    return responce
 
 
 def get_tns_details(request, mission_id):
@@ -1010,4 +1017,6 @@ database_urls = [
     path(f'{url_prefix}/database/select/', select_database, name='form_biochem_database_update_db_selection'),
     path(f'{url_prefix}/database/connect/', validate_connection, name='form_biochem_database_validate_connection'),
     path(f'{url_prefix}/database/sync/', sync_biochem, name='form_biochem_database_sync'),
+
+    path(f'{url_prefix}/database/card/', get_database_connection_form, name='form_biochem_get_database_connection_form'),
 ]

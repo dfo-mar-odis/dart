@@ -1,6 +1,7 @@
 import csv
 import logging
 import os
+import subprocess
 
 from datetime import datetime
 from pathlib import Path
@@ -626,8 +627,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
 def sample_data_upload( mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem_plankton).delete()
-    core_models.Error.objects.filter(mission=mission,
-                                                     type=core_models.ErrorType.biochem_plankton).delete()
+    core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem_plankton).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Plankton Data"))
@@ -674,9 +674,8 @@ def upload_batch(request, mission_id):
             request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
         batch_id = form_biochem_batch.get_mission_batch_id()
-        batch = biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
-                                                                        username=uploader,
-                                                                        batch_seq=batch_id)[0]
+        batch = biochem_models.Bcbatches.objects.using('biochem').get_or_create(
+            name=mission.mission_descriptor, username=uploader, batch_seq=batch_id)[0]
 
         sample_data_upload(mission, uploader, batch)
         attrs = {
@@ -718,7 +717,7 @@ def download_batch(request, mission_id):
     soup.append(div)
 
     mission = core_models.Mission.objects.get(pk=mission_id)
-    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.net)
     bottles = core_models.Bottle.objects.filter(event__in=events)
 
     alert_soup = form_biochem_database.confirm_uploader(request)
@@ -769,7 +768,7 @@ def download_batch(request, mission_id):
         logger.exception(e)
         return HttpResponse(soup)
 
-    plankton_samples = core_models.PlanktonSample.objects.filter(sample__bottle__event__mission=mission)
+    plankton_samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
 
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
@@ -801,6 +800,9 @@ def download_batch(request, mission_id):
         div.append(alert_soup)
         logger.exception(e)
         return HttpResponse(soup)
+
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
 
     attrs = {
         'component_id': 'div_id_upload_biochem',
