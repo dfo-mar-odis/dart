@@ -1,7 +1,5 @@
 import os.path
 
-from datetime import datetime
-
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Row, Field, HTML, Div
@@ -22,7 +20,6 @@ from biochem import upload
 
 from core import models as core_models
 from core import forms as core_forms
-from core.form_biochem_pre_validation import BIOCHEM_CODES
 from dart.utils import load_svg
 
 from settingsdb import models as settings_models
@@ -511,110 +508,6 @@ def get_bcs_p_table():
     return get_connected_database().bc_plankton_station_edits
 
 
-def upload_bcs_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches = None):
-    uploader = get_uploader()
-
-    # 1) get bottles from BCS_D table
-    bcs_d = upload.get_model(get_bcs_d_table(), bio_models.BcsD)
-    exists = upload.check_and_create_model('biochem', bcs_d)
-
-    # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
-    ctd_events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
-    bottles = core_models.Bottle.objects.filter(event__in=ctd_events)
-    # bottles = models.Bottle.objects.filter(event__mission=mission)
-    if exists:
-        if bottles.exists():
-            # 4) upload only bottles that are new or were modified since the last biochem upload
-            # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-            user_logger.info(_("Compiling BCS rows"))
-            create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_d_model=bcs_d)
-
-            # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-            user_logger.info(_("Creating/updating BCS Discrete rows"))
-            upload.upload_db_rows(bcs_d, create)
-
-
-def upload_bcd_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches = None):
-    uploader = get_uploader()
-
-    # 1) get the biochem BCD_D model
-    table_name = get_bcd_d_table()
-    bcd_d = upload.get_model(table_name, bio_models.BcdD)
-
-    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
-    exists = upload.check_and_create_model('biochem', bcd_d)
-    if not exists:
-        raise DatabaseError(f"A database error occurred while uploading BCD D data. "
-                            f"Could not connect to table {table_name}")
-
-    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
-
-    # 4) else filter the samples down to rows based on:
-    #  * samples in this mission
-    #  * samples of the current sample_type
-    datatypes = core_models.BioChemUpload.objects.filter(
-        # status=core_models.BioChemUploadStatus.upload,
-        type__mission=mission
-    ).exclude(
-        status=core_models.BioChemUploadStatus.delete
-    ).values_list('type', flat=True).distinct()
-
-    discreate_samples = core_models.DiscreteSampleValue.objects.filter(
-        sample__bottle__event__mission=mission
-    )
-    discreate_samples = discreate_samples.filter(sample__type_id__in=datatypes)
-
-    if discreate_samples.exists():
-        # 4) upload only samples that are new or were modified since the last biochem upload
-        message = _("Compiling BCD rows for sample type") + " : " + mission.name
-        user_logger.info(message)
-        create = upload.get_bcd_d_rows(uploader=uploader, samples=discreate_samples, batch=batch, bcd_d_model=bcd_d)
-
-        message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
-        user_logger.info(message)
-        try:
-            upload.upload_db_rows(bcd_d, create)
-            uploaded = core_models.BioChemUpload.objects.filter(
-                type__mission=mission,
-                status=core_models.BioChemUploadStatus.upload
-            )
-
-            for sample in uploaded:
-                sample.status = core_models.BioChemUploadStatus.uploaded
-                sample.upload_date = datetime.now()
-                sample.save()
-
-        except Exception as ex:
-            message = _("An error occured while writing BCD rows: ") + str(ex)
-            core_models.Error.objects.create(
-                mission=mission, message=message, type=core_models.ErrorType.biochem,
-                code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
-            )
-            user_logger.error(message)
-            logger.exception(ex)
-
-
-def get_biochem_errors(request, **kwargs):
-    mission_id = kwargs['mission_id']
-    if request.method == 'GET':
-        mission = core_models.Mission.objects.get(pk=mission_id)
-        context = {
-            'mission': mission,
-            'biochem_errors': mission.errors.filter(type=core_models.ErrorType.biochem)
-        }
-        html = render_to_string(template_name='core/partials/card_biochem_validation.html', context=context)
-
-        return HttpResponse(html)
-
-    logger.error("user has entered an unmanageable state")
-    logger.error(kwargs)
-    logger.error(request.method)
-    logger.error(request.GET)
-    logger.error(request.POST)
-
-    return Http404("You shouldn't be here")
-
-
 def get_database_connection_form(request, mission_id):
     database_connections = settings_models.BcDatabaseConnection.objects.all()
     if database_connections.exists():
@@ -949,6 +842,27 @@ def sync_biochem(request, mission_id, *kwargs):
     soup.append(alert)
 
     return HttpResponse(soup)
+
+
+def get_biochem_errors(request, **kwargs):
+    mission_id = kwargs['mission_id']
+    if request.method == 'GET':
+        mission = core_models.Mission.objects.get(pk=mission_id)
+        context = {
+            'mission': mission,
+            'biochem_errors': mission.errors.filter(type=core_models.ErrorType.biochem)
+        }
+        html = render_to_string(template_name='core/partials/card_biochem_validation.html', context=context)
+
+        return HttpResponse(html)
+
+    logger.error("user has entered an unmanageable state")
+    logger.error(kwargs)
+    logger.error(request.method)
+    logger.error(request.GET)
+    logger.error(request.POST)
+
+    return Http404("You shouldn't be here")
 
 
 url_prefix = "<str:mission_id>"

@@ -1,3 +1,4 @@
+import csv
 import os
 import logging
 
@@ -21,7 +22,7 @@ from django.utils.translation import gettext as _
 
 from core import models as core_models
 from core import forms as core_forms
-from biochem import models as biochem_models
+from biochem import models as biochem_models, upload
 
 from dart.utils import load_svg
 
@@ -615,9 +616,7 @@ def get_batch(soup, batch_form: BiochemBatchForm, bcd_model, stage1_valid_proc):
     delete_button.attrs['disabled'] = 'disabled'
 
     if not batch_form.batch_id:
-        response = HttpResponse(soup)
-        response['Hx-Trigger'] = 'clear_batch'
-        return response
+        return soup
 
     upload_button.attrs['disabled'] = 'disabled'
     validate1_button.attrs.pop('disabled')
@@ -769,3 +768,36 @@ def get_station_errors_table(batch_id, page, swap_oob, page_url):
         tr_header.attrs['hx-swap'] = "none"
 
     return soup
+
+
+def write_bcs_file(rows, bcs_file, report_model):
+    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+
+    bcs_headers = [field.name for field in report_model._meta.fields]
+
+    with open(bcs_file, 'w', newline='', encoding="UTF8") as f:
+
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        writer.writerow(bcs_headers)
+
+        for idx, bcs_row in enumerate(rows):
+            row = [getattr(bcs_row, header, '') for header in bcs_headers]
+            writer.writerow(row)
+
+
+def write_bcd_file(rows, bcd_file, report_model):
+    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+
+    bcd_headers = [field.name for field in report_model._meta.fields]
+
+    with open(bcd_file, 'w', newline='', encoding="UTF8") as f:
+
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        writer.writerow(bcd_headers)
+
+        for idx, bcd_row in enumerate(rows):
+            row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcd_row, header, '') for
+                   header in bcd_headers]
+            writer.writerow(row)
