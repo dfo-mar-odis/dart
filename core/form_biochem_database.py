@@ -22,7 +22,6 @@ from biochem import upload
 
 from core import models as core_models
 from core import forms as core_forms
-from core import form_biochem_batch
 from core.form_biochem_pre_validation import BIOCHEM_CODES
 from dart.utils import load_svg
 
@@ -535,33 +534,6 @@ def upload_bcs_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches 
             upload.upload_db_rows(bcs_d, create)
 
 
-def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bio_models.Bcbatches = None):
-    # 1) get bottles from BCS_P table
-    bcs_p = upload.get_model(get_bcs_p_table(), bio_models.BcsP)
-    exists = upload.check_and_create_model('biochem', bcs_p)
-
-    # 2) get all the bottles to be uploaded
-    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
-    bottle_ids = samples.values_list('bottle_id').distinct()
-    bottles = core_models.Bottle.objects.filter(pk__in=bottle_ids)
-
-    if exists:
-        # 3) else filter bottles from local db where bottle.last_modified > bcs_p.created_date
-        last_uploaded = bcs_p.objects.using('biochem').all().values_list('created_date', flat=True).distinct().last()
-        # if last_uploaded:
-        #     bottles = bottles.filter(last_modified__gt=last_uploaded)
-
-    if bottles.exists():
-        # 4) upload only bottles that are new or were modified since the last biochem upload
-        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-        user_logger.info(_("Compiling BCS rows"))
-        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_p_model=bcs_p)
-
-        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        user_logger.info(_("Creating/updating BCS Plankton rows"))
-        upload.upload_db_rows(bcs_p, bcs_create)
-
-
 def upload_bcd_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches = None):
     uploader = get_uploader()
 
@@ -620,35 +592,6 @@ def upload_bcd_d_data(mission: core_models.Mission, batch: bio_models.Bcbatches 
             )
             user_logger.error(message)
             logger.exception(ex)
-
-
-def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: bio_models.Bcbatches = None):
-    # 1) get Biochem BCD_P model
-    table_name = get_bcd_p_table()
-    bcd_p = upload.get_model(table_name, bio_models.BcdP)
-
-    # 2) if the BCD_P model doesn't exist, create it
-    exists = upload.check_and_create_model('biochem', bcd_p)
-
-    if not exists:
-        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
-                            f"Could not connect to table {table_name}")
-
-    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
-
-    # 4) if the bcs_p table exist, create with all the bottles. linked to plankton samples
-    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
-
-    if samples.exists():
-        # 5) upload only bottles that are new or were modified since the last biochem upload
-        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
-        user_logger.info(_("Compiling BCD Plankton rows"))
-        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples, batch=batch,
-                                           bcd_p_model=bcd_p)
-
-        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
-        user_logger.info(_("Creating/updating BCD Plankton rows"))
-        upload.upload_db_rows(bcd_p, bcd_create)
 
 
 def get_biochem_errors(request, **kwargs):

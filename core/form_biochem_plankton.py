@@ -10,7 +10,8 @@ from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
 from django.conf import settings
 
-from django.db import connections
+from django.db import connections, DatabaseError
+from django.db.models import QuerySet
 from django.http import HttpResponse
 from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
@@ -707,6 +708,23 @@ def upload_batch(request, mission_id):
     return response
 
 
+def get_plankton_bottles(mission: core_models.Mission) -> (QuerySet[core_models.PlanktonSample], QuerySet[core_models.Bottle]):
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    bottle_ids = samples.values_list('bottle_id').distinct()
+    bottles = core_models.Bottle.objects.filter(pk__in=bottle_ids)
+    return samples, bottles
+
+
+def is_locked(file):
+    try:
+        # if a file exists and can't be renamed to itself this will throw an exception indicating the file
+        # can't be opened and written to
+        if os.path.exists(file):
+            os.rename(file, file)
+        return False
+    except OSError:
+        return True
+
 def download_batch(request, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
@@ -717,15 +735,42 @@ def download_batch(request, mission_id):
     soup.append(div)
 
     mission = core_models.Mission.objects.get(pk=mission_id)
-    events = mission.events.filter(instrument__type=core_models.InstrumentType.net)
-    bottles = core_models.Bottle.objects.filter(event__in=events)
 
-    alert_soup = form_biochem_database.confirm_uploader(request)
-    if alert_soup:
+    bcs_file_name = f'{mission.name}_BCS_P.csv'
+    bcd_file_name = f'{mission.name}_BCD_P.csv'
+
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file = os.path.join(report_path, bcs_file_name)
+    bcd_file = os.path.join(report_path, bcd_file_name)
+    # check if the files are locked and fail early if they are
+    if is_locked(bcs_file):
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("An existing version of the BCS file may be opened and/or locked"),
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    if is_locked(bcd_file):
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("An existing version of the BCD file may be opened and/or locked"),
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
         div.append(alert_soup)
         return HttpResponse(soup)
 
     alert_soup = form_biochem_database.confirm_descriptor(request, mission)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    alert_soup = form_biochem_database.confirm_uploader(request)
     if alert_soup:
         div.append(alert_soup)
         return HttpResponse(soup)
@@ -736,60 +781,11 @@ def download_batch(request, mission_id):
 
     logger.info(f"Using uploader: {uploader}")
 
-    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
-    # only the objects being created will be returned.
-    create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
-
-    logger.info(f"Created {len(create)} BCD rows")
-
-    bcs_headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
-
-    file_name = f'{mission.name}_BCS_P.csv'
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
+    samples, bottles = get_plankton_bottles(mission)
 
     try:
-        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
-
-            writer = csv.writer(f)
-            writer.writerow(bcs_headers)
-
-            for bcs_row in create:
-                row = [getattr(bcs_row, header, '') for header in bcs_headers]
-                writer.writerow(row)
-    except PermissionError as e:
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': _("Could not save report, the file may be opened and/or locked"),
-        }
-        alert_soup = core_forms.blank_alert(**attrs)
-        div.append(alert_soup)
-        logger.exception(e)
-        return HttpResponse(soup)
-
-    plankton_samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
-
-    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
-    # only the objects being created will be returned.
-    create = upload.get_bcd_p_rows(uploader=uploader, samples=plankton_samples)
-
-    bcd_headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
-
-    file_name = f'{mission.name}_BCD_P.csv'
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
-
-    try:
-        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
-
-            writer = csv.writer(f)
-            writer.writerow(bcd_headers)
-
-            for idx, bcs_row in enumerate(create):
-                row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
-                       header in bcd_headers]
-                writer.writerow(row)
+        write_bcs_file(bottles, uploader, bcs_file)
+        write_bcd_file(samples, uploader, bcd_file)
     except PermissionError as e:
         attrs = {
             'component_id': 'div_id_upload_biochem',
@@ -814,6 +810,97 @@ def download_batch(request, mission_id):
     div.append(alert_soup)
 
     return HttpResponse(soup)
+
+def write_bcs_file(bottles: QuerySet[core_models.Bottle], uploader, bcs_file):
+    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+
+    logger.info(f"Created {len(create)} BCD rows")
+
+    bcs_headers = [field.name for field in biochem_models.BcsPReportModel._meta.fields]
+
+    with open(bcs_file, 'w', newline='', encoding="UTF8") as f:
+
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        writer.writerow(bcs_headers)
+
+        for bcs_row in create:
+            row = [getattr(bcs_row, header, '') for header in bcs_headers]
+            writer.writerow(row)
+
+
+def write_bcd_file(samples: QuerySet[core_models.PlanktonSample], uploader, bcd_file):
+    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
+    # only the objects being created will be returned.
+    create = upload.get_bcd_p_rows(uploader=uploader, samples=samples)
+
+    bcd_headers = [field.name for field in biochem_models.BcdPReportModel._meta.fields]
+
+    with open(bcd_file, 'w', newline='', encoding="UTF8") as f:
+
+        writer = csv.writer(f, quoting=csv.QUOTE_ALL)
+        writer.writerow(bcd_headers)
+
+        for idx, bcs_row in enumerate(create):
+            row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
+                   header in bcd_headers]
+            writer.writerow(row)
+
+
+def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None, bio_models=None):
+    if not form_biochem_database.is_connected():
+        raise DatabaseError(f"No Database Connection")
+
+    # 1) get bottles from BCS_P table
+    table_name = form_biochem_database.get_bcs_p_table()
+    bcs_p = upload.get_model(table_name, bio_models.BcsP)
+    exists = upload.check_and_create_model('biochem', bcs_p)
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
+                            f"Could not connect to table {table_name}")
+
+    # 2) get all the bottles to be uploaded
+    bottles = get_plankton_bottles(mission)
+    if bottles.exists():
+        # 4) upload only bottles that are new or were modified since the last biochem upload
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCS rows"))
+        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_p_model=bcs_p)
+
+        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCS Plankton rows"))
+        upload.upload_db_rows(bcs_p, bcs_create)
+
+
+def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+    if not form_biochem_database.is_connected():
+        raise DatabaseError(f"No Database Connection")
+
+    # 1) get Biochem BCD_P model
+    table_name = form_biochem_database.get_bcd_p_table()
+    bcd_p = upload.get_model(table_name, biochem_models.BcdP)
+
+    # 2) if the BCD_P model doesn't exist, create it
+    exists = upload.check_and_create_model('biochem', bcd_p)
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
+                            f"Could not connect to table {table_name}")
+
+    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
+
+    # 4) if the bcs_p table exist, create with all the bottles. linked to plankton samples
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    if samples.exists():
+        # 5) upload only bottles that are new or were modified since the last biochem upload
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCD Plankton rows"))
+        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples, batch=batch,
+                                           bcd_p_model=bcd_p)
+
+        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCD Plankton rows"))
+        upload.upload_db_rows(bcd_p, bcd_create)
 
 
 prefix = 'biochem/plankton'
