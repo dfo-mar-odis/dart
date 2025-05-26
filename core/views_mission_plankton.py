@@ -42,29 +42,6 @@ class PlanktonDetails(MissionMixin, GenericDetailView):
     def get_page_title(self):
         return _("Mission Plankton") + " : " + self.object.name
 
-
-def biochem_upload_card(request, mission_id):
-    # upload_url = reverse_lazy("core:mission_samples_upload_biochem", args=(database, mission_id,))
-    # download_url = reverse_lazy("core:mission_samples_download_biochem", args=(database, mission_id,))
-
-    button_url = reverse_lazy('core:mission_plankton_update_biochem_buttons', args=(mission_id,))
-
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_card_wrapper"))
-    biochem_card_wrapper.attrs['class'] = "mb-2 mt-2"
-    biochem_card_wrapper.attrs['hx-get'] = button_url
-    biochem_card_wrapper.attrs['hx-trigger'] = 'load, biochem_db_update from:body'
-    # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
-    biochem_card_wrapper.attrs['hx-swap'] = 'none'
-
-    form_soup = form_biochem_database.get_database_connection_form(request, mission_id)
-    biochem_card_wrapper.append(form_soup)
-
-    responce = HttpResponse(soup)
-    responce['Hx-Trigger'] = "biochem_db_connect"
-    return responce
-
-
 def download_samples(request, mission_id):
     soup = BeautifulSoup('', 'html.parser')
     div = soup.new_tag('div')
@@ -211,18 +188,6 @@ def get_download_bcs_bcd_button(soup, mission_id):
     return button
 
 
-def get_biochem_buttons(request, mission_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(button_area := soup.new_tag('div'))
-    button_area.attrs['id'] = form_biochem_database.get_biochem_additional_button_id()
-    button_area.attrs['class'] = 'col-auto align-self-center'
-    button_area.attrs['hx-swap-oob'] = 'true'
-
-    button_area.append(get_download_bcs_bcd_button(soup, mission_id))
-
-    return HttpResponse(soup)
-
-
 def biochem_batches_card(request, mission_id):
 
     # The first time we get into this function will be a GET request from the mission_samples.html template asking
@@ -257,11 +222,8 @@ def biochem_batches_card(request, mission_id):
 plankton_urls = [
     path(f'<str:database>/plankton/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
 
-    path(f'plankton/plankton/upload/sensor/<int:mission_id>/', biochem_upload_card, name="mission_plankton_biochem_upload_card"),
     path(f'plankton/plankton/batch/<int:mission_id>/', biochem_batches_card, name="mission_plankton_biochem_plankton_card"),
 
     path(f'plankton/download/<int:mission_id>/', download_samples, name="mission_plankton_download_plankton"),
     path(f'plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
-
-    path(f'plankton/biochem/<int:mission_id>/', get_biochem_buttons, name="mission_plankton_update_biochem_buttons"),
 ]

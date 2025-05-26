@@ -22,7 +22,7 @@ urlpatterns = [
 
 urlpatterns.extend(views_mission_event.mission_event_urls)
 urlpatterns.extend(views_sample_type.sample_type_urls)
-urlpatterns.extend(views_mission_sample.mission_sample_urls)
+urlpatterns.extend(views_mission_sample.url_patterns)
 urlpatterns.extend(views_mission_sample_type.mission_sample_type_urls)
 urlpatterns.extend(views_mission_plankton.plankton_urls)
 urlpatterns.extend(views_mission_plankton.plankton_urls)

@@ -118,7 +118,8 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
 
     total_bottles = len(bottles)
     for count, bottle in enumerate(bottles):
-        user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
+        if count % 10 == 9:
+            user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
 
         event = bottle.event
         mission = event.mission
@@ -219,7 +220,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
 
     total_bottles = len(bottles)
     for count, bottle in enumerate(bottles):
-        user_logger.info(_("Compiling BCS") + " : %d/%d", (count + 1), total_bottles)
+        if count % 10 == 9:
+            user_logger.info(_("Compiling BCS") + " : %d/%d", (count + 1), total_bottles)
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
         gears = bottle.plankton_data.values_list('gear_type', 'mesh_size').distinct()
         event = bottle.event
@@ -410,7 +412,8 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     total_samples = len(samples)
     for count, ds_sample in enumerate(samples):
         # dis_data_num = count + dis_data_num
-        user_logger.info(_("Compiling updates for BCD Discrete samples") + " : " + "%d/%d", (count + 1), total_samples)
+        if count % 10 == 9:
+            user_logger.info(_("Compiling updates for BCD Discrete samples") + " : " + "%d/%d", (count + 1), total_samples)
         sample = ds_sample.sample
         bottle = sample.bottle
         event = bottle.event
@@ -519,7 +522,8 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     total_samples = len(samples)
     for count, sample in enumerate(samples):
-        user_logger.info(_("Compiling BCD Plankton rows") + " : %d/%d", (count + 1), total_samples)
+        if count % 10 == 9:
+            user_logger.info(_("Compiling BCD Plankton rows") + " : %d/%d", (count + 1), total_samples)
 
         bottle = sample.bottle
         event = bottle.event
