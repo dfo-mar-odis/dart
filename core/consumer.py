@@ -1,6 +1,6 @@
-from asgiref.sync import async_to_sync
+from asgiref.sync import async_to_sync, sync_to_async
 from bs4 import BeautifulSoup
-from channels.generic.websocket import WebsocketConsumer
+from channels.generic.websocket import WebsocketConsumer, AsyncWebsocketConsumer
 from django.utils.translation import gettext as _
 
 import logging
@@ -102,21 +102,28 @@ class BiochemConsumer(CoreConsumer, logging.Handler):
         CoreConsumer.__init__(self)
 
 
-class LoggerConsumer(CoreConsumer, logging.Handler):
+class LoggerConsumer(AsyncWebsocketConsumer, logging.Handler):
 
     GROUP_NAME = "logger"
 
-    def connect(self):
-        super().connect()
+    async def connect(self):
+        logger.info(self.channel_name)
+
+        await self.channel_layer.group_add(
+            self.GROUP_NAME, self.channel_name
+        )
+        await self.accept()
         logger_to_listen_to = self.scope['url_route']['kwargs']['logger']
         logging.getLogger(f'{logger_to_listen_to}').addHandler(self)
 
-    def disconnect(self, code):
+    async def disconnect(self, code):
         logger_to_listen_to = self.scope['url_route']['kwargs']['logger']
         logging.getLogger(f'{logger_to_listen_to}').removeHandler(self)
-        super().disconnect(code)
+        await self.channel_layer.group_discard(
+            self.GROUP_NAME, self.channel_name
+        )
 
-    def process_render_queue(self, component_id, event) -> None:
+    async def process_render_queue(self, component_id, event) -> None:
         soup = BeautifulSoup(f'<div id="{component_id}">{event["message"]}</div>', 'html.parser')
         progress_bar = soup.new_tag("div")
         progress_bar.attrs = {
@@ -138,9 +145,9 @@ class LoggerConsumer(CoreConsumer, logging.Handler):
             progress_bar.string = _("Working")
 
         soup.append(progress_bar_div)
-        self.send(text_data=soup)
+        await self.send(soup)
 
-    def emit(self, record: logging.LogRecord) -> None:
+    async def emit(self, record: logging.LogRecord) -> None:
         component = self.scope['url_route']['kwargs']['component_id']
 
         if len(record.args) > 0:
@@ -148,11 +155,11 @@ class LoggerConsumer(CoreConsumer, logging.Handler):
                 'message': record.getMessage(),
                 'queue': int((record.args[0]/record.args[1])*100)
             }
-            self.process_render_queue(component, event)
+            await self.process_render_queue(component, event)
         else:
             html = BeautifulSoup(f'<div id="{component}">{record.getMessage()}</div>', 'html.parser')
-            self.send(text_data=html)
+            await self.send(html)
 
     def __init__(self):
         logging.Handler.__init__(self, level=logging.INFO)
-        CoreConsumer.__init__(self)
+        AsyncWebsocketConsumer.__init__(self)

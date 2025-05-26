@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import math
 
@@ -16,3 +18,14 @@ def distance(point1: [float, float], point2: [float, float]) -> float:
     d = math.acos(1 if inner > 1 else inner) * R
 
     return d
+
+
+def is_locked(file):
+    try:
+        # if a file exists and can't be renamed to itself this will throw an exception indicating the file
+        # can't be opened and written to
+        if os.path.exists(file):
+            os.rename(file, file)
+        return False
+    except OSError:
+        return True

@@ -9,7 +9,7 @@ from biochem.models import BcsP
 from dart.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
-from core import form_biochem_database
+from core import form_biochem_discrete
 from core.tests import CoreFactoryFloor as core_factory
 
 from biochem import upload
@@ -181,8 +181,10 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
     def setUp(self):
         utilities.create_model_table([bio_models.Bcbatches], 'biochem')
 
-        self.sample_database = settings_factory.BcDatabaseConnection()
-        caches['biochem_keys'].set('database_id', self.sample_database.pk, 3600)
+        self.sample_database = settings_factory.BcDatabaseConnection(name=settings.DATABASES['biochem']['NAME'])
+        caches['biochem_keys'].set('database_id', self.sample_database.pk, timeout=3600)
+        # fake a password so the tester thinks it's connect to a real DB
+        caches['biochem_keys'].set('pwd', "FaKe123", version=self.sample_database.pk, timeout=3600)
 
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
@@ -213,7 +215,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
             type=oxy_sample_type
         )
 
-        form_biochem_database.upload_bcd_d_data(self.mission)
+        form_biochem_discrete.upload_bcd_d_data(self.mission, "Upsonp")
 
         self.model = upload.get_model(self.sample_database.bc_discrete_data_edits, bio_models.BcdD)
         # oxygen samples should have been added to the biochem db

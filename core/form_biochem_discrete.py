@@ -9,7 +9,8 @@ from pathlib import Path
 from bs4 import BeautifulSoup
 from django.conf import settings
 
-from django.db import connections
+from django.db import connections, DatabaseError
+from django.db.models import QuerySet
 from django.http import HttpResponse
 from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
@@ -22,6 +23,8 @@ from core import form_biochem_database, form_biochem_batch
 from biochem import upload, MergeTables
 from biochem import models as biochem_models
 
+from core.form_biochem_pre_validation import BIOCHEM_CODES
+from core.utils import is_locked
 
 logger = logging.getLogger('dart')
 user_logger = logger.getChild('user')
@@ -106,7 +109,6 @@ def delete_discrete_proc(batch_id):
 
 
 def run_biochem_delete_procedure(request, mission_id, batch_id):
-
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div_alert_area := soup.new_tag('div'))
 
@@ -153,7 +155,7 @@ def checkout_existing_mission(mission: biochem_models.Bcmissionedits) -> biochem
             # If in the locked missions table and not in the users table we shouldn't be deleting or overriding
             if hasattr(bc_mission, 'locked_missions'):
                 msg = f"'{bc_mission.locked_missions.downloaded_by}' " + _("already has this mission checked out. "
-                        "Mission needs to be released from BCLockedMissions before it can be modified.")
+                                                                           "Mission needs to be released from BCLockedMissions before it can be modified.")
                 raise PermissionError(msg)
 
             # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
@@ -166,12 +168,12 @@ def checkout_existing_mission(mission: biochem_models.Bcmissionedits) -> biochem
 
             if return_value[1] is None:
                 biochem_models.Bclockedmissions.objects.using('biochem').create(
-                    mission = bc_mission,
-                    mission_name = bc_mission.name,
-                    descriptor = bc_mission.descriptor,
-                    data_pointer_code = "DH",  # reference to BCDataPointers table - "DH" for discrete, "PL" for plankton
-                    downloaded_by = form_biochem_database.get_uploader(),
-                    downloaded_date = datetime.now()).save(using='biochem')
+                    mission=bc_mission,
+                    mission_name=bc_mission.name,
+                    descriptor=bc_mission.descriptor,
+                    data_pointer_code="DH",  # reference to BCDataPointers table - "DH" for discrete, "PL" for plankton
+                    downloaded_by=form_biochem_database.get_uploader(),
+                    downloaded_date=datetime.now()).save(using='biochem')
                 return bc_mission
         else:
             return user_missions.first().mission
@@ -314,7 +316,6 @@ def stage1_valid_proc(batch_id):
 
 
 def get_batch(request, mission_id):
-
     soup = BeautifulSoup('', 'html.parser')
     soup.append(div_alert_area := soup.new_tag('div'))
 
@@ -343,7 +344,6 @@ def get_batch(request, mission_id):
     bcd_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
 
     soup = form_biochem_batch.get_batch(soup, batch_form, bcd_model, stage1_valid_proc)
-
     add_tables_to_soup(soup, batch_form.batch_id)
 
     return HttpResponse(soup)
@@ -657,7 +657,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
     data_error_details.append(get_data_errors_table(batch_id, swap_oob=swap_oob).find('div'))
 
 
-def sample_data_upload(mission: core_models.Mission, batch: biochem_models.Bcbatches):
+def sample_data_upload(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem).delete()
     core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem).delete()
@@ -677,8 +677,8 @@ def sample_data_upload(mission: core_models.Mission, batch: biochem_models.Bcbat
         core_models.Error.objects.bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
-    form_biochem_database.upload_bcs_d_data(mission, batch)
-    form_biochem_database.upload_bcd_d_data(mission, batch)
+    upload_bcs_d_data(mission, uploader, batch)
+    upload_bcd_d_data(mission, uploader, batch)
 
 
 def upload_batch(request, mission_id):
@@ -715,14 +715,14 @@ def upload_batch(request, mission_id):
 
         batch_id = form_biochem_batch.get_mission_batch_id()
         batch = biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
-                                                                        username=uploader,
-                                                                        batch_seq=batch_id)[0]
+                                                                                username=uploader,
+                                                                                batch_seq=batch_id)[0]
 
         bc_statn_data_errors = []
         # user_logger.info(_("Running Biochem validation on Batch") + f" : {batch_id}")
         # bc_statn_data_errors = run_biochem_validation_procedure(batch_id, mission.mission_descriptor)
 
-        sample_data_upload(mission, batch)
+        sample_data_upload(mission, uploader, batch)
 
         attrs = {
             'component_id': 'div_id_upload_biochem',
@@ -754,8 +754,29 @@ def upload_batch(request, mission_id):
     alert_soup = core_forms.blank_alert(**attrs)
     div.append(alert_soup)
     response = HttpResponse(soup)
+    # update samples to refresh the "which samples have been uploaded recently" buttons
     response['HX-Trigger'] = 'update_samples'
     return response
+
+
+def get_discrete_data(mission: core_models.Mission, upload_all=False) -> (
+QuerySet[core_models.DiscreteSampleValue], QuerySet[core_models.Bottle]):
+    if upload_all:
+        data_types = core_models.BioChemUpload.objects.filter(
+            type__mission=mission).values_list('type', flat=True).distinct()
+    else:
+        data_types = core_models.BioChemUpload.objects.filter(
+            type__mission=mission
+        ).exclude(
+            status=core_models.BioChemUploadStatus.delete
+        ).values_list('type', flat=True).distinct()
+
+    samples = core_models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission,
+                                                             sample__type_id__in=data_types)
+    bottle_ids = samples.values_list('sample__bottle_id').distinct()
+    bottles = core_models.Bottle.objects.filter(pk__in=bottle_ids)
+
+    return samples, bottles
 
 
 def download_batch(request, mission_id):
@@ -768,15 +789,42 @@ def download_batch(request, mission_id):
     soup.append(div)
 
     mission = core_models.Mission.objects.get(pk=mission_id)
-    events = mission.events.filter(instrument__type=core_models.InstrumentType.ctd)
-    bottles = core_models.Bottle.objects.filter(event__in=events)
 
-    alert_soup = form_biochem_database.confirm_uploader(request)
-    if alert_soup:
+    bcs_file_name = f'{mission.name}_BCS_D.csv'
+    bcd_file_name = f'{mission.name}_BCD_D.csv'
+
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file = os.path.join(report_path, bcs_file_name)
+    bcd_file = os.path.join(report_path, bcd_file_name)
+    # check if the files are locked and fail early if they are
+    if is_locked(bcs_file):
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("An existing version of the BCS file may be opened and/or locked"),
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    if is_locked(bcd_file):
+        attrs = {
+            'component_id': 'div_id_upload_biochem',
+            'alert_type': 'danger',
+            'message': _("An existing version of the BCD file may be opened and/or locked"),
+        }
+        alert_soup = core_forms.blank_alert(**attrs)
         div.append(alert_soup)
         return HttpResponse(soup)
 
     alert_soup = form_biochem_database.confirm_descriptor(request, mission)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
+    alert_soup = form_biochem_database.confirm_uploader(request)
     if alert_soup:
         div.append(alert_soup)
         return HttpResponse(soup)
@@ -787,65 +835,14 @@ def download_batch(request, mission_id):
 
     logger.info(f"Using uploader: {uploader}")
 
-    # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
-    # only the objects being created will be returned.
-    create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
-
-    logger.info(f"Created {len(create)} BCD rows")
-
-    bcs_headers = [field.name for field in biochem_models.BcsDReportModel._meta.fields]
-
-    file_name = f'{mission.name}_BCS_D.csv'
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
+    samples, bottles = get_discrete_data(mission, upload_all=True)
 
     try:
-        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
+        sample_rows = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
+        form_biochem_batch.write_bcs_file(sample_rows, bcs_file, biochem_models.BcsDReportModel)
 
-            writer = csv.writer(f)
-            writer.writerow(bcs_headers)
-
-            for bcs_row in create:
-                row = [getattr(bcs_row, header, '') for header in bcs_headers]
-                writer.writerow(row)
-    except PermissionError as e:
-        attrs = {
-            'component_id': 'div_id_upload_biochem',
-            'alert_type': 'danger',
-            'message': _("Could not save report, the file may be opened and/or locked"),
-        }
-        alert_soup = core_forms.blank_alert(**attrs)
-        div.append(alert_soup)
-        logger.exception(e)
-        return HttpResponse(soup)
-
-    data_types = core_models.BioChemUpload.objects.filter(
-        type__mission=mission).values_list('type', flat=True).distinct()
-
-    discrete_samples = core_models.DiscreteSampleValue.objects.filter(
-        sample__bottle__event__mission=mission)
-    discrete_samples = discrete_samples.filter(sample__type_id__in=data_types)
-
-    # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
-    # only the objects being created will be returned.
-    create = upload.get_bcd_d_rows(uploader=uploader, samples=discrete_samples)
-
-    bcd_headers = [field.name for field in biochem_models.BcdDReportModel._meta.fields]
-
-    file_name = f'{mission.name}_BCD_D.csv'
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
-
-    try:
-        with open(os.path.join(report_path, file_name), 'w', newline='', encoding="UTF8") as f:
-
-            writer = csv.writer(f)
-            writer.writerow(bcd_headers)
-
-            for idx, bcs_row in enumerate(create):
-                row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcs_row, header, '') for
-                       header in bcd_headers]
-                writer.writerow(row)
+        bottle_rows = upload.get_bcd_d_rows(uploader=uploader, samples=samples)
+        form_biochem_batch.write_bcd_file(bottle_rows, bcd_file, biochem_models.BcdDReportModel)
     except PermissionError as e:
         attrs = {
             'component_id': 'div_id_upload_biochem',
@@ -872,25 +869,103 @@ def download_batch(request, mission_id):
     return HttpResponse(soup)
 
 
+def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+    if not form_biochem_database.is_connected():
+        raise DatabaseError(f"No Database Connection")
+
+    # 1) get bottles from BCS_D table
+    bcs_d = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+    exists = upload.check_and_create_model('biochem', bcs_d)
+
+    # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
+    samples, bottles = get_discrete_data(mission)
+    if bottles.exists():
+        # 4) upload only bottles that are new or were modified since the last biochem upload
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCS rows"))
+        create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_d_model=bcs_d)
+
+        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCS Discrete rows"))
+        upload.upload_db_rows(bcs_d, create)
+
+
+def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_models.Bcbatches = None):
+    if not form_biochem_database.is_connected():
+        raise DatabaseError(f"No Database Connection")
+
+    # 1) get the biochem BCD_D model
+    table_name = form_biochem_database.get_bcd_d_table()
+    bcd_d = upload.get_model(table_name, biochem_models.BcdD)
+
+    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
+    exists = upload.check_and_create_model('biochem', bcd_d)
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD D data. "
+                            f"Could not connect to table {table_name}")
+
+    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
+
+    # 4) else filter the samples down to rows based on:
+    #  * samples in this mission
+    #  * samples of the current sample_type
+    samples, bottles = get_discrete_data(mission)
+    if samples.exists():
+        # 4) upload only samples that are new or were modified since the last biochem upload
+        message = _("Compiling BCD rows for sample type") + " : " + mission.name
+        user_logger.info(message)
+        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples, batch=batch, bcd_d_model=bcd_d)
+
+        message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
+        user_logger.info(message)
+        try:
+            upload.upload_db_rows(bcd_d, create)
+
+            # after uploading the samples we want to update the status of the samples in this mission so we
+            # know what has been uploaded and what hasn't.
+            uploaded = core_models.BioChemUpload.objects.filter(
+                type__mission=mission,
+                status=core_models.BioChemUploadStatus.upload
+            )
+
+            for sample in uploaded:
+                sample.status = core_models.BioChemUploadStatus.uploaded
+                sample.upload_date = datetime.now()
+                sample.save()
+
+        except Exception as ex:
+            message = _("An error occured while writing BCD rows: ") + str(ex)
+            core_models.Error.objects.create(
+                mission=mission, message=message, type=core_models.ErrorType.biochem,
+                code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
+            )
+            user_logger.error(message)
+            logger.exception(ex)
+
+
 prefix = 'biochem/discrete'
 url_patterns = [
     path(f'<int:mission_id>/{prefix}/upload/', upload_batch, name="form_biochem_discrete_upload_batch"),
     path(f'<int:mission_id>/{prefix}/download/', download_batch, name="form_biochem_discrete_download_batch"),
     path(f'<int:mission_id>/{prefix}/batch/', get_batch, name="form_biochem_discrete_update_selected_batch"),
     path(f'<int:mission_id>/{prefix}/batch/<int:batch_id>/', get_batch_info, name="form_biochem_discrete_get_batch"),
-    path(f'<int:mission_id>/{prefix}/delete/<int:batch_id>/', run_biochem_delete_procedure, name="form_biochem_discrete_delete"),
+    path(f'<int:mission_id>/{prefix}/delete/<int:batch_id>/', run_biochem_delete_procedure,
+         name="form_biochem_discrete_delete"),
     path(f'<int:mission_id>/{prefix}/form/<int:batch_id>/', refresh_batches_form, name="form_biochem_discrete_refresh"),
 
-    path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure, name="form_biochem_discrete_validation1"),
-    path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure, name="form_biochem_discrete_validation2"),
+    path(f'{prefix}/validate1/<int:batch_id>/', biochem_validation1_procedure,
+         name="form_biochem_discrete_validation1"),
+    path(f'{prefix}/validate2/<int:batch_id>/', biochem_validation2_procedure,
+         name="form_biochem_discrete_validation2"),
     path(f'{prefix}/checkin/<int:batch_id>/', biochem_checkin_procedure, name="form_biochem_discrete_checkin"),
-    path(f'<int:mission_id>/{prefix}/merge/<int:batch_id>/', biochem_merge_procedure, name="form_biochem_discrete_merge"),
+    path(f'<int:mission_id>/{prefix}/merge/<int:batch_id>/', biochem_merge_procedure,
+         name="form_biochem_discrete_merge"),
     path(f'{prefix}/page/bcd/<int:batch_id>/<int:page>/', page_bcd, name="form_biochem_discrete_page_bcd"),
     path(f'{prefix}/page/bcs/<int:batch_id>/<int:page>/', page_bcs, name="form_biochem_discrete_page_bcs"),
     path(f'{prefix}/page/station_errors/<int:batch_id>/<int:page>/', page_data_station_errors,
          name="form_biochem_discrete_page_station_errors"
-    ),
+         ),
     path(f'{prefix}/page/data_errors/<int:batch_id>/<int:page>/', page_data_errors,
          name="form_biochem_discrete_page_errors"
-    ),
+         ),
 ]
