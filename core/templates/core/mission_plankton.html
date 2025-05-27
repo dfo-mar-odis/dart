@@ -23,11 +23,11 @@
     <div class="container-fluid" id="div_content_block_id"
          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
     >
-{#        <div class="mb-2" hx-trigger="load" hx-get="{% url "core:form_plankton_multinet_card" mission.pk %}?hide_loaded=true"#}
-{#             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>#}
-            {# The Load Bottle form will be swapped in here #}
-{#            {% include 'core/partials/card_placeholder.html' with card_name="multinet_load" card_title="Load Multinet Data" %}#}
-{#        </div>#}
+        <div class="mb-2" hx-trigger="load" hx-get="{% url "core:form_plankton_multinet_card" mission.pk %}?hide_loaded=true"
+             hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+             {# The Load Bottle form will be swapped in here  #}
+            {% include 'core/partials/card_placeholder.html' with card_name="multinet_load" card_title="Load Net Volume" %}
+        </div>
 
         <div id="div_id_card_plankton_form" class="card">
             <div class="card-header">
@@ -86,7 +86,7 @@
                 </div>
             </div>
         </div>
-        <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:mission_plankton_biochem_upload_card" mission.pk %}">
+        <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:form_biochem_get_database_connection_form" mission.pk %}">
             {# The Biochem database form will be swapped in here after the page loads #}
             {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
             {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}

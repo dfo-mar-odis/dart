@@ -142,11 +142,20 @@ class Event(models.Model):
     sample_id = models.IntegerField(verbose_name=_("Start Bottle"), null=True, blank=True)
     end_sample_id = models.IntegerField(verbose_name=_("End Bottle"), null=True, blank=True)
 
-    # net specific attributes
+    # net specific attributes used in computing volume if a computed volume isn't provided.
+    # By default the biochem.upload.get_bcs_p_rows() function assumes a net is a 0.75m diameter ring and the
+    # flowmeter constant is 0.3 then uses the equation V=((π(diameter/2)²) * ((flow_end - flow_start) * 0.3))
+    # if the flow meter reading isn't provided the wire out is used V=((π(diameter/2)²) * wire out). Wire angle is
+    # a relic and not used in the Dart equations. We hope in the future to use a provided "surface area" instead
+    # of assuming a net is round, or in the case of multinets have the computed volume calucated by software to control
+    # the multinet provided. If a computed volume is provided it will be provided per-"bottle" which holds the
+    # same information a net requires.
+    surface_area = models.FloatField(verbose_name=_("Surface Area (m²)"), null=True, blank=True)
     wire_out = models.FloatField(verbose_name=_("Wire Out"), null=True, blank=True)
     wire_angle = models.FloatField(verbose_name=_("Wire Angle"), null=True, blank=True)
     flow_start = models.IntegerField(verbose_name=_("Flow Meter Start"), null=True, blank=True)
     flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
+    flowmeter_constant = models.FloatField(verbose_name=_("Flow Meter Constant"), null=True, blank=True)
 
     @property
     def files(self):
@@ -380,6 +389,10 @@ class Bottle(models.Model):
     longitude = models.DecimalField(verbose_name=_("Longitude"), blank=True, null=True, decimal_places=6, max_digits=9)
 
     last_modified = models.DateTimeField(auto_now=True)
+
+    # Provided if this bottle is actually a net in a multinet setup. This would be m³ for a net, but could be used
+    # for liters if we want to recorde the size of a Niscan bottle.
+    volume = models.FloatField(verbose_name=_("Volume"), null=True, blank=True)
 
     def __str__(self):
         return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"

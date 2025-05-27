@@ -491,25 +491,6 @@ def add_sensor_to_upload(request, mission_id, sensor_id, **kwargs):
     return Http404("You shouldn't be here")
 
 
-def biochem_upload_card(request, mission_id):
-
-    button_url = reverse_lazy('core:mission_samples_update_bio_chem_buttons', args=(mission_id,))
-
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_card_wrapper"))
-    biochem_card_wrapper.attrs['class'] = "mb-2"
-    biochem_card_wrapper.attrs['hx-get'] = button_url
-    biochem_card_wrapper.attrs['hx-trigger'] = 'load, biochem_db_update from:body'
-    biochem_card_wrapper.attrs['hx-swap'] = 'none'
-
-    form_soup = form_biochem_database.get_database_connection_form(request, mission_id)
-    biochem_card_wrapper.append(form_soup)
-
-    responce = HttpResponse(soup)
-    responce['Hx-Trigger'] = "biochem_db_connect"
-    return responce
-
-
 def biochem_batches_card(request, mission_id):
 
     # The first time we get into this function will be a GET request from the mission_samples.html template asking
@@ -538,15 +519,6 @@ def biochem_batches_card(request, mission_id):
     biochem_card_wrapper.append(form_soup)
     return HttpResponse(soup)
 
-def get_biochem_buttons(request, mission_id):
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(button_area := soup.new_tag('div'))
-    button_area.attrs['id'] = form_biochem_database.get_biochem_additional_button_id()
-    button_area.attrs['class'] = 'col-auto align-self-center'
-    button_area.attrs['hx-swap-oob'] = 'true'
-
-    return HttpResponse(soup)
-
 
 def delete_file_error(request, error_id):
     models.FileError.objects.filter(id=error_id).delete()
@@ -555,7 +527,7 @@ def delete_file_error(request, error_id):
 
 
 # ###### Mission Sample ###### #
-mission_sample_urls = [
+url_patterns = [
     path(f'<str:database>/sample/<int:pk>/', SampleDetails.as_view(), name="mission_samples_sample_details"),
 
     # used to reload elements on the sample form if a GET htmx request
@@ -569,12 +541,7 @@ mission_sample_urls = [
     path('sample/list/<int:mission_id>/', list_samples, name="mission_samples_sample_list"),
 
     path('sample/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload, name="mission_samples_add_sensor_to_upload"),
-    path('sample/upload/sensor/<int:mission_id>/', biochem_upload_card, name="mission_samples_biochem_upload_card"),
-
     path(f'sample/batch/<int:mission_id>/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
 
     path(f'sample/sample/error/<int:error_id>/', delete_file_error, name="mission_samples_delete_file_error"),
-
-    path(f'sample/sample/biochem/<int:mission_id>/', get_biochem_buttons, name="mission_samples_update_bio_chem_buttons"),
-
 ]
