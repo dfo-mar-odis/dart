@@ -3,7 +3,7 @@ import easygui
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Field, Layout, Row, Column, Div
+from crispy_forms.layout import Field, Layout, Row, Column, Div, HTML
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
@@ -77,11 +77,19 @@ class PlanktonForm(forms.Form):
 
 class MultinetLoadForm(CollapsableCardForm):
 
+    net_volume_help_text = _("For single net plankton catches net volumes are computed based on the the surface area "
+                             "a net covers (e.g [base * height] or [πr²]) and multiplied by distance the net traveled. "
+                             "The travel distance is either the difference in a end flowmeter and a start flowmeter "
+                             "reading multiplied by a manufacture provided constant of 0.3 or computed based on a "
+                             "wire out formula, if no flowmeter is present. In the case of multinets there is often "
+                             "accompanying files that identify the volume of water that passes through a net before "
+                             "the net is closed. Dart provides a template that can assist in providing volume data.")
+
     def get_card_body(self) -> Div:
         body = super().get_card_body()
 
-        load_icon = load_svg("arrow-down-square")
-        url = reverse_lazy("core:form_plankton_upload_multinet", args=(self.database, self.mission.pk,))
+        load_icon = load_svg("arrow-up-square")
+        url = reverse_lazy("core:form_plankton_upload_multinet", args=(self.mission.pk,))
         load_attrs = {
             'id': f"{self.card_name}_load_bottles",
             'hx-get': url,
@@ -92,7 +100,11 @@ class MultinetLoadForm(CollapsableCardForm):
         button_row = Row(
             Column(load_btn, css_class="col-auto"),
         )
+        description_row = Row(
+            Column(HTML("<p>" + self.net_volume_help_text + "</p>"), css_class="col"),
+        )
 
+        body.fields.append(description_row)
         body.fields.append(button_row)
 
         return body
@@ -101,7 +113,7 @@ class MultinetLoadForm(CollapsableCardForm):
 
         self.mission = mission
 
-        super().__init__(card_name="multinet_load", card_title=_("Load Multinet Files"), *args, **kwargs)
+        super().__init__(card_name="multinet_load", card_title=_("Load Net Volume"), *args, **kwargs)
 
 
 def load_plankton(request, mission_id):
