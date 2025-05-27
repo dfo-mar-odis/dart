@@ -237,8 +237,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             logger.error("Could not acquire bottom action for event sounding")
 
         try:
-            # for calculating volume we need either a wire out or a flow meter start and end. Both of these should
-            # be, at the very least, attached to the last action of an event.
+            # for calculating volume, if not provided with a sample, we need either a wire out or a flow meter start
+            # and end. Both of these should be, at the very least, attached to the last action of an event.
             recovery_action: core_models.Action = event.actions.get(type=core_models.ActionType.recovered)
         except core_models.Action.DoesNotExist as e:
             # if there's no recovery event then we won't be able to complete this row of data, it also means this
