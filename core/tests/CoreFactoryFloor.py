@@ -143,6 +143,8 @@ class BottleFactory(DjangoModelFactory):
     closed = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
     bottle_id = factory.sequence(lambda n: n)
     pressure = factory.lazy_attribute(lambda o: faker.pyfloat(left_digits=4, right_digits=3))
+    gear_type = factory.lazy_attribute(lambda o: bio_tables.models.BCGear.objects.get(pk=90000002))
+    mesh_size = 0
 
 
 class SampleFactory(DjangoModelFactory):

@@ -78,7 +78,7 @@ class CardForm(forms.Form):
         return f'div_id_card_{self.card_name}'
 
     def get_card_class(self):
-        return f'card'
+        return f'card mb-2'
 
     def get_card(self, attrs: dict = None) -> Div:
 
@@ -148,7 +148,7 @@ class CollapsableCardForm(CardForm):
         card = Div(
             self.get_card_header(),
             self.get_collapsable_card_body(),
-            css_class='card',
+            css_class='card mb-2',
             id=self.get_card_id()
         )
 
@@ -395,6 +395,24 @@ def save_load_component(component_id, message, **kwargs):
 #     'hx-trigger': 'load'
 # }
 def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
+    """
+    Generates a Bootstrap alert HTML component with a progress bar and websocket live status updates.
+
+    Args:
+        alert_area_id (str): The HTML element ID where the alert will be rendered.
+        logger (str): Logger or identifier for the websocket notification channel.
+        message (str): The initial message to display in the alert.
+        **kwargs: Additional HTML attributes for the alert component.
+
+    Returns:
+        BeautifulSoup: A soup object containing the alert HTML, ready for rendering.
+
+    The alert includes a websocket connection for real-time status updates and is designed
+    to be swapped into the page using HTMX out-of-band swapping.
+
+    You CANNOT use django.utils.translation.gettext_lazy() here because it provides a reference
+    to a translation, not the actual translation string.
+    """
     component_id = f"{alert_area_id}_alert"
     soup = BeautifulSoup("", 'html.parser')
     soup.append(div := soup.new_tag('div', id=alert_area_id, attrs={"hx-swap-oob": 'true'}))

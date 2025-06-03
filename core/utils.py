@@ -29,3 +29,11 @@ def is_locked(file):
         return False
     except OSError:
         return True
+
+
+def is_number(value: str) -> bool:
+    try:
+        float(value)
+        return True
+    except (TypeError, ValueError):
+        return False

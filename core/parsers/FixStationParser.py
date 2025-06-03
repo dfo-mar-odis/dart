@@ -117,8 +117,7 @@ class FixStationParser:
             else:
                 raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
 
-            if (btl := core_models.Bottle.objects.exclude(event=self.event).filter(
-                    bottle_id=bottle_id)).exists():
+            if (btl := core_models.Bottle.objects.exclude(event=self.event).filter(bottle_id=bottle_id)).exists():
                 # if the bottle exists for an event other than the current event
                 if not (btl.first().event == self.event):
                     raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")

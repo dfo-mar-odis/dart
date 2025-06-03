@@ -1,0 +1,61 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div class="card mb-2" id="div_id_card_gear_type_filter">
+    <div class="card-header" id="div_id_card_header_gear_type_filter">
+        <div class="row">
+            <button aria-expanded="true" class="btn btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                    href="#div_id_card_collapse_gear_type_filter" id="button_id_collapse_gear_type_filter"
+                    type="button">
+                <svg class="bi bi-caret-down" fill="currentColor" height="16" viewBox="0 0 16 16" width="16"
+                     xmlns="http://www.w3.org/2000/svg">
+                    <path d="M3.204 5h9.592L8 10.481 3.204 5zm-.753.659 4.796 5.48a1 1 0 0 0 1.506 0l4.796-5.48c.566-.647.106-1.659-.753-1.659H3.204a1 1 0 0 0-.753 1.659z"></path>
+                </svg>
+            </button>
+            <div class="col align-self-end">
+                <div class="card-title" id="div_id_card_title_gear_type_filter"><h5>{% trans "Sample Filter" %}</h5>
+                </div>
+            </div>
+            <div class="col-auto">
+                <label class="btn btn-danger" for="input_id_delete_gear_type_filter"
+                       title="{% trans "Delete Selected Samples" %}">{% custom_icon 'dash-square' %}</label>
+            </div>
+        </div>
+    </div>
+    <div class="collapse show" id="div_id_card_collapse_gear_type_filter">
+        <div class="card-body">
+            <form id="form_id_gear_type_filter" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+                <button class="d-none" id="input_id_delete_gear_type_filter"
+                        hx-post="{% url 'core:form_gear_type_delete_samples' mission.pk instrument_type %}"
+                        hx-confirm="{% trans 'Are you sure?' %}" hx-swap="none"></button>
+                <div id="div_id_form_trigger_gear_type_filter_load"
+                     hx-swap="none"
+                     hx-trigger="load"
+                     hx-get="{% url 'core:form_gear_type_list_samples' mission.pk instrument_type %}?page=0"></div>
+                <input id="div_id_form_trigger_gear_type_filter"
+                       type="hidden"
+                       hx-swap="none"
+                       hx-trigger="reload_sample_list from:body"
+                       hx-post="{% url 'core:form_gear_type_list_samples' mission.pk instrument_type %}"/>
+                <div class="row mb-2">
+                    <div class="col">
+                        {{ form.event.label_tag }}
+                        {{ form.event }}
+                    </div>
+                </div>
+                <div class="row mb-2">
+                    <div class="col-auto">
+                        {{ form.set_gear_type.label_tag }}
+                        {{ form.set_gear_type }}
+                    </div>
+                    <div class="col-auto d-flex flex-column justify-content-end">
+                        <button class="btn btn-primary"
+                                hx-swap="none"
+                                hx-post="{% url "core:form_gear_type_apply_samples" mission.pk instrument_type %}"
+                                title="{% trans "Apply code to selected samples" %}">{% custom_icon 'check-square' %}</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
