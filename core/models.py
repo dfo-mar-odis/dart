@@ -394,6 +394,22 @@ class Bottle(models.Model):
     # for liters if we want to recorde the size of a Niscan bottle.
     volume = models.FloatField(verbose_name=_("Volume"), null=True, blank=True)
 
+    # Phytoplankton is collected from multiple Niskin bottles for ONLY station HL_02. Previously, the AZMP template
+    # used the code 90000019, which is for a 10L Niskin bottle. Lindsay has asked me to use 90000002 for a Niskin
+    # bottle, size unknown, with an option for the user to set the "bottle" type in the future.
+    #
+    # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
+    # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
+    gear_type = models.ForeignKey(bio_tables.models.BCGear, verbose_name="Gear Type", related_name="bottles",
+                                  on_delete=models.DO_NOTHING, default=90000002)
+
+    # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
+    # The mesh can normally be used to determine the gear_type, but if the gear type is set to
+    # 90000105 (0.5m diameter ring), the net could be a 76um *or* a 70um mesh.
+    # The mesh size goes into the BCS_P table so it has to be tracked for later.
+    mesh_size = models.IntegerField(verbose_name=_("Mesh Size"), help_text=_("Mesh size of the net material in um"),
+                                    blank=True, null=True, default=0)
+
     def __str__(self):
         return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
 
@@ -511,15 +527,6 @@ class PlanktonSample(models.Model):
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
     bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)
 
-    # Phytoplankton is collected from multiple Niskin bottles for ONLY station HL_02. Previously, the AZMP template
-    # used the code 90000019, which is for a 10L Niskin bottle. Lindsay has asked me to use 90000002 for a Niskin
-    # bottle, size unknown, with an option for the user to set the "bottle" type in the future.
-    #
-    # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
-    # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
-    gear_type = models.ForeignKey(bio_tables.models.BCGear, verbose_name="Gear Type", related_name="plankton_data",
-                                  on_delete=models.DO_NOTHING, default=90000002)
-
     taxa = models.ForeignKey(bio_tables.models.BCNatnlTaxonCode, verbose_name=_("Taxonomy"),
                              related_name="plankton_data", on_delete=models.DO_NOTHING)
 
@@ -537,13 +544,6 @@ class PlanktonSample(models.Model):
     # these defaults are for phytoplankton, more complicated for zooplankton
     min_sieve = models.FloatField(verbose_name=_("Max Sieve"), default=0.002)
     max_sieve = models.FloatField(verbose_name=_("Max Sieve"), blank=True, null=True, default=0.55)
-
-    # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
-    # The mesh can normally be used to determine the gear_type, but if the gear type is set to
-    # 90000105 (0.5m diameter ring), the net could be a 76um *or* a 70um mesh.
-    # The mesh size goes into the BCS_P table so it has to be tracked for later.
-    mesh_size = models.IntegerField(verbose_name=_("Mesh Size"), help_text=_("Mesh size of the net material in um"),
-                                    blank=True, null=True)
 
     # The 'what_was_it' code will determine which of these values gets filled out for Zooplankton
     # count = cell_liters for Phytoplankton, the rest are blank
@@ -617,6 +617,9 @@ class AbstractError(models.Model):
 
     # The error code can be used to be more specific than an error type
     code = models.IntegerField(verbose_name=_("Error code"), default=-1)
+    # code spaces:
+    # 1-99 is used by the Plankton Parser
+    # 1000-1999 is used by core.form_mission_gear_type
 
 
 # General errors we want to keep track of and notify the user about

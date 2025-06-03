@@ -55,7 +55,7 @@ class TestPhytoplanktonParser(DartTestCase):
         # this should create 32 plankton samples
         PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
                                            dataframe=self.dataframe)
-        samples = core_models.PlanktonSample.objects.using('default').all()
+        samples = core_models.PlanktonSample.objects.all()
         self.assertEqual(len(samples), 32)
 
     def test_update(self):
@@ -64,13 +64,13 @@ class TestPhytoplanktonParser(DartTestCase):
         core_factory.PhytoplanktonSampleFactory(bottle=self.bottle_mission_start, file=self.file_name, taxa=taxa,
                                                 count=1000)
 
-        expected_plankton = core_models.PlanktonSample.objects.using('default').get(bottle=self.bottle_mission_start, taxa=taxa)
+        expected_plankton = core_models.PlanktonSample.objects.get(bottle=self.bottle_mission_start, taxa=taxa)
         self.assertEqual(expected_plankton.count, 1000)
 
         PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
                                            dataframe=self.dataframe)
 
-        expected_plankton = core_models.PlanktonSample.objects.using('default').get(bottle=self.bottle_mission_start, taxa=taxa)
+        expected_plankton = core_models.PlanktonSample.objects.get(bottle=self.bottle_mission_start, taxa=taxa)
         self.assertEqual(expected_plankton.count, 200)
 
 
@@ -93,6 +93,7 @@ class TestZooplanktonParser(DartTestCase):
         self.event_mission_end = core_factory.NetEventFactory(mission=self.mission, station=self.station,
                                                                 sample_id=488685, event_id=88)
 
+    @tag('parsers_plankton_zoo_test_create_zooplankton')
     def test_create_zooplankton(self):
         # test that a Zooplankton is created from a dataframe.
         dataframe = pd.DataFrame(data={
@@ -124,7 +125,7 @@ class TestZooplanktonParser(DartTestCase):
         taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(pk=taxa_key)
 
         bottle = core_models.Bottle.objects.get(bottle_id=self.event_mission_start.sample_id)
-        plankton = core_models.PlanktonSample.objects.using('default').filter(bottle=bottle, taxa=taxa)
+        plankton = core_models.PlanktonSample.objects.filter(bottle=bottle, taxa=taxa)
 
         self.assertTrue(plankton.exists())
 
@@ -134,7 +135,7 @@ class TestZooplanktonParser(DartTestCase):
         self.assertEqual(plankton.sex.pk, 90000002)
 
         # this is a 202 net so it should use a 90000102 gear_type
-        self.assertEqual(plankton.gear_type.pk, 90000102)
+        self.assertEqual(bottle.gear_type.pk, 90000102)
 
         # proc_code is 20 so the min_sieve should be mesh_size/1000
         self.assertEqual(plankton.min_sieve, 202/1000)
@@ -156,7 +157,7 @@ class TestZooplanktonParser(DartTestCase):
         # the sample data frame should have 28 samples for id 488275 and 42 samples for id 488685
         PlanktonParser.parse_zooplankton(self.mission, self.file_name, self.dataframe)
 
-        samples = core_models.PlanktonSample.objects.using('default').filter(bottle__bottle_id=488275)
+        samples = core_models.PlanktonSample.objects.filter(bottle__bottle_id=488275)
         self.assertEqual(len(samples), 28)
 
     def test_get_min_sieve(self):
@@ -253,7 +254,7 @@ class TestCTDParser(DartTestCase):
 
         self.assertEqual(len(errors), 0)
 
-        bottles = core_models.Bottle.objects.using('default').filter(event=event)
+        bottles = core_models.Bottle.objects.filter(event=event)
         self.assertTrue(bottles.exists())
         self.assertEqual(len(bottles), 19)
         self.assertEqual(bottles.first().bottle_id, event.sample_id)
@@ -305,7 +306,7 @@ class TestCTDParser(DartTestCase):
             self.assertIsInstance(error, core_models.ValidationError)
 
         # 14 bottles should have been created even though there are 24 bottles in the BTL file
-        bottles = core_models.Bottle.objects.using('default').filter(event=event)
+        bottles = core_models.Bottle.objects.filter(event=event)
         self.assertEqual(len(bottles), 14)
 
     # The number of bottles loaded from a dataframe should match (event.end_sample_id - event.sample_id)
@@ -348,7 +349,7 @@ class TestCTDParser(DartTestCase):
         datatype = bio_tables.models.BCDataType.objects.get(data_type_seq=90000009)
         mst = core_factory.MissionSampleTypeFactory(mission=mission, name='sbeox0ml/l', datatype=datatype)
         origional_modified_date = datetime.strptime('2020-10-24 14:03:22+00:00', '%Y-%m-%d %H:%M:%S%z')
-        core_models.BioChemUpload.objects.using('default').create(
+        core_models.BioChemUpload.objects.create(
             type=mst,
             status=core_models.BioChemUploadStatus.uploaded,
             modified_date=origional_modified_date,
@@ -431,7 +432,7 @@ class TestSampleCSVParser(DartTestCase):
         sample = core_factory.SampleFactory(bottle=bottle, type=sample_type, file=self.file_name)
         core_factory.DiscreteValueFactory(sample=sample, replicate=1, value=0.001, comment="some comment")
 
-        discrete = core_models.DiscreteSampleValue.objects.using('default').filter(sample=sample)
+        discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
         self.assertEqual(len(discrete), 1)
 
         # this should update one discrete value and attach a second to the sample
@@ -444,7 +445,7 @@ class TestSampleCSVParser(DartTestCase):
 
         SampleParser.parse_data_frame(self.mission, self.oxy_file_settings, self.file_name, df)
 
-        discrete = core_models.DiscreteSampleValue.objects.using('default').filter(sample=sample)
+        discrete = core_models.DiscreteSampleValue.objects.filter(sample=sample)
         self.assertEqual(len(discrete), 2)
         self.assertEqual(discrete[0].replicate, 1)
         self.assertEqual(discrete[0].value, 3.932)
@@ -610,7 +611,7 @@ class TestSampleCSVParser(DartTestCase):
         # make a BioChemUpload entry to be checked to make sure it's updated
         origional_modified_date = datetime.strptime("2020-01-01 00:00:00+00:00", '%Y-%m-%d %H:%M:%S%z')
         sample_type = self.oxy_file_settings.sample_type.get_mission_sample_type(self.mission)
-        core_models.BioChemUpload.objects.using('default').create(
+        core_models.BioChemUpload.objects.create(
             type=sample_type,
             modified_date=origional_modified_date,
             upload_date=datetime.strptime("2020-02-01 00:00:00+00:00", '%Y-%m-%d %H:%M:%S%z'),
@@ -621,7 +622,7 @@ class TestSampleCSVParser(DartTestCase):
 
         errors = core_models.FileError.objects.filter(file_name=self.file_name)
         self.assertEqual(len(errors), 0)
-        bottles = core_models.Bottle.objects.using('default').filter(event=self.ctd_event)
+        bottles = core_models.Bottle.objects.filter(event=self.ctd_event)
 
         # check that a replicate was created for the first sample
         bottle_with_replicate = bottles.get(bottle_id=495271)

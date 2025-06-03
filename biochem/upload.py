@@ -223,7 +223,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         if count % 10 == 9:
             user_logger.info(_("Compiling BCS") + " : %d/%d", (count + 1), total_bottles)
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
-        gears = bottle.plankton_data.values_list('gear_type', 'mesh_size').distinct()
         event = bottle.event
         mission = event.mission
         institute: bio_tables.models.BCDataCenter = mission.data_center
@@ -248,150 +247,149 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             logger.error(message)
             continue
 
-        for gear, mesh_size in gears:
-            plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{gear}'
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
 
-            m_start_date = mission.start_date
-            m_end_date = mission.end_date
+        m_start_date = mission.start_date
+        m_end_date = mission.end_date
 
-            if bcs_p_model:
-                bcs_row = bcs_p_model._meta.model(plank_sample_key_value=plankton_key)
-            else:
-                bcs_row = models.BcsPReportModel(plank_sample_key_value=plankton_key)
+        if bcs_p_model:
+            bcs_row = bcs_p_model._meta.model(plank_sample_key_value=plankton_key)
+        else:
+            bcs_row = models.BcsPReportModel(plank_sample_key_value=plankton_key)
 
-            # updated_fields.add(updated_value(bcs_row, 'dis_headr_collector_sample_id', bottle.bottle_id))
-            bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
-            bcs_row.created_by = uploader
+        # updated_fields.add(updated_value(bcs_row, 'dis_headr_collector_sample_id', bottle.bottle_id))
+        bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
+        bcs_row.created_by = uploader
 
-            bcs_row.mission_descriptor = mission.mission_descriptor
-            bcs_row.mission_name = mission.name
-            bcs_row.mission_leader = mission.lead_scientist
-            bcs_row.mission_sdate = m_start_date
-            bcs_row.mission_edate = m_end_date
-            bcs_row.mission_institute = institute.description if institute else "Not Specified"
-            bcs_row.mission_platform = mission.platform
-            bcs_row.mission_protocol = mission.protocol
-            bcs_row.mission_geographic_region = mission.geographic_region
-            bcs_row.mission_collector_comment = mission.collector_comments
-            bcs_row.mission_more_comment = mission.more_comments
-            bcs_row.mission_data_manager_comment = mission.data_manager_comments
+        bcs_row.mission_descriptor = mission.mission_descriptor
+        bcs_row.mission_name = mission.name
+        bcs_row.mission_leader = mission.lead_scientist
+        bcs_row.mission_sdate = m_start_date
+        bcs_row.mission_edate = m_end_date
+        bcs_row.mission_institute = institute.description if institute else "Not Specified"
+        bcs_row.mission_platform = mission.platform
+        bcs_row.mission_protocol = mission.protocol
+        bcs_row.mission_geographic_region = mission.geographic_region
+        bcs_row.mission_collector_comment = mission.collector_comments
+        bcs_row.mission_more_comment = mission.more_comments
+        bcs_row.mission_data_manager_comment = mission.data_manager_comments
 
-            bcs_row.event_collector_event_id = f'{event.event_id:03d}'
-            bcs_row.event_collector_stn_name = event.station.name
-            bcs_row.event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
-            bcs_row.event_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
-            bcs_row.event_stime = datetime.strftime(event.start_date, "%H%M")
-            bcs_row.event_etime = datetime.strftime(event.end_date, "%H%M")
-            bcs_row.event_utc_offset = 0
-            bcs_row.event_min_lat = min(event.start_location[0], event.end_location[0])
-            bcs_row.event_max_lat = max(event.start_location[0], event.end_location[0])
-            bcs_row.event_min_lon = min(event.start_location[1], event.end_location[1])
-            bcs_row.event_max_lon = max(event.start_location[1], event.end_location[1])
+        bcs_row.event_collector_event_id = f'{event.event_id:03d}'
+        bcs_row.event_collector_stn_name = event.station.name
+        bcs_row.event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
+        bcs_row.event_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
+        bcs_row.event_stime = datetime.strftime(event.start_date, "%H%M")
+        bcs_row.event_etime = datetime.strftime(event.end_date, "%H%M")
+        bcs_row.event_utc_offset = 0
+        bcs_row.event_min_lat = min(event.start_location[0], event.end_location[0])
+        bcs_row.event_max_lat = max(event.start_location[0], event.end_location[0])
+        bcs_row.event_min_lon = min(event.start_location[1], event.end_location[1])
+        bcs_row.event_max_lon = max(event.start_location[1], event.end_location[1])
 
-            bcs_row.event_collector_comment = None
-            bcs_row.event_more_comment = None
-            bcs_row.event_data_manager_comment = DART_EVENT_COMMENT
+        bcs_row.event_collector_comment = None
+        bcs_row.event_more_comment = None
+        bcs_row.event_data_manager_comment = DART_EVENT_COMMENT
 
-            bcs_row.pl_headr_collector_sample_id = bottle.bottle_id
-            bcs_row.pl_headr_gear_seq = gear
+        bcs_row.pl_headr_collector_sample_id = bottle.bottle_id
+        bcs_row.pl_headr_gear_seq = bottle.gear_type.gear_seq
 
-            # This was set to 1 in the existing AZMP Template for phyto
-            bcs_row.pl_headr_time_qc_code = 1
+        # This was set to 1 in the existing AZMP Template for phyto
+        bcs_row.pl_headr_time_qc_code = 1
 
-            # This was set to 1 in the existing AZMP Template for phyto
-            bcs_row.pl_headr_position_qc_code = 1
-            bcs_row.pl_headr_preservation_seq = 90000039
+        # This was set to 1 in the existing AZMP Template for phyto
+        bcs_row.pl_headr_position_qc_code = 1
+        bcs_row.pl_headr_preservation_seq = 90000039
 
 
-            # use the event starts and stops if not provided by the bottle.
-            bcs_row.pl_headr_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
-            bcs_row.pl_headr_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
-            bcs_row.pl_headr_stime = datetime.strftime(event.start_date, "%H%M")
-            bcs_row.pl_headr_etime = datetime.strftime(event.end_date, "%H%M")
+        # use the event starts and stops if not provided by the bottle.
+        bcs_row.pl_headr_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
+        bcs_row.pl_headr_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
+        bcs_row.pl_headr_stime = datetime.strftime(event.start_date, "%H%M")
+        bcs_row.pl_headr_etime = datetime.strftime(event.end_date, "%H%M")
 
-            if bottle.latitude:
-                bcs_row.pl_headr_slat = bottle.latitude
-                bcs_row.pl_headr_elat = bottle.latitude
-            else:
-                bcs_row.pl_headr_slat = event.start_location[0]
-                bcs_row.pl_headr_elat = event.end_location[0]
+        if bottle.latitude:
+            bcs_row.pl_headr_slat = bottle.latitude
+            bcs_row.pl_headr_elat = bottle.latitude
+        else:
+            bcs_row.pl_headr_slat = event.start_location[0]
+            bcs_row.pl_headr_elat = event.end_location[0]
 
-            if bottle.longitude:
-                bcs_row.pl_headr_slon = bottle.longitude
-                bcs_row.pl_headr_elon = bottle.longitude
-            else:
-                bcs_row.pl_headr_slon = event.start_location[1]
-                bcs_row.pl_headr_elon = event.end_location[1]
+        if bottle.longitude:
+            bcs_row.pl_headr_slon = bottle.longitude
+            bcs_row.pl_headr_elon = bottle.longitude
+        else:
+            bcs_row.pl_headr_slon = event.start_location[1]
+            bcs_row.pl_headr_elon = event.end_location[1]
 
-            bcs_row.pl_headr_start_depth = bottle.pressure
-            if hasattr(bottle, 'end_pressure') and bottle.end_pressure is not None:
-                bcs_row.pl_headr_end_depth = bottle.end_pressure
-            else:
-                bcs_row.pl_headr_end_depth = bottle.pressure
+        bcs_row.pl_headr_start_depth = bottle.pressure
+        if hasattr(bottle, 'end_pressure') and bottle.end_pressure is not None:
+            bcs_row.pl_headr_end_depth = bottle.end_pressure
+        else:
+            bcs_row.pl_headr_end_depth = bottle.pressure
 
-            bcs_row.process_flag = 'NR'
-            bcs_row.data_center_code = institute.data_center_code
+        bcs_row.process_flag = 'NR'
+        bcs_row.data_center_code = institute.data_center_code
 
-            bcs_row.batch = batch
-            # bcs_row.batch_seq = batch
+        bcs_row.batch = batch
+        # bcs_row.batch_seq = batch
 
-            # Maybe this should be averaged?
-            bcs_row.pl_headr_sounding = sounding
+        # Maybe this should be averaged?
+        bcs_row.pl_headr_sounding = sounding
 
-            collection_method = 90000010  # hydrographic if this is phytoplankton
-            procedure = 90000001
-            storage = 90000016
-            shared = 'N'
-            large_plankton_removed = "N"  # No if phytoplankton
+        collection_method = 90000010  # hydrographic if this is phytoplankton
+        procedure = 90000001
+        storage = 90000016
+        shared = 'N'
+        large_plankton_removed = "N"  # No if phytoplankton
 
-            if event.instrument.type == core_models.InstrumentType.net:
-                collection_method = 90000001  # vertical if this is zooplankton
-                large_plankton_removed = 'Y'  # Yes if Zooplankton
+        if event.instrument.type == core_models.InstrumentType.net:
+            collection_method = 90000001  # vertical if this is zooplankton
+            large_plankton_removed = 'Y'  # Yes if Zooplankton
 
-            responsible_group = mission.protocol
-            collector = recovery_action.data_collector
-            comment = recovery_action.comment
+        responsible_group = mission.protocol
+        collector = recovery_action.data_collector
+        comment = recovery_action.comment
 
-            if event.instrument.type == core_models.InstrumentType.net:
-                # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
-                diameter = 0.75
-                area = np.pi * np.power(float(diameter/2), 2)
+        if event.instrument.type == core_models.InstrumentType.net:
+            # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
+            diameter = 0.75
+            area = np.pi * np.power(float(diameter/2), 2)
 
-                if event.flow_start and event.flow_end:
-                    # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
-                    # else use the wire out.
-                    # multiply by 0.3 to compensate for the flow meters prop rotation
-                    height = (event.flow_end - event.flow_start) * 0.3
-                    volume = np.round(height * area, 1)
+            if event.flow_start and event.flow_end:
+                # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
+                # else use the wire out.
+                # multiply by 0.3 to compensate for the flow meters prop rotation
+                height = (event.flow_end - event.flow_start) * 0.3
+                volume = np.round(height * area, 1)
 
-                    bcs_row.pl_headr_volume = volume
-                    # 90000002 - volume calculated from recorded revolutions and flow meter calibrations
-                    bcs_row.pl_headr_volume_method_seq = 90000002
-                elif event.wire_out:
-                    volume = np.round(event.wire_out * area, 1)
+                bcs_row.pl_headr_volume = volume
+                # 90000002 - volume calculated from recorded revolutions and flow meter calibrations
+                bcs_row.pl_headr_volume_method_seq = 90000002
+            elif event.wire_out:
+                volume = np.round(event.wire_out * area, 1)
 
-                    bcs_row.pl_headr_volume = volume
-                    # 90000004 - estimate of volume calculated using depth and gear mouth opening (wire angle ignored)
-                    bcs_row.pl_headr_volume_method_seq = 90000004
-            else:
-                bcs_row.pl_headr_volume = 0.001
-                # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
-                bcs_row.pl_headr_volume_method_seq = 90000010
+                bcs_row.pl_headr_volume = volume
+                # 90000004 - estimate of volume calculated using depth and gear mouth opening (wire angle ignored)
+                bcs_row.pl_headr_volume_method_seq = 90000004
+        else:
+            bcs_row.pl_headr_volume = 0.001
+            # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
+            bcs_row.pl_headr_volume_method_seq = 90000010
 
-            bcs_row.pl_headr_lrg_plankton_removed = large_plankton_removed
-            bcs_row.pl_headr_mesh_size = mesh_size if mesh_size else 0
-            bcs_row.pl_headr_collection_method_seq = collection_method
-            bcs_row.pl_headr_collector_deplmt_id = None
-            bcs_row.pl_headr_procedure_seq = procedure
-            bcs_row.pl_headr_storage_seq = storage
-            bcs_row.pl_headr_collector = collector
-            bcs_row.pl_headr_collector_comment = comment
-            bcs_row.pl_headr_meters_sqd_flag = "Y"
-            bcs_row.pl_headr_data_manager_comment = DART_EVENT_COMMENT
-            bcs_row.pl_headr_responsible_group = responsible_group
-            bcs_row.pl_headr_shared_data = shared
+        bcs_row.pl_headr_lrg_plankton_removed = large_plankton_removed
+        bcs_row.pl_headr_mesh_size = bottle.mesh_size
+        bcs_row.pl_headr_collection_method_seq = collection_method
+        bcs_row.pl_headr_collector_deplmt_id = None
+        bcs_row.pl_headr_procedure_seq = procedure
+        bcs_row.pl_headr_storage_seq = storage
+        bcs_row.pl_headr_collector = collector
+        bcs_row.pl_headr_collector_comment = comment
+        bcs_row.pl_headr_meters_sqd_flag = "Y"
+        bcs_row.pl_headr_data_manager_comment = DART_EVENT_COMMENT
+        bcs_row.pl_headr_responsible_group = responsible_group
+        bcs_row.pl_headr_shared_data = shared
 
-            bcs_objects_to_create.append(bcs_row)
+        bcs_objects_to_create.append(bcs_row)
 
     return bcs_objects_to_create
 
@@ -528,9 +526,8 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         bottle = sample.bottle
         event = bottle.event
         mission = event.mission
-        gear = sample.gear_type.pk
 
-        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{gear}'
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
 
         bcd_row = bcd_model(plank_sample_key_value=plankton_key)
 
@@ -593,7 +590,6 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         # PL_GEN_UNIT
 
         # ########### Stuff that we get from the bottle object #################################################### #
-        bottle = sample.bottle
 
         # ########### Stuff that we get from the event object #################################################### #
         event = bottle.event
