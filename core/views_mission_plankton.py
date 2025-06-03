@@ -159,11 +159,13 @@ def clear_plankton(request, mission_id):
         soup.append(alert)
         return HttpResponse(soup)
 
-    samples = models.PlanktonSample.objects.filter(bottle__event__mission_id=mission_id)
+    nets = models.Bottle.objects.filter(event__mission_id=mission_id, event__instrument__type=models.InstrumentType.net)
+    samples = models.PlanktonSample.objects.filter(bottle__in=nets)
     files = samples.values_list('file', flat=True).distinct()
     errors = mission.file_errors.filter(file_name__in=files)
     errors.delete()
     samples.delete()
+    nets.delete()
 
     soup.append(alert_row := soup.new_tag("div"))
     alert_row.attrs['class'] = "row"

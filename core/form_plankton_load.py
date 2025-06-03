@@ -11,6 +11,7 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
+from django.conf import settings
 
 from core import models as core_models
 from core import forms as core_forms
@@ -373,7 +374,6 @@ def list_plankton(request, mission_id):
     div.attrs['hx-trigger'] = 'update_samples from:body'
     div.attrs['hx-get'] = reverse_lazy('core:form_plankton_list_plankton', args=(mission.pk,))
     div.attrs['hx-swap-oob'] = 'true'
-    div.attrs['class'] = 'vertical-scrollbar'
     soup.append(div)
 
     page = int(request.GET.get('page', 0) or 0)
@@ -404,6 +404,13 @@ def list_plankton(request, mission_id):
         table_soup = BeautifulSoup(table_html, 'html.parser')
 
         table = table_soup.find('table')
+        sample_th = table.find('thead').find('tr').find('th')
+        sample_th.string = ""
+
+        database = settings.DATABASES[mission._state.db]['LOADED']
+        button = soup.new_tag('A', attrs={'class': 'btn btn-sm btn-primary', 'href': reverse_lazy("core:mission_gear_type_details", args=(database, mission_id, core_models.InstrumentType.net.value))})
+        button.string = _("Sample")
+        sample_th.append(button)
 
         table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
         trs = table.find('tbody').find_all('tr')

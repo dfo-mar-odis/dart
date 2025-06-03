@@ -154,7 +154,6 @@ def get_file_error_card(request, mission_id):
         card_div = error_card.find("div")
 
         card_body = card_div.find(id=error_card_form.get_card_body_id())
-        card_body['class'] = card_body.get('class', []) + ['vertical-scrollbar-sm']
 
         ul = soup.new_tag("ul", attrs={'class': 'list-group'})
 
@@ -336,14 +335,34 @@ def list_samples(request, mission_id):
         available_sensors = [c[0] for c in df.columns.values]
         sensor_order = sensors.order_by('is_sensor', 'priority', 'pk')
         df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensor_order if sensor.pk in available_sensors]]
+        if df.shape == (0, 0):
+            table_soup.append(table := table_soup.new_tag('div', attrs={'class': 'alert alert-warning'}))
+            table.attrs['id'] = "table_id_sample_table"
+            table.attrs['hx-swap-oob'] = 'true'
+            table.string = _("No Data Found")
+            response = HttpResponse(table_soup)
+            return response
+
         table_soup = format_all_sensor_table(df, mission)
+
     except Exception as ex:
         logger.exception(ex)
 
     # add styles to the table so it's consistent with the rest of the application
     table = table_soup.find('table')
+
     table.attrs['id'] = "table_id_sample_table"
     table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
+
+    sample_th = table.find('thead').find_all('tr')[1].find('th')
+    sample_th.string = ""
+
+    database = settings.DATABASES[mission._state.db]['LOADED']
+    button = table_soup.new_tag('A', attrs={'class': 'btn btn-sm btn-primary',
+                                      'href': reverse_lazy("core:mission_gear_type_details", args=(
+                                      database, mission_id, models.InstrumentType.ctd.value))})
+    button.string = _("Sample")
+    sample_th.append(button)
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
@@ -391,17 +410,19 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
     sensor_headers = soup.find("thead").find("tr")
 
     # this is the replicate row, but we aren't doing anything with this row so get rid of it
-    replicate_headers = sensor_headers.findNext("tr")
-    replicate_headers.decompose()
+    if(replicate_headers := sensor_headers.findNext("tr")):
+        replicate_headers.decompose()
 
     # we now have two header rows. The first contains all the sensor/sample names. The second contains the "Sample"
     # and "Pressure" labels with a bunch of empty columns afterward. I want to copy the first two columns
     # from the second header to the sensor_header row (because the labels might be translated)
     # then delete the second row
-    index_headers = sensor_headers.findNext('tr')
+    if (index_headers := sensor_headers.findNext('tr')) is None:
+        return soup
 
     # copy the 'Sample' label
     index_column = index_headers.find('th')
+
     sensor_column = sensor_headers.find('th')
     sensor_column.string = index_column.string
 

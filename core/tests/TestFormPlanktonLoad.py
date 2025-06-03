@@ -147,7 +147,7 @@ class TestFormPlanktonLoad(DartTestCase):
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        plankton = core_models.PlanktonSample.objects.using('default').all()
+        plankton = core_models.PlanktonSample.objects.all()
         self.assertTrue(plankton.exists())
 
         # the function should clear the div_id_plankton_message area
@@ -190,7 +190,7 @@ class TestFormPlanktonLoad(DartTestCase):
 
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        plankton = core_models.PlanktonSample.objects.using('default').all()
+        plankton = core_models.PlanktonSample.objects.all()
         self.assertTrue(plankton.exists())
 
         # the function should clear the div_id_plankton_message area
@@ -234,18 +234,18 @@ class TestFormPlanktonLoad(DartTestCase):
     @tag('form_plankton_test_clear_plankton_post')
     def test_clear_plankton_post(self):
         # provided a database and mission_id, the clear plankton url should remove existing plankton data
-        event = core_factory.CTDEventFactory(mission=self.mission)
+        event = core_factory.NetEventFactory(mission=self.mission)
         bottles = core_factory.BottleFactory.create_batch(10, event=event)
         for bottle in bottles:
             core_factory.PhytoplanktonSampleFactory(bottle=bottle)
 
-        plankton = core_models.PlanktonSample.objects.using('default').all()
+        plankton = core_models.PlanktonSample.objects.all()
         self.assertTrue(plankton.exists())
 
         url = reverse(self.clear_plankton_url, args=(self.mission.pk,))
         response = self.client.post(url)
 
-        plankton = core_models.PlanktonSample.objects.using('default').all()
+        plankton = core_models.PlanktonSample.objects.all()
         self.assertFalse(plankton.exists())
 
         # the response should also have Hx-Trigger="update_samples" to update the sample table
