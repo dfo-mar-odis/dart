@@ -13,6 +13,7 @@ REM if this is a cloned version of the git repo we want to pull from master, the
 git branch | find "* %master_branch%" > NULL
 if ERRORLEVEL 1 (
 	git checkout %master_branch%
+	git pull origin %master_branch%
 )
 
 ping -n 1 github.com > NUL
