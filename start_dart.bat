@@ -4,7 +4,7 @@ if not exist ".\logs\" (
   mkdir logs
 )
 
-set master_branch=4.1.x
+set master_branch=master
 set /p dart_version=<current_version.txt
 
 REM if this is not a git repo, and the application was installed from zip file we just want to run update
