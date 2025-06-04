@@ -1,5 +1,6 @@
 @echo off
 
+if exist "logs\start_dart.log" del "logs\start_dart.log"
 if not exist ".\logs\" (
   mkdir logs
 )
