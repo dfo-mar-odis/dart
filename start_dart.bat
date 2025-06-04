@@ -9,7 +9,7 @@ set master_branch=master
 set /p dart_version=<current_version.txt
 
 echo ============================================ >> logs/start_dart.log
-echo Version: %dart_version >> logs/start_dart.log
+echo Version: %dart_version% >> logs/start_dart.log
 echo ============================================ >> logs/start_dart.log
 
 REM if this is not a git repo, and the application was installed from zip file we just want to run update
