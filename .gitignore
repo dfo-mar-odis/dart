@@ -54,6 +54,7 @@ prod.cnf
 test_start_dart.bat
 
 .env
+current_version.txt
 /bio_tables/fixtures/biochem_fixtures.json
 /staticfiles
 node_modules/
