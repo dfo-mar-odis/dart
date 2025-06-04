@@ -291,14 +291,23 @@ def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
 
 def list_samples(request, mission_id):
     page = int(request.GET.get('page', 0) or 0)
-    page_limit = 50
+    page_limit = 100
     page_start = page_limit * page
 
     table_soup = BeautifulSoup('', 'html.parser')
 
     mission = models.Mission.objects.get(pk=mission_id)
-    bottle_limit = models.Bottle.objects.filter(event__mission=mission).order_by('bottle_id')[
-                   page_start:(page_start + page_limit)]
+    bottle_limit = models.Bottle.objects.filter(event__mission=mission)
+    if not bottle_limit.exists():
+        # there is no data loaded yet
+        table_soup.append(table := table_soup.new_tag('div', attrs={'class': 'alert alert-warning'}))
+        table.attrs['id'] = "table_id_sample_table"
+        table.attrs['hx-swap-oob'] = 'true'
+        table.string = _("No Data")
+        response = HttpResponse(table_soup)
+        return response
+
+    bottle_limit = bottle_limit.order_by('bottle_id')[page_start:(page_start + page_limit)]
 
     if not bottle_limit.exists():
         # if there are no more bottles then we stop loading, otherwise weird things happen
@@ -318,96 +327,78 @@ def list_samples(request, mission_id):
 
     try:
         sensors = mission.mission_sample_types.all()
-        df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
-        # we want a column for every sensor and then a column for every replicate for every sensor
-        # for all sensors in the mission
+        # Precompute all required (sensor, replicate) column pairs
+        required_columns = []
         for sensor in sensors:
-            # compute the maximum number of columns this sensor will require by figuring out th maximum number
-            # of replicate the sensor/sample has
-            replicate_count = sensor.samples.aggregate(replicates=Max('discrete_values__replicate'))
-            if replicate_count['replicates']:
-                for i in range(0, replicate_count['replicates']):
-                    replicate = i + 1
-                    if not df.columns.isin([(sensor.pk, replicate)]).any():
-                        # if the replicate column doesn't currently have any values, insert a nan as a placeholder
-                        df[(sensor.pk, replicate)] = df.apply(lambda _: np.nan, axis=1)
+            replicate_count = sensor.samples.aggregate(replicates=Max('discrete_values__replicate'))['replicates']
+            if replicate_count:
+                required_columns.extend([(sensor.pk, i + 1) for i in range(replicate_count)])
+
+        df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+        # Add missing columns in one go, filling with np.nan
+        for col in required_columns:
+            if col not in df.columns:
+                df[col] = np.nan
 
         available_sensors = [c[0] for c in df.columns.values]
         sensor_order = sensors.order_by('is_sensor', 'priority', 'pk')
         df = df.reindex(axis=1).loc[:, [sensor.pk for sensor in sensor_order if sensor.pk in available_sensors]]
-        if df.shape == (0, 0):
-            table_soup.append(table := table_soup.new_tag('div', attrs={'class': 'alert alert-warning'}))
-            table.attrs['id'] = "table_id_sample_table"
-            table.attrs['hx-swap-oob'] = 'true'
-            table.string = _("No Data Found")
-            response = HttpResponse(table_soup)
-            return response
-
-        table_soup = format_all_sensor_table(df, mission)
-
     except Exception as ex:
         logger.exception(ex)
 
-    # add styles to the table so it's consistent with the rest of the application
-    table = table_soup.find('table')
-
-    table.attrs['id'] = "table_id_sample_table"
-    table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
-
-    sample_th = table.find('thead').find_all('tr')[1].find('th')
-    sample_th.string = ""
-
-    database = settings.DATABASES[mission._state.db]['LOADED']
-    button = table_soup.new_tag('A', attrs={'class': 'btn btn-sm btn-primary',
-                                      'href': reverse_lazy("core:mission_gear_type_details", args=(
-                                      database, mission_id, models.InstrumentType.ctd.value))})
-    button.string = _("Sample")
-    sample_th.append(button)
-
-    # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
-    # of samples will be loaded into the table.
-    # table_head = table.find('thead')
-
-    table_body = table.find('tbody')
-    table_body.attrs['id'] = "tbody_id_sample_table"
-
-    url = reverse_lazy('core:mission_samples_sample_list', args=(mission.pk,))
-    last_tr = table_body.find_all('tr')[-2]
-    last_tr.attrs['hx-target'] = '#tbody_id_sample_table'
-    last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
-    last_tr.attrs['hx-swap'] = "beforeend"
-
-    # finally, align all text in each column to the center of the cell
-    tds = table_soup.find('table').find_all('td')
-    for td in tds:
-        td['class'] = 'text-center text-nowrap'
-
-    if page > 0:
-        response = HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
-    else:
-        table = table_soup.find("table", recursive=False)
-        table.attrs['id'] = "table_id_sample_table"
-        table.attrs['hx-swap-oob'] = 'true'
-        response = HttpResponse(table_soup)
-
-    return response
-
-
-def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> BeautifulSoup:
     # start by replacing nan values with '---'
     df.fillna('---', inplace=True)
 
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
     # Use BeautifulSoup for html manipulation to post process the HTML table Pandas created
-    soup = BeautifulSoup(df.to_html(), 'html.parser')
+    df_soup = BeautifulSoup(df.to_html(), 'html.parser')
+
+    table = df_soup.find('table')
+
+    # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
+    # of samples will be loaded into the table.
+    # table_head = table.find('thead')
+    table_body = table.find('tbody')
+    table_body.attrs['id'] = "tbody_id_sample_table"
+
+    # 9 rows are visible on screen so let's put the trigger on line 8, which is sure to be in the table
+    # and will trigger the reload before the user hits the bottlm
+    page_trigger = 8
+    if len(last_tr:=table_body.find_all('tr')) > page_trigger:
+        url = reverse_lazy('core:mission_samples_sample_list', args=(mission.pk,))
+        last_tr = table_body.find_all('tr')[-page_trigger]
+        last_tr.attrs['hx-target'] = '#tbody_id_sample_table'
+        last_tr.attrs['hx-trigger'] = 'intersect once'
+        last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
+        last_tr.attrs['hx-swap'] = "beforeend"
+
+    # finally, align all text in each column to the center of the cell
+    for tr in df_soup.find('table').find_all('tr'):
+        tr['class'] = 'text-center text-nowrap'
+
+    if page > 0:
+        return HttpResponse(df_soup.find('tbody').findAll('tr', recursive=False))
+
+    # we only have to format the table header on the first call to the list function. After that we don't need it.
+    format_all_sensor_table(df_soup, mission)
+
+
+    table = df_soup.find("table", recursive=False)
+    table.attrs['id'] = "table_id_sample_table"
+    table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
+    table.attrs['hx-swap-oob'] = 'true'
+
+    return HttpResponse(df_soup)
+
+
+def format_all_sensor_table(df_soup: BeautifulSoup, mission: models.Mission):
 
     # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
     # followed by the 'replicate' row that describes if this is a single, double, triple, etc. column sample.
 
     # We're going to flatten the headers down to one row then remove the other thead rows.
     # this is the row containing the sensor/sample short names
-    sensor_headers = soup.find("thead").find("tr")
+    sensor_headers = df_soup.find("thead").find("tr")
 
     # this is the replicate row, but we aren't doing anything with this row so get rid of it
     if(replicate_headers := sensor_headers.findNext("tr")):
@@ -418,13 +409,22 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
     # from the second header to the sensor_header row (because the labels might be translated)
     # then delete the second row
     if (index_headers := sensor_headers.findNext('tr')) is None:
-        return soup
+        # if the index_header row is empty, it's because there's now data loaded and no point in continuing.
+        return
 
     # copy the 'Sample' label
-    index_column = index_headers.find('th')
 
+    # instead of just copying the sample label, we'll use a button so the user can access the Gear Type form
+    # to set gear types and load volume data.
+    index_column = index_headers.find('th')
     sensor_column = sensor_headers.find('th')
-    sensor_column.string = index_column.string
+
+    database = settings.DATABASES[mission._state.db]['LOADED']
+    button = df_soup.new_tag('A', attrs={'class': 'btn btn-sm btn-primary',
+                                         'href': reverse_lazy("core:mission_gear_type_details", args=(
+                                             database, mission.pk, models.InstrumentType.ctd.value))})
+    button.string = _("Sample")
+    sensor_column.append(button)
 
     # copy the 'Pressure' label
     index_column = index_column.findNext('th')
@@ -436,11 +436,11 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
 
     # Now add a row to the table header that will contain checkbox inputs for the user to select
     # a sensor or sample to upload to biochem
-    upload_row = soup.new_tag('tr')
-    soup.find("thead").insert(0, upload_row)
+    upload_row = df_soup.new_tag('tr')
+    df_soup.find("thead").insert(0, upload_row)
 
     # the first column of the table will have the 'Sample' and 'Pressure' lables under it so it spans two columns
-    upload_row_title = soup.new_tag('th')
+    upload_row_title = df_soup.new_tag('th')
     upload_row_title.attrs['colspan'] = "2"
     upload_row_title.string = _("Biochem upload")
     upload_row.append(upload_row_title)
@@ -454,24 +454,22 @@ def format_all_sensor_table(df: pd.DataFrame, mission: models.Mission) -> Beauti
 
         sampletype_id = int(column.string)
 
-        button = get_sensor_table_button(soup, mission, sampletype_id)
+        button = get_sensor_table_button(df_soup, mission, sampletype_id)
 
         # clear the column string and add the button instead
         column.string = ''
         column.append(button)
 
         # add the upload checkbox to the upload_row we created above, copy the attributes of the button column
-        upload = soup.new_tag('th')
+        upload = df_soup.new_tag('th')
         upload.attrs = column.attrs
 
-        check = get_sensor_table_upload_checkbox(soup, mission, sampletype_id)
+        check = get_sensor_table_upload_checkbox(df_soup, mission, sampletype_id)
         upload.append(check)
         upload_row.append(upload)
 
         # we're done with this column, get the next column and start again
         column = column.find_next_sibling('th')
-
-    return soup
 
 
 def add_sensor_to_upload(request, mission_id, sensor_id, **kwargs):
