@@ -84,10 +84,13 @@ def query_samples(mission_id, instrument_type, arguments: dict = None):
 
 def list_samples(request, mission_id, instrument_type, **kwargs):
     soup = BeautifulSoup('', 'html.parser')
+
+    # When ever the table list is updated we'll clear any notifications from the forms card.
     soup.append('<div id="div_id_sample_card_notifications" hx-swap-oob="true" ></div>')
 
     bottles = query_samples(mission_id, instrument_type, request.GET if request.method == "GET" else request.POST)
 
+    # if the table is being paged then we want to truncate the result set to just what we're working with
     page = None
     if 'page' in request.GET:
         page = int(request.GET.get('page', 0))
@@ -107,30 +110,44 @@ def list_samples(request, mission_id, instrument_type, **kwargs):
 
     df = read_frame(bottles)
 
+    # Note:
+    #   The template 'mission_gear_type.html' has the table header, but if I was going to set
+    #   the human-readable column names, I'd do it here. The table header has to agree with
+    #   the 'bottles = bottles.values' statement above, they have to have the same elements
+    #   in the same order
+
+    # df.columns = ["Sample", "Event", "Mesh", "Volume", "GearType", "Description"]
+
     html = df.to_html(index=False)
     table_soup = BeautifulSoup(html, 'html.parser')
 
     table = table_soup.find('table')
+    # we don't need the head of the table, just the body. It's a waste of bandwidth to send it.
+    table.find('thead').decompose()
 
     table_body = table.find('tbody')
     table_body.attrs['id'] = "tbody_id_gear_type_sample_table"
     table_body.attrs['hx-swap-oob'] = "true"
 
     if isinstance(page, int):
-        if len(tr_list := table_body.findAll('tr', recursive=False)) > 2:
+        # add a pageing trigger to the second last row of the table. This way the next table update will
+        # start before the user reaches the end of the table.
+        page_trigger = 2
+        if len(tr_list := table_body.findAll('tr', recursive=False)) > page_trigger:
             url = request.path
-            last_tr = tr_list[-2]
+            last_tr = tr_list[-page_trigger]
             last_tr.attrs['hx-target'] = '#tbody_id_gear_type_sample_table'
             last_tr.attrs['hx-trigger'] = 'intersect once'
             last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
             last_tr.attrs['hx-swap'] = "beforeend"
 
+        # after the initial load of the table, we now only want to send
+        # back rows to be swapped in at the end of the table.
         if page > 0:
-            soup.append(tr_list)
-            return HttpResponse(soup)
+            return HttpResponse(tr_list)
 
     soup.append(table)
-    return HttpResponse(soup)
+    return HttpResponse(soup.prettify())
 
 
 def delete_samples(request, mission_id, instrument_type):
