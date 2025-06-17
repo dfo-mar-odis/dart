@@ -6,7 +6,7 @@ from enum import Enum
 
 from django.db.models import QuerySet
 
-import dart.utils
+import config.utils
 from settingsdb.models import FileConfiguration
 
 from core import models as core_models
@@ -15,7 +15,7 @@ from django.utils.translation import gettext_lazy as _
 
 import logging
 
-from dart.utils import convertDMS_degs
+from config.utils import convertDMS_degs
 
 logger = logging.getLogger('dart')
 logger_notifications = logging.getLogger('dart.user.elog')
@@ -507,13 +507,13 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
             flow_start = flow_start if flow_start else event.flow_start
             flow_end = flow_end if flow_end else event.flow_end
 
-            update_fields.add(dart.utils.updated_value(event, 'station_id', station.pk))
-            update_fields.add(dart.utils.updated_value(event, 'instrument_id', instrument.pk))
-            update_fields.add(dart.utils.updated_value(event, 'sample_id', sample_id))
-            update_fields.add(dart.utils.updated_value(event, 'end_sample_id', end_sample_id))
-            update_fields.add(dart.utils.updated_value(event, 'wire_out', wire_out))
-            update_fields.add(dart.utils.updated_value(event, 'flow_start', flow_start))
-            update_fields.add(dart.utils.updated_value(event, 'flow_end', flow_end))
+            update_fields.add(config.utils.updated_value(event, 'station_id', station.pk))
+            update_fields.add(config.utils.updated_value(event, 'instrument_id', instrument.pk))
+            update_fields.add(config.utils.updated_value(event, 'sample_id', sample_id))
+            update_fields.add(config.utils.updated_value(event, 'end_sample_id', end_sample_id))
+            update_fields.add(config.utils.updated_value(event, 'wire_out', wire_out))
+            update_fields.add(config.utils.updated_value(event, 'flow_start', flow_start))
+            update_fields.add(config.utils.updated_value(event, 'flow_end', flow_end))
 
             update_fields.remove('')
 

@@ -2,7 +2,7 @@ import os.path
 
 from django.db.models import DecimalField
 
-from dart import settings
+from config import settings
 
 import logging
 

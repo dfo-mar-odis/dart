@@ -26,9 +26,9 @@ from core.parsers import SampleParser
 
 from settingsdb import models as settings_models
 
-from dart.utils import load_svg
+from config.utils import load_svg
 
-from dart.views import GenericDetailView
+from config.views import GenericDetailView
 
 import logging
 

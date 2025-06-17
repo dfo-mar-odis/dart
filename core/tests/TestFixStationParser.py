@@ -11,7 +11,7 @@ from core.parsers.FixStationParser import FixStationParser
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models
 
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 
 @tag('parsers', 'parsers_fixstation')

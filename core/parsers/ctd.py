@@ -16,7 +16,7 @@ from core import validation
 from settingsdb import models as settings_models
 import logging
 
-from dart.utils import updated_value
+from config.utils import updated_value
 
 logger = logging.getLogger("dart")
 logger_notifications = logging.getLogger('dart.user.ctd')

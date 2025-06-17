@@ -389,11 +389,11 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
 
         table.append(tr_header := soup.new_tag('tr'))
 
-        tr_header.append(td := soup.new_tag('td'))
-        td.string = str(error.edit_table_name)
+        tr_header.append(td_table := soup.new_tag('td'))
+        td_table.string = str(error.edit_table_name)
 
-        tr_header.append(td := soup.new_tag('td'))
-        td.string = str(error.record_num_seq)
+        tr_header.append(td_record := soup.new_tag('td'))
+        td_record.string = str(error.record_num_seq)
 
         replicate = None
         if error.edit_table_name.upper() == 'BCDISREPLICATEDITS':

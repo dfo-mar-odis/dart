@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 from django.test import tag
 
 from core.models import ActionType as action_types

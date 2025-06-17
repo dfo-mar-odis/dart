@@ -13,4 +13,4 @@ if "%server_path%"=="" (
 echo "Starting webserver: http://localhost:8000/"
 
 Rem Start the webserver
-daphne dart.asgi:application >> logs/start_dart.log
+daphne config.asgi:application >> logs/start_dart.log

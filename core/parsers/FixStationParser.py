@@ -10,7 +10,7 @@ import pandas as pd
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
-from dart import utils
+from config import utils
 from core import models as core_models
 from settingsdb.models import FileConfiguration, GlobalSampleType
 

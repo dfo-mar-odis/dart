@@ -10,7 +10,7 @@ from django.conf import settings
 from django.test import tag
 
 from core.tests import CoreFactoryFloor as core_factory
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 from core.parsers import andes
 from core import models as core_models
 

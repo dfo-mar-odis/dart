@@ -18,7 +18,7 @@ from django.conf import settings
 from bio_tables import models as bio_models
 from core import models as core_models
 from core import forms as core_forms
-from dart.utils import load_svg
+from config.utils import load_svg
 
 
 class BioChemDataType(forms.Form):

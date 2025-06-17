@@ -22,7 +22,7 @@ from core import forms as core_forms, models, validation
 from core.parsers import FilterLogParser, elog, andes
 from core.parsers.FixStationParser import FixStationParser
 
-from dart.utils import load_svg
+from config.utils import load_svg
 
 from settingsdb import models as settings_models
 

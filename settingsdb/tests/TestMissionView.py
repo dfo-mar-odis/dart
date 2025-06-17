@@ -8,7 +8,7 @@ from django.db import connections, close_old_connections
 from django.urls import reverse
 from django.conf import settings
 
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
 

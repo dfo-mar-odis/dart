@@ -22,7 +22,7 @@ import core.forms
 from core import models
 from core.parsers import ctd
 from core.forms import CollapsableCardForm
-from dart.utils import load_svg
+from config.utils import load_svg
 
 import logging
 

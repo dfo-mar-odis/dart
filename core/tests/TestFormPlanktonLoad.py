@@ -7,7 +7,7 @@ from django.urls import reverse
 from django.conf import settings
 
 from core.parsers import PlanktonParser
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models

@@ -6,7 +6,7 @@ from django.utils.translation import gettext as _
 from django.views.generic import TemplateView
 from render_block import render_block_to_string
 
-from dart.views import GenericViewMixin
+from config.views import GenericViewMixin
 from core import forms
 
 from settingsdb import models as settings_models

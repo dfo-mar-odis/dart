@@ -7,7 +7,7 @@ from django.conf import settings
 from django.urls import reverse
 
 import settingsdb.models
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from core import form_biochem_database
 from core.tests import CoreFactoryFloor as core_factory

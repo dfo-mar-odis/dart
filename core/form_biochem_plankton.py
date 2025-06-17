@@ -354,7 +354,7 @@ def get_batch(request, mission_id):
     batch_id = request.POST.get('selected_batch', None)
     batch_form = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id, swap_oob=True)
 
-    bcd_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
+    bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
 
     soup = form_biochem_batch.get_batch(soup, batch_form, bcd_model, stage1_valid_proc)
     add_tables_to_soup(soup, batch_form.batch_id)
@@ -381,7 +381,7 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
     page_start = _page_limit * page
     table_id = 'table_id_biochem_batch_data_errors'
 
-    headers = ['Table', 'ID', 'Missing Lookup Value', 'Error']
+    headers = ['Table', 'ID', 'Column', 'Missing Lookup Value', 'Error']
 
     soup = form_biochem_batch.get_table_soup('Data Errors', table_id, headers, swap_oob)
     if batch_id == 0:
@@ -406,31 +406,42 @@ def get_data_errors_table(batch_id, page=0, swap_oob=True):
 
         table.append(tr_header := soup.new_tag('tr'))
 
-        tr_header.append(td := soup.new_tag('td'))
-        td.string = str(error.edit_table_name)
+        tr_header.append(td_table := soup.new_tag('td'))
+        td_table.string = str(error.edit_table_name)
 
         plankton = None
+        plankton_hdr = None
         if error.edit_table_name.upper() == 'BCPLANKTNGENERLEDITS':
             plankton = biochem_models.Bcplanktngenerledits.objects.using('biochem').get(
                 pl_general_edt_seq=error.record_num_seq,
             )
+        elif error.edit_table_name.upper() == 'BCPLANKTNHEDREDITS':
+            plankton_hdr = biochem_models.Bcplanktnhedredits.objects.using('biochem').get(
+                pl_headr_edt_seq=error.record_num_seq)
 
         tr_header.append(td_sample_id := soup.new_tag('td'))
         td_sample_id.string = "---"
+
+        tr_header.append(td_column := soup.new_tag('td'))
+        td_column.string = "---"
 
         tr_header.append(td_taxa_name := soup.new_tag('td'))
         td_taxa_name.string = "---"
         if plankton:
             plankton_hdr = biochem_models.Bcplanktnhedredits.objects.using('biochem').get(
                 pl_headr_edt_seq=plankton.pl_header_edit.pk)
+
+        if plankton_hdr:
             td_sample_id.string = str(plankton_hdr.collector_sample_id)
 
             val = "---"
             if hasattr(biochem_models, error.edit_table_name.title()):
                 model = getattr(biochem_models, error.edit_table_name.title())
-                if hasattr(model, error.column_name.lower()):
+                td_column.string = error.column_name
+                column = error.column_name.strip().lower()
+                if hasattr(model, column):
                     row = model.objects.using('biochem').get(pk=error.record_num_seq)
-                    val = getattr(row, error.column_name.lower())
+                    val = getattr(row, column)
 
             td_taxa_name.string = str(val)
 
@@ -804,13 +815,13 @@ def download_batch(request, mission_id):
     return HttpResponse(soup)
 
 
-def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None, bio_models=None):
+def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
     # 1) get bottles from BCS_P table
     table_name = form_biochem_database.get_bcs_p_table()
-    bcs_p = upload.get_model(table_name, bio_models.BcsP)
+    bcs_p = upload.get_model(table_name, biochem_models.BcsP)
     exists = upload.check_and_create_model('biochem', bcs_p)
     if not exists:
         raise DatabaseError(f"A database error occurred while uploading BCD P data. "

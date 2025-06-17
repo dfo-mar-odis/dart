@@ -27,7 +27,6 @@ logger = logging.getLogger('dart')
 
 
 class GearTypeFilterForm(django_forms.ModelForm):
-
     set_gear_type = django_forms.ChoiceField(
         required=False,
         label=_("Set Gear Type"),
@@ -49,9 +48,16 @@ class GearTypeFilterForm(django_forms.ModelForm):
             # get events mathing the instrument type, but only if it has samples
             self.fields['event'].queryset = self.fields['event'].queryset.filter(
                 instrument__type=instrument_type
-            ).annotate(
-                sample_count=Count('bottles__samples')
-            ).filter(
+            )
+            if instrument_type == models.InstrumentType.ctd:
+                self.fields['event'].queryset = self.fields['event'].queryset.annotate(
+                    sample_count=Count('bottles__samples')
+                )
+            elif instrument_type == models.InstrumentType.net:
+                self.fields['event'].queryset = self.fields['event'].queryset.annotate(
+                    sample_count=Count('bottles__plankton_data')
+                )
+            self.fields['event'].queryset = self.fields['event'].queryset.filter(
                 sample_count__gt=0
             )
 
@@ -62,11 +68,11 @@ class GearTypeFilterForm(django_forms.ModelForm):
         })
 
         gear_type_choices = [('', '--------------')] + [
-            (g.gear_seq, f"{g.gear_seq} - {g.type} - {(g.description[:100] + "...") if len(g.description) > 100 else g.description}") for g in biochem_models.BCGear.objects.all().order_by("type", "gear_seq")
+            (g.gear_seq,
+             f"{g.gear_seq} - {g.type} - {(g.description[:100] + "...") if len(g.description) > 100 else g.description}")
+            for g in biochem_models.BCGear.objects.all().order_by("type", "gear_seq")
         ]
         self.fields['set_gear_type'].choices = gear_type_choices
-
-
 
 
 def query_samples(mission_id, instrument_type, arguments: dict = None):
@@ -280,13 +286,13 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
 
 
 def apply_gear_type_samples(request, mission_id, instrument_type=None, **kwargs):
-
     soup = BeautifulSoup('', 'html.parser')
     bottles = query_samples(mission_id, instrument_type, request.POST)
     gear_type = request.POST.get('set_gear_type', None)
 
     for bottle in bottles:
-        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(gear_type) else gear_type
+        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(
+            gear_type) else gear_type
 
     models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 

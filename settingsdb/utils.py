@@ -10,7 +10,7 @@ from django.db.migrations.executor import MigrationExecutor
 import settingsdb.models
 from settingsdb import models
 from bio_tables import models as biomodels
-from dart import settings
+from config import settings
 
 from core import models as core_models
 from git import Repo

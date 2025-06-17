@@ -15,7 +15,7 @@ from django.utils.translation import gettext as _
 import core.models
 from core import models as core_models
 from settingsdb import models as settings_models
-from dart.utils import updated_value
+from config.utils import updated_value
 
 import logging
 

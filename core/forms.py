@@ -10,7 +10,7 @@ from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
-from dart.utils import load_svg
+from config.utils import load_svg
 
 from . import models
 
