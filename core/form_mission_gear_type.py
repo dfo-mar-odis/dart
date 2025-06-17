@@ -15,6 +15,7 @@ from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import path, reverse_lazy
 from django import forms as django_forms
+from django.db.models import Q
 from django_pandas.io import read_frame
 from core import models, forms, utils
 
@@ -48,17 +49,10 @@ class GearTypeFilterForm(django_forms.ModelForm):
             # get events mathing the instrument type, but only if it has samples
             self.fields['event'].queryset = self.fields['event'].queryset.filter(
                 instrument__type=instrument_type
-            )
-            if instrument_type == models.InstrumentType.ctd:
-                self.fields['event'].queryset = self.fields['event'].queryset.annotate(
-                    sample_count=Count('bottles__samples')
-                )
-            elif instrument_type == models.InstrumentType.net:
-                self.fields['event'].queryset = self.fields['event'].queryset.annotate(
-                    sample_count=Count('bottles__plankton_data')
-                )
-            self.fields['event'].queryset = self.fields['event'].queryset.filter(
-                sample_count__gt=0
+            ).annotate(
+                sample_count=Count('bottles__samples'), pk_sample_count=Count('bottles__plankton_data')
+            ).filter(
+                Q(sample_count__gt=0) | Q(pk_sample_count__gt=0)
             )
 
         self.fields['event'].widget.attrs.update({
