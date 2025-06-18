@@ -6,7 +6,7 @@ from core import models as core_models
 from core.parsers import elog
 from core.tests import CoreFactoryFloor as core_factory
 from core.tests.TestParsers import logger
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 
 @tag('parsers', 'parsers_elog')

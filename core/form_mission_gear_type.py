@@ -15,6 +15,7 @@ from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import path, reverse_lazy
 from django import forms as django_forms
+from django.db.models import Q
 from django_pandas.io import read_frame
 from core import models, forms, utils
 
@@ -27,7 +28,6 @@ logger = logging.getLogger('dart')
 
 
 class GearTypeFilterForm(django_forms.ModelForm):
-
     set_gear_type = django_forms.ChoiceField(
         required=False,
         label=_("Set Gear Type"),
@@ -50,9 +50,9 @@ class GearTypeFilterForm(django_forms.ModelForm):
             self.fields['event'].queryset = self.fields['event'].queryset.filter(
                 instrument__type=instrument_type
             ).annotate(
-                sample_count=Count('bottles__samples')
+                sample_count=Count('bottles__samples'), pk_sample_count=Count('bottles__plankton_data')
             ).filter(
-                sample_count__gt=0
+                Q(sample_count__gt=0) | Q(pk_sample_count__gt=0)
             )
 
         self.fields['event'].widget.attrs.update({
@@ -62,11 +62,11 @@ class GearTypeFilterForm(django_forms.ModelForm):
         })
 
         gear_type_choices = [('', '--------------')] + [
-            (g.gear_seq, f"{g.gear_seq} - {g.type} - {(g.description[:100] + "...") if len(g.description) > 100 else g.description}") for g in biochem_models.BCGear.objects.all().order_by("type", "gear_seq")
+            (g.gear_seq,
+             f"{g.gear_seq} - {g.type} - {(g.description[:100] + "...") if len(g.description) > 100 else g.description}")
+            for g in biochem_models.BCGear.objects.all().order_by("type", "gear_seq")
         ]
         self.fields['set_gear_type'].choices = gear_type_choices
-
-
 
 
 def query_samples(mission_id, instrument_type, arguments: dict = None):
@@ -280,13 +280,13 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
 
 
 def apply_gear_type_samples(request, mission_id, instrument_type=None, **kwargs):
-
     soup = BeautifulSoup('', 'html.parser')
     bottles = query_samples(mission_id, instrument_type, request.POST)
     gear_type = request.POST.get('set_gear_type', None)
 
     for bottle in bottles:
-        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(gear_type) else gear_type
+        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(
+            gear_type) else gear_type
 
     models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 

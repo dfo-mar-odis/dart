@@ -55,7 +55,7 @@ DEBUG = env.bool('DEBUG', default=True)
 
 ALLOWED_HOSTS = ['*']
 
-ASGI_APPLICATION = 'dart.asgi.application'
+ASGI_APPLICATION = 'config.asgi.application'
 
 TNS_NAMES = {}
 try:
@@ -138,7 +138,7 @@ LOGIN_REDIRECT_URL = ""
 CRISPY_ALLOWED_TEMPLATE_PACKS = "bootstrap5"
 CRISPY_TEMPLATE_PACK = "bootstrap5"
 
-ROOT_URLCONF = 'dart.urls'
+ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
     {
@@ -157,7 +157,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'dart.wsgi.application'
+WSGI_APPLICATION = 'config.wsgi.application'
 CHANNEL_LAYERS = {
     "default": {
         "BACKEND": "channels.layers.InMemoryChannelLayer"
@@ -167,7 +167,7 @@ CHANNEL_LAYERS = {
 # Database
 # https://docs.djangoproject.com/en/3.2/ref/settings/#databases
 
-DATABASE_ROUTERS = ["dart.routers.PrimaryRouter"]
+DATABASE_ROUTERS = ["config.routers.PrimaryRouter"]
 # DATABASE_ROUTERS = ['dynamic_db_router.DynamicDbRouter']
 DATABASES = {
     'default': {

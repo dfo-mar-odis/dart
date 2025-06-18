@@ -6,7 +6,7 @@ import settingsdb.models
 from core import models
 from core.form_event_details import EventForm
 from core.tests import CoreFactoryFloor as core_factory
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 
 @tag('forms', 'form_mission_event')

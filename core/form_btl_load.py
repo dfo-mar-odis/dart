@@ -1,7 +1,7 @@
 import os
 import queue
 import time
-
+import ctypes
 import easygui
 
 import concurrent.futures
@@ -22,7 +22,7 @@ import core.forms
 from core import models
 from core.parsers import ctd
 from core.forms import CollapsableCardForm
-from dart.utils import load_svg
+from config.utils import load_svg
 
 import logging
 
@@ -336,12 +336,50 @@ def load_ctd_files(mission):
     ctd.logger_notifications.info(f"Complete")
 
 
+def force_foreground_window():
+    # Give system time to create the dialog
+    time.sleep(0.25)
+    # Get the foreground window handle
+    dialog_title = _("Choose BTL directory")
+    hwnd = ctypes.windll.user32.FindWindowW(None, dialog_title)
+
+    if hwnd:
+        # Try more aggressive techniques to force to front
+        # This combination works better for dialog windows
+        ctypes.windll.user32.ShowWindow(hwnd, 5)  # SW_SHOW
+        ctypes.windll.user32.BringWindowToTop(hwnd)
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
+        ctypes.windll.user32.FlashWindow(hwnd, True)
+    else:
+        # Fall back to the original method if we can't find by title
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
+        if hwnd:
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            ctypes.windll.user32.FlashWindow(hwnd, True)
+
+
+def diropenbox_on_top(*args, **kwargs):
+    import platform
+
+    # For Windows, use the dialog-forcing approach
+    if platform.system() == 'Windows':
+        # Start the dialog in a way that allows us to force it to the top
+        result = None
+        import threading
+        threading.Timer(0.2, force_foreground_window).start()
+        result = easygui.diropenbox(*args, **kwargs)
+        return result
+    else:
+        # For non-Windows platforms, just use the standard dialog
+        return easygui.diropenbox(*args, **kwargs)
+
+
 def choose_bottle_dir(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
     if request.method == "POST" and 'dir_field' in request.POST:
         result = request.POST['dir_field']
     else:
-        result = easygui.diropenbox(title="Choose BTL directory")
+        result = diropenbox_on_top(title=_("Choose BTL directory"))
 
     if result:
         mission.bottle_directory = result

@@ -21,7 +21,7 @@ from core.parsers.PlanktonParser import parse_zooplankton, parse_phytoplankton, 
 from core.parsers.SampleParser import get_excel_dataframe
 from core.parsers.BionessParser import parse_bioness
 
-from dart.utils import load_svg
+from config.utils import load_svg
 
 import os
 import logging

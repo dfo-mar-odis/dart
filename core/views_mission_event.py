@@ -11,8 +11,8 @@ from django.utils.translation import gettext as _
 
 from core import models, forms, validation, form_event_details
 from core.views import MissionMixin, reports
-from dart.utils import load_svg
-from dart.views import GenericDetailView
+from config.utils import load_svg
+from config.views import GenericDetailView
 
 
 class EventDetails(MissionMixin, GenericDetailView):

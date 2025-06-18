@@ -2,7 +2,7 @@ from bs4 import BeautifulSoup
 from django.test import tag, Client
 from django.urls import reverse
 
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
 from core import form_mission_settings

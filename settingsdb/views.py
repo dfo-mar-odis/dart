@@ -19,12 +19,12 @@ from django.conf import settings
 
 from render_block import render_block_to_string
 
-from dart.utils import load_svg
+from config.utils import load_svg
 from settingsdb import models as setting_models
 from core import models
 from settingsdb import filters, utils
 
-from dart.views import GenericTemplateView
+from config.views import GenericTemplateView
 
 import logging
 

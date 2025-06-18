@@ -6,7 +6,7 @@ from django.test import tag
 from django.urls import reverse
 
 from biochem.models import BcsP
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
 from core import form_biochem_discrete

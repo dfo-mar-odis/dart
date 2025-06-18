@@ -17,9 +17,9 @@ from core.form_biochem_batch import get_mission_batch_id
 from biochem import models as biochem_models
 from biochem import upload
 
-from dart.utils import load_svg
+from config.utils import load_svg
 
-from dart.views import GenericDetailView
+from config.views import GenericDetailView
 
 debug_logger = logging.getLogger('dart.debug')
 logger = logging.getLogger('dart')

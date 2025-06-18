@@ -4,7 +4,7 @@ from django.test import tag, Client
 from django.urls import reverse
 
 from core.form_mission_sample_type import BioChemDataType
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models

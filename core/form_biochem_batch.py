@@ -24,7 +24,7 @@ from core import models as core_models
 from core import forms as core_forms
 from biochem import models as biochem_models, upload
 
-from dart.utils import load_svg
+from config.utils import load_svg
 
 logger = logging.getLogger('dart')
 user_logger = logger.getChild('user')

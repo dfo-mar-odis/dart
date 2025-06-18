@@ -23,7 +23,7 @@ from core import forms as core_forms
 from core import models
 from core.parsers import SampleParser
 
-from dart.utils import load_svg
+from config.utils import load_svg
 from settingsdb import models as settings_models
 
 import logging
@@ -531,7 +531,13 @@ def load_sample_config(request, **kwargs):
             # field after the Datatype_filter has been triggered.
             sample_config_form = SampleTypeConfigForm(file_type="", initial=request.GET)
             html = render_crispy_form(sample_config_form)
-            return HttpResponse(html)
+            soup = BeautifulSoup(html, "html.parser")
+            form_html = render_to_string('core/partials/form_sample_config.html', context={})
+            form_soup = BeautifulSoup(form_html, "html.parser")
+            clear_div = form_soup.find("div", id="div_id_loaded_sample_type")
+            clear_div.attrs['hx-swap-oob'] = "true"
+            soup.append(clear_div)
+            return HttpResponse(soup)
 
         if mission_id is None:
             raise Http404(_("Mission does not exist"))
@@ -605,8 +611,6 @@ def load_sample_config(request, **kwargs):
             alert_div = core_forms.blank_alert(**attrs)
             soup.find(id="div_id_sample_type_holder").append(alert_div)
 
-        # html = render_block_to_string("core/partials/form_sample_type.html", "loaded_samples_block",
-        #                               context=context)
         return HttpResponse(soup)
  
     

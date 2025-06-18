@@ -20,8 +20,9 @@
 {# Act 6: The user clicks the 'load' button to submit all the sample types with the #}
 {#        file and the parsers use the file config settings to load data from the files #}
 <form id="id_form_load_samples" hx-encoding="multipart/form-data" onkeydown="return event.key != 'Enter';">
-    <input type="hidden" name="mission_id" value="{{ mission.pk }}">
+    <input type="hidden" name="mission_id" value="{% if mission %}{{ mission.pk }}{% endif %}">
 {% block file_input_form_block %}
+    {% if mission %}
     <div class="row">
         <div class="col">
             {# choose file input #}
@@ -39,6 +40,7 @@
             >{% custom_icon 'plus-square' %}</button>
         </div>
     </div>
+    {% endif %}
     <div id="div_id_sample_type_holder">{# Anchor point for file message and new/update sample type form #}</div>
     <div id="div_id_loaded_sample_type">
         <div id="div_id_loaded_samples_list">{# anchor point for previously loaded file configurations #}</div>

@@ -9,16 +9,20 @@
 
 {% block nav_button_block %}
     <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' database object.pk %}"
+           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <button disabled class="btn btn-secondary"
+           title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</button>
+    </li>
+    <li class="nav-item me-2">
         <a href="{% url 'core:mission_samples_sample_details' database object.pk %}" class="btn btn-primary"
            title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
     </li>
     <li class="nav-item me-2">
         <a href="{% url 'core:mission_plankton_plankton_details' database object.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
-    </li>
-    <li class="nav-item me-2">
-        <a class="btn btn-primary" href="{% url 'core:mission_edit' database object.pk %}"
-           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
     </li>
 {% endblock %}
 

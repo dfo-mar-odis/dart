@@ -10,7 +10,7 @@ from render_block import render_block_to_string
 import core.form_mission_settings
 from biochem import models
 
-from dart.views import GenericCreateView, GenericUpdateView, GenericDetailView
+from config.views import GenericCreateView, GenericUpdateView, GenericDetailView
 
 from core import models
 from core.parsers import elog

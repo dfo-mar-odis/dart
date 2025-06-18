@@ -12,8 +12,8 @@ from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
 from core.tests.TestForms import logger
 
-from dart import settings
-from dart.tests.DartTestCase import DartTestCase
+from config import settings
+from config.tests.DartTestCase import DartTestCase
 
 from settingsdb import models as settings_models
 from settingsdb.tests import SettingsFactoryFloor as settings_factory

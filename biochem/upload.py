@@ -14,7 +14,7 @@ from django.utils.translation import gettext as _
 import bio_tables.models
 import core.models
 from biochem import models
-from dart.utils import updated_value
+from config.utils import updated_value
 from core import models as core_models
 
 import logging
@@ -350,7 +350,12 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         collector = recovery_action.data_collector
         comment = recovery_action.comment
 
-        if event.instrument.type == core_models.InstrumentType.net:
+        if bottle.volume:
+            bcs_row.pl_headr_volume = bottle.volume
+            # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
+            bcs_row.pl_headr_volume_method_seq = 90000001
+
+        elif event.instrument.type == core_models.InstrumentType.net:
             # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
             diameter = 0.75
             area = np.pi * np.power(float(diameter/2), 2)

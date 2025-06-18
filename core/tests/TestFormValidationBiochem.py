@@ -15,7 +15,7 @@ from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
 from core.form_biochem_batch import get_mission_batch_id
 
-from dart.tests.DartTestCase import DartTestCase
+from config.tests.DartTestCase import DartTestCase
 
 from biochem import models as bio_models
 

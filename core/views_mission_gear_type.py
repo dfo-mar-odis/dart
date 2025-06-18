@@ -3,7 +3,7 @@ from django.utils.translation import gettext as _
 
 from core import models, form_mission_gear_type
 from core.form_mission_gear_type import GearTypeFilterForm
-from dart.views import GenericDetailView
+from config.views import GenericDetailView
 
 
 class GearTypeDetails(GenericDetailView):

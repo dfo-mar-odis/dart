@@ -15,7 +15,7 @@ from django.utils.translation import gettext as _
 import core.models
 from core import models as core_models
 from settingsdb import models as settings_models
-from dart.utils import updated_value
+from config.utils import updated_value
 
 import logging
 
@@ -27,16 +27,13 @@ excel_extensions = ['xls', 'xlsx', 'xlsm']
 
 
 def get_file_configs(data, file_type):
-    sample_configs = settings_models.SampleTypeConfig.objects.annotate(
-        sample_field_lower=Lower('sample_field'),
-        value_field_lower=Lower('value_field')
-    ).filter(file_type=file_type).order_by('tab')
+    sample_configs = settings_models.SampleTypeConfig.objects.filter(file_type=file_type).order_by('tab')
 
     # It's expensive to read headers.
     # If a config file matches a sample_field and a value_filed to a file then we'll assume we found
     # the correct header row for the correct tab, then we can narrow down our configs using the same settings
     lowercase_fields = []
-    matching_config = None
+    matching_configs = []
 
     xls_file = None
     for sample_type in sample_configs:
@@ -67,27 +64,17 @@ def get_file_configs(data, file_type):
             header = xls_data.iloc[0].tolist()
             lowercase_fields = [str(column).lower() for column in header]
 
-        if sample_type.sample_field_lower in lowercase_fields and sample_type.value_field_lower in lowercase_fields:
-            matching_config = sample_type
-            break
+        if sample_type.sample_field.lower() in lowercase_fields and sample_type.value_field.lower() in lowercase_fields:
+            if sample_type.limit_field and sample_type.limit_field.lower() not in lowercase_fields:
+                continue
+            if sample_type.flag_field and sample_type.flag_field.lower() not in lowercase_fields:
+                continue
+            if sample_type.comment_field and sample_type.comment_field.lower() not in lowercase_fields:
+                continue
 
-        lowercase_fields = []
-    if matching_config:
-        # we now have a queryset of all configs for this file type, matching a specific tab, header and sample row
-        # in the available columns should give us all file configurations for this type of file that
-        # the user can load samples from.
-        #
-        # Now we have to filter out sample types that don't have value, limit, qc and comment columns in the file
-        file_configs = sample_configs.filter(
-            tab=matching_config.tab, skip=matching_config.skip,
-            sample_field__iexact=matching_config.sample_field)
-        file_configs = file_configs.filter(value_field__in=lowercase_fields)
-        file_configs = file_configs.filter(Q(limit_field__isnull=True) | Q(limit_field='') | Q(limit_field__in=lowercase_fields))
-        file_configs = file_configs.filter(Q(flag_field__isnull=True) | Q(flag_field='') | Q(flag_field__in=lowercase_fields))
-        file_configs = file_configs.filter(Q(comment_field__isnull=True) | Q(comment_field='') | Q(comment_field__in=lowercase_fields))
-        return file_configs
+            matching_configs.append(sample_type)
 
-    return None
+    return matching_configs
 
 
 def get_headers(data, file_type: str, tab: int = 0, skip: int = -1) -> [int, int, list]:

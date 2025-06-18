@@ -17,7 +17,7 @@ from git import Repo
 from core import models
 from core.form_biochem_pre_validation import BIOCHEM_CODES
 from core.forms import NoWhiteSpaceCharField
-from dart.utils import load_svg
+from config.utils import load_svg
 from settingsdb import models as settings_models, utils as settings_utils
 
 
@@ -267,16 +267,16 @@ class MissionSettingsForm(forms.ModelForm):
     def save(self, commit=True):
         mission_name = self.cleaned_data['name']
         database_name = mission_name
-        if mission_name not in settings.DATABASES:
+        if 'mission_db' not in settings.DATABASES:
             # if the mission_name is already in the settings.Databases, it's a connected
             # database that's being updated, otherwise we want to use the new naming convention.
             database_name = f'DART_{mission_name}'
 
+            # if we're already connected then we don't want to run migrations and apply fixtures to the db
+            if mission_name not in settings.DATABASES:
+                settings_utils.add_database(database_name)
+
         repo = Repo(settings.BASE_DIR)
-
-        if mission_name not in settings.DATABASES:
-            settings_utils.add_database(database_name)
-
         instance: models.Mission = super().save(commit=False)
 
         instance.dart_version = repo.head.commit.hexsha

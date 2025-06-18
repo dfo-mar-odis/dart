@@ -11,7 +11,7 @@ from core import models as core_models
 from core.parsers import parser_utils
 
 from bio_tables import models as bio_models
-from dart.utils import updated_value
+from config.utils import updated_value
 
 from settingsdb.models import FileConfiguration
 

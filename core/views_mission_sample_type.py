@@ -9,7 +9,7 @@ from django.utils.translation import gettext as _
 from core import views, models, forms
 from core.form_mission_sample_type import BioChemDataType
 
-from dart.views import GenericDetailView
+from config.views import GenericDetailView
 from settingsdb import models as settingsdb_models
 
 
