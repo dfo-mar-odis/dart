@@ -579,7 +579,7 @@ class AttachmentForm(forms.ModelForm):
     #     return instance
 
 
-def update_stations(request, database):
+def update_stations(request):
     soup = BeautifulSoup('', 'html.parser')
 
     if request.method == "GET":
@@ -609,7 +609,7 @@ def update_stations(request, database):
 
             return HttpResponse(soup)
 
-        event_form = EventForm(database=database, data=request.GET)
+        event_form = EventForm(data=request.GET)
         html = render_crispy_form(event_form)
         form_soup = BeautifulSoup(html, "html.parser")
         station_soup = form_soup.find(id="id_event_station_field")
@@ -627,7 +627,7 @@ def update_stations(request, database):
                 new_station.save()
                 mission_dict['global_station'] = new_station.pk
 
-        mission_form = EventForm(database=database, data=mission_dict)
+        mission_form = EventForm(data=mission_dict)
         html = render_crispy_form(mission_form)
 
         form_soup = BeautifulSoup(html, 'html.parser')
