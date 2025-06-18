@@ -532,7 +532,11 @@ def load_sample_config(request, **kwargs):
             sample_config_form = SampleTypeConfigForm(file_type="", initial=request.GET)
             html = render_crispy_form(sample_config_form)
             soup = BeautifulSoup(html, "html.parser")
-            soup.append(soup.new_tag("div", id="div_id_loaded_samples_list", attrs={"hx-swap-oob": "true"}))
+            form_html = render_to_string('core/partials/form_sample_config.html', context={})
+            form_soup = BeautifulSoup(form_html, "html.parser")
+            clear_div = form_soup.find("div", id="div_id_loaded_sample_type")
+            clear_div.attrs['hx-swap-oob'] = "true"
+            soup.append(clear_div)
             return HttpResponse(soup)
 
         if mission_id is None:
@@ -586,18 +590,29 @@ def load_sample_config(request, **kwargs):
         div_sample_type_list.attrs['class'] = "mt-2"
         div_sample_type.append(div_sample_type_list)
 
+        div_sample_type.append(button_row := soup.new_tag("div", attrs={'class': "row"}))
+        button_row.append(soup.new_tag("div", attrs={'class': "col"}))
+        button_row.append(button_col := soup.new_tag("div", attrs={'class': "col-auto"}))
+        button_col.append(load_button := get_upload_button())
+
         if file_configs:
 
             for config in file_configs:
                 html = render_to_string('core/partials/card_sample_config.html', context={'sample_config': config})
                 sample_type = BeautifulSoup(html, 'html.parser')
                 div_sample_type_list.append(sample_type.find("div"))
+        else:
+            load_button.attrs['disabled'] = "disabled"
+            attrs = {
+                'component_id': "div_id_loaded_samples_alert",
+                'message': _("No File Configurations Found"),
+                'type': 'info'
+            }
+            alert_div = core_forms.blank_alert(**attrs)
+            soup.find(id="div_id_sample_type_holder").append(alert_div)
 
-            div_sample_type_list.append(button_row := soup.new_tag("div", attrs={'class': "row"}))
-            button_row.append(soup.new_tag("div", attrs={'class': "col"}))
-            button_row.append(button_col := soup.new_tag("div", attrs={'class': "col-auto"}))
-            button_col.append(load_button := get_upload_button())
-
+        # html = render_block_to_string("core/partials/form_sample_type.html", "loaded_samples_block",
+        #                               context=context)
         return HttpResponse(soup)
  
     
