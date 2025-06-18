@@ -29,53 +29,71 @@ excel_extensions = ['xls', 'xlsx', 'xlsm']
 def get_file_configs(data, file_type):
     sample_configs = settings_models.SampleTypeConfig.objects.filter(file_type=file_type).order_by('tab')
 
-    # It's expensive to read headers.
-    # If a config file matches a sample_field and a value_filed to a file then we'll assume we found
-    # the correct header row for the correct tab, then we can narrow down our configs using the same settings
-    lowercase_fields = []
+    # Store headers by tab/skip combination to avoid redundant reads
+    tab_headers_cache = {}
     matching_configs = []
 
-    xls_file = None
+    # Convert data to BytesIO once if needed for Excel files
+    if file_type in excel_extensions and not isinstance(data, (BufferedReader, BytesIO)):
+        data = BytesIO(data)
+
+    # Pre-load Excel file object if needed
+    xls_file = pd.ExcelFile(data) if file_type in excel_extensions else None
+
     for sample_type in sample_configs:
-        if file_type == 'csv' or file_type == 'dat':
-            if not lowercase_fields:
-                # get the field choices, then see if they match the file_config's sample_type fields
-                tab, skip, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
-                lowercase_fields = [field[0] for field in field_choices]
+        # Use tab and skip as cache key
+        cache_key = (sample_type.tab, sample_type.skip)
 
-        elif file_type in excel_extensions:
-            # the file configs are ordered by their tab, doing it this way means we're only reloading the dataframe
-            # if the tab changes
-            if not isinstance(data, BufferedReader) and not isinstance(data, BytesIO):
-                data = BytesIO(data)
+        if cache_key not in tab_headers_cache:
+            # Only read headers once for each tab/skip combination
+            if file_type == 'csv' or file_type == 'dat':
+                _, _, field_choices = get_headers(data, file_type, sample_type.tab, sample_type.skip)
+                lowercase_fields = {field[0] for field in field_choices}  # Use set for O(1) lookups
 
-            if not xls_file:
-                xls_file = pd.ExcelFile(data)
+            elif file_type in excel_extensions:
+                # Check if tab exists
+                if sample_type.tab >= len(xls_file.sheet_names):
+                    continue
 
-            if sample_type.tab > (len(xls_file.sheet_names)-1):
-                continue
+                try:
+                    # Use the preloaded xls_file instead of re-reading data
+                    xls_data = pd.read_excel(
+                        io=xls_file,
+                        sheet_name=sample_type.tab,
+                        header=None,
+                        skiprows=sample_type.skip,
+                        nrows=1
+                    )
 
-            xls_data = pd.read_excel(io=data, sheet_name=sample_type.tab, header=None,
-                                     skiprows=sample_type.skip, nrows=1)
-            lowercase_fields = []
-            if xls_data.empty:
-                continue
+                    if xls_data.empty:
+                        continue
 
-            header = xls_data.iloc[0].tolist()
-            lowercase_fields = [str(column).lower() for column in header]
+                    header = xls_data.iloc[0].tolist()
+                    lowercase_fields = {str(column).lower() for column in header}
+                except Exception:
+                    continue
 
-        if sample_type.sample_field.lower() in lowercase_fields and sample_type.value_field.lower() in lowercase_fields:
-            if sample_type.limit_field and sample_type.limit_field.lower() not in lowercase_fields:
-                continue
-            if sample_type.flag_field and sample_type.flag_field.lower() not in lowercase_fields:
-                continue
-            if sample_type.comment_field and sample_type.comment_field.lower() not in lowercase_fields:
-                continue
+            tab_headers_cache[cache_key] = lowercase_fields
+        else:
+            lowercase_fields = tab_headers_cache[cache_key]
 
-            matching_configs.append(sample_type)
+        # Check field requirements
+        sample_field = sample_type.sample_field.lower()
+        value_field = sample_type.value_field.lower()
+
+        if sample_field in lowercase_fields and value_field in lowercase_fields:
+            # Check optional fields with more concise logic
+            required_fields_present = True
+            for field_attr in ['limit_field', 'flag_field', 'comment_field']:
+                field_value = getattr(sample_type, field_attr)
+                if field_value and field_value.lower() not in lowercase_fields:
+                    required_fields_present = False
+                    break
+
+            if required_fields_present:
+                matching_configs.append(sample_type)
 
     return matching_configs
-
 
 def get_headers(data, file_type: str, tab: int = 0, skip: int = -1) -> [int, int, list]:
     field_choices = []
