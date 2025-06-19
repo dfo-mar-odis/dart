@@ -206,7 +206,7 @@ def error_report(request, database, mission_id):
 
     validation_errs = core_models.ValidationError.objects.filter(event__mission=mission)
     for error in validation_errs:
-        row = [mission.name, "", f"Event: {error.event.event_id}", error.get_type_display(), error.message]
+        row = [mission.name, "", f"Event: {error.event.event_id} - {error.event.station}", error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
     general_errs = mission.errors.all()
