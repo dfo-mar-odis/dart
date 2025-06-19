@@ -12,6 +12,8 @@
                         <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' mission.pk %}"
                            title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>
 
+                        <label for="csv_event_file_input_id" class="btn btn-primary btn-sm"
+                               title="{% trans "Upload events from csv files" %}">CSV {% custom_icon 'arrow-up-square' %}</label>
                         <label for="elog_event_file_input_id" class="btn btn-primary btn-sm"
                                title="{% trans "Upload events from elog files" %}">Elog {% custom_icon 'arrow-up-square' %}</label>
                         <label for="andes_event_file_input_id" class="btn btn-primary btn-sm"
@@ -26,6 +28,8 @@
                           hx-trigger="change"
                           hx-swap="none"
                     >
+                        <input id="csv_event_file_input_id" type="file" name="csv_event" accept=".csv"
+                               multiple="true" class="invisible"/>
                         <input id="elog_event_file_input_id" type="file" name="elog_event" accept=".log"
                                multiple="true" class="invisible"/>
                         <input id="andes_event_file_input_id" type="file" name="andes_event" accept=".json"

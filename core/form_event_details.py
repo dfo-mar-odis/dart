@@ -19,7 +19,7 @@ from django.utils.translation import gettext as _
 from render_block import render_block_to_string
 
 from core import forms as core_forms, models, validation
-from core.parsers import FilterLogParser, elog, andes
+from core.parsers import FilterLogParser, elog, andes, event_csv
 from core.parsers.FixStationParser import FixStationParser
 
 from config.utils import load_svg
@@ -1209,7 +1209,10 @@ def import_elog_events(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
-        if 'andes_event' in request.GET:
+        if 'csv_event' in request.GET:
+            logger = event_csv.logger_notifications.name
+            message = _("Processing CSV Report")
+        elif 'andes_event' in request.GET:
             logger = andes.logger_notifications.name
             message = _("Processing Andes Report")
         else:
@@ -1226,13 +1229,17 @@ def import_elog_events(request, mission_id, **kwargs):
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
 
-    if 'andes_event' in request.FILES:
+    if 'csv_event' in request.FILES:
+        file = request.FILES.get('csv_event')
+        event_csv.parse(mission, file.name, file)
+    elif 'andes_event' in request.FILES:
         file = request.FILES.get('andes_event')
         andes.parse(mission, file.name, file)
     else:
         files = request.FILES.getlist('elog_event')
         elog.parse_files(mission, files)
-    validation.validate_mission(mission)
+
+    # validation.validate_mission(mission)
 
     # When a file is first loaded it triggers a 'selection changed' event for the forms "input" element.
     # If we don't clear the input element here and the user tries to reload the same file, nothing will happen

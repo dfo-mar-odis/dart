@@ -77,7 +77,7 @@
   {% bootstrap_messages %}
 {% endblock %}
 
-<div class="container">
+<div class="{% block container %}container{% endblock %}">
     <div id="page_title_area" class="row mt-2">
     {% block title %}{% if page_title %}<div class="h2 col">{{page_title}}</div>{% endif %}{% endblock title %}
     </div>

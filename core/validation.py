@@ -150,9 +150,10 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
         return validation_errors
 
     if not event.attachments.filter(Q(name__iexact='202um') | Q(name__iexact='76um')).exists():
-        message = _("Nets must have a '202um' or '76um' attachment")
-        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
-        validation_errors.append(err)
+        if event.instrument.name != ('202um' or '76um'):
+            message = _("The nets name must be 202um or 76um or the event must have a '202um' or '76um' attachment")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
     elif not event.sample_id:
         message = _("Missing a starting sample ID")
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)

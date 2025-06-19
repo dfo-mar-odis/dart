@@ -26,6 +26,7 @@
     </li>
 {% endblock %}
 
+{% block container %}container-fluid{% endblock %}
 {% block content %}
     <span hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% include 'core/partials/card_event_row.html' %}
