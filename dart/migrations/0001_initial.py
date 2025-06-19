@@ -106,7 +106,7 @@ class Migration(migrations.Migration):
                 ('priority', models.IntegerField(default=1, verbose_name='Priority')),
                 ('is_sensor', models.BooleanField(default=False, help_text='Identify this sample type as a type of sensor', verbose_name='Is Sensor')),
                 ('datatype', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='mission_sample_types', to='bio_tables.bcdatatype', verbose_name='BioChem DataType')),
-                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mission_sample_types', to='core.mission', verbose_name='Mission')),
+                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mission_sample_types', to='dart.mission', verbose_name='Mission')),
             ],
         ),
         migrations.CreateModel(
@@ -134,8 +134,8 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('value', models.CharField(max_length=255, verbose_name='Field Value')),
-                ('action', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='variables', to='core.action', verbose_name='Action')),
-                ('name', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='variables', to='core.variablename', verbose_name='Field Name')),
+                ('action', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='variables', to='dart.action', verbose_name='Action')),
+                ('name', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='variables', to='dart.variablename', verbose_name='Field Name')),
             ],
         ),
         migrations.CreateModel(
@@ -144,7 +144,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('message', models.CharField(max_length=255, verbose_name='Message')),
                 ('type', models.IntegerField(choices=[(0, 'Unknown'), (1, 'Missing ID'), (2, 'Missing Value'), (3, 'Validation Error'), (4, 'Bottle Error'), (5, 'Biochem Error'), (6, 'Event Error'), (7, 'Sample Error'), (8, 'Plankton Error')], default=0, verbose_name='Error type')),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='validation_errors', to='core.event', verbose_name='Event')),
+                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='validation_errors', to='dart.event', verbose_name='Event')),
             ],
             options={
                 'abstract': False,
@@ -156,8 +156,8 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('file', models.CharField(blank=True, max_length=50, null=True, verbose_name='File Name')),
                 ('last_modified', models.DateTimeField(auto_now=True, help_text='Date sample was last updated', verbose_name='Sample Modified')),
-                ('bottle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='samples', to='core.bottle', verbose_name='Bottle')),
-                ('type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='samples', to='core.missionsampletype', verbose_name='Type')),
+                ('bottle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='samples', to='dart.bottle', verbose_name='Bottle')),
+                ('type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='samples', to='dart.missionsampletype', verbose_name='Type')),
             ],
         ),
         migrations.CreateModel(
@@ -177,7 +177,7 @@ class Migration(migrations.Migration):
                 ('comments', models.CharField(blank=True, max_length=255, null=True, verbose_name='Comments')),
                 ('proc_code', models.IntegerField(default=9999, verbose_name='Procedure Code')),
                 ('plank_data_num', models.IntegerField(blank=True, help_text='key linking this plankton sample to a biochem staging table', null=True, verbose_name='Plankton data number')),
-                ('bottle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='plankton_data', to='core.bottle', verbose_name='Bottle')),
+                ('bottle', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='plankton_data', to='dart.bottle', verbose_name='Bottle')),
                 ('gear_type', models.ForeignKey(default=90000002, on_delete=django.db.models.deletion.DO_NOTHING, related_name='plankton_data', to='bio_tables.bcgear', verbose_name='Gear Type')),
                 ('sex', models.ForeignKey(default=90000000, on_delete=django.db.models.deletion.DO_NOTHING, to='bio_tables.bcsex', verbose_name='Sex')),
                 ('stage', models.ForeignKey(default=90000000, on_delete=django.db.models.deletion.DO_NOTHING, to='bio_tables.bclifehistory', verbose_name='Stage of Life')),
@@ -192,7 +192,7 @@ class Migration(migrations.Migration):
                 ('type', models.IntegerField(choices=[(0, 'Unknown'), (1, 'Missing ID'), (2, 'Missing Value'), (3, 'Validation Error'), (4, 'Bottle Error'), (5, 'Biochem Error'), (6, 'Event Error'), (7, 'Sample Error'), (8, 'Plankton Error')], default=0, verbose_name='Error type')),
                 ('file_name', models.CharField(max_length=50, verbose_name='File Name')),
                 ('line', models.IntegerField(blank=True, null=True, verbose_name='Line/Object')),
-                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='file_errors', to='core.mission', verbose_name='Mission')),
+                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='file_errors', to='dart.mission', verbose_name='Mission')),
             ],
             options={
                 'abstract': False,
@@ -201,17 +201,17 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='event',
             name='instrument',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='events', to='core.instrument', verbose_name='Instrument'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='events', to='dart.instrument', verbose_name='Instrument'),
         ),
         migrations.AddField(
             model_name='event',
             name='mission',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='core.mission', verbose_name='Mission'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='events', to='dart.mission', verbose_name='Mission'),
         ),
         migrations.AddField(
             model_name='event',
             name='station',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='events', to='core.station', verbose_name='Station'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.DO_NOTHING, related_name='events', to='dart.station', verbose_name='Station'),
         ),
         migrations.CreateModel(
             name='Error',
@@ -219,7 +219,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('message', models.CharField(max_length=255, verbose_name='Message')),
                 ('type', models.IntegerField(choices=[(0, 'Unknown'), (1, 'Missing ID'), (2, 'Missing Value'), (3, 'Validation Error'), (4, 'Bottle Error'), (5, 'Biochem Error'), (6, 'Event Error'), (7, 'Sample Error'), (8, 'Plankton Error')], default=0, verbose_name='Error type')),
-                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='errors', to='core.mission', verbose_name='Mission')),
+                ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='errors', to='dart.mission', verbose_name='Mission')),
             ],
             options={
                 'abstract': False,
@@ -236,13 +236,13 @@ class Migration(migrations.Migration):
                 ('comment', models.TextField(blank=True, null=True, verbose_name='Sample Comments')),
                 ('dis_data_num', models.IntegerField(blank=True, help_text='The BCD unique ID provided once a sample has been uploaded', null=True, verbose_name='BioChem Data Number')),
                 ('datatype', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='bio_tables.bcdatatype', verbose_name='BioChem DataType')),
-                ('sample', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='discrete_values', to='core.sample', verbose_name='Sample')),
+                ('sample', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='discrete_values', to='dart.sample', verbose_name='Sample')),
             ],
         ),
         migrations.AddField(
             model_name='bottle',
             name='event',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bottles', to='core.event', verbose_name='Event'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='bottles', to='dart.event', verbose_name='Event'),
         ),
         migrations.CreateModel(
             name='BioChemUpload',
@@ -250,7 +250,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('upload_date', models.DateTimeField(blank=True, help_text='The last time this sensor/sample was uploaded to biochem', null=True, verbose_name='Upload Date')),
                 ('modified_date', models.DateTimeField(auto_now=True, help_text='The last time this sensor/sample was modified', null=True, verbose_name='Upload Date')),
-                ('type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='uploads', to='core.missionsampletype', verbose_name='Type')),
+                ('type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='uploads', to='dart.missionsampletype', verbose_name='Type')),
             ],
         ),
         migrations.CreateModel(
@@ -258,13 +258,13 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=50, verbose_name='Attachment Name')),
-                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attachments', to='core.event', verbose_name='Event')),
+                ('event', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='attachments', to='dart.event', verbose_name='Event')),
             ],
         ),
         migrations.AddField(
             model_name='action',
             name='event',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actions', to='core.event', verbose_name='Event'),
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='actions', to='dart.event', verbose_name='Event'),
         ),
         migrations.AlterUniqueTogether(
             name='event',

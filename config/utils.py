@@ -12,12 +12,37 @@ from django.http import HttpResponse
 from django.utils.translation import gettext_lazy as _
 from django.db import connections
 from django.db.migrations.executor import MigrationExecutor
+from django.db.models import F
 
 from dart.models import Mission
+from user_settings.models import LocalSetting
 
 import logging
 logger = logging.getLogger('dart')
 user_logger = logging.getLogger('dart.user')
+
+
+# Python
+def get_location():
+    location = LocalSetting.objects.filter(connected=True)
+
+    if location.exists():
+        # Get the connected directory
+        directory = location.first().database_location
+    else:
+        # Default to './missions' if no connected location exists
+        default_location = "./missions"
+        location, created = LocalSetting.objects.get_or_create(
+            database_location=default_location, defaults={"connected": True}
+        )
+        directory = location.database_location
+
+    # Ensure the directory exists in the file system
+    if directory == "./missions" and not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
+
+    return directory
+
 
 def create_database(db_name, db_dir=None):
     """
@@ -33,8 +58,10 @@ def create_database(db_name, db_dir=None):
     Returns:
         django.db.backends.base.base.BaseDatabaseWrapper: The active database connection.
     """
+    location = get_location()
+
     if db_dir is None:
-        db_dir = os.path.join(settings.BASE_DIR, "databases")
+        db_dir = os.path.join(settings.BASE_DIR, location)
 
     os.makedirs(db_dir, exist_ok=True)
     db_path = os.path.join(db_dir, f"{db_name}.sqlite3")
@@ -77,9 +104,10 @@ def connect_database(db_name, db_dir=None):
     Returns:
         django.db.backends.base.base.BaseDatabaseWrapper: The active database connection.
     """
+    location = get_location()
 
     if db_dir is None:
-        db_dir = os.path.join(settings.BASE_DIR, "databases")
+        db_dir = os.path.join(settings.BASE_DIR, location)
 
     os.makedirs(db_dir, exist_ok=True)  # Ensure directory exists
 
@@ -140,7 +168,8 @@ def get_mission_dictionary(db_dir=None, filter=None):
     Returns:
         dict: Mapping of database names to metadata, including mission name, migration status, and version.
     """
-    db_dir = db_dir if db_dir else os.path.join(settings.BASE_DIR, "databases")
+    location = get_location()
+    db_dir = db_dir if db_dir else os.path.join(settings.BASE_DIR, location)
     if not os.path.exists(db_dir):
         os.mkdir(db_dir)
 

@@ -3,23 +3,6 @@
 from django.db import migrations, models
 import django.db.models.deletion
 
-def migrate_all_models(apps, schema_editor):
-    core_models = apps.get_app_config('core').get_models()
-    dart_models = apps.get_app_config('dart').get_models()
-
-    core_model_map = {model.__name__: model for model in core_models}
-    dart_model_map = {model.__name__: model for model in dart_models}
-
-    for model_name, core_model in core_model_map.items():
-        if model_name in dart_model_map:
-            dart_model = dart_model_map[model_name]
-            for old_instance in core_model.objects.all():
-                new_instance = dart_model()
-                for field in core_model._meta.fields:
-                    if hasattr(dart_model, field.name):
-                        setattr(new_instance, field.name, getattr(old_instance, field.name))
-                new_instance.save()
-
 
 class Migration(migrations.Migration):
 
@@ -28,7 +11,6 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunPython(migrate_all_models),
         migrations.AlterField(
             model_name='action',
             name='event',

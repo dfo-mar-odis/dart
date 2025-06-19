@@ -5,6 +5,9 @@ import django.db.models.deletion
 
 
 def migrate_mesh_gear_to_bottle(apps, schema_editor):
+    if not apps.is_installed('core'):
+        return
+
     PlanktonSample = apps.get_model('core', 'PlanktonSample')
     Bottle = apps.get_model('core', 'Bottle')
 
@@ -24,6 +27,9 @@ def migrate_mesh_gear_to_bottle(apps, schema_editor):
 
 
 def migrate_mesh_gear_to_plankton_sample(apps, schema_editor):
+    if not apps.is_installed('core'):
+        return
+
     PlanktonSample = apps.get_model('core', 'PlanktonSample')
     Bottle = apps.get_model('core', 'Bottle')
 
