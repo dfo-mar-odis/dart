@@ -99,7 +99,7 @@ TEMPLATES = [
     },
 ]
 
-ASGI_APPLICATION = "htmx_template.asgi.application"
+ASGI_APPLICATION = "config.asgi.application"
 # WSGI_APPLICATION = 'htmx_template.wsgi.application'
 CHANNEL_LAYERS = {
     "default": {
@@ -113,7 +113,7 @@ CHANNEL_LAYERS = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'dart_settings.sqlite3',
+        'NAME': BASE_DIR / 'dart_local.sqlite3',
         'TEST': {
             'NAME': 'test_database'
         }

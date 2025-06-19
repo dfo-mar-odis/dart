@@ -6,7 +6,6 @@ django-widget-tweaks
 django-pandas
 django-htmx
 beautifulsoup4
-django-channels
 uvicorn
 channels
 concurrent-log-handler==0.9.26
