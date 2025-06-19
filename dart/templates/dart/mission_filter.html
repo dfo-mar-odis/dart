@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load i18n %}
+
+{% block content %}
+<div class="row mb-2">
+    <div class="col">
+    {% include 'dart/forms/mission_list_filter_form.html' with form=mission_form object=object %}
+    </div>
+</div>
+<div class="row">
+    <div class="col">
+        <div class="card" id="card_mission_filter">
+            <div class="card-header" id="card_header_mission_filter">
+                <div class="row">
+                    <div class="card-title h3 col" id="card_title_mission_filter"></div>
+                    <div class="col-auto">
+                        <a href="{% url 'dart:mission_new' %}" class="btn btn-primary">
+                            {% custom_icon "plus-square" %}
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body" id="card_body_mission_filter">
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

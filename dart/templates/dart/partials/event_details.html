@@ -1,0 +1,23 @@
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+<div id="div_id_event_details_container" hx-swap-oob="true">
+    <div class="row">
+        <div class="col-auto">
+            <div class="fs-3">{% trans 'Event' %} : {{ event.event_id }}</div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col">
+            <div class="fs-3">{% trans 'Station' %} : {{ event.station.name }}</div>
+        </div>
+        <div class="col">
+            <div class="fs-3">{% trans 'Instrument' %} : {{ event.instrument.get_type_display }}</div>
+        </div>
+    </div>
+    {% include 'dart/forms/action_form.html' with event=event %}
+</div>

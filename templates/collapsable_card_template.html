@@ -1,0 +1,33 @@
+{% load i18n %}
+{% load static %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+{% block card %}
+<div class="card" id="card_{{prefix}}">
+    <div class="card-header d-flex align-items-center justify-content-between" id="card_header_{{prefix}}">
+        <div class="col-auto" id="card_title_toggle_{{prefix}}">
+            <button class="btn btn-link" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#card_body_{{prefix}}" aria-expanded="false"
+                    aria-controls="card_body_{{prefix}}" id="card_toggle_btn_{{prefix}}"
+                    title="{% trans 'Toggle Open' %}"
+            >
+                {% custom_icon 'chevron-down' %}
+            </button>
+        </div>
+        <div class="card-title col mb-0" id="card_title_{{prefix}}">
+            {% block card_title %}Card Title{% endblock card_title %}
+        </div>
+        <div class="col-auto">
+            {% block card_header_buttons %}
+            {% endblock card_header_buttons %}
+        </div>
+    </div>
+    <div id="card_body_{{prefix}}" class="collapse" aria-labelledby="card_header_{{prefix}}" data-bs-parent="#card_{{prefix}}">
+        <div class="{% block card_body_class %}card-body{% endblock card_body_class %}">
+            {% block card_body %}
+            {% endblock card_body %}
+        </div>
+    </div>
+</div>
+{% endblock card %}

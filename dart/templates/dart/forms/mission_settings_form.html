@@ -1,0 +1,92 @@
+{% extends "card_template.html" %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load static %}
+{% load i18n %}
+
+
+{% block card %}
+{% with prefix="mission_settings" %}
+{{ block.super }}
+{% endwith %}
+{% endblock card %}
+
+{% block card_title %}{% trans "Mission Metadata" %}{% endblock card_title %}
+
+{% block card_header_buttons %}
+{% if object %}
+<button type="button" title="{% trans 'Update' %}" class="btn btn-primary" hx-swap="none"
+        hx-get="{% url 'dart:form_mission_update_mission' object.pk %}">
+    {% custom_icon 'check' %}
+</button>
+{% else %}
+<button type="button" title="{% trans 'Save' %}" class="btn btn-primary" hx-swap="none"
+        hx-get="{% url 'dart:form_mission_new_mission' %}" data-bs-toggle="modal" data-bs-target="#modal">
+    {% custom_icon 'check' %}
+</button>
+{% endif %}
+{% endblock card_header_buttons %}
+
+{% block card_body %}
+<form id="form_id_mission">
+    <div id="form_id_mission_hidden_submit">{# used by htmx to submit the form #}</div>
+    <div class="mb-3">
+        {% if form.name.value and not form.name.errors %}
+        <h2>{{ form.name.value }}</h2>
+
+        <input type="hidden" id="id_name" name="name" value="{{ form.name.value }}"/>
+        {% else %}
+        {% include 'dart/forms/components/field_form_input.html' with form_element=form.name %}
+        {% endif %}
+    </div>
+    <div class="row mb-3">
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.start_date %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.end_date %}
+        </div>
+    </div>
+    <div id="div_id_geographic_region_section" class="mb-3" hx-swap-oob="true">
+        {% include 'dart/forms/components/field_geographic_region.html' with form_element=form.geographic_region %}
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.mission_descriptor %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.lead_scientist %}
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.platform %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.protocol %}
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col-6">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.data_center %}
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.collector_comments %}
+        </div>
+    </div>
+
+    <div class="row mb-3">
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.data_manager_comments %}
+        </div>
+    </div>
+
+</form>
+
+{% endblock card_body %}

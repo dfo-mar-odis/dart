@@ -1,0 +1,1267 @@
+[
+{
+    "model": "user_settings.globalstation",
+    "pk": 231,
+    "fields": {
+        "name": "AR7W_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 232,
+    "fields": {
+        "name": "AR7W_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 233,
+    "fields": {
+        "name": "AR7W_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 234,
+    "fields": {
+        "name": "AR7W_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 235,
+    "fields": {
+        "name": "AR7W_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 236,
+    "fields": {
+        "name": "AR7W_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 237,
+    "fields": {
+        "name": "AR7W_07.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 238,
+    "fields": {
+        "name": "AR7W_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 239,
+    "fields": {
+        "name": "AR7W_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 240,
+    "fields": {
+        "name": "AR7W_09.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 241,
+    "fields": {
+        "name": "AR7W_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 242,
+    "fields": {
+        "name": "AR7W_10.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 243,
+    "fields": {
+        "name": "AR7W_11",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 244,
+    "fields": {
+        "name": "AR7W_11.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 245,
+    "fields": {
+        "name": "AR7W_12",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 246,
+    "fields": {
+        "name": "AR7W_12.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 247,
+    "fields": {
+        "name": "AR7W_13",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 248,
+    "fields": {
+        "name": "AR7W_13.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 249,
+    "fields": {
+        "name": "AR7W_14",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 250,
+    "fields": {
+        "name": "AR7W_14.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 251,
+    "fields": {
+        "name": "AR7W_15",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 252,
+    "fields": {
+        "name": "AR7W_15.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 253,
+    "fields": {
+        "name": "AR7W_16",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 254,
+    "fields": {
+        "name": "AR7W_16.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 255,
+    "fields": {
+        "name": "AR7W_17",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 256,
+    "fields": {
+        "name": "AR7W_17.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 257,
+    "fields": {
+        "name": "AR7W_18",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 258,
+    "fields": {
+        "name": "AR7W_18.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 259,
+    "fields": {
+        "name": "AR7W_19",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 260,
+    "fields": {
+        "name": "AR7W_19.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 261,
+    "fields": {
+        "name": "AR7W_20",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 262,
+    "fields": {
+        "name": "AR7W_20.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 263,
+    "fields": {
+        "name": "AR7W_21",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 264,
+    "fields": {
+        "name": "AR7W_21.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 265,
+    "fields": {
+        "name": "AR7W_22",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 266,
+    "fields": {
+        "name": "AR7W_22.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 267,
+    "fields": {
+        "name": "AR7W_23",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 268,
+    "fields": {
+        "name": "AR7W_23.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 269,
+    "fields": {
+        "name": "AR7W_24",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 270,
+    "fields": {
+        "name": "AR7W_24.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 271,
+    "fields": {
+        "name": "AR7W_25",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 272,
+    "fields": {
+        "name": "AR7W_25.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 273,
+    "fields": {
+        "name": "AR7W_26",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 274,
+    "fields": {
+        "name": "AR7W_26.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 275,
+    "fields": {
+        "name": "AR7W_27",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 276,
+    "fields": {
+        "name": "AR7W_27.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 277,
+    "fields": {
+        "name": "AR7W_28",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 278,
+    "fields": {
+        "name": "AR7W_28.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 279,
+    "fields": {
+        "name": "BBL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 280,
+    "fields": {
+        "name": "BBL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 281,
+    "fields": {
+        "name": "BBL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 282,
+    "fields": {
+        "name": "BBL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 283,
+    "fields": {
+        "name": "BBL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 284,
+    "fields": {
+        "name": "BBL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 285,
+    "fields": {
+        "name": "BBL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 286,
+    "fields": {
+        "name": "CSL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 287,
+    "fields": {
+        "name": "CSL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 288,
+    "fields": {
+        "name": "CSL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 289,
+    "fields": {
+        "name": "CSL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 290,
+    "fields": {
+        "name": "CSL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 291,
+    "fields": {
+        "name": "CSL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 292,
+    "fields": {
+        "name": "GULD_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 293,
+    "fields": {
+        "name": "GUL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 294,
+    "fields": {
+        "name": "GUL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 295,
+    "fields": {
+        "name": "GUL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 296,
+    "fields": {
+        "name": "GUL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 297,
+    "fields": {
+        "name": "HL_0",
+        "latitude": 44.6937,
+        "longitude": -63.6403,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 298,
+    "fields": {
+        "name": "HL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 299,
+    "fields": {
+        "name": "HL_02",
+        "latitude": 44.2675,
+        "longitude": -63.3175,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 300,
+    "fields": {
+        "name": "HL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 301,
+    "fields": {
+        "name": "HL_03.3",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 302,
+    "fields": {
+        "name": "HL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 303,
+    "fields": {
+        "name": "HL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 304,
+    "fields": {
+        "name": "HL_05.5",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 305,
+    "fields": {
+        "name": "HL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 306,
+    "fields": {
+        "name": "HL_06.3",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 307,
+    "fields": {
+        "name": "HL_06.7",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 308,
+    "fields": {
+        "name": "HL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 309,
+    "fields": {
+        "name": "LCM_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 310,
+    "fields": {
+        "name": "LCM_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 311,
+    "fields": {
+        "name": "LCM_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 312,
+    "fields": {
+        "name": "LCM_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 313,
+    "fields": {
+        "name": "LCM_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 314,
+    "fields": {
+        "name": "LCM_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 315,
+    "fields": {
+        "name": "LCM_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 316,
+    "fields": {
+        "name": "LCM_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 317,
+    "fields": {
+        "name": "LCM_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 318,
+    "fields": {
+        "name": "LCM_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 319,
+    "fields": {
+        "name": "LL_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 320,
+    "fields": {
+        "name": "LL_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 321,
+    "fields": {
+        "name": "LL_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 322,
+    "fields": {
+        "name": "LL_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 323,
+    "fields": {
+        "name": "LL_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 324,
+    "fields": {
+        "name": "LL_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 325,
+    "fields": {
+        "name": "LL_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 326,
+    "fields": {
+        "name": "LL_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 327,
+    "fields": {
+        "name": "LL_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 328,
+    "fields": {
+        "name": "NEC_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 329,
+    "fields": {
+        "name": "NEC_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 330,
+    "fields": {
+        "name": "NEC_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 331,
+    "fields": {
+        "name": "NEC_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 332,
+    "fields": {
+        "name": "NEC_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 333,
+    "fields": {
+        "name": "NEC_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 334,
+    "fields": {
+        "name": "NEC_07",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 335,
+    "fields": {
+        "name": "NEC_08",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 336,
+    "fields": {
+        "name": "NEC_09",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 337,
+    "fields": {
+        "name": "NEC_10",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 338,
+    "fields": {
+        "name": "P5",
+        "latitude": 44.9307,
+        "longitude": -66.8500,
+        "sounding": null,
+        "fixstation": true
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 339,
+    "fields": {
+        "name": "STAB_01",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 340,
+    "fields": {
+        "name": "STAB_02",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 341,
+    "fields": {
+        "name": "STAB_03",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 342,
+    "fields": {
+        "name": "STAB_04",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 343,
+    "fields": {
+        "name": "STAB_05",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 344,
+    "fields": {
+        "name": "STAB_06",
+        "latitude": null,
+        "longitude": null,
+        "sounding": null,
+        "fixstation": false
+    }
+},
+{
+    "model": "user_settings.globalstation",
+    "pk": 345,
+    "fields": {
+        "name": "Shediac Valley",
+        "latitude": 47.7833,
+        "longitude": -64.0333,
+        "sounding": null,
+        "fixstation": true
+    }
+}
+]

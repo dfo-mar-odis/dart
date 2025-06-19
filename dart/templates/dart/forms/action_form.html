@@ -1,0 +1,43 @@
+{% load static %}
+{% load i18n %}
+{% load bootstrap_icons %}
+
+{# this form is intended to be included on the event_details_form, it's not meant to be a standalone form so it isn't wrapped in a form tag #}
+<div id="div_id_action_form" hx-swap-oob="true">
+    <form>
+    {% if form %}
+    <div class="row mb-1">
+        {{ form.event }}
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.type %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.date_time %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.latitude %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.longitude %}
+        </div>
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.sounding %}
+        </div>
+    </div>
+    <div class="row mb-1">
+        <div class="col">
+            {% include 'dart/forms/components/field_form_input.html' with form_element=form.comment %}
+        </div>
+        <div class="col-auto d-flex align-items-end">
+            <button hx-swap="none" hx-post="{% url 'dart:form_event_action_new' event.pk %}" class="btn btn-primary" title="{% trans 'Add Action' %}">{% custom_icon 'plus-square' %}</button>
+            {% if action %}
+                <button hx-swap="none" hx-post="{% url 'dart:form_event_action_update' event.pk action.pk %}" class="btn btn-secondary ms-1" title="{% trans 'Update Action' %}">{% custom_icon 'arrow-counterclockwise' %}</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    {% if event %}
+        {% include 'dart/partials/action_list.html' %}
+    {% endif %}
+    </form>
+</div>

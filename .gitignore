@@ -46,6 +46,7 @@ Thumbs.db
 # misc folders #
 ################
 /.idea/
+.venv
 
 # Local config files #
 ######################

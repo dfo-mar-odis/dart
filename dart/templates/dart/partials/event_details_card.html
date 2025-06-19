@@ -1,0 +1,29 @@
+{% load static %}
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+<div class="card" id="card_event_details" hx-swap-oob="true">
+    <div class="card-header" id="card_header_event_details">
+        <div class="row">
+            <div class="card-title h3 col-auto" id="card_title_event_details">{% trans "Event Details" %}</div>
+            <div id="div_id_card_event_details_button_column" class="col">
+<!--                <label for="input_id_event_form_new" class="btn btn-primary btn-sm" title="{% trans 'Copy to New Event' %}">{% custom_icon 'copy' %}</label>-->
+<!--                <label for="input_id_event_form_update" class="btn btn-primary btn-sm" title="{% trans 'Update Event' %}">{% custom_icon 'arrow-counterclockwise' %}</label>-->
+                <button class="btn btn-primary btn-sm" title="{% trans 'Add Event' %}" hx-swap="none" hx-get="{% url 'dart:form_events_new' mission.pk %}">{% custom_icon 'plus-square' %}</button>
+                {% if event %}
+                <button class="btn btn-primary btn-sm" title="{% trans 'Update Event' %}" hx-swap="none" hx-get="{% url 'dart:form_events_update' mission.pk event.pk %}" >
+                {% else %}
+                <button class="btn btn-primary btn-sm" disabled="disabled" >
+                {% endif %}{% custom_icon 'pencil-square' %}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body vertical-scrollbar-lg" id="card_body_event_details">
+        {% if event %}
+        {% include 'dart/partials/event_details.html' %}
+        {% else %}
+        <div id="div_id_event_details_container"></div>
+        {% endif %}
+    </div>
+</div>

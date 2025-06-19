@@ -1,0 +1,20 @@
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+<div id="div_id_global_geographic_region_select" hx-swap-oob="true" class="row">
+    <div class="col-auto">
+        <button class="btn btn-primary" id="btn_id_add_geographic_region" title="{% trans 'Add' %}" hx-post="{% url 'dart:form_mission_new_geographic_region' %}">{% custom_icon 'plus-square' %}</button>
+        <button class="btn btn-danger ms-2" id="btn_id_delete_geographic_region" title="{% trans 'Delete' %}" hx-confirm="{% trans 'Are you sure?' %}" hx-post="{% url 'dart:form_mission_delete_geographic_region' %}">{% custom_icon 'dash-square' %}</button>
+    </div>
+    <div class="col">
+        <select id="global_geographic_region_select"
+                name="global_geographic_region"
+                class="form-control mb-2"
+                hx-get="{% url 'dart:form_mission_list_geographic_regions' %}"
+                hx-trigger="load"
+                hx-swap="none">
+            <option value="-1">--- Select Geographic Region ---</option>
+        </select>
+    </div>
+</div>

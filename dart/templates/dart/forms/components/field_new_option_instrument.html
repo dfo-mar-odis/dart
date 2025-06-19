@@ -1,0 +1,30 @@
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load i18n %}
+{% load static %}
+
+<div id="{{ field_swap_id }}" class="row mb-2" hx-swap-oob="true" hx-swap="none">
+    <div id="div_id_btn_col_{{ field_swap_id }}" class="col-auto">
+        <button class="btn btn-primary" id="btn_id_add_{{ field_swap_id }}" title="{% trans 'Add' %}"
+                hx-post="{{add_url}}">{% custom_icon 'plus-square' %}
+        </button>
+        <button class="btn btn-danger" id="btn_id_cancel_{{ field_swap_id }}" title="{% trans 'Cancel' %}"
+                hx-get="{{cancel_url}}" name="cancel">{% custom_icon 'dash-square' %}
+        </button>
+    </div>
+    <div id="div_id_field_col_{{ field_swap_id }}" class="col">
+        <div class="row">
+            <div class="col">
+                <select class="form-select" name="type">
+                    {% for value, label in types %}
+                    <option value="{{ value }}">{{label}}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col">
+                <input type="text" id="input_id_field_{{ field_swap_id }}" name="{{ field_name }}"
+                       class="form-control"/>
+            </div>
+        </div>
+    </div>
+</div>

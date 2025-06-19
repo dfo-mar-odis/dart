@@ -1,0 +1,12 @@
+{% load widget_tweaks %}
+
+<label for="{{ form_element.id_for_label }}" class="form-label">{{ form_element.label }}</label>
+{% if form_element.errors %}
+    {{ form_element|add_class:"form-control is-invalid" }}
+{% else %}
+    {{ form_element|add_class:"form-control" }}
+{% endif %}
+<small class="form-text text-muted">{{ form_element.help_text }}</small>
+<div class="invalid-feedback">
+    {{ form_element.errors|striptags }}
+</div>

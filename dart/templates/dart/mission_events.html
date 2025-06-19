@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load static %}
+{% load i18n %}
+
+{% block nav_button_block %}
+    {% if object %}
+    <li class="nav-item me-2">
+        <a href="{% url 'dart:mission_update' database object.pk %}" class="btn btn-primary" title="{% trans 'Mission Metadata' %}">{% custom_icon 'gear' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <button class="btn btn-secondary" title="{% trans 'Events' %}" disabled="disabled">{% custom_icon 'calendar3-range' %}</button>
+    </li>
+    <li class="nav-item me-2">
+        <a href="" class="btn btn-primary" title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a href="" class="btn btn-primary" title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
+    </li>
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-3">
+            {% include 'dart/partials/event_list_card.html' %}
+        </div>
+        <div class="col">
+            {% include 'dart/partials/event_details_card.html' with mission=object %}
+        </div>
+    </div>
+</div>
+{% endblock content %}

@@ -1,0 +1,27 @@
+{% extends 'card_template.html' %}
+
+{% load static %}
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+{% block card %}
+    {% with prefix="event_list" %}
+    {{ block.super }}
+    {% endwith %}
+{% endblock card %}
+
+{% block card_title %}Events{% endblock card_title %}
+
+{% block card_body_class %}
+vertical-scrollbar-lg
+{% endblock card_body_class %}
+
+{% block card_body %}
+<table id="table_id_list_events" class="table table-striped" >
+    <thead class="border-bottom sticky-top bg-white" >
+    <tr style="max-height: 30px;"><th>{% trans 'Event' %}</th><th>{% trans 'Station' %}</th><th>{% trans 'Instrument' %}</th></tr>
+    </thead>
+    <tbody class="" hx-get="{% url 'dart:form_events_list' object.pk %}" hx-trigger="load, reload_events from:body"></tbody>
+</table>
+{% endblock card_body %}

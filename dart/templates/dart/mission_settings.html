@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% load bootstrap_icons %}
+{% load bootstrap5 %}
+{% load static %}
+{% load i18n %}
+
+{% block nav_button_block %}
+    {% if object %}
+    <li class="nav-item me-2">
+        <button class="btn btn-secondary" title="{% trans 'Mission Metadata' %}" disabled="disabled">{% custom_icon 'gear' %}</button>
+    </li>
+    <li class="nav-item me-2">
+        <a href="{% url 'dart:mission_events' database object.pk %}" class="btn btn-primary" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a href="" class="btn btn-primary" title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
+    </li>
+    <li class="nav-item me-2">
+        <a href="" class="btn btn-primary" title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
+    </li>
+    {% endif %}
+{% endblock %}
+
+{% block title %}
+{# We're going to put this page's title on the form's card #}
+{% endblock title %}
+
+{% block content %}
+<div class="container-fluid">
+    {% include 'dart/forms/mission_settings_form.html' with form=mission_form object=object %}
+</div>
+
+{% endblock content %}

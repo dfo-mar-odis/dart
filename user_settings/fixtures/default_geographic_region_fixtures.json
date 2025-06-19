@@ -1,0 +1,224 @@
+[
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Banqereau Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Barrow Strait"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Bay of Fundy"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Bras d’Or Lakes"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Brown’s Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Cabot Strait"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Chaleur Bay"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Chedabucto Bay"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Continental Slope"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Davis Strait"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Emerald Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Emerald Basin"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Flemish Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Flemish Cap"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Flemish Pass"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Georges Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Grand Banks"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Gulf of Maine"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Hudson Bay"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "LaHave Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Labrador Shelf"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Laurentian Fan"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Laurentian Trough"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Magdalen Shelf"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Northumberland Strait"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Orphan Basin"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Orphan Knoll"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Sable Island"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Scotian Shelf"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Shediac Valley"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "St. Anne’s Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "St. Lawrence Estuary"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Sydney Bight"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "The Gulf of St. Lawrence"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "The Gully"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "West Bank"
+    }
+},
+{
+    "model": "user_settings.globalgeographicregion",
+    "fields": {
+        "name": "Whycocomagh Bay"
+    }
+}
+]

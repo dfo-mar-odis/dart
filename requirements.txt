@@ -1,94 +1,16 @@
-# we have to use Django3 because Django4 doesn't support Oracle12
-Django<=4.2.0,>=4.1.0
-asgiref<4,>=3.6.0
-
-# used for dynamic Oracle connections for biochem upload and for copying external sqlite dbs
-django-dynamic-db-router
-
-# useful helper extensions for database fields and admin functions https://django-extensions.readthedocs.io/en/latest/index.html
-django-extensions==3.2.1
-
-# provides authentication/registration out of the box https://django-allauth.readthedocs.io/en/latest/
-django-allauth==0.52.0
-
-# tweaking of django forms
-django-crispy-forms
-crispy-bootstrap5
-
-# django-filters is used for easily creating filter pages to
-django-filter==2.4.0
-
-# Icons to make things pretty
+django
+django_filter
+django-bootstrap-v5
 django-bootstrap-icons
-
-# used for partial page rendering with HTMX
-django-render-block
-
-# used for updating dynamic forms with HTMX
-django-forms-dynamic
-
-# used for detecting HTMX calls
-django-htmx==1.16.0
-
-# daphne is a standalone python webserver used to run the Django application outside a development env.
-daphne==3.0.2
-
-# Channels allows for more advanced web layer communications, channels and daphne versions must be compatible
-channels==3.0.5
-
-# Whitenoise is used to track static content so that a user doesn't need to do 'python manage.py collectstatic'
-# as a setup requirement
-whitenoise<=6.6.0,>=6.5.0
-
-# used to read environment variables in the settings.py file
-django-environ~=0.9.0
-
-# django-bootstrap is a CSS library for displaying content in web browsers.
-django-bootstrap-v5==1.0.11
-
-# factory-boy and Faker are used for unit Testing
-Faker==5.0.1
-factory-boy==3.1.0
-
-# CTD is used to process BTL and ROS files
-ctd==1.4.7
-# ctd @ git+https://github.com/upsonp/python-ctd@main
-
-# used for reading and producing xlsx files
-openpyxl==3.1.5
-
-# Corrects network issues on windows
-PySocks==1.7.1
-
-# time zone package
-pytz>=2022.6
-
-# math and data processing packages
-pandas==2.2.3
-jinja2==3.1.3
-matplotlib~=3.6.2
-django-pandas==0.6.6
-
-# cgi was removed for python 3.13, but django running asgi requires it
-legacy-cgi
-
-# Post pandas to_html table styling
+django-widget-tweaks
+django-pandas
+django-htmx
 beautifulsoup4
-
-# xlrd is for working with legacy excel (.xls) files
-xlrd==2.0.1
-
-# Connection to oracle database
-cx_Oracle~=8.3
-# oracledb is the eventual replacement for cx_oracle see note in dart/settings.py
-# oracledb==1.4.2
-
-# package handles native UI components like open file dialog.
-easygui==0.98.3
-
-# used for versioning databases
-gitpython==3.1.43
-
-# Sometimes windows locks logfiles which will then start throwing errors when info.log and error.log
-# are being written to. This will help resolve the issue.
-concurrent_log_handler==0.9.25
+django-channels
+uvicorn
+channels
+concurrent-log-handler==0.9.26
+gitpython
+pandas
+websockets
+factory_boy

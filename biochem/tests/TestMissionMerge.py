@@ -7,7 +7,7 @@ from biochem import MergeTables
 from biochem import models as biochem_models
 from core.views_sample_type import new_sample_type
 
-from settingsdb.tests import utilities
+from user_settings.tests import utilities
 
 import logging
 

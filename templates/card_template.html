@@ -1,0 +1,20 @@
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+
+{% block card %}
+<div class="card" id="card_{{prefix}}">
+    <div class="card-header" id="card_header_{{prefix}}">
+        <div class="row">
+            <div class="card-title h3 col" id="card_title_{{prefix}}">{% block card_title %}Card Title{% endblock card_title %}</div>
+            <div class="col-auto">
+                {% block card_header_buttons %}
+                {% endblock card_header_buttons %}
+            </div>
+        </div>
+    </div>
+    <div class="{% block card_body_class %}card-body{% endblock %}" style="{% block card_body_style %}{% endblock %}" id="card_body_{{prefix}}">
+        {% block card_body %}
+        {% endblock card_body %}
+    </div>
+</div>
+{% endblock card %}

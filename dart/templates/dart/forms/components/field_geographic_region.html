@@ -1,0 +1,22 @@
+{% load widget_tweaks %}
+{% load i18n %}
+{% load bootstrap5 %}
+{% load bootstrap_icons %}
+{% load static %}
+
+<label for="{{ form_element.id_for_label }}" class="form-label">{{ form_element.label }}</label>
+
+{% include 'dart/forms/components/field_geographic_region_select.html' with form_element=form_element %}
+
+{% if form_element.errors %}
+    {{ form_element|add_class:"form-control is-invalid" }}
+{% else %}
+    {{ form_element|add_class:"form-control" }}
+{% endif %}
+<div id="div_id_geographic_regions_row" class="row" hx-swap="outerHTML" hx-trigger="update_regions from:body" hx-post="{% url 'dart:form_mission_show_selected_geographic_regions' %}">
+
+</div>
+<small class="form-text text-muted">{% trans "One to four geographic regions. Combined text length may not exceed 100 characters" %}</small>
+<div id="div_id_geographic_region_errors" class="invalid-feedback">
+    {{ form_element.errors|striptags }}
+</div>

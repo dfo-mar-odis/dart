@@ -1,0 +1,54 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div id="div_id_action_table" class="row">
+    <div class="col">
+        <table id="table_id_action_table" class="table table-striped table-sm">
+            <thead>
+            <tr>
+                <th>{% trans 'Action' %}</th>
+                <th>{% trans 'Time' %}</th>
+                <th>{% trans 'Latitude' %}</th>
+                <th>{% trans 'Longitude' %}</th>
+                <th>{% trans 'Sounding' %}</th>
+                <th></th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for action in event.actions.all %}
+            <tr>
+                <td>{{ action.get_type_display }}</td>
+                <td>{{ action.date_time }}</td>
+                <td>{{ action.latitude }}</td>
+                <td>{{ action.longitude }}</td>
+                <td>{{ action.sounding }}</td>
+                <td>
+                    {% if form %}
+                    <div class="d-flex justify-content-end">
+                        <button type="button" hx-swap="none" hx-get="{% url 'dart:form_event_action_update' event.pk action.pk %}" class="btn btn-secondary btn-sm">{% custom_icon 'pencil-square' %}</button>
+                        <button class="btn btn-danger btn-sm ms-1" hx-post="{% url 'dart:form_event_action_delete' event.pk action.pk %}" >{% custom_icon 'dash-square' %}</button>
+                    </div>
+                    {% endif %}
+                </td>
+            </tr>
+            {% if action.comment %}
+            <tr>
+                <td><strong>{% trans 'Comment' %} :</strong></td>
+                <td colspan="5"><div class="d-flex justify-content-start">{{ action.comment }}</div></td>
+            </tr>
+            {% endif %}
+            {% endfor %}
+            </tbody>
+            <tfoot>
+            <tr>
+                <th>{% trans 'Total Time :' %}</th>
+                <th>{{ event.drift_time }}</th>
+                <th>{% trans 'Total Distance (m)' %}</th>
+                <th>{{ event.drift_distance }}</th>
+                <th>{# sounding #}</th>
+                <th></th>
+            </tr>
+            </tfoot>
+        </table>
+    </div>
+</div>

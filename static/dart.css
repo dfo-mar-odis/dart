@@ -1,0 +1,72 @@
+table thead th {
+    position: sticky;
+    top: 0;
+    background: white;
+    box-shadow: 0 1px 1px rgba(0,0,0,.1);
+    padding: 0.75rem;
+}
+
+.vertical-scrollbar-sm {
+    height: 150px;
+}
+
+.vertical-scrollbar {
+    height: 400px;
+}
+
+.vertical-scrollbar-lg {
+    height: 600px;
+}
+
+/* Modern scrollbar styling */
+.vertical-scrollbar-lg, .vertical-scrollbar, .vertical-scrollbar-sm {
+    scrollbar-width: thin;
+    position: relative;
+    overflow-y: scroll;
+
+}
+
+.vertical-scrollbar-lg::-webkit-scrollbar,
+.vertical-scrollbar::-webkit-scrollbar,
+.vertical-scrollbar-sm::-webkit-scrollbar {
+    width: 6px;
+}
+
+.vertical-scrollbar-lg::-webkit-scrollbar-thumb,
+.vertical-scrollbar::-webkit-scrollbar-thumb,
+.vertical-scrollbar-sm::-webkit-scrollbar-thumb {
+    background-color: #c1c1c1;
+    border-radius: 3px;
+}
+
+.htmx-indicator {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+
+.htmx-request .htmx-indicator {
+    opacity: 1;
+}
+
+.htmx-request.htmx-indicator {
+    opacity: 1;
+}
+
+.htmx-swapping {
+    opacity: 0;
+    transition: opacity 200ms ease-out;
+}
+
+.htmx-settling {
+    opacity: 0;
+    transition: opacity 200ms ease-in;
+}
+
+.htmx-added {
+    opacity: 0;
+    animation: fade-in 500ms forwards;
+}
+
+@keyframes fade-in {
+    to { opacity: 1; }
+}

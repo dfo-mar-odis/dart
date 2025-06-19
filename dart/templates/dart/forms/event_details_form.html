@@ -1,0 +1,67 @@
+{% load static %}
+{% load i18n %}
+{% load humanize %}
+{% load bootstrap_icons %}
+
+<div id="div_id_event_details_container" hx-swap-oob="true">
+    <form>
+        {{ form.mission }}
+        <div class="row mb-2">
+            <div class="col-auto">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.event_id %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.station %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.instrument %}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.sample_id %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.end_sample_id %}
+            </div>
+        </div>
+        {% if event and event.instrument.type == 2 %}
+        <div class="row mb-2">
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.wire_out %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.wire_angle %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.flow_start %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.flow_end %}
+            </div>
+        </div>
+        <div class="row mb-2">
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.surface_area %}
+            </div>
+            <div class="col">
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.flowmeter_constant %}
+            </div>
+        </div>
+        {% endif %}
+        <div class="row">
+            <div class="col">
+            </div>
+            <div class="col-auto">
+                {% if event %}
+                <input id="input_id_event_form_new" type="hidden" class="btn btn-primary" hx-swap="none" hx-post="{% url 'dart:form_events_update' mission.pk event.pk %}">{% custom_icon 'check-square' %}</input>
+                {% elif mission %}
+                <input id="input_id_event_form_update" type="hidden" class="btn btn-primary" hx-swap="none" hx-post="{% url 'dart:form_events_new' mission.pk %}">
+                {% endif %}
+            </div>
+        </div>
+    </form>
+    {% if action_form %}
+    {% include 'dart/forms/action_form.html' with form=action_form event=event %}
+    {% endif %}
+</div>
