@@ -1,6 +1,5 @@
 django
 django_filter
-django-bootstrap-v5
 django-bootstrap-icons
 django-widget-tweaks
 django-pandas
@@ -13,3 +12,4 @@ gitpython
 pandas
 websockets
 factory_boy
+oracledb
