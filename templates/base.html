@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 {% load static %}
 {% load bootstrap_icons %}
-{% load bootstrap5 %}
 {% load i18n %}
 
 <html lang="en" dir="ltr">
@@ -14,9 +13,9 @@
     {# Bootstrap 5 #}
     <link rel="stylesheet" href="{% static 'bootstrap-5.3.6-dist/css/bootstrap.min.css' %}"/>
     <link rel="stylesheet" href="{% static 'bootstrap-icons-1.13.1/bootstrap-icons.min.css' %}"/>
+    <script type="text/javascript" src="{% static 'bootstrap-5.3.6-dist/js/bootstrap.bundle.min.js' %}"></script>
 
     <script type="text/javascript" src="{% static 'jquery-3.7.1.min.js' %}"></script>
-    <script type="text/javascript" src="{% static 'bootstrap-5.3.6-dist/js/bootstrap.bundle.min.js' %}"></script>
     <script type="text/javascript" src="{% static 'htmx-2.0.4/js/htmx.js' %}"></script>
     <script type="text/javascript" src="{% static 'htmx-2.0.4/js/multi-swap.js' %}"></script>
     <script type="text/javascript" src="{% static 'htmx-2.0.4/js/ws.js' %}"></script>
@@ -68,10 +67,6 @@
         </ul>
     </div>
 </nav>
-{% endblock %}
-
-{% block messages %}
-{% bootstrap_messages %}
 {% endblock %}
 
 <div class="container{% if wide_format %}-fluid{% endif %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
