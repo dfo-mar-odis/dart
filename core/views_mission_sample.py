@@ -361,6 +361,16 @@ def list_samples(request, mission_id):
     table_body = table.find('tbody')
     table_body.attrs['id'] = "tbody_id_sample_table"
 
+    #add sticky columns to all the tbody frist two th elements
+    for tr in table_body.find_all('tr'):
+        th1 = tr.find('th')
+        th1.attrs['class'] = "sticky-column"
+        th1.attrs['style'] = "left: -1px;"
+
+        th2 = th1.find_next_sibling('th')
+        th2.attrs['class'] = "sticky-column"
+        th2.attrs['style'] = "left: 89px;"
+
     # 9 rows are visible on screen so let's put the trigger on line 8, which is sure to be in the table
     # and will trigger the reload before the user hits the bottlm
     page_trigger = 8
@@ -385,7 +395,7 @@ def list_samples(request, mission_id):
 
     table = df_soup.find("table", recursive=False)
     table.attrs['id'] = "table_id_sample_table"
-    table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
+    table.attrs['class'] = 'table table-striped table-sm'
     table.attrs['hx-swap-oob'] = 'true'
 
     return HttpResponse(df_soup)
@@ -398,7 +408,10 @@ def format_all_sensor_table(df_soup: BeautifulSoup, mission: models.Mission):
 
     # We're going to flatten the headers down to one row then remove the other thead rows.
     # this is the row containing the sensor/sample short names
-    sensor_headers = df_soup.find("thead").find("tr")
+    table_header = df_soup.find("thead")
+    table_header.attrs['class'] = "sticky-top bg-white"
+
+    sensor_headers = table_header.find("tr")
 
     # this is the replicate row, but we aren't doing anything with this row so get rid of it
     if(replicate_headers := sensor_headers.findNext("tr")):
@@ -425,12 +438,15 @@ def format_all_sensor_table(df_soup: BeautifulSoup, mission: models.Mission):
                                              database, mission.pk, models.InstrumentType.ctd.value))})
     button.string = _("Sample")
     sensor_column.append(button)
+    sensor_column.attrs['class'] = "sticky-column"
+    sensor_column.attrs['style'] = "left: -1px;"
 
     # copy the 'Pressure' label
     index_column = index_column.findNext('th')
     sensor_column = sensor_column.findNext('th')
+    sensor_column.attrs['class'] = "sticky-column"
+    sensor_column.attrs['style'] = "left: 89px;"
     sensor_column.string = index_column.string
-
     # remove the now unneeded index_header row
     index_headers.decompose()
 
@@ -443,6 +459,9 @@ def format_all_sensor_table(df_soup: BeautifulSoup, mission: models.Mission):
     upload_row_title = df_soup.new_tag('th')
     upload_row_title.attrs['colspan'] = "2"
     upload_row_title.string = _("Biochem upload")
+    upload_row_title.attrs['class'] = "sticky-column"
+    upload_row_title.attrs['style'] = "left: -1px;"
+
     upload_row.append(upload_row_title)
 
     # Now we're going to convert all of the sensor/sample column labels, which are actually the

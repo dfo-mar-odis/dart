@@ -94,3 +94,15 @@ span.spinner-border {
 input.invisible {
     display: none;
 }
+
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+.sticky-column {
+    position: sticky;
+    background-clip: border-box;
+    min-width: 90px;
+    background-color: white; /* Prevent transparency */
+    z-index: 1; /* Ensure it stays above other content */
+}
