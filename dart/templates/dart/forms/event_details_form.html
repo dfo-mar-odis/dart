@@ -11,7 +11,7 @@
                 {% include 'dart/forms/components/field_form_input.html' with form_element=form.event_id %}
             </div>
             <div class="col">
-                {% include 'dart/forms/components/field_form_input.html' with form_element=form.station %}
+                {% include 'dart/forms/components/field_form_input.html' with form_element=form.global_station %}
             </div>
             <div class="col">
                 {% include 'dart/forms/components/field_form_input.html' with form_element=form.instrument %}
@@ -54,12 +54,17 @@
             </div>
             <div class="col-auto">
                 {% if event %}
-                <input id="input_id_event_form_new" type="hidden" class="btn btn-primary" hx-swap="none" hx-post="{% url 'dart:form_events_update' mission.pk event.pk %}">{% custom_icon 'check-square' %}</input>
-                {% elif mission %}
-                <input id="input_id_event_form_update" type="hidden" class="btn btn-primary" hx-swap="none" hx-post="{% url 'dart:form_events_new' mission.pk %}">
+                <button id="input_id_event_form_update" class="d-none" hx-swap="none"
+                        hx-post="{% url 'dart:form_events_update' mission.pk event.pk %}">{% custom_icon 'check-square'
+                    %}</input>
+                {% endif %}
+                {% if mission %}
+                <button id="input_id_event_form_new" class="d-none" hx-swap="none"
+                        hx-post="{% url 'dart:form_events_new' mission.pk %}">
                 {% endif %}
             </div>
         </div>
+        {{ form.station }}
     </form>
     {% if action_form %}
     {% include 'dart/forms/action_form.html' with form=action_form event=event %}

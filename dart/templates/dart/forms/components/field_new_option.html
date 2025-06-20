@@ -5,9 +5,9 @@
 <div id="{{ field_swap_id }}" class="row mb-2" hx-swap-oob="true" hx-swap="none">
   <div id="div_id_btn_col_{{ field_swap_id }}" class="col-auto">
     <button class="btn btn-primary" id="btn_id_add_{{ field_swap_id }}" title="{% trans 'Add' %}" hx-post="{{add_url}}">{% custom_icon 'plus-square' %}</button>
-    <button class="btn btn-danger" id="btn_id_cancel_{{ field_swap_id }}" title="{% trans 'Cancel' %}" hx-get="{{cancel_url}}" name="cancel">{% custom_icon 'dash-square' %}</button>
+    <button class="btn btn-secondary" id="btn_id_cancel_{{ field_swap_id }}" title="{% trans 'Cancel' %}" hx-get="{{cancel_url}}" name="cancel">{% custom_icon 'x-square' %}</button>
   </div>
   <div id="div_id_field_col_{{ field_swap_id }}" class="col">
-    <input type="text" id="input_id_field_{{ field_swap_id }}" name="{{ field_name }}" class="form-control" />
+    <input type="text" id="input_id_field_{{ field_swap_id }}" name="{{ field_name }}" class="form-control {% if is_invalid %}is-invalid{% endif %}" {% if placeholder %}placeholder="{{ placeholder }}{% endif %}" />
   </div>
 </div>

@@ -7,13 +7,13 @@
         <button class="btn btn-primary" id="btn_id_add_{{ field_swap_id }}" title="{% trans 'Add' %}"
                 hx-post="{{add_url}}">{% custom_icon 'plus-square' %}
         </button>
-        <button class="btn btn-danger" id="btn_id_cancel_{{ field_swap_id }}" title="{% trans 'Cancel' %}"
-                hx-get="{{cancel_url}}" name="cancel">{% custom_icon 'dash-square' %}
+        <button class="btn btn-secondary" id="btn_id_cancel_{{ field_swap_id }}" title="{% trans 'Cancel' %}"
+                hx-get="{{cancel_url}}" name="cancel">{% custom_icon 'x-square' %}
         </button>
     </div>
     <div id="div_id_field_col_{{ field_swap_id }}" class="col">
         <div class="row">
-            <div class="col">
+            <div class="col-auto">
                 <select class="form-select" name="type">
                     {% for value, label in types %}
                     <option value="{{ value }}">{{label}}</option>
@@ -22,7 +22,7 @@
             </div>
             <div class="col">
                 <input type="text" id="input_id_field_{{ field_swap_id }}" name="{{ field_name }}"
-                       class="form-control"/>
+                       class="form-control {% if is_invalid %}is-invalid{% endif %}" placeholder="{% trans 'Instrument Name' %}"/>
             </div>
         </div>
     </div>

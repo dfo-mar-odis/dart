@@ -4,19 +4,47 @@
 {% load bootstrap_icons %}
 
 <div id="div_id_event_details_container" hx-swap-oob="true">
-    <div class="row">
-        <div class="col-auto">
-            <div class="fs-3">{% trans 'Event' %} : {{ event.event_id }}</div>
-        </div>
-    </div>
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>{% trans 'Event' %}</th>
+            <th>{% trans 'Station' %}</th>
+            <th>{% trans 'Instrument' %}</th>
+            <th>{% trans 'Start ID' %}</th>
+            <th>{% trans 'End ID' %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>{{ event.event_id }}</td>
+            <td>{{ event.station.name }}</td>
+            <td>{{ event.instrument.get_type_display }}{% if instrument.name %} - {{ instrument.name }}{% endif %}</td>
+            <td>{{ event.sample_id }}</td>
+            <td>{{ event.end_sample_id }}</td>
+        </tr>
+        </tbody>
+    </table>
 
-    <div class="row">
-        <div class="col">
-            <div class="fs-3">{% trans 'Station' %} : {{ event.station.name }}</div>
-        </div>
-        <div class="col">
-            <div class="fs-3">{% trans 'Instrument' %} : {{ event.instrument.get_type_display }}</div>
-        </div>
-    </div>
+    {% if event.instrument.type == 2 %}
+    <table class="table table-striped">
+        <thead>
+        <tr>
+            <th>{% trans 'Wire Out' %}</th>
+            <th>{% trans 'Wire Angle' %}</th>
+            <th>{% trans 'Flowmeter Start' %}</th>
+            <th>{% trans 'Flowmeter End' %}</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+            <td>{{ event.wire_out }}</td>
+            <td>{{ event.wire_angle }}</td>
+            <td>{{ event.flow_start }}</td>
+            <td>{{ event.flow_end }}</td>
+        </tr>
+        </tbody>
+    </table>
+    {% endif %}
+
     {% include 'dart/forms/action_form.html' with event=event %}
 </div>
