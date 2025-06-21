@@ -1,4 +1,6 @@
 import copy
+import math
+import numpy as np
 
 from bs4 import BeautifulSoup
 from django import forms
@@ -13,6 +15,7 @@ from dart import models
 from dart.forms import event_action_form
 
 from user_settings import models as user_models
+
 
 class EventDetailForm(forms.ModelForm):
     mission = forms.ModelChoiceField(
@@ -39,7 +42,7 @@ class EventDetailForm(forms.ModelForm):
         queryset=models.Instrument.objects.all(),
         required=True,
         empty_label="--------",
-        widget = forms.Select(attrs={
+        widget=forms.Select(attrs={
             'hx-swap': 'none',
             'hx-trigger': 'change',
             'hx-get': reverse_lazy('dart:form_events_new_instrument')  # Replace with your actual URL or use reverse()
@@ -79,13 +82,13 @@ class EventDetailForm(forms.ModelForm):
 
 
 def get_form(request, mission_id, event_id=None):
-
     soup = BeautifulSoup('', 'html.parser')
     # if we're editing an existing event we want to put labels on the card header to accept changes
-    div_button_col = soup.new_tag("div", id="div_id_card_event_details_button_column", attrs={'class':"col", 'hx-swap-oob':"true"})
+    div_button_col = soup.new_tag("div", id="div_id_card_event_details_button_column",
+                                  attrs={'class': "col", 'hx-swap-oob': "true"})
     soup.append(div_button_col)
 
-    #These labels are for inputs in the dart/forms/event_details_form.html template
+    # These labels are for inputs in the dart/forms/event_details_form.html template
     div_button_col.append(label_update := soup.new_tag('label', attrs={'for': "input_id_event_form_new"}))
 
     label_update.append(BeautifulSoup(load_svg('check'), 'html.parser'))
@@ -95,6 +98,7 @@ def get_form(request, mission_id, event_id=None):
     # 1) get the root object this child object will be attached to
     mission = models.Mission.objects.get(pk=mission_id)
     context = {'mission': mission}
+    initial = {'mission': mission.pk}
 
     # 2) if an ID for the child object is provided then store it for using with the form as an update instance
     event = None
@@ -105,15 +109,15 @@ def get_form(request, mission_id, event_id=None):
     if request.method == "POST":
         # 3) update only create or update the object if in a post request.
         # 3a) All forms should have a hidden field for whatever object the new element is being tied to.
-        initial = {
-            "mission": mission.pk,
-        }
-
         # Special case: have to convert the dart.models.Station to a user_settings.models.GlobalStation
         if hasattr(event, 'station'):
             station = user_models.GlobalStation.objects.get_or_create(name=event.station)[0]
             initial['global_station'] = station
-
+        elif (station_id := request.POST.get('global_station', '')) != '':
+            station = user_models.GlobalStation.objects.get(pk=int(station_id))
+            local_stn = models.Station.objects.get_or_create(name=station)[0]
+            request.POST = copy.copy(request.POST)
+            request.POST['station'] = local_stn.pk
         # 3b) populate the form and store it in the context. Either it's valid and you'll return the
         #   form with the new instance that was just created or you'll return the form with errors
         #   the user needs to update.
@@ -122,6 +126,13 @@ def get_form(request, mission_id, event_id=None):
         # 3c) validate the form, if valid a new child object will be created and returned.
         if context['form'].is_valid():
             event = context['form'].save()
+            if event.instrument.type == models.InstrumentType.net and any(
+                    sub in event.instrument.name.lower() for sub in ["202", "76"]):
+                # 202um ringnets use a 0.75m ring
+                diameter = 0.75
+                event.surface_area = np.pi * np.power(float(diameter/2), 2)
+                event.flowmeter_constant = 0.3
+                event.save()
             context['event'] = event
             station = user_models.GlobalStation.objects.get_or_create(name=event.station)[0]
             context['form'] = EventDetailForm(instance=event, initial={'global_station': station.pk})
@@ -131,15 +142,16 @@ def get_form(request, mission_id, event_id=None):
         # 4) If this is a GET request, but the object we're creating exists then we want a form for updating
         # 4a) Create a version of the form that has an instance for updating and any required subforms.
         station = user_models.GlobalStation.objects.get_or_create(name=event.station)[0]
-        context['form'] = EventDetailForm(instance=event, initial={'global_station': station.pk})
+        initial['global_station'] = station.pk
+        context['form'] = EventDetailForm(instance=event, initial=initial)
         context['action_form'] = event_action_form.ActionsModelForm(initial={'event': event.pk})
     else:
-        initial = {}
-        initial["mission"] = mission.pk,
         if event:
-            initial = {field.name: getattr(event, field.name, None) for field in event._meta.fields if field.name not in ['id', 'event_id']}
+            initial = {field.name: getattr(event, field.name, None) for field in event._meta.fields if
+                       field.name not in ['id', 'event_id']}
             initial['global_station'] = user_models.GlobalStation.objects.get_or_create(name=event.station.name)[0].pk
-        initial["event_id"] = (mission.events.aggregate(max_id=Max('event_id'))['max_id'] + 1) if mission.events.exists() else 1
+        initial["event_id"] = (
+                    mission.events.aggregate(max_id=Max('event_id'))['max_id'] + 1) if mission.events.exists() else 1
 
         # 5b) create the blank form to be returned
         context['form'] = EventDetailForm(initial=initial)
@@ -166,7 +178,6 @@ def get_form(request, mission_id, event_id=None):
 
 
 def new_station(request):
-
     form = None
 
     is_invalid = False
@@ -175,8 +186,8 @@ def new_station(request):
     elif request.GET.get('global_station', "0") != "0":
         return HttpResponse()  # user selected an element that wasn't 0, "new"
     elif request.method == "POST":
-        if (station:=request.POST.get('global_station', '')) != '':
-            if (n_station:=user_models.GlobalStation.objects.filter(name__iexact=station)).exists():
+        if (station := request.POST.get('global_station', '')) != '':
+            if (n_station := user_models.GlobalStation.objects.filter(name__iexact=station)).exists():
                 n_station = n_station.first()
             else:
                 n_station = user_models.GlobalStation.objects.get_or_create(name=station)[0]
@@ -210,7 +221,6 @@ def new_station(request):
 
 
 def new_instrument(request):
-
     form = None
 
     missing_name = False
@@ -219,9 +229,9 @@ def new_instrument(request):
     elif request.GET.get('instrument', "0") != "0":
         return HttpResponse()  # user selected an element that wasn't 0, "new"
     elif request.method == "POST":
-        if (inst_name:=request.POST.get('instrument', '')) == '':
+        if (inst_name := request.POST.get('instrument', '')) == '':
             missing_name = True
-        elif (type:=request.POST.get('type', None)):
+        elif (type := request.POST.get('type', None)):
             n_instrument = models.Instrument(type=type, name=inst_name)
             n_instrument.save()
 
@@ -247,10 +257,25 @@ def new_instrument(request):
     return response
 
 
+def delete_event(request, mission_id, event_id):
+
+    if request.method == "POST":
+        mission = models.Mission.objects.get(pk=mission_id)
+        event = mission.events.get(pk=event_id)
+        event.delete()
+
+        html = render_to_string('dart/partials/event_details_card.html', context={"mission": mission})
+        response = HttpResponse(html)
+        response['HX-Trigger'] = "reload_events"
+        return response
+
+
+
 urlpatterns = [
     path("event/new/<int:mission_id>/", get_form, name="form_events_new"),
     path("event/new/station/", new_station, name="form_events_new_station"),
     path("event/new/instrument/", new_instrument, name="form_events_new_instrument"),
     path("event/update/<int:mission_id>/<int:event_id>/", get_form, name="form_events_update"),
     path("event/copy/<int:mission_id>/<int:event_id>/", get_form, name="form_events_copy"),
+    path("event/delete/<int:mission_id>/<int:event_id>/", delete_event, name="form_events_delete"),
 ]

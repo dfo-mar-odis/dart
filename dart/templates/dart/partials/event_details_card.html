@@ -18,6 +18,11 @@
                 <button class="btn btn-primary btn-sm" disabled="disabled" >{% custom_icon 'pencil-square' %}</button>
                 {% endif %}
             </div>
+            <div class="col-auto">
+                {% if event %}
+                <button class="btn btn-danger btn-sm" title="{% trans 'Delete Event' %}" hx-swap="none" hx-post="{% url 'dart:form_events_delete' mission.pk event.pk %}" >{% custom_icon 'dash-square' %}</button>
+                {% endif %}
+            </div>
         </div>
     </div>
     <div class="card-body vertical-scrollbar-lg" id="card_body_event_details">
