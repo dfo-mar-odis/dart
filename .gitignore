@@ -63,8 +63,8 @@ node_modules/
 /public
 webpack-stats.json
 tmp_*
-test_*
 !/tests/test_*
+test_start*
 /plots/
 /dart_env/
 /settings/
