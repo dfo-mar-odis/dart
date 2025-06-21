@@ -6,7 +6,11 @@ from bio_tables import models as bio_models
 
 
 class LocalSetting(models.Model):
-    database_location = models.FilePathField(verbose_name=_("Mission Database(s) Path"), default="./missions",
+    database_location = models.FilePathField(verbose_name=_("Mission Database(s) Path"),
+                                             path="./",
+                                             default="./missions",
+                                             allow_files=False,
+                                             allow_folders=True,
                                              help_text=_("Location of individual mission databases"))
 
     connected = models.BooleanField(verbose_name="Connected", default=False)

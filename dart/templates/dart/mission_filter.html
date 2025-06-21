@@ -6,6 +6,11 @@
 {% block content %}
 <div class="row mb-2">
     <div class="col">
+    {% include 'dart/forms/database_location_form.html' with form=location_form object=object %}
+    </div>
+</div>
+<div class="row mb-2">
+    <div class="col">
     {% include 'dart/forms/mission_list_filter_form.html' with form=mission_form object=object %}
     </div>
 </div>

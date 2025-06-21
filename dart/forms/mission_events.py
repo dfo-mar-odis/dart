@@ -54,9 +54,9 @@ def get_event_details(event):
 
     return soup
 
-def event_selection(request, mission_id, event_pk):
+def event_selection(request, mission_id, event_id):
     try:
-        event = dart_models.Event.objects.get(pk=event_pk, mission__id=mission_id)
+        event = dart_models.Event.objects.get(pk=event_id, mission__id=mission_id)
     except dart_models.Event.DoesNotExist:
         return HttpResponse("Event not found", status=404)
 
@@ -78,8 +78,9 @@ def event_selection(request, mission_id, event_pk):
         response = HttpResponse(soup)
     else:
         tr.attrs['class'] = 'table-success'
-        tr.attrs['hx-trigger'] = 'deselect from:body'
-        tr.attrs['hx-get'] = url + "?deselect=true"
+        tr.attrs['hx-trigger'] = f'click, selected_event_{event_id} from:body, deselect from:body'
+        tr.attrs['hx-swap'] = 'outerHTML'
+        tr.attrs['hx-get'] = url + f"?deselect=true"
         soup.append(get_event_details(event))
         response = HttpResponse(soup)
         response['HX-Trigger'] = 'deselect'
@@ -88,5 +89,5 @@ def event_selection(request, mission_id, event_pk):
 
 urlpatterns = [
     path("mission/event/list/<int:mission_id>", list_events, name="form_events_list"),
-    path("mission/event/select/<int:mission_id>/<int:event_pk>/", event_selection, name="form_events_details"),
+    path("mission/event/select/<int:mission_id>/<int:event_id>/", event_selection, name="form_events_details"),
 ]

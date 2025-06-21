@@ -6,6 +6,7 @@ from config import generic_views
 
 from dart import models
 
+from dart.forms.database_location_form import DatabaseLocationForm
 from dart.forms.mission_settings_form import MissionSettingsForm
 from dart.forms.mission_list_filter_form import MissionListFilterForm
 
@@ -60,6 +61,7 @@ class MissionFilter(GenericMissionView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
 
+        context['location_form'] = DatabaseLocationForm()
         context['mission_form'] = MissionListFilterForm()
         context['missions'] = models.Mission.objects.all()
 

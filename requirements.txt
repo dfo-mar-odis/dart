@@ -13,3 +13,5 @@ pandas
 websockets
 factory_boy
 oracledb
+easygui
+whitenoise

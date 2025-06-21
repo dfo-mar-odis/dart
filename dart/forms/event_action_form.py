@@ -1,5 +1,10 @@
+import re
+import numpy as np
+
 from bs4 import BeautifulSoup
 from django import forms
+from django.utils.translation import gettext as _
+from django.core.exceptions import ValidationError
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.urls import path
@@ -24,10 +29,58 @@ class ActionsModelForm(forms.ModelForm):
         required=True
     )
 
+    latitude = forms.CharField()
+    longitude = forms.CharField()
+
     class Meta:
         model = models.Action
         fields = '__all__'
 
+    def clean_longitude(self):
+        data = self.cleaned_data['longitude']
+        try:
+            if re.match(r'(-{0,1}\d{1,3} \d{1,2}.*\d+( [Ee]|[Ww])*)', data):
+                lon_split: [str] = data.split(' ')
+                lon = float(lon_split[0])
+                negative = False
+                if lon < 0:
+                    lon *= -1
+                    negative = True
+
+                if len(lon_split) > 1:
+                    lon += float(lon_split[1])/60
+                if negative or (len(lon_split) > 2 and lon_split[2].upper() == 'W'):
+                    lon *= -1
+                return str(np.round(lon, models.Action.longitude.field.decimal_places))
+
+            lon = float(data)
+            return str(np.round(lon, models.Action.longitude.field.decimal_places))
+        except ValueError:
+            message = _("Longitude is badly formatted. Must be in decimal degrees, or degree minutes with 'W' or 'E'. E.g: 62 24.53 W")
+            raise forms.ValidationError(message)
+
+    def clean_latitude(self):
+        data = self.cleaned_data['latitude']
+        try:
+            if re.match(r'(-{0,1}\d{1,2} \d{1,2}\.*\d+( [Nn]|[Ss])*)', data):
+                lat_split: [str] = data.split(' ')
+                lat = float(lat_split[0])
+                negative = False
+                if lat < 0:
+                    lat *= -1
+                    negative = True
+
+                if len(lat_split) > 1:
+                    lat += float(lat_split[1])/60
+                if negative or (len(lat_split) > 2 and lat_split[2].upper() == 'S'):
+                    lat *= -1
+                return str(np.round(lat, models.Action.latitude.field.decimal_places))
+
+            lat = float(data)
+            return str(np.round(lat, models.Action.latitude.field.decimal_places))
+        except ValueError:
+            message = _("Latitude is badly formatted. Must be in decimal degrees, or degree minutes with 'N' or 'S'. E.g: 42 12.432 N")
+            raise forms.ValidationError(message)
 
 def get_form(request, event_id, action_id=None):
 

@@ -1,0 +1,20 @@
+{% extends 'collapsable_card_template.html' %}
+{% load i18n %}
+{% load bootstrap_icons %}
+
+{% block card_title %}
+{% trans 'Mission Database Folder' %}
+{% endblock card_title %}
+
+{% block card_body %}
+<form>
+<div class="row align-items-center">
+ <div class="col">
+ {% include 'dart/forms/components/field_form_input.html' with form_element=form.database_location %}
+ </div>
+ <div class="col-auto">
+  <button class="btn btn-secondary mt-2" hx-swap="outerHTML" hx-target="#id_database_location" hx-post="{% url 'dart:form_db_location_remove_selected' %}" title="{% trans 'Forget this location' %}">{% custom_icon 'x-square' %}</button>
+ </div>
+</div>
+ </form>
+{% endblock card_body %}

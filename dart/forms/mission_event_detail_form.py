@@ -16,6 +16,9 @@ from dart.forms import event_action_form
 
 from user_settings import models as user_models
 
+import re
+from django import forms
+from django.core.exceptions import ValidationError
 
 class EventDetailForm(forms.ModelForm):
     mission = forms.ModelChoiceField(
@@ -88,6 +91,9 @@ def get_form(request, mission_id, event_id=None):
     soup.append(div_button_col)
 
     label_update = soup.new_tag('label', attrs={'for': "input_id_event_form_new"})
+    if event_id and 'copy' not in request.path:
+        label_update.attrs['for'] = "input_id_event_form_update"
+
     label_update.append(BeautifulSoup(load_svg('check'), 'html.parser'))
     label_update.attrs.update({'class': "btn btn-sm btn-primary ms-1", 'title': _("Update Event")})
     div_button_col.append(label_update)
@@ -123,7 +129,6 @@ def get_form(request, mission_id, event_id=None):
             })})
             context['action_form'] = event_action_form.ActionsModelForm(initial={'event': event.pk})
     elif event and 'copy' not in request.path:
-        label_update.attrs['for'] = "input_id_event_form_update"
         station = user_models.GlobalStation.objects.get_or_create(name=event.station)[0]
         initial['global_station'] = station.pk
         context.update({
@@ -143,10 +148,9 @@ def get_form(request, mission_id, event_id=None):
 
     response = HttpResponse(soup)
     triggers = []
-    if 'update' not in request.path:
-        triggers.append('deselect')
-        if context.get('event'):
-            triggers.append('reload_events')
+    triggers.append('deselect')
+    if 'update' not in request.path and context.get('event'):
+        triggers.append('reload_events')
     if triggers:
         response['HX-Trigger'] = ', '.join(triggers)
 

@@ -1,5 +1,50 @@
 import os
 import math
+import easygui
+import time
+import ctypes
+
+import concurrent.futures
+
+from django.utils.translation import gettext as _
+
+
+def force_foreground_window():
+    # Give system time to create the dialog
+    time.sleep(0.25)
+    # Get the foreground window handle
+    dialog_title = _("Choose BTL directory")
+    hwnd = ctypes.windll.user32.FindWindowW(None, dialog_title)
+
+    if hwnd:
+        # Try more aggressive techniques to force to front
+        # This combination works better for dialog windows
+        ctypes.windll.user32.ShowWindow(hwnd, 5)  # SW_SHOW
+        ctypes.windll.user32.BringWindowToTop(hwnd)
+        ctypes.windll.user32.SetForegroundWindow(hwnd)
+        ctypes.windll.user32.FlashWindow(hwnd, True)
+    else:
+        # Fall back to the original method if we can't find by title
+        hwnd = ctypes.windll.user32.GetForegroundWindow()
+        if hwnd:
+            ctypes.windll.user32.SetForegroundWindow(hwnd)
+            ctypes.windll.user32.FlashWindow(hwnd, True)
+
+def diropenbox_on_top(*args, **kwargs):
+    import platform
+
+    # For Windows, use the dialog-forcing approach
+    if platform.system() == 'Windows':
+        # Start the dialog in a way that allows us to force it to the top
+        result = None
+        import threading
+        threading.Timer(0.2, force_foreground_window).start()
+        result = easygui.diropenbox(*args, **kwargs)
+        return result
+    else:
+        # For non-Windows platforms, just use the standard dialog
+        return easygui.diropenbox(*args, **kwargs)
+
 
 def distance(point1: [float, float], point2: [float, float]) -> float:
     """

@@ -2,7 +2,10 @@ import re
 
 from bs4 import BeautifulSoup
 
+from git import Repo
+
 from django import forms
+from django.conf import settings
 from django.utils.text import normalize_newlines
 from django.utils.translation import gettext as _
 from django.core.exceptions import ValidationError
@@ -82,7 +85,7 @@ class MissionSettingsForm(forms.ModelForm):
 
 
 def get_db_name(name: str) -> str:
-    return f'DART_{name}'
+    return name.upper() if name.upper().startswith('DART_') else f'DART_{name.upper()}'
 
 
 def get_form_soup(request, **kwargs) -> tuple[bool, models.Mission, BeautifulSoup]:
@@ -105,7 +108,12 @@ def get_form_soup(request, **kwargs) -> tuple[bool, models.Mission, BeautifulSou
             utils.create_database(db_name)
 
         valid = True
-        mission = form.save()
+        repo = Repo(settings.BASE_DIR)
+
+        mission = form.save(commit=False)
+        mission.dart_version = repo.head.commit.hexsha
+        mission.save()
+
         form_context['object'] = mission
 
     form_html = render_to_string('dart/forms/mission_settings_form.html', form_context)

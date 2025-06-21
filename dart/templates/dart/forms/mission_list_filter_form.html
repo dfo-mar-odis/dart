@@ -18,7 +18,7 @@
 {% endblock card_header_buttons %}
 
 {% block card_body %}
-<form id="form_id_mission_list" method="post" hx-swap="none" hx-get="{% url 'dart:form_mission_list_filter_filter' %}" hx-trigger="load">
+<form id="form_id_mission_list" method="post" hx-swap="none" hx-get="{% url 'dart:form_mission_list_filter_filter' %}" hx-trigger="load, reload_missions from:body">
     <div id="form_id_mission_list_hidden_submit">{# used by htmx to submit the form #}</div>
     <div class="row">
         <div class="col">

@@ -3,48 +3,79 @@
 {% load humanize %}
 {% load bootstrap_icons %}
 
-<div id="div_id_event_details_container" hx-swap-oob="true">
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>{% trans 'Event' %}</th>
-            <th>{% trans 'Station' %}</th>
-            <th>{% trans 'Instrument' %}</th>
-            <th>{% trans 'Start ID' %}</th>
-            <th>{% trans 'End ID' %}</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-            <td>{{ event.event_id }}</td>
-            <td>{{ event.station.name }}</td>
-            <td>{{ event.instrument.get_type_display }}{% if instrument.name %} - {{ instrument.name }}{% endif %}</td>
-            <td>{{ event.sample_id }}</td>
-            <td>{{ event.end_sample_id }}</td>
-        </tr>
-        </tbody>
-    </table>
-
+<div class="container-fluid" id="div_id_event_details_container" hx-swap-oob="true">
+    <div class="row mb-3">
+        <!-- Event Info -->
+        <div class="col-md-6 mb-2">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <strong>Event Details</strong>
+                </div>
+                <div class="card-body p-2">
+                    <dl class="row mb-0">
+                        <dt class="col-4">Event</dt>
+                        <dd class="col-8">{{ event.event_id }}</dd>
+                        <dt class="col-4">Station</dt>
+                        <dd class="col-8">{{ event.station.name }}</dd>
+                        <dt class="col-4">Instrument</dt>
+                        <dd class="col-8">{{ event.instrument.get_type_display }} - {{ event.instrument.name }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        <!-- Sample Info -->
+        <div class="col-md-6 mb-2">
+            <div class="card h-100">
+                <div class="card-header bg-light">
+                    <strong>Sample Summary</strong>
+                </div>
+                <div class="card-body p-2">
+                    <dl class="row mb-0">
+                        <dt class="col-5">Start ID</dt>
+                        <dd class="col-7">{{ event.sample_id }}</dd>
+                        <dt class="col-5">End ID</dt>
+                        <dd class="col-7">{{ event.end_sample_id }}</dd>
+                        <dt class="col-5">Total Bottles</dt>
+                        <dd class="col-7">{{ event.total_samples }}</dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Action Table -->
     {% if event.instrument.type == 2 %}
-    <table class="table table-striped">
-        <thead>
-        <tr>
-            <th>{% trans 'Wire Out' %}</th>
-            <th>{% trans 'Wire Angle' %}</th>
-            <th>{% trans 'Flowmeter Start' %}</th>
-            <th>{% trans 'Flowmeter End' %}</th>
-        </tr>
-        </thead>
-        <tbody>
-        <tr>
-            <td>{{ event.wire_out }}</td>
-            <td>{{ event.wire_angle }}</td>
-            <td>{{ event.flow_start }}</td>
-            <td>{{ event.flow_end }}</td>
-        </tr>
-        </tbody>
-    </table>
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong>Net Details</strong>
+        </div>
+        <div class="card-body p-2">
+            <table class="table table-striped mb-0">
+                <thead>
+                <tr>
+                    <th>{% trans 'Wire Out' %}</th>
+                    <th>{% trans 'Wire Angle' %}</th>
+                    <th>{% trans 'Flowmeter Start' %}</th>
+                    <th>{% trans 'Flowmeter End' %}</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr>
+                    <td>{{ event.wire_out }}</td>
+                    <td>{{ event.wire_angle }}</td>
+                    <td>{{ event.flow_start }}</td>
+                    <td>{{ event.flow_end }}</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
     {% endif %}
-
-    {% include 'dart/forms/action_form.html' with event=event %}
+    <div class="card mb-3">
+        <div class="card-header bg-light">
+            <strong>Action Details</strong>
+        </div>
+        <div class="card-body p-2">
+            {% include 'dart/forms/action_form.html' with event=event %}
+        </div>
+    </div>
 </div>
