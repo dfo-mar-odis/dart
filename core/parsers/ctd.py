@@ -415,7 +415,11 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
 
                 discrete_value = sample.discrete_values.all().first()
                 new_value = row[column.lower()]
-                if updated_value(discrete_value, 'value', new_value):
+                # a user may have previously deleted bad data in which case discrete_value will be None
+                if discrete_value is None:
+                    discrete_value = core_models.DiscreteSampleValue(sample=sample, value=new_value)
+                    new_discrete_samples.append(discrete_value)
+                elif updated_value(discrete_value, 'value', new_value):
                     update_discrete_samples.append(discrete_value)
             else:
                 sample = core_models.Sample(bottle=bottle, type=sample_types[column], file=file_name)
