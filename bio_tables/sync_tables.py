@@ -189,7 +189,7 @@ def create_fixture(bio_table_name: str = None, output_dir: str = "bio_tables/fix
     # otherwise a fixture for all bio_tables will be created
 
     bio_table = "bio_tables"
-    fixture_output = "biochem_fixtures.json"
+    fixture_output = "default_biochem_fixtures.json"
     if bio_table_name:
         bio_table += f".{bio_table_name}"
         fixture_output = bio_table_name.lower() + ".json"

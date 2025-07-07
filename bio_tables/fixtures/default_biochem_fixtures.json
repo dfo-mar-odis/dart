@@ -3,7 +3,14 @@
     "model": "bio_tables.bcupdate",
     "pk": 1,
     "fields": {
-        "last_update": "2023-11-28T12:59:41.491Z"
+        "last_update": "2025-07-07T10:22:47.167Z"
+    }
+},
+{
+    "model": "bio_tables.bcupdate",
+    "pk": 2,
+    "fields": {
+        "last_update": "2024-02-06T08:17:49.274Z"
     }
 },
 {
@@ -5725,6 +5732,36 @@
     }
 },
 {
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000483,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "ALLOM",
+        "parameter_description": "Chl a allomer",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000484,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "EPIMER",
+        "parameter_description": "Chl a epimer",
+        "unit_seq": 90000021,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
     "model": "bio_tables.bcanalysis",
     "pk": 90000000,
     "fields": {
@@ -6769,6 +6806,15 @@
     }
 },
 {
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000132,
+    "fields": {
+        "data_center_code": 20,
+        "name": "GO-SHIP",
+        "description": "Becker, S., et al (2019). GO-SHIP Repeat Hydrography Nutrient Manual: The precise and accurate determination of dissolved inorganic nutrients in seawater using Continuous Flow Analysis methods. GO-SHIP."
+    }
+},
+{
     "model": "bio_tables.bcstorage",
     "pk": 90000000,
     "fields": {
@@ -7306,6 +7352,15 @@
         "data_center_code": 20,
         "name": "TraceMetal_C20",
         "description": "ROPOS Corer"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Filtered-cellulose acetate",
+        "description": "Filtered on cellulose acetate"
     }
 },
 {
@@ -10992,7 +11047,7 @@
         "description": "Temperature / CTD / ITS-1990",
         "conversion_equation": "ITS90=ITPS-68/1.00024",
         "originally_entered_by": "BCPIERRE",
-        "method": "Temp_CTD_1990",
+        "method": "Temp_CTD_90_Convert",
         "priority": 2,
         "p_code": "TE90",
         "bodc_code": ""
@@ -23180,19 +23235,139 @@
 },
 {
     "model": "bio_tables.bcdatatype",
-    "pk": 90001140,
+    "pk": 90001141,
     "fields": {
         "data_center_code": 20,
-        "data_retrieval": 90000003,
-        "analysis": 90000015,
-        "preservation": 90000001,
-        "sample_handling": 90000001,
-        "storage": 90000001,
-        "unit": 90000005,
-        "description": "CTD Temperature meter using ITS-90",
+        "data_retrieval": 90000483,
+        "analysis": 90000035,
+        "preservation": 90000033,
+        "sample_handling": 90000013,
+        "storage": 90000013,
+        "unit": 90000019,
+        "description": "Chl a allomer",
         "conversion_equation": "",
-        "originally_entered_by": "BUGDENJ",
-        "method": "TE90",
+        "originally_entered_by": "BenjaminR",
+        "method": "HPLC_ALLOM",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001142,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000484,
+        "analysis": 90000035,
+        "preservation": 90000033,
+        "sample_handling": 90000013,
+        "storage": 90000013,
+        "unit": 90000019,
+        "description": "Chl a epimer",
+        "conversion_equation": "",
+        "originally_entered_by": "BenjaminR",
+        "method": "HPLC_EPIMER",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001143,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000014,
+        "analysis": 90000132,
+        "preservation": 90000029,
+        "sample_handling": 90000041,
+        "storage": 90000005,
+        "unit": 90000020,
+        "description": "Nitrate+Nitrite / GO-SHIP / Frozen / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "BenjaminR",
+        "method": "NO2NO3_Filt_F",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001144,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000027,
+        "analysis": 90000132,
+        "preservation": 90000029,
+        "sample_handling": 90000041,
+        "storage": 90000005,
+        "unit": 90000020,
+        "description": "Nitrite / GO-SHIP / Frozen / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "BenjaminR",
+        "method": "NO2_Filt_F",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001145,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000028,
+        "analysis": 90000132,
+        "preservation": 90000029,
+        "sample_handling": 90000041,
+        "storage": 90000005,
+        "unit": 90000020,
+        "description": "Ammonia / GO-SHIP / Frozen / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "BenjaminR",
+        "method": "NH3_Filt_F",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001146,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000012,
+        "analysis": 90000132,
+        "preservation": 90000029,
+        "sample_handling": 90000041,
+        "storage": 90000005,
+        "unit": 90000020,
+        "description": "Silicate / GO-SHIP / Frozen / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "BenjaminR",
+        "method": "SiO4_Filt_F",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001147,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000013,
+        "analysis": 90000132,
+        "preservation": 90000029,
+        "sample_handling": 90000041,
+        "storage": 90000005,
+        "unit": 90000020,
+        "description": "Phosphate / GO-SHIP / Frozen / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "BenjaminR",
+        "method": "PO4_Filt_F",
         "priority": 1,
         "p_code": "",
         "bodc_code": ""
@@ -104614,7 +104789,7 @@
         "tsn": 158770,
         "taxonomic_name": "Flaccisagitta hexaptera",
         "best_nodc7": 1,
-        "authority": "d¿Orbigny, 1843",
+        "authority": "d’Orbigny, 1843",
         "collectors_comment": "Harding, 1984",
         "data_managers_comment": "2010AZMP",
         "short_name": "",
@@ -105287,7 +105462,7 @@
         "taxonomic_name": "Protoperidinium quinquecorne ",
         "best_nodc7": 1,
         "authority": "",
-        "collectors_comment": "Gomez, F. 2005. A list of free-living dinoflagellate species\r\nin the world¿s oceans. Acta Bot. Croat. 64 (1), 129¿212.  p. 191. ",
+        "collectors_comment": "Gomez, F. 2005. A list of free-living dinoflagellate species\r\nin the world’s oceans. Acta Bot. Croat. 64 (1), 129–212.  p. 191. ",
         "data_managers_comment": "IML-May2011",
         "short_name": "",
         "tsn_itis": 10263,
@@ -110423,7 +110598,7 @@
         "taxonomic_name": "Orodendrum",
         "best_nodc7": 1,
         "authority": "",
-        "collectors_comment": "type of Phaeodaria Oroscena regalis Borgert translated by Friend and Riedel (1967) to Orodendrum in paper titled Friend, J. K. and Riedel, W. R., 1967. Cenozoic orosphaerid radiolarians from tropical Pacific sediments. Micropaleontology, vol. 13, no. 2, 217-232. ¿The species described by Borgert (1901) as Oroscena regalis, and subsequently thoroughly redescribed by Haecker (1908, pp. 428-429) and Riecke (1910) and recorded by Reshetniak (1955), undoubtedly belongs within Orodendrumas defined above. Haecker, in fact, suggested that Orodendrumhu xleyim ight be synonymous with 0. regalis ¿ Identified by Paulian Dumitrica 2004 from Radiolaria.org ",
+        "collectors_comment": "type of Phaeodaria Oroscena regalis Borgert translated by Friend and Riedel (1967) to Orodendrum in paper titled Friend, J. K. and Riedel, W. R., 1967. Cenozoic orosphaerid radiolarians from tropical Pacific sediments. Micropaleontology, vol. 13, no. 2, 217-232. “The species described by Borgert (1901) as Oroscena regalis, and subsequently thoroughly redescribed by Haecker (1908, pp. 428-429) and Riecke (1910) and recorded by Reshetniak (1955), undoubtedly belongs within Orodendrumas defined above. Haecker, in fact, suggested that Orodendrumhu xleyim ight be synonymous with 0. regalis “ Identified by Paulian Dumitrica 2004 from Radiolaria.org ",
         "data_managers_comment": "IOSzooplanktondbase_Dec2012",
         "short_name": "",
         "tsn_itis": null,
@@ -113007,6 +113182,310 @@
     }
 },
 {
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006130,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 591714,
+        "taxonomic_name": "Halocypris inflata",
+        "best_nodc7": 61110502,
+        "authority": "Dana, 1849",
+        "collectors_comment": "",
+        "data_managers_comment": "Formerly Halocypris brevirostris (Ncode 90000000000469)",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 127794
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006131,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Tripos furca",
+        "best_nodc7": 1204140100,
+        "authority": "(Ehrenberg) F. Gómez, 2013",
+        "collectors_comment": "Dodge, J.D. 1982. Marine dinoflagellates of the British Isles. London: Her Majesty's Stationery Office. 303 p.\r\nKraberg, A.; Baumann, M.; Dürselen, C.-D. 2010. Coastal phytoplankton : photo guide for Northern European Seas. München, Germany : Verlag Dr. Friedrich Pfeil, 2010. ISBN 9783899371130. 204 p.",
+        "data_managers_comment": "IML_PMAT_2023 New name for now unaccepted Ceratium furca (Ehrenberg) Claparède & Lachman, 1859 -TSN_10399, AphiaD_109950 - Nat_Taxonomic_Seq_90000000001011",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 840627
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006132,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Amphorides infundibulum",
+        "best_nodc7": 3540130800,
+        "authority": "Kofoid & Campbell, 1929",
+        "collectors_comment": "MARSHALL S.M. 1969. Order: Tintinnida. Conseil International Pour L'exploration de la Mer. Zooplankton Sheet 117-127.",
+        "data_managers_comment": "IML_PHYTO_March2024 (observed during the fall 2016 mission at the TIDM2 station)",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 427535
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006133,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Dadayiella bulbosa",
+        "best_nodc7": 3540130300,
+        "authority": "Brandt, 1906",
+        "collectors_comment": "MARSHALL S.M. 1969. Order: Tintinnida. Conseil International Pour L'exploration de la Mer. Zooplankton Sheet 117-127.",
+        "data_managers_comment": "IML_PHYTO_March2024 (observed during the fall 2016 mission at the TDC1 station)\r\nAccording to WoRMS: status uncertain > taxon inquirendum",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 427540
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006134,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 0,
+        "taxonomic_name": "Dictyocysta speciosa",
+        "best_nodc7": 3540040100,
+        "authority": "Jörgensen, 1924",
+        "collectors_comment": "MARSHALL S.M. 1969. Order: Tintinnida. Conseil International Pour L'exploration de la Mer. Zooplankton Sheet 117-127.",
+        "data_managers_comment": "IML_PHYTO_March2024 (observed during the fall 2016 mission at the TBB1 station)",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 427469
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006135,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 82390,
+        "taxonomic_name": "Oegopsida",
+        "best_nodc7": 5707,
+        "authority": "A. d'Orbigny, 1845",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 11730
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006136,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 51390,
+        "taxonomic_name": "Marrus",
+        "best_nodc7": 37170104,
+        "authority": "Totton, 1954",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 135391
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006137,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 206947,
+        "taxonomic_name": "Paguroidea",
+        "best_nodc7": 618319,
+        "authority": "Latreille, 1802",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 106687
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006138,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 49470,
+        "taxonomic_name": "Campanulariidae",
+        "best_nodc7": 370401,
+        "authority": "Johnston, 1836",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 1606
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006139,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 158808,
+        "taxonomic_name": "Serratosagitta",
+        "best_nodc7": 83080109,
+        "authority": "Tokioka & Pathansali, 1963",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 105411
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006140,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 87293,
+        "taxonomic_name": "Aegisthus aculeatus",
+        "best_nodc7": 6119200101,
+        "authority": "Giesbrecht, 1891",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 115508
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006141,
+    "fields": {
+        "data_center_code": 30,
+        "tsn": 5420,
+        "taxonomic_name": "Dunaliella",
+        "best_nodc7": 801000000,
+        "authority": "Teodoresco, 1905",
+        "collectors_comment": "1-Throndsen, J.; Hasle, G.R.; Tangen, K. 2007. Phytoplankton of Norwegian coastal waters. Oslo, Norway : Almater Forlag AS. 343 p. \r\n2-Throndsen, J.; Heimdal, B.R. 1993. Marine Phytoplankton: A Guide to Naked Flagellates and Coccolithophorids. Edited by Carmelo R. Tomas. Academic Press Inc.",
+        "data_managers_comment": "IML_PHYTO_October2024  (observed during the spring 2024 mission at the TESL7 station)",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 178589
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006142,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 162172,
+        "taxonomic_name": "Cyclothone acclinidens",
+        "best_nodc7": 8759010108,
+        "authority": "Garman, 1899",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "Cyclothone accl",
+        "tsn_itis": null,
+        "aphiaid": 127282
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006143,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 1,
+        "taxonomic_name": "Lophuroecia lophura",
+        "best_nodc7": 1,
+        "authority": "(Müller, 1906)",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 1314233
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006144,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 96120,
+        "taxonomic_name": "Acanthephyra eximia",
+        "best_nodc7": 1,
+        "authority": "Smith, 1884",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 564909
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006145,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 88998,
+        "taxonomic_name": "Monstrilla longicornis",
+        "best_nodc7": 1,
+        "authority": "Thompson I.C., 1890",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "Monstrilla long",
+        "tsn_itis": null,
+        "aphiaid": 119804
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006146,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 95336,
+        "taxonomic_name": "Lanceola sayana",
+        "best_nodc7": 1,
+        "authority": "Bovallius, 1885",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "Lanceola sayana",
+        "tsn_itis": null,
+        "aphiaid": 103265
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006147,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 51587,
+        "taxonomic_name": "Nausithoe globifera",
+        "best_nodc7": 1,
+        "authority": "Broch, 1913",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "Nausithoe globi",
+        "tsn_itis": null,
+        "aphiaid": 135286
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006148,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 85714,
+        "taxonomic_name": "Tharybis",
+        "best_nodc7": 1,
+        "authority": "Sars G.O., 1902",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "Tharybis",
+        "tsn_itis": null,
+        "aphiaid": 104246
+    }
+},
+{
     "model": "bio_tables.bcgear",
     "pk": 90000000,
     "fields": {
@@ -114015,7 +114494,7 @@
         "type": "Net",
         "model": "BIONESS 0.5m",
         "gear_size": "0.5 m",
-        "description": "Bioness with 0.5m frame, common name is Mininess"
+        "description": "BIONESS with 0.5m x 0.5m frame (AKA MiniNESS). Original MiniNESS equipped with 243 um (front section) and 202 um (back section) nets."
     }
 },
 {
@@ -117905,6 +118384,26 @@
         "data_center_code": 20,
         "name": "Tentacles",
         "description": "Damaged tentacles alone. Main body of specimen not encountered",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000266,
+    "fields": {
+        "data_center_code": 20,
+        "name": "paralarva",
+        "description": "young cephalopods in the planktonic stages between hatchling and subadult",
+        "molt_number": ""
+    }
+},
+{
+    "model": "bio_tables.bclifehistory",
+    "pk": 90000267,
+    "fields": {
+        "data_center_code": 20,
+        "name": "epitoke",
+        "description": "pelagic, sexually reproductive morph of benthic polychaetes",
         "molt_number": ""
     }
 },
