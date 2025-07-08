@@ -311,12 +311,12 @@ def process_stations(mission: core_models.Mission, station_queue: [str]) -> None
     core_models.Station.objects.bulk_create(stations)
 
 
-def get_instrument_type(instrument_name: str) -> core_models.InstrumentType:
+def get_instrument_name(instrument_name: str) -> core_models.InstrumentType:
     try:
         # This is really only going to match if the instrument is a CTD or a VPR
         # if it's a type of net or buoy we'll have to see if we have a specific match in the
-        # get_instrument_type method, which could be expanded later for other instruments
-        # If the instrument doesn't match anyting in the get_instrument_type method
+        # get_instrument_name method, which could be expanded later for other instruments
+        # If the instrument doesn't match anything in the get_instrument_name method
         # then the instrument is of type 'other'
         instrument_type = core_models.InstrumentType[instrument_name.lower()].value
         return instrument_type
@@ -358,7 +358,7 @@ def get_net_mesh_size(instrument, attachments):
 
 def get_instrument(name, attachments):
     instrument_name = name.upper()
-    instrument_type = get_instrument_type(instrument_name=name)
+    instrument_type = get_instrument_name(instrument_name=name)
     if instrument_type == core_models.InstrumentType.net:
         if instrument_name.upper() == "BIONESS":
             instrument_name = instrument_name.upper()

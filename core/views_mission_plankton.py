@@ -178,18 +178,6 @@ def clear_plankton(request, mission_id):
     return response
 
 
-def get_download_bcs_bcd_button(soup, mission_id):
-    icon = BeautifulSoup(load_svg('arrow-down-square'), 'html.parser').svg
-    button = soup.new_tag('button')
-    button.append(icon)
-    button.attrs['class'] = 'btn btn-sm btn-primary ms-2'
-    button.attrs['title'] = _("Build BCS/BCD Staging table CSV file")
-    button.attrs['hx-get'] = reverse_lazy("core:mission_plankton_download_plankton", args=(mission_id,))
-    button.attrs['hx-swap'] = 'none'
-
-    return button
-
-
 def biochem_batches_card(request, mission_id):
 
     # The first time we get into this function will be a GET request from the mission_samples.html template asking
@@ -225,7 +213,5 @@ plankton_urls = [
     path(f'<str:database>/plankton/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
 
     path(f'plankton/plankton/batch/<int:mission_id>/', biochem_batches_card, name="mission_plankton_biochem_plankton_card"),
-
-    path(f'plankton/download/<int:mission_id>/', download_samples, name="mission_plankton_download_plankton"),
     path(f'plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 ]
