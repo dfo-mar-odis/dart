@@ -154,11 +154,33 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
             message = _("The nets name must be 202um or 76um or the event must have a '202um' or '76um' attachment")
             err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
-    elif not event.sample_id:
+
+    if not event.sample_id:
         message = _("Missing a starting sample ID")
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
-    elif event.mission.start_date < datetime.strptime("2024-01-01", '%Y-%m-%d').date():
+
+    if not event.actions.filter(type=core_models.ActionType.deployed).exists():
+        message = _("Missing a deployed action")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.actions.filter(type=core_models.ActionType.bottom).exists():
+        message = _("Missing a bottom action")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.actions.filter(type=core_models.ActionType.recovered).exists():
+        message = _("Missing a recovered action")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if event.flow_start and not event.flow_end:
+        message = _("Missing ending flowmeter value")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if event.mission.start_date < datetime.strptime("2024-01-01", '%Y-%m-%d').date():
         if event.attachments.filter(name__iexact='76um').exists():
             ctd_events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd)
             if not ctd_events.filter(end_sample_id=event.sample_id).exists():
