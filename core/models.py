@@ -238,6 +238,25 @@ class Event(models.Model):
 
         return " ".join(comments)
 
+    @property
+    def sounding_action(self):
+        # use the bottom action if it exists
+        sounding_action = self.actions.filter(type=ActionType.bottom)
+        if sounding_action.exists() and sounding_action.first().sounding:
+            return sounding_action.first()
+
+        logger.error("No Bottom Action for depth sounding using Recovered Action")
+        sounding_action = self.actions.filter(type=ActionType.recovered)
+        if sounding_action.exists() and sounding_action.first().sounding:
+            return sounding_action.first()
+
+        logger.error("No Recovered Action for depth sounding using Deployed Action")
+        sounding_action = self.actions.filter(type=ActionType.deployed)
+        if sounding_action.exists() and sounding_action.first().sounding:
+            return sounding_action.first()
+
+        raise ValueError("No action with valid sounding")
+
     class Meta:
         unique_together = ("event_id", "instrument")
         ordering = ("event_id",)
@@ -446,25 +465,6 @@ class Bottle(models.Model):
 
         # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
         return [90000010, None]
-
-    @property
-    def bottom_sounding(self):
-        # use the bottom action if it exists
-        sounding_action = self.actions.filter(type=ActionType.bottom)
-        if sounding_action.exists() and sounding_action.first().sounding:
-            return sounding_action.first().sounding
-
-        logger.error("No Bottom Action for depth sounding using Recovered Action")
-        sounding_action = self.actions.filter(type=ActionType.recovered)
-        if sounding_action.exists() and sounding_action.first().sounding:
-            return sounding_action.first().sounding
-
-        logger.error("No Recovered Action for depth sounding using Deployed Action")
-        sounding_action = self.actions.filter(type=ActionType.deployed)
-        if sounding_action.exists() and sounding_action.first().sounding:
-            return sounding_action.first().sounding
-
-        raise ValueError("No action with valid sounding")
 
     def __str__(self):
         return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
@@ -676,6 +676,8 @@ class AbstractError(models.Model):
     # code spaces:
     # 1-99 is used by the Plankton Parser
     # 1000-1999 is used by core.form_mission_gear_type
+    # 2000-2999 is used by core.form_biochem_pre_validation
+    # 3000-3999 is used by biochem.upload
 
 
 # General errors we want to keep track of and notify the user about

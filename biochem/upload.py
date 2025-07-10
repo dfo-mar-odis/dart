@@ -1,8 +1,8 @@
 import math
 import numpy as np
 
+from enum import Enum
 from typing import Type
-
 from datetime import datetime
 
 from django.conf import settings
@@ -12,15 +12,17 @@ from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
 import bio_tables.models
-import core.models
 from biochem import models
-from config.utils import updated_value
 from core import models as core_models
 
 import logging
 
 user_logger = logging.getLogger('dart.user')
 logger = logging.getLogger('dart')
+
+
+class BIOCHEM_CODES(Enum):
+    MISSING_SOUNDING = 3000
 
 
 def create_model(database_name: str, model):
@@ -168,10 +170,15 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
         bcs_row.dis_headr_time_qc_code = 1
         bcs_row.dis_headr_position_qc_code = 1
 
-        if (bottom_action := event.actions.filter(type=core_models.ActionType.bottom)).exists():
-            bottom_action = bottom_action[0]
-            bcs_row.dis_headr_sounding = bottom_action.sounding
-            bcs_row.dis_headr_collector = bottom_action.data_collector
+        try:
+            sounding_action = event.sounding_action
+            bcs_row.dis_headr_sounding = sounding_action.sounding
+            bcs_row.dis_headr_collector = sounding_action.data_collector
+        except ValueError as ex:
+            logger.exception(ex)
+            bcs_row.dis_headr_sounding = None
+            bcs_row.dis_headr_collector = "Unknown"
+            bcs_row.event_collector_comment2 = "No sounding action found for this event"
 
         bcs_row.dis_headr_responsible_group = mission.protocol
 
@@ -226,8 +233,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         event = bottle.event
         mission = event.mission
         institute: bio_tables.models.BCDataCenter = mission.data_center
-
-        sounding = event.bottom_sounding
 
         try:
             # for calculating volume, if not provided with a sample, we need either a wire out or a flow meter start
@@ -327,8 +332,15 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.batch = batch
         # bcs_row.batch_seq = batch
 
-        # Maybe this should be averaged?
-        bcs_row.pl_headr_sounding = sounding
+        try:
+            sounding_action = event.sounding_action
+            bcs_row.pl_headr_sounding = sounding_action.sounding
+            bcs_row.pl_headr_collector = sounding_action.data_collector
+        except ValueError as ex:
+            logger.exception(ex)
+            bcs_row.pl_headr_sounding = None
+            bcs_row.pl_headr_collector = "Unknown"
+            bcs_row.event_more_comment = "No sounding action found for this event"
 
         collection_method = 90000010  # hydrographic if this is phytoplankton
         procedure = 90000001
@@ -341,8 +353,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             large_plankton_removed = 'Y'  # Yes if Zooplankton
 
         responsible_group = mission.protocol
-        collector = recovery_action.data_collector
-        comment = recovery_action.comment
 
         bottle_volume = bottle.computed_volume
         bcs_row.pl_headr_volume_method_seq = bottle_volume[0]
@@ -354,9 +364,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.pl_headr_collector_deplmt_id = None
         bcs_row.pl_headr_procedure_seq = procedure
         bcs_row.pl_headr_storage_seq = storage
-        bcs_row.pl_headr_collector = collector
-        bcs_row.pl_headr_collector_comment = comment
         bcs_row.pl_headr_meters_sqd_flag = "Y"
+        bcs_row.pl_headr_collector_comment = event.comments
         bcs_row.pl_headr_data_manager_comment = DART_EVENT_COMMENT
         bcs_row.pl_headr_responsible_group = responsible_group
         bcs_row.pl_headr_shared_data = shared
