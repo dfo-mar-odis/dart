@@ -205,12 +205,19 @@ def checkin_batch_proc(batch_id: int):
     # if successful delete the new mission from the edit tables, but keep the old one.
     if return_value[1] is not None:
         user_logger.error(f"Issues with archiving mission: {return_value[1]}")
+
+        if bc_mission and bc_mission.locked_missions:
+            old_batch_id = biochem_models.Bcmissionedits.objects.using('biochem').filter(
+                mission_edt_seq=bc_mission.mission_seq).first().batch.batch_seq
+            delete_plankton_proc(old_batch_id)
+            bc_mission.locked_missions.delete()
+
         raise ValueError(return_value[1])
 
-    # if the mission exists in the lock tables and there was no problem archiving it,
-    # then remove it from the locked table
+    # if the new batch was successfully archived, delete the old version of the mission. It will remain in the users
+    # edit tables, but be removed from the archive
     if bc_mission and bc_mission.locked_missions:
-        bc_mission.locked_missions.delete()
+        bc_mission.delete()
 
     delete_plankton_proc(batch_id)
 
