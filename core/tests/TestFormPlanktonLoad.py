@@ -143,7 +143,7 @@ class TestFormPlanktonLoad(DartTestCase):
 
         url = reverse(self.import_plankton_url, args=(self.mission.pk,))
         with open(file, 'rb') as fp:
-            response = self.client.post(url, {'plankton_file': fp, 'tab': 1, 'header': 0})
+            response = self.client.post(url, {'plankton_file': fp, 'tab': 0, 'header': 0})
 
         soup = BeautifulSoup(response.content, 'html.parser')
 

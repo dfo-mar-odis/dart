@@ -99,7 +99,7 @@ def list_samples(request, mission_id, instrument_type, **kwargs):
         end = start + results
         bottles = bottles[start:end]
 
-    bottles = bottles.values(
+    bottles_values = bottles.values(
         'bottle_id',
         'event__event_id',
         'mesh_size',
@@ -108,7 +108,14 @@ def list_samples(request, mission_id, instrument_type, **kwargs):
         'gear_type__description',
     )
 
-    df = read_frame(bottles)
+    df = read_frame(bottles_values)
+    if instrument_type == models.InstrumentType.net:
+        bottle_dict = {b.bottle_id: b for b in bottles}
+        for i, row in df.iterrows():
+            if row['volume'] == None:
+                volume = bottle_dict[row['bottle_id']].computed_volume[1]
+
+                df.at[i, 'volume'] = volume if volume else "-----"
 
     # Note:
     #   The template 'mission_gear_type.html' has the table header, but if I was going to set

@@ -227,13 +227,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         mission = event.mission
         institute: bio_tables.models.BCDataCenter = mission.data_center
 
-        sounding = None
-        try:
-            # The current AZMP template uses the bottom action for the sounding
-            bottom_action: core_models.Action = event.actions.get(type=core_models.ActionType.bottom)
-            sounding = bottom_action.sounding
-        except core_models.Action.DoesNotExist as e:
-            logger.error("Could not acquire bottom action for event sounding")
+        sounding = event.bottom_sounding
 
         try:
             # for calculating volume, if not provided with a sample, we need either a wire out or a flow meter start
@@ -350,36 +344,9 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         collector = recovery_action.data_collector
         comment = recovery_action.comment
 
-        if bottle.volume:
-            bcs_row.pl_headr_volume = bottle.volume
-            # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
-            bcs_row.pl_headr_volume_method_seq = 90000001
-
-        elif event.instrument.type == core_models.InstrumentType.net:
-            # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
-            diameter = 0.75
-            area = np.pi * np.power(float(diameter/2), 2)
-
-            if event.flow_start and event.flow_end:
-                # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
-                # else use the wire out.
-                # multiply by 0.3 to compensate for the flow meters prop rotation
-                height = (event.flow_end - event.flow_start) * 0.3
-                volume = np.round(height * area, 1)
-
-                bcs_row.pl_headr_volume = volume
-                # 90000002 - volume calculated from recorded revolutions and flow meter calibrations
-                bcs_row.pl_headr_volume_method_seq = 90000002
-            elif event.wire_out:
-                volume = np.round(event.wire_out * area, 1)
-
-                bcs_row.pl_headr_volume = volume
-                # 90000004 - estimate of volume calculated using depth and gear mouth opening (wire angle ignored)
-                bcs_row.pl_headr_volume_method_seq = 90000004
-        else:
-            bcs_row.pl_headr_volume = 0.001
-            # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
-            bcs_row.pl_headr_volume_method_seq = 90000010
+        bottle_volume = bottle.computed_volume
+        bcs_row.pl_headr_volume_method_seq = bottle_volume[0]
+        bcs_row.pl_headr_volume = bottle_volume[1]
 
         bcs_row.pl_headr_lrg_plankton_removed = large_plankton_removed
         bcs_row.pl_headr_mesh_size = bottle.mesh_size
