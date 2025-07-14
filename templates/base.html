@@ -44,13 +44,17 @@
         </li>
         {% endif %}
         <li class="nav-item ms-2">
+            {% if help_text %}
+                <div class="btn btn-primary" title="{{ help_text }}">{% custom_icon 'question-circle' %}</div>
+            {% else %}
             <a class="btn btn-primary" href="{% url 'docs:index' %}" title="{% trans "Help" %}">{% custom_icon 'question-circle' %}</a>
+            {% endif %}
         </li>
     {% endblock %}
     </ul>
     {% if reports %}
     <ul class="navbar-nav">
-        <li class="nav-item dropdown">
+        <li class="nav-item dropdown" title="{% block report_help_text %}{% trans 'Access useful Dart reports' %}{% endblock %}">
           <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
             {% trans 'Download Report' %}
           </a>

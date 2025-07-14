@@ -17,6 +17,7 @@ class GenericViewMixin(ContextMixin):
     home_url = reverse_lazy('settingsdb:mission_filter')
     theme = 'light'
     settings_url = None
+    help_text = None
 
     def get_home_url(self):
         return self.home_url
@@ -29,6 +30,9 @@ class GenericViewMixin(ContextMixin):
 
     def get_theme(self):
         return self.theme
+
+    def get_help_text(self):
+        return self.help_text
 
     def get_context_data(self, **kwargs):
 
@@ -51,6 +55,10 @@ class GenericViewMixin(ContextMixin):
         repo = Repo(settings.BASE_DIR)
         context['git_version'] = repo.git.rev_parse(repo.head.commit.hexsha, short=8)
         context['dart_version'] = os.environ.get("update_version", -1)
+
+        if (help_text := self.get_help_text()) is not None:
+            context['help_text'] = help_text
+
         return context
 
 

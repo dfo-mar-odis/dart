@@ -10,6 +10,7 @@
     </li>
 {% endblock %}
 
+{% block report_help_text %}{% trans 'Access fix station reports for missions visible in the mission list' %}{% endblock %}
 {% block report %}
   <ul class="dropdown-menu" id="ul_id_fixstation_reports">
       {% for key,report in reports.items %}
@@ -27,12 +28,22 @@
 
 {% block content %}
 <div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <form id="form_id_mission_directory" class="form-control">
+    <form id="form_id_mission_directory" class="form-control mb-2">
     {% if dir_select_form %}
         {% crispy dir_select_form %}
     {% endif %}
     </form>
 
-    {% include 'settingsdb/partials/mission_table.html' %}
+    <div class="card">
+        <div class="card-header">
+            <div class="card_title" title="{% trans "Filter missions based on the mission dates and limit which missions will be used in the fix station reports" %}">
+                {%  custom_icon 'question-circle' %} {% trans "Mission List" %}
+            </div>
+        </div>
+        <div class="card-body">
+        {% include 'settingsdb/partials/mission_table.html' %}
+        </div>
+    </div>
+
 </div>
 {% endblock %}
