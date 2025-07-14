@@ -423,20 +423,20 @@ class TestAndesParser(DartTestCase):
         instruments = [
             {
                 'name': "CTD AZOMP 2024",
-                'instrument_name': "CTD"
+                'instrument_type': "CTD"
             },
             {
                 'name': "Plankton net (202um)",
-                'instrument_name': "Plankton net",
+                'instrument_type': "Plankton net",
             },
             {
                 'name': "Plankton net (76um)",
-                'instrument_name': "Plankton Net",  # made "Net" uppercase to test case sensitivity
+                'instrument_type': "Plankton Net",  # made "Net" uppercase to test case sensitivity
             },
             {
                 "id": 8,
                 "name": "Argo (BIO AZOMP)",
-                "instrument_name": "ARGO",
+                "instrument_type": "ARGO",
                 "components": []
             }
         ]
@@ -520,7 +520,7 @@ class TestAndesParser(DartTestCase):
                 {
                     "event_number": 10.0,
                     "instrument": "CTD AZOMP 2024",
-                    "instrument_name": "CTD",
+                    "instrument_type": "CTD",
                     "wire_out": "3312 m",
                     "wire_angle": None,
                     "flow_meter_start": None,
@@ -530,7 +530,7 @@ class TestAndesParser(DartTestCase):
                 {
                     "event_number": 11.0,
                     "instrument": "Plankton net (202μm)",
-                    "instrument_name": "Net",
+                    "instrument_type": "Net",
                     "wire_out": "1000 m",
                     "wire_angle": "45 degrees",
                     "flow_meter_start": 2068,

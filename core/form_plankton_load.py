@@ -1,9 +1,14 @@
 import easygui
 
+import pandas as pd
+
+from io import BufferedReader
+from io import BytesIO
+
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Field, Layout, Row, Column, Div, HTML
+from crispy_forms.layout import Field, Layout, Row, Column
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
@@ -15,9 +20,7 @@ from django.conf import settings
 
 from core import models as core_models
 from core import forms as core_forms
-from core.forms import CollapsableCardForm
 from core.parsers.PlanktonParser import parse_zooplankton, parse_phytoplankton, parse_zooplankton_bioness
-
 from core.parsers.SampleParser import get_excel_dataframe
 from core.parsers.BionessParser import parse_bioness
 
@@ -38,7 +41,22 @@ class PlanktonForm(forms.Form):
     def __init__(self, mission, *args, **kwargs):
         self.mission = mission
 
+        tabs = None
+        self.file_data = None
+
+        if 'file_data' in kwargs:
+            self.file_data = kwargs.pop('file_data')
+            if isinstance(self.file_data, BufferedReader):
+                tabs = pd.ExcelFile(self.file_data).sheet_names
+            else:
+                tabs = pd.ExcelFile(BytesIO(self.file_data)).sheet_names
+
         super().__init__(*args, **kwargs)
+
+        if tabs:
+            s_field = self.base_fields['tab']
+            self.fields['tab'] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
+            self.fields['tab'].choices =[(i, tabs[i]) for i in range(0, len(tabs))]
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
@@ -74,47 +92,6 @@ class PlanktonForm(forms.Form):
                 id="div_id_plankton_form_details"
             )
         )
-
-
-class MultinetLoadForm(CollapsableCardForm):
-
-    net_volume_help_text = _("For single net plankton catches net volumes are computed based on the the surface area "
-                             "a net covers (e.g [base * height] or [πr²]) and multiplied by distance the net traveled. "
-                             "The travel distance is either the difference in a end flowmeter and a start flowmeter "
-                             "reading multiplied by a manufacture provided constant of 0.3 or computed based on a "
-                             "wire out formula, if no flowmeter is present. In the case of multinets there is often "
-                             "accompanying files that identify the volume of water that passes through a net before "
-                             "the net is closed. Dart provides a template that can assist in providing volume data.")
-
-    def get_card_body(self) -> Div:
-        body = super().get_card_body()
-
-        load_icon = load_svg("arrow-up-square")
-        url = reverse_lazy("core:form_plankton_upload_multinet", args=(self.mission.pk,))
-        load_attrs = {
-            'id': f"{self.card_name}_load_bottles",
-            'hx-get': url,
-            'hx-swap': 'none'
-        }
-        load_btn = StrictButton(load_icon, css_class="btn btn-primary btn-sm mb-2", **load_attrs)
-
-        button_row = Row(
-            Column(load_btn, css_class="col-auto"),
-        )
-        description_row = Row(
-            Column(HTML("<p>" + self.net_volume_help_text + "</p>"), css_class="col"),
-        )
-
-        body.fields.append(description_row)
-        body.fields.append(button_row)
-
-        return body
-
-    def __init__(self, mission, *args, **kwargs):
-
-        self.mission = mission
-
-        super().__init__(card_name="multinet_load", card_title=_("Load Net Volume"), *args, **kwargs)
 
 
 def load_plankton(request, mission_id):
@@ -176,8 +153,7 @@ def load_plankton(request, mission_id):
 
         # because this is an excel format, we now need to know what tab and line the header
         # appears on to figure out if this is zooplankton or phytoplankton
-        tab = int(request.POST.get('tab', 1) or 1)
-        tab = 1 if tab <= 0 else tab
+        tab = int(request.POST.get('tab', 0) or 0)
 
         header = int(request.POST.get('header', -1) or -1)
         dict_vals = request.POST.copy()
@@ -185,7 +161,7 @@ def load_plankton(request, mission_id):
         dict_vals['header'] = header
 
         try:
-            dataframe = get_excel_dataframe(stream=data, sheet_number=(tab-1), header_row=(header-1))
+            dataframe = get_excel_dataframe(stream=data, sheet_number=tab, header_row=(header-1))
             start = dataframe.index.start if hasattr(dataframe.index, 'start') else 0
             dict_vals['header'] = max(start + 1, header)
 
@@ -211,7 +187,7 @@ def load_plankton(request, mission_id):
             }
             table_div = core_forms.blank_alert(**attrs)
 
-        form = PlanktonForm(mission=mission, data=dict_vals)
+        form = PlanktonForm(mission=mission, data=dict_vals, file_data=data)
         form_html = render_crispy_form(form)
 
         form_soup = BeautifulSoup(form_html, 'html.parser')
@@ -284,11 +260,11 @@ def import_plankton(request, mission_id):
 
     # because this is an excel format, we now need to know what tab and line the header
     # appears on to figure out if this is zoo or phyto plankton
-    tab = int(request.POST.get('tab', 1) or 1)
+    tab = int(request.POST.get('tab', 0) or 0)
     header = int(request.POST.get('header', 1) or 1)
 
     try:
-        dataframe = get_excel_dataframe(stream=data, sheet_number=(tab - 1), header_row=(header - 1))
+        dataframe = get_excel_dataframe(stream=data, sheet_number=tab, header_row=(header - 1))
         dataframe.columns = map(str.upper, dataframe.columns)
 
         try:
@@ -438,33 +414,6 @@ def list_plankton(request, mission_id):
     return HttpResponse(soup)
 
 
-def get_multinet_load_card(request, mission_id, **kwargs):
-    context = {}
-
-    initial = {}
-    if 'hide_loaded' in request.GET:
-        initial = {'hide_loaded': "true"}
-
-    collapsed = False if 'collapsed' in kwargs else True
-    mission = core_models.Mission.objects.get(pk=mission_id)
-    multinet_load_form = MultinetLoadForm(mission=mission, collapsed=collapsed, initial=initial)
-    multinet_load_html = render_crispy_form(multinet_load_form, context=context)
-    multinet_load_soup = BeautifulSoup(multinet_load_html, 'html.parser')
-
-    return multinet_load_soup
-
-
-def get_multinet_data_card(request, mission_id, **kwargs):
-    multinet_load_soup = get_multinet_load_card(request, mission_id, **kwargs)
-    first_elm = multinet_load_soup.find(recursive=False)
-    form_id = first_elm.attrs['id']
-    form_soup = BeautifulSoup(f'<form id="form_id_{form_id}"></form>', 'html.parser')
-    form = form_soup.find('form')
-    form.append(multinet_load_soup)
-
-    return HttpResponse(form_soup)
-
-
 def upload_multinet(request, mission_id, **kwargs):
     mission = core_models.Mission.objects.get(pk=mission_id)
     result = easygui.fileopenbox("Open multinet file", "Multinet", default="*", filetypes="*.T**", multiple=True)
@@ -477,7 +426,6 @@ def upload_multinet(request, mission_id, **kwargs):
 
 url_prefix = "plankton"
 plankton_urls = [
-    path(f'{url_prefix}/card/<int:mission_id>/', get_multinet_data_card, name="form_plankton_multinet_card"),
     path(f'{url_prefix}/multinet/<int:mission_id>/', upload_multinet, name="form_plankton_upload_multinet"),
 
     path(f'{url_prefix}/load/<int:mission_id>/', load_plankton, name="form_plankton_load_plankton"),

@@ -7,6 +7,7 @@ from core.models import ActionType as action_types
 from core.validation import validate_event, validate_ctd_event, validate_net_event
 
 from . import CoreFactoryFloor as core_factory
+from core import models
 
 import logging
 
@@ -142,6 +143,18 @@ class TestCTDEventValidation(DartTestCase):
         logger.debug(errors)
         self.assertEqual(len(errors), 0)
 
+
+@tag('validation', 'validation_net')
+class TestCTDEventValidation(DartTestCase):
+
+    def setUp(self) -> None:
+        self.start_date = datetime.strptime("2020-01-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.end_date = datetime.strptime("2020-02-01 14:30:00", '%Y-%m-%d %H:%M:%S')
+        self.mission = core_factory.MissionFactory(
+            start_date=self.start_date.date(),
+            end_date=self.end_date.date()
+        )
+
     def test_validate_net_event_missing_sample_id(self):
         expected_file = 'test.log'
 
@@ -163,8 +176,10 @@ class TestCTDEventValidation(DartTestCase):
     def test_validate_net_missing_attachment(self):
         expected_file = 'test.log'
 
+        instrument = core_factory.InstrumentFactory(type=models.InstrumentType.net)
+
         core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000)
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000, instrument=instrument)
 
         core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
                                    date_time=self.start_date)
@@ -212,3 +227,27 @@ class TestCTDEventValidation(DartTestCase):
         errors = validate_net_event(event)
         logger.debug(errors)
         self.assertTrue(errors)
+
+    def test_missing_flow_end(self):
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000, flow_start=5000, flow_end=None)
+
+        errors = validate_net_event(event)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Missing ending flowmeter value", errors[0].message)
+
+    def test_flowmeter_rollover(self):
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000, flow_start=97719, flow_end=417)
+        errors = validate_net_event(event)
+        self.assertEqual(len(errors), 0)  # No error expected after rollover adjustment
+
+    def test_unreasonable_difference(self):
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000, flow_start=5000, flow_end=20000)
+        errors = validate_net_event(event)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Unreasonably large difference", errors[0].message)
+
+    def test_invalid_adjusted_flow_end(self):
+        event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000, flow_start=60048, flow_end=60045)
+        errors = validate_net_event(event)
+        self.assertEqual(len(errors), 1)
+        self.assertIn("Starting flowmeter value must be less", errors[0].message)

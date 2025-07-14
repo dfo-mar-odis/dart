@@ -1,8 +1,8 @@
 import math
 import numpy as np
 
+from enum import Enum
 from typing import Type
-
 from datetime import datetime
 
 from django.conf import settings
@@ -12,15 +12,17 @@ from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
 import bio_tables.models
-import core.models
 from biochem import models
-from config.utils import updated_value
 from core import models as core_models
 
 import logging
 
 user_logger = logging.getLogger('dart.user')
 logger = logging.getLogger('dart')
+
+
+class BIOCHEM_CODES(Enum):
+    MISSING_SOUNDING = 3000
 
 
 def create_model(database_name: str, model):
@@ -168,10 +170,15 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
         bcs_row.dis_headr_time_qc_code = 1
         bcs_row.dis_headr_position_qc_code = 1
 
-        if (bottom_action := event.actions.filter(type=core_models.ActionType.bottom)).exists():
-            bottom_action = bottom_action[0]
-            bcs_row.dis_headr_sounding = bottom_action.sounding
-            bcs_row.dis_headr_collector = bottom_action.data_collector
+        try:
+            sounding_action = event.sounding_action
+            bcs_row.dis_headr_sounding = sounding_action.sounding
+            bcs_row.dis_headr_collector = sounding_action.data_collector
+        except ValueError as ex:
+            logger.exception(ex)
+            bcs_row.dis_headr_sounding = None
+            bcs_row.dis_headr_collector = "Unknown"
+            bcs_row.event_collector_comment2 = "No sounding action found for this event"
 
         bcs_row.dis_headr_responsible_group = mission.protocol
 
@@ -226,14 +233,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         event = bottle.event
         mission = event.mission
         institute: bio_tables.models.BCDataCenter = mission.data_center
-
-        sounding = None
-        try:
-            # The current AZMP template uses the bottom action for the sounding
-            bottom_action: core_models.Action = event.actions.get(type=core_models.ActionType.bottom)
-            sounding = bottom_action.sounding
-        except core_models.Action.DoesNotExist as e:
-            logger.error("Could not acquire bottom action for event sounding")
 
         try:
             # for calculating volume, if not provided with a sample, we need either a wire out or a flow meter start
@@ -333,8 +332,15 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.batch = batch
         # bcs_row.batch_seq = batch
 
-        # Maybe this should be averaged?
-        bcs_row.pl_headr_sounding = sounding
+        try:
+            sounding_action = event.sounding_action
+            bcs_row.pl_headr_sounding = sounding_action.sounding
+            bcs_row.pl_headr_collector = sounding_action.data_collector
+        except ValueError as ex:
+            logger.exception(ex)
+            bcs_row.pl_headr_sounding = None
+            bcs_row.pl_headr_collector = "Unknown"
+            bcs_row.event_more_comment = "No sounding action found for this event"
 
         collection_method = 90000010  # hydrographic if this is phytoplankton
         procedure = 90000001
@@ -347,39 +353,10 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             large_plankton_removed = 'Y'  # Yes if Zooplankton
 
         responsible_group = mission.protocol
-        collector = recovery_action.data_collector
-        comment = recovery_action.comment
 
-        if bottle.volume:
-            bcs_row.pl_headr_volume = bottle.volume
-            # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
-            bcs_row.pl_headr_volume_method_seq = 90000001
-
-        elif event.instrument.type == core_models.InstrumentType.net:
-            # all nets are 75 cm in diameter use the formula for the volume of a cylinder height * pi * r^2
-            diameter = 0.75
-            area = np.pi * np.power(float(diameter/2), 2)
-
-            if event.flow_start and event.flow_end:
-                # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
-                # else use the wire out.
-                # multiply by 0.3 to compensate for the flow meters prop rotation
-                height = (event.flow_end - event.flow_start) * 0.3
-                volume = np.round(height * area, 1)
-
-                bcs_row.pl_headr_volume = volume
-                # 90000002 - volume calculated from recorded revolutions and flow meter calibrations
-                bcs_row.pl_headr_volume_method_seq = 90000002
-            elif event.wire_out:
-                volume = np.round(event.wire_out * area, 1)
-
-                bcs_row.pl_headr_volume = volume
-                # 90000004 - estimate of volume calculated using depth and gear mouth opening (wire angle ignored)
-                bcs_row.pl_headr_volume_method_seq = 90000004
-        else:
-            bcs_row.pl_headr_volume = 0.001
-            # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
-            bcs_row.pl_headr_volume_method_seq = 90000010
+        bottle_volume = bottle.computed_volume
+        bcs_row.pl_headr_volume_method_seq = bottle_volume[0]
+        bcs_row.pl_headr_volume = bottle_volume[1]
 
         bcs_row.pl_headr_lrg_plankton_removed = large_plankton_removed
         bcs_row.pl_headr_mesh_size = bottle.mesh_size
@@ -387,9 +364,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.pl_headr_collector_deplmt_id = None
         bcs_row.pl_headr_procedure_seq = procedure
         bcs_row.pl_headr_storage_seq = storage
-        bcs_row.pl_headr_collector = collector
-        bcs_row.pl_headr_collector_comment = comment
         bcs_row.pl_headr_meters_sqd_flag = "Y"
+        bcs_row.pl_headr_collector_comment = event.comments
         bcs_row.pl_headr_data_manager_comment = DART_EVENT_COMMENT
         bcs_row.pl_headr_responsible_group = responsible_group
         bcs_row.pl_headr_shared_data = shared

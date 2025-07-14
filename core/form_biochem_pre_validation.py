@@ -25,7 +25,7 @@ class BIOCHEM_CODES(Enum):
     DATE_MISSING = 1  # use for when a date is missing
     DATE_BAD_VALUES = 2  # use when a date is improperly formatted or outside an expected range
     POSITION_MISSING = 50  # use when an event/bottle is missing a position (lat/lon)
-    DESCRIPTOR_MISSING = 1001  # use for when the mission descriptor is missing
+    DESCRIPTOR_MISSING = 2000  # use for when the mission descriptor is missing
     DATA = 2001  # use for general data errors
     DATA_BAD_RANGE = 2002  # use for bad data outside of expected BCRetrivals min/max
 

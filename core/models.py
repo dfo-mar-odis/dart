@@ -1,9 +1,7 @@
 import datetime
-
-from pandas import DataFrame
+import numpy as np
 
 import bio_tables.models
-import settingsdb.utils
 from core.utils import distance
 
 from django.db.models.functions import Lower
@@ -240,6 +238,25 @@ class Event(models.Model):
 
         return " ".join(comments)
 
+    @property
+    def sounding_action(self):
+        # use the bottom action if it exists
+        sounding_action = self.actions.filter(type=ActionType.bottom)
+        if sounding_action.exists() and sounding_action.first().sounding:
+            return sounding_action.first()
+
+        logger.error("No Bottom Action for depth sounding using Recovered Action")
+        sounding_action = self.actions.filter(type=ActionType.recovered)
+        if sounding_action.exists() and sounding_action.first().sounding:
+            return sounding_action.first()
+
+        logger.error("No Recovered Action for depth sounding using Deployed Action")
+        sounding_action = self.actions.filter(type=ActionType.deployed)
+        if sounding_action.exists() and sounding_action.first().sounding:
+            return sounding_action.first()
+
+        raise ValueError("No action with valid sounding")
+
     class Meta:
         unique_together = ("event_id", "instrument")
         ordering = ("event_id",)
@@ -409,6 +426,45 @@ class Bottle(models.Model):
     # The mesh size goes into the BCS_P table so it has to be tracked for later.
     mesh_size = models.IntegerField(verbose_name=_("Mesh Size"), help_text=_("Mesh size of the net material in um"),
                                     blank=True, null=True, default=0)
+
+    # returnes the volume method sequence number and the computed or provided volume -> (volume_method_seq, volume)
+    @property
+    def computed_volume(self):
+        # if the volume was set by loading a volume file for nets like BIONESS then we just want
+        # to use the volume as it was provided
+        if self.volume:
+            # 90000001 - electronic readout of volume of water filtered
+            return [90000001, self.volume]
+
+        # if no volume has been provided then we have to compute the volume.
+        if self.gear_type.pk == 90000102 or self.gear_type.pk == 90000105:
+            diameter = None
+            if self.gear_type.pk == 90000102: # this is a 3/4 meter diameter ringnet
+                diameter = 0.75
+            elif self.gear_type.pk == 90000105: # this is a 1/2 meter diameter ringnet
+                diameter = 0.5
+
+            area = np.pi * np.power(float(diameter / 2), 2)
+            if self.event.flow_start and self.event.flow_end:
+                # if there is a flow meter use (flow_end-flow_start)*0.3 has the height of the cylinder
+                # else use the wire out.
+                # multiply by 0.3 to compensate for the flow meters prop rotation
+
+                # account for the case that the flow_start was close to 100,000 and the flowmeter counter rolled
+                # over back to zero in which case a number like 417 was suppose to be 100,417
+                adjusted_flow_end = self.event.flow_end
+                if self.event.flow_start > 97000 and self.event.flow_end < 3000:
+                    adjusted_flow_end = adjusted_flow_end + 100000
+
+                height = (adjusted_flow_end - self.event.flow_start) * 0.3
+                # 90000002 - volume calculated from recorded revolutions and flow meter calibrations
+                return [90000002, np.round(height * area, 1)]
+            elif self.event.wire_out:
+                # 90000004 - estimate of volume calculated using depth and gear mouth opening (wire angle ignored)
+                return [90000004, np.round(self.event.wire_out * area, 1)]
+
+        # 90000010 - not applicable; perhaps net lost; perhaps data from a bottle
+        return [90000010, None]
 
     def __str__(self):
         return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
@@ -620,6 +676,8 @@ class AbstractError(models.Model):
     # code spaces:
     # 1-99 is used by the Plankton Parser
     # 1000-1999 is used by core.form_mission_gear_type
+    # 2000-2999 is used by core.form_biochem_pre_validation
+    # 3000-3999 is used by biochem.upload
 
 
 # General errors we want to keep track of and notify the user about

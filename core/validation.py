@@ -154,7 +154,46 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
             message = _("The nets name must be 202um or 76um or the event must have a '202um' or '76um' attachment")
             err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
-    elif not event.sample_id:
+
+    if not event.actions.filter(type=core_models.ActionType.deployed).exists():
+        message = _("Missing a deployed action")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.actions.filter(type=core_models.ActionType.bottom).exists():
+        message = _("Missing a bottom action")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.actions.filter(type=core_models.ActionType.recovered).exists():
+        message = _("Missing a recovered action")
+        err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if event.flow_start:
+        if not event.flow_end:
+            message = _("Missing ending flowmeter value")
+            err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+            validation_errors.append(err)
+        else:
+            # Handle flowmeter rollover
+            if event.flow_start > 97000 and event.flow_end < 3000:
+                adjusted_flow_end = event.flow_end + 100000
+            else:
+                adjusted_flow_end = event.flow_end
+
+            # Check for unreasonable differences to catch potential miskeyed values
+            if adjusted_flow_end - event.flow_start > 10000:
+                message = _("Unreasonably large difference between starting and ending flowmeter values. "
+                            "Please verify the entered values.")
+                err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+                validation_errors.append(err)
+            elif adjusted_flow_end < event.flow_start:
+                message = _("Starting flowmeter value must be less than the ending flowmeter value (after accounting for rollover)")
+                err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
+                validation_errors.append(err)
+
+    if not event.sample_id:
         message = _("Missing a starting sample ID")
         err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
@@ -165,7 +204,7 @@ def validate_net_event(event: core_models.Event) -> [core_models.ValidationError
                 message = _("No CTD event with matching surface bottle. "
                             "Check the deck sheet to confirm this is a surface bottle")
                 message += f" : {event.sample_id}"
-                possible_match =ctd_events.filter(sample_id__lte=event.sample_id, end_sample_id__gte=event.sample_id)
+                possible_match = ctd_events.filter(sample_id__lte=event.sample_id, end_sample_id__gte=event.sample_id)
                 if possible_match.exists():
                     message += _(", Likely matches event : ") + str(possible_match.first().event_id)
 
