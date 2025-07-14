@@ -24,6 +24,7 @@
 
 {% endblock %}
 
+{% block container %}container-fluid{% endblock %}
 {% block content %}
     <div class="container-fluid" id="div_content_block_id"
          hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'

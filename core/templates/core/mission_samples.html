@@ -23,6 +23,7 @@
     </li>
 {% endblock %}
 
+{% block container %}container-fluid{% endblock %}
 {% block content %}
     <div class="" hx-trigger="load" hx-get="{% url "core:form_btl_card" mission.pk %}?hide_loaded=true" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {# The Load Bottle form will be swapped in here #}

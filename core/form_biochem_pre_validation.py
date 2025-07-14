@@ -3,6 +3,8 @@ import re
 
 from bs4 import BeautifulSoup
 from enum import Enum
+
+from django.conf import settings
 from django.urls import reverse_lazy, path
 from django.http import HttpResponse
 from django.utils.translation import gettext as _
@@ -11,8 +13,6 @@ from django.db.models import Q, QuerySet
 from config.utils import load_svg
 from core import models as core_models
 from core import forms
-
-from biochem import models as biochem_models
 
 import logging
 
@@ -92,11 +92,15 @@ def _validate_sample_ranges(mission) -> [core_models.Error]:
     sample_types: QuerySet[core_models.MissionSampleType] = mission.mission_sample_types.filter(Q(uploads__status=core_models.BioChemUploadStatus.uploaded) | Q(uploads__status=core_models.BioChemUploadStatus.upload))
     for mst in sample_types:
         range = mst.datatype.data_retrieval
-        values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).filter(Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
+        values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).exclude(flag__exact=4).filter(Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
         if values.exists():
+            # mst_id allows us to find the mission sample type later when removing or flagging data
+            message = "MST_ID [" + str(mst.pk) + "]"
+            message += " : " + str(values.count()) + " " + _("Samples exist outside of the expected range")
+            message += f" [{range.minimum_value}, {range.maximum_value}]"
             err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem,
                                     code=BIOCHEM_CODES.DATA_BAD_RANGE.value,
-                                    message=_("Samples exist outside of the expected range, count [") + str(values.count()) + "] : MST_ID [" + str(mst.pk) + "] :" + str(mst)
+                                    message=message
                                     )
             errors.append(err)
 
@@ -139,6 +143,9 @@ def run_biochem_validation(request, mission_id):
 
 def get_validation_errors(request, mission_id):
 
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    database = settings.DATABASES[mission._state.db]['LOADED']
+
     soup = BeautifulSoup('', 'html.parser')
     soup.append(badge_error_count := soup.new_tag("div"))
     badge_error_count.attrs["id"] = "div_id_biochem_validation_count"
@@ -163,40 +170,97 @@ def get_validation_errors(request, mission_id):
     # If an element matches these codes the user should have an option to delete the flagged data
     remove_data_codes = [BIOCHEM_CODES.DATA_BAD_RANGE.value]
 
-    mission = core_models.Mission.objects.get(pk=mission_id)
-    database = mission._state.db
     minus_icon = BeautifulSoup(load_svg("dash-square"), 'html.parser').svg
+    flag_icon = BeautifulSoup(load_svg("flag"), 'html.parser').svg
     for error in errors:
-        ul.append(li := soup.new_tag('li'))
-        li.attrs = {'class': 'list-group-item'}
-        li.string = error.message
-
         if error.code in settings_codes:
+            ul.append(li := soup.new_tag('li'))
+            li.attrs = {'class': 'list-group-item'}
+            li.string = error.message
+
             link = reverse_lazy('core:mission_edit', args=(database, mission_id))
-            li.append(div_row:=soup.new_tag('div', attrs={'class': 'row'}))
-            div_row.append(div_col:=soup.new_tag('div', attrs={'class': 'col'}))
+            li.append(btn_row:=soup.new_tag('div', attrs={'class': 'row'}))
+            btn_row.append(div_col:=soup.new_tag('div', attrs={'class': 'col'}))
             div_col.append(a := soup.new_tag('a', href=link))
             a.attrs['class'] = 'btn btn-primary btn-sm'
             a.string = _("Mission Details")
         elif error.code in remove_data_codes:
+            ul.append(li := soup.new_tag('li'))
+            li.attrs = {'class': 'list-group-item'}
+            li.append(title_row:=soup.new_tag("div"))
+
+            title_row.attrs = {'class': 'd-flex w-100 justify-content-between'}
+            title_row.append(header:=soup.new_tag("h5"))
+            header.string = _("Unknown issue")
+
+            title_row.append(count_badge:=soup.new_tag("span"))
+            count_badge.attrs = {'class': 'd-flex align-items-center badge text-bg-primary'}
+            count_badge.string = "0"
+
+            li.append(message_row:=soup.new_tag("p"))
+            message_row.attrs = {'class': 'mb-1'}
+
             match = re.search(r'MST_ID \[(\d+)\]', error.message)
+            message = re.sub(r'MST_ID \[\d+\] : ', '', error.message)
+            count_match = re.search(r'^(\d+)', message)
+            if count_match:
+                count_badge.string = count_match.group(1)
+                message = re.sub(r'^\d+ ', '', message)
+
+            message_row.string = message
+
             if match:
                 mst_id = int(match.group(1))
+                mst = core_models.MissionSampleType.objects.get(pk=mst_id)
+                header.string = str(mst)
+
+                li.append(btn_row:=soup.new_tag('div', attrs={'class': 'row'}))
+                btn_row.append(div_col:=soup.new_tag('div', attrs={'class': 'col'}))
+
+                url = reverse_lazy('core:form_biochem_pre_validation_flag_data', args=(mission_id, error.pk,))
+                div_col.append(btn_flag := soup.new_tag('button'))
+                btn_flag.attrs['class'] = 'btn btn-danger btn-sm me-2'
+                btn_flag.attrs['hx-confirm'] = _("Are you sure?")
+                btn_flag.attrs['hx-swap'] = "none"
+                btn_flag.attrs['hx-post'] = url
+                btn_flag.attrs['title'] = _("Flag Bad Data")
+                btn_flag.append(copy.copy(flag_icon))
 
                 url = reverse_lazy('core:form_biochem_pre_validation_bad_data', args=(mission_id, error.pk,))
-                li.append(div_row:=soup.new_tag('div', attrs={'class': 'row'}))
-                div_row.append(div_col:=soup.new_tag('div', attrs={'class': 'col'}))
-                div_col.append(btn := soup.new_tag('button'))
-                btn.attrs['class'] = 'btn btn-danger btn-sm'
-                btn.attrs['hx-confirm'] = _("Are you sure?")
-                btn.attrs['hx-swap'] = "none"
-                btn.attrs['hx-post'] = url
-                btn.attrs['title'] = _("Remove Bad Data")
-                btn.append(copy.copy(minus_icon))
+                div_col.append(btn_remove := soup.new_tag('button'))
+                btn_remove.attrs['class'] = 'btn btn-danger btn-sm me-2'
+                btn_remove.attrs['hx-confirm'] = _("Are you sure?")
+                btn_remove.attrs['hx-swap'] = "none"
+                btn_remove.attrs['hx-post'] = url
+                btn_remove.attrs['title'] = _("Remove Bad Data")
+                btn_remove.append(copy.copy(minus_icon))
 
     response = HttpResponse(soup)
     return response
 
+
+def flag_data(request, mission_id, error_id):
+    error = core_models.Error.objects.get(mission__id=mission_id, pk=error_id)
+    match = re.search(r'MST_ID \[(\d+)\]', error.message)
+    if match:
+        mst_id = int(match.group(1))
+
+        mission = error.mission
+        mst = mission.mission_sample_types.get(pk=mst_id)
+        range = mst.datatype.data_retrieval
+
+        values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).filter(
+            Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
+        for v in values:
+            v.flag = 4
+
+        core_models.DiscreteSampleValue.objects.bulk_update(values, ['flag'])
+
+        error.delete()
+
+    response = HttpResponse()
+    response['HX-Trigger'] = "biochem_validation_update"
+    return response
 
 def remove_data(request, mission_id, error_id):
     error = core_models.Error.objects.get(mission__id=mission_id, pk=error_id)
@@ -223,4 +287,5 @@ database_urls = [
     path(f'{url_prefix}/biochem/validation/run/', run_biochem_validation, name="form_biochem_pre_validation_run"),
     path(f'{url_prefix}/biochem/validation/', get_validation_errors, name="form_biochem_pre_validation_get_validation_errors"),
     path(f'{url_prefix}/biochem/bad_data/<int:error_id>/', remove_data, name="form_biochem_pre_validation_bad_data"),
+    path(f'{url_prefix}/biochem/flag_data/<int:error_id>/', flag_data, name="form_biochem_pre_validation_flag_data"),
 ]
