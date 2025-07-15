@@ -105,9 +105,10 @@ def get_mission_dictionary(db_dir):
         try:
             if models.Mission.objects.using(database).exists():
                 if not utils.is_database_synchronized(database):
-                    version = getattr(models.Mission.objects.using(database).first(), 'dart_version', None)
+                    mission = models.Mission.objects.using(database).only('name', 'dart_version').first()
+                    version = mission.dart_version
                     short_version = repo.git.rev_parse(version, short=8)
-                    missions[database] = {'name': database, 'requires_migration': 'true', 'version': short_version}
+                    missions[database] = {'database': database, 'name': mission.name, 'requires_migration': 'true', 'version': short_version}
                 else:
                     mission = models.Mission.objects.using(database).first()
                     missions[database] = mission
@@ -217,7 +218,8 @@ def filter_missions(after_date, before_date) -> list[dict]:
                 continue
 
         version = mission['version'] if type(mission) == dict else getattr(mission, 'dart_version', 'No version number')
-        missions.append({'database': database, 'mission': mission,
+        missions.append({'database': database,
+                         'mission': mission,
                          'version': version})
 
     return missions

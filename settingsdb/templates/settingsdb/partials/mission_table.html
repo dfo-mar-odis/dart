@@ -38,7 +38,7 @@
             <td>
                 Dart Version: {{ mission_dict.version }}
                 <button id="btn_id_migrate_{{ mission.name }}" type="button" class="btn btn-danger" title="{% trans "Database requires migrations before it can be read" %}"
-                        hx-target="#btn_id_migrate_{{ mission.name }}" hx-swap="outerHTML" hx-get="{% url 'settingsdb:migrate_database' mission.name %}"
+                        hx-target="#btn_id_migrate_{{ mission.name }}" hx-swap="outerHTML" hx-get="{% url 'settingsdb:migrate_database' mission.database %}"
                         hx-confirm="{% trans 'Make sure the database is backed up before running migrations to update the database model' %}">{% custom_icon 'arrow-clockwise' %}</button>
             </td>
             {% else %}

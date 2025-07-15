@@ -79,6 +79,15 @@ class Mission(models.Model):
                                                          "history (processing steps, edits, special warnings)"),
                                              blank=True, null=True)
 
+    # underway samples can be provided so these IDs will be excluded from validation when loading samples
+    start_underway_sample = models.IntegerField(verbose_name=_("Start Underway Sample ID"), blank=True, null=True,
+                                                help_text=_("A starting and ending sample ID can be provided for a "
+                                                            "range of samples to exclude from the validation when "
+                                                            "loading samples. This is primarily for underway samples "
+                                                            "that will be present in a sample file, but have no "
+                                                            "associated events or bottles."))
+    end_underway_sample = models.IntegerField(verbose_name=_("End Underway Sample ID"), blank=True, null=True)
+
     @property
     def get_batch_name(self):
         return f'{self.start_date.strftime("%Y%m")}{self.end_date.strftime("%m")}'
