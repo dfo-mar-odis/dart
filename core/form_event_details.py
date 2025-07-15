@@ -32,6 +32,12 @@ logger = logging.getLogger('dart')
 
 
 class EventDetails(core_forms.CardForm):
+    help_text = _("The event details card allows for the individual creation of new events or shows details of events "
+                  "selected in the event list. If events are bulk loaded, the file an event was loaded from will "
+                  "be displayed. Edits to these events will have to be made in the source file and then the file "
+                  "reloaded. This is to ensure future missions can be recreated from corrected source files. Events "
+                  "created using the event details form can be modified and have sensor data loaded from BTL and ROS "
+                  "files here.")
 
     event = None
     # when creating a new event a mission is required to attach the event too
@@ -213,7 +219,6 @@ class NoDeleteEditEventDetails(EventDetails):
 
 
 class EventForm(forms.ModelForm):
-
     global_station = forms.ChoiceField(label=_("Station"))
 
     class Meta:
@@ -330,12 +335,12 @@ class EventForm(forms.ModelForm):
 
             event_element = Column(Field('event_id', css_class='form-control-sm'))
             self.helper.layout.fields.insert(0,
-                Row(
-                    submit_button,
-                    event_element,
-                    css_class="input-group input-group-sm"
-                ),
-            )
+                                             Row(
+                                                 submit_button,
+                                                 event_element,
+                                                 css_class="input-group input-group-sm"
+                                             ),
+                                             )
 
     def save(self, commit=True):
 
@@ -470,7 +475,7 @@ class ActionForm(forms.ModelForm):
                 negative = True
 
             if len(lon_split) > 1:
-                lon += float(lon_split[1])/60
+                lon += float(lon_split[1]) / 60
             if negative or (len(lon_split) > 2 and lon_split[2].upper() == 'W'):
                 lon *= -1
             return str(np.round(lon, models.Action.longitude.field.decimal_places))
@@ -493,7 +498,7 @@ class ActionForm(forms.ModelForm):
                 negative = True
 
             if len(lat_split) > 1:
-                lat += float(lat_split[1])/60
+                lat += float(lat_split[1]) / 60
             if negative or (len(lat_split) > 2 and lat_split[2].upper() == 'S'):
                 lat *= -1
             return str(np.round(lat, models.Action.latitude.field.decimal_places))
@@ -584,7 +589,6 @@ def update_stations(request):
 
     if request.method == "GET":
         if request.GET.get('global_station', '-1') == '-1':
-
             row = soup.new_tag('div')
             row.attrs['class'] = 'container-fluid row'
 
@@ -753,7 +757,8 @@ def deselect_event(soup):
     if caches['default'].touch("selected_event"):
         old_event_id = caches['default'].get('selected_event')
         old_event = models.Event.objects.get(pk=old_event_id)
-        tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row', context={"event": old_event})
+        tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
+                                         context={"event": old_event})
         table = create_replace_table(soup, tr_html)
         soup.append(table)
 
@@ -887,7 +892,6 @@ def selected_details(request, event_id):
 
 
 def get_selected_event(request):
-
     soup = BeautifulSoup('', 'html.parser')
     event_id = caches['default'].get('selected_event', -1)
     if event_id == -1:
@@ -963,7 +967,6 @@ def list_action(request, event_id, editable=False):
 
 
 def render_action_form(soup, action_form):
-
     # the action form isn't wrapped in a form tag so it has to have that added
     action_form_html = render_crispy_form(action_form)
     action_form_soup = BeautifulSoup(action_form_html, 'html.parser')
@@ -1190,7 +1193,7 @@ def load_bottle_file(request, event_id):
             }
             msg_area.append(core_forms.blank_alert(**attrs))
             err = models.FileError(mission=event.mission, file_name=btl_file, line=-1, message=message,
-                                        type=models.ErrorType.event)
+                                   type=models.ErrorType.event)
             err.save()
             trigger = "event_updated"
 
@@ -1227,7 +1230,6 @@ def import_elog_events(request, mission_id, **kwargs):
             'message': message,
         }
         return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
-
 
     if 'csv_event' in request.FILES:
         file = request.FILES.get('csv_event')

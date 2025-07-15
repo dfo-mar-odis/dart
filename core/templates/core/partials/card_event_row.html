@@ -7,10 +7,10 @@
         <div class="card">
             <div class="card-header">
                 <div class="row">
-                    <div class="card-title col">{% trans "Events" %}</div>
+                    <div class="card-title col" title="{% trans 'The event list allows bulk loading of events from various file formats. Once created, events can be selected from this list to show more details about the events on the event details card. When event validation is run events containing issues will be highlighted in the list.' %}">{% custom_icon 'question-circle' %}{% trans "Events" %}</div>
                     <div class="col-auto">
-                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' mission.pk %}"
-                           title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>
+{#                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' mission.pk %}"#}
+{#                           title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>#}
 
                         <label for="csv_event_file_input_id" class="btn btn-primary btn-sm"
                                title="{% trans "Upload events from csv files" %}">CSV {% custom_icon 'arrow-up-square' %}</label>

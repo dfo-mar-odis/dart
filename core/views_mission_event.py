@@ -1,12 +1,11 @@
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
-from crispy_forms.layout import Div, HTML, Row, Column
+from crispy_forms.layout import Div, HTML, Column
 from crispy_forms.utils import render_crispy_form
 
 from django.core.cache import caches
-from django.conf import settings
 from django.http import HttpResponse
-from django.urls import reverse_lazy, path
+from django.urls import reverse_lazy, reverse, path
 from django.utils.translation import gettext as _
 
 from core import models, forms, validation, form_event_details
@@ -17,6 +16,10 @@ from config.views import GenericDetailView
 
 class EventDetails(MissionMixin, GenericDetailView):
     page_title = _("Missions Events")
+    help_text = _("The mission events page allows you to load and view event details associated with the mission. "
+    "This page contains detailed reporting on issues that may have occurred when loading event files and "
+    "allows for event-specific validation to help detect and correct missing or erroneous issues with "
+    "specific events.")
     template_name = "core/mission_events.html"
 
     def get_page_title(self):
@@ -112,6 +115,9 @@ class ValidationEventCard(forms.CardForm):
 class ValidateEventsCard(forms.CollapsableCardForm):
 
     mission = None
+    help_text = _("Run at-sea validation on loaded events. This will provide a list of issues that are often easier to "
+                 "solve early in the data collection process. This process is automatically run when events are loaded "
+                  "but can be manually run as well for events that were created individually.")
 
     def get_card_header(self):
         header = super().get_card_header()
@@ -132,7 +138,14 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         spacer_col.fields.append(revalidate)
 
         issue_count = models.ValidationError.objects.filter(event__mission=self.mission).count()
-        issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
+        counter_attrs = {
+            'hx-get': reverse_lazy("core:mission_events_recount_event_errors", args=(self.mission.pk,)),
+            'hx-trigger': 'recount_event_errors from:body',
+            'hx-swap': 'outerHTML',
+        }
+        issue_class = "badge " + ('bg-danger' if issue_count > 0 else 'bg-success')
+        issue_count_col = Div(HTML(issue_count), css_id="div_id_event_error_count", css_class=issue_class,
+                              **counter_attrs)
         buttons.fields.append(issue_count_col)
 
         header.fields.append(super().get_alert_area())
@@ -230,6 +243,9 @@ class ValidationFileCard(forms.CardForm):
 class ValidateFileCard(forms.CollapsableCardForm):
     mission = None
 
+    help_text = _("Issues that occur when reading files will appear in this area. This can be for poorly formated "
+                  "elog files, or when unexpected values are found in a file.")
+
     def get_card_header(self):
         header = super().get_card_header()
 
@@ -240,9 +256,15 @@ class ValidateFileCard(forms.CollapsableCardForm):
         header.fields[0].fields.append(buttons)
 
         issue_count = self.mission.file_errors.filter(type=models.ErrorType.event).count()
-        if issue_count > 0:
-            issue_count_col = Div(HTML(issue_count), css_class="badge bg-danger")
-            buttons.fields.append(issue_count_col)
+        counter_attrs = {
+            'hx-get': reverse_lazy("core:mission_events_recount_file_errors", args=(self.mission.pk,)),
+            'hx-trigger': 'recount_file_errors from:body',
+            'hx-swap': 'outerHTML',
+        }
+        issue_class = 'badge ' + ('bg-danger' if issue_count > 0 else 'bg-success')
+        issue_count_col = Div(HTML(issue_count), css_id="div_id_file_error_count", css_class=issue_class,
+                              **counter_attrs)
+        buttons.fields.append(issue_count_col)
 
         return header
 
@@ -264,16 +286,22 @@ class ValidateFileCard(forms.CollapsableCardForm):
         super().__init__(card_name="file_validation", card_title=_("File Issues"), *args, **kwargs)
 
 
-def get_validation_card(request, mission_id, **kwargs):
+def get_validation_card_soup(mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
+
     validation_card = ValidateEventsCard(mission=mission, collapsed=('collapsed' not in kwargs))
     validation_card_html = render_crispy_form(validation_card)
     validation_card_soup = BeautifulSoup(validation_card_html, 'html.parser')
 
     if 'swap' in kwargs:
-        validation_card_soup.find(id=validation_card.get_card_id()).attrs['hx-swap-oob'] = 'true'
+        card = validation_card_soup.find(id=validation_card.get_card_id())
+        card.attrs['hx-swap-oob'] = 'true'
 
-    return HttpResponse(validation_card_soup)
+    return validation_card_soup
+
+
+def get_validation_card(request, mission_id, **kwargs):
+    return HttpResponse(get_validation_card_soup(mission_id, **kwargs))
 
 
 def get_file_validation_card(request, mission_id, **kwargs):
@@ -288,6 +316,43 @@ def get_file_validation_card(request, mission_id, **kwargs):
     return HttpResponse(validation_card_soup)
 
 
+def get_event_error_count(request, mission_id):
+
+    mission = models.Mission.objects.get(pk=mission_id)
+    issue_count = models.ValidationError.objects.filter(event__mission=mission).count()
+
+    soup = BeautifulSoup('', 'html.parser')
+    count_div = soup.new_tag('div', attrs={'id': 'div_id_event_error_count'})
+    success_class = 'bg-danger' if issue_count > 0 else 'bg-success'
+    count_div.attrs['class'] = f'badge {success_class}'
+
+    count_div.attrs['hx-get'] = request.path
+    count_div.attrs['hx-swap'] = 'outerHTML'
+    count_div.attrs['hx-trigger'] = 'recount_event_errors from:body'
+    count_div.string = str(issue_count)
+
+    soup.append(count_div)
+    return HttpResponse(soup)
+
+
+def get_file_error_count(request, mission_id):
+
+    mission = models.Mission.objects.get(pk=mission_id)
+    issue_count = mission.file_errors.filter(type=models.ErrorType.event).count()
+
+    soup = BeautifulSoup('', 'html.parser')
+    count_div = soup.new_tag('div', attrs={'id': 'div_id_event_file_count'})
+    success_class = 'bg-danger' if issue_count > 0 else 'bg-success'
+    count_div.attrs['class'] = f'badge {success_class}'
+
+    count_div.attrs['hx-get'] = request.path
+    count_div.attrs['hx-swap'] = 'outerHTML'
+    count_div.attrs['hx-trigger'] = 'recount_file_errors from:body'
+    count_div.string = str(issue_count)
+
+    soup.append(count_div)
+    return HttpResponse(soup)
+
 def revalidate_events(request, mission_id):
     mission = models.Mission.objects.get(pk=mission_id)
 
@@ -297,13 +362,15 @@ def revalidate_events(request, mission_id):
             'alert_area_id': "div_id_card_alert_event_validation",
             'logger': validation.logger_notifications.name,
             'message': _("Revalidating"),
+            'hx-swap': 'none',
             'hx-trigger': 'load',
-            'hx-post': reverse_lazy("core:mission_events_revalidate", args=(mission_id,)),
+            'hx-post': request.path,
         }
         return HttpResponse(forms.websocket_post_request_alert(**attrs))
 
     validation.validate_mission(mission)
-    response = get_validation_card(request, mission_id, swap=True, collapsed=False)
+    card = get_validation_card_soup(mission_id, swap=True, collapsed=False)
+    response = HttpResponse(card)
     response['HX-Trigger'] = 'event_updated'
     return response
 
@@ -311,7 +378,9 @@ def revalidate_events(request, mission_id):
 def delete_log_file_errors(request, file_name):
     models.FileError.objects.filter(file_name__iexact=file_name).delete()
 
-    return HttpResponse()
+    response = HttpResponse()
+    response['HX-Trigger'] = 'recount_file_errors'
+    return response
 
 
 def delete_log_file_error(request, error_id, uuid):
@@ -320,19 +389,25 @@ def delete_log_file_error(request, error_id, uuid):
     error.delete()
 
     if models.FileError.objects.filter(file_name__iexact=file_name).exists():
-        return HttpResponse()
+        response = HttpResponse()
+        response['HX-Trigger'] = 'recount_file_errors'
+        return response
 
     # if there are no more errors connected to this event, delete the event card from the validation area
     soup = BeautifulSoup("", "html.parser")
     div_id = f'div_id_card_file_validation_{uuid}'
     soup.append(soup.new_tag('div', attrs={'id': div_id, 'hx-swap-oob': 'delete'}))
-    return HttpResponse(soup)
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'recount_file_errors'
+    return response
 
 
 def delete_event_errors(request, event_id):
     models.ValidationError.objects.filter(event_id=event_id).delete()
 
-    return HttpResponse()
+    response = HttpResponse()
+    response['HX-Trigger'] = 'recount_event_errors'
+    return response
 
 
 def delete_event_error(request, error_id):
@@ -341,13 +416,18 @@ def delete_event_error(request, error_id):
     error.delete()
 
     if models.ValidationError.objects.filter(event_id=event_id).exists():
-        return HttpResponse()
+        response = HttpResponse()
+        response['HX-Trigger'] = 'recount_event_errors'
+        return response
 
     # if there are no more errors connected to this event, delete the event card from the validation area
     soup = BeautifulSoup("", "html.parser")
     div_id = f'div_id_card_event_validation_{event_id}'
     soup.append(soup.new_tag('div', attrs={'id': div_id, 'hx-swap-oob': 'delete'}))
-    return HttpResponse(soup)
+
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'recount_event_errors'
+    return response
 
 
 path_prefix = '<str:database>/mission'
@@ -357,6 +437,9 @@ mission_event_urls = [
     path(f'mission/event/validation/<int:mission_id>/', get_validation_card, name="mission_events_validation"),
     path(f'mission/file/validation/<int:mission_id>/', get_file_validation_card, name="mission_file_validation"),
     path(f'mission/event/revalidate/<int:mission_id>/', revalidate_events, name="mission_events_revalidate"),
+
+    path(f'mission/event/recount/<int:mission_id>/', get_event_error_count, name="mission_events_recount_event_errors"),
+    path(f'mission/file/recount/<int:mission_id>/', get_file_error_count, name="mission_events_recount_file_errors"),
 
     path(f'mission/event/log/<str:file_name>/', delete_log_file_errors, name="mission_event_delete_log_file_errors"),
     path(f'mission/event/log/error/<int:error_id>/<int:uuid>/', delete_log_file_error, name="mission_event_delete_log_file_error"),

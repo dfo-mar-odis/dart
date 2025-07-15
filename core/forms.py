@@ -31,6 +31,7 @@ class CardForm(forms.Form):
     card_title_class = None
     card_header_class = None
     card_name = None
+    help_text = None
 
     # the card name is frequently used in uniquely naming elements for a card
     def get_card_name(self):
@@ -42,8 +43,16 @@ class CardForm(forms.Form):
     def get_card_title_class(self):
         return 'card-title' + (f" {self.card_title_class}" if self.card_title_class else "")
 
+    def get_help_text(self):
+        return self.help_text
+
     def get_card_title(self):
-        title = HTML(f'<h6>{self.card_title}</h6>') if self.card_title else None
+        if (help_text:=self.get_help_text()) is not None:
+            svg = BeautifulSoup(load_svg('question-circle'), 'html.parser').svg
+            title_string = f'<h6 title="{help_text}"><span class="me-1">{svg}</span>{self.card_title}</h6>'
+        else:
+            title_string = f'<h6>{self.card_title}</h6>'
+        title = HTML(title_string) if self.card_title else None
         return Div(title, css_class=self.get_card_title_class(), id=self.get_card_title_id())
 
     def get_alert_area_id(self):
