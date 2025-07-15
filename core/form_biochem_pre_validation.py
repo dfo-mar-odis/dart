@@ -17,6 +17,7 @@ from core import forms
 import logging
 
 logger_notifications = logging.getLogger('dart.user.biochem_validation')
+logger = logging.getLogger('dart')
 
 
 class BIOCHEM_CODES(Enum):
@@ -144,7 +145,11 @@ def run_biochem_validation(request, mission_id):
 def get_validation_errors(request, mission_id):
 
     mission = core_models.Mission.objects.get(pk=mission_id)
-    database = settings.DATABASES[mission._state.db]['LOADED']
+    try:
+        database = settings.DATABASES[mission._state.db]['LOADED']
+    except KeyError as ex:
+        logger.exception(ex)
+        database = 'mission_db'
 
     soup = BeautifulSoup('', 'html.parser')
     soup.append(badge_error_count := soup.new_tag("div"))
