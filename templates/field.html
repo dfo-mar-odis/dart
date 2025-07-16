@@ -1,4 +1,7 @@
 {% load crispy_forms_field %}
+{# I had to override the default Bootstrap template for fields, because someone thought putting 'mb-3' #}
+{# as a default for field wrappers was a good idea and it creates a massive gap under the inputs when #}
+{# used in a card title #}
 
 {% if field.is_hidden %}
     {{ field }}

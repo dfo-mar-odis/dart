@@ -1,10 +1,10 @@
+import os
 import pandas as pd
 import numpy as np
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
-from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Field, Layout, Div, Row, Column, Hidden
+from crispy_forms.layout import Field, Div, Row, Column, Hidden, HTML
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
@@ -15,8 +15,8 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
-from pywin.framework.stdin import get_input_line
 
+import core.models
 from bio_tables import models as bio_models
 from core import models as core_models
 from core import forms as core_forms
@@ -24,10 +24,11 @@ from config.utils import load_svg
 
 
 class MissionSampleTypeFilter(core_forms.CollapsableCardForm):
-    sample_id_start = forms.IntegerField(label=_("Start"), required=False,
-                                         help_text=_("The start of the sample range. If no ending ID is provided only "
-                                                     "samples matching this ID will be returned."))
+    sample_id_start = forms.IntegerField(label=_("Start"), required=False)
     sample_id_end = forms.IntegerField(label=_("End"), required=False)
+
+    # Using this to remove large gaps around input fields crispy forms puts in
+    field_template = os.path.join(settings.TEMPLATE_DIR, "field.html")
 
     # I make these static methods so when functions outside of the form want to manipulate elements on the form
     # we can be sure we're using the same IDs
@@ -48,28 +49,70 @@ class MissionSampleTypeFilter(core_forms.CollapsableCardForm):
         return "btn_id_delete_mission_samples"
 
     def get_input_hidden_mission_sample_type(self):
-        return Hidden(value=self.mission_sample_type.pk, name='mission_sample_type', id=self.get_input_mission_sample_type_id())
+        attrs = self.htmx_attributes.copy()
+        attrs['hx-trigger'] = "reload_samples from:body"
+        input =  Hidden(value=self.mission_sample_type.pk, name='mission_sample_type', id=self.get_input_mission_sample_type_id(), **attrs)
+        return input
 
     def get_input_sample_id_start(self):
-        attrs = self.htmx_attributes
-        return Field('sample_id_start', name='sample_id_start', id=self.get_input_sample_id_start_id(), **attrs)
+        attrs = self.htmx_attributes.copy()
+        attrs['hx-trigger'] = "keyup changed delay:500ms"
+        return Field('sample_id_start', name='sample_id_start', id=self.get_input_sample_id_start_id(),
+                     css_class="form-control-sm", template=self.field_template, **attrs)
 
     def get_input_sample_id_end(self):
-        attrs = self.htmx_attributes
-        return Field('sample_id_end', name='sample_id_end', id=self.get_input_sample_id_end_id(), **attrs)
+        attrs = self.htmx_attributes.copy()
+        attrs['hx-trigger'] = "keyup changed delay:500ms"
+        return Field('sample_id_end', name='sample_id_end', id=self.get_input_sample_id_end_id(),
+                     css_class="form-control-sm", template=self.field_template, **attrs)
 
     def get_button_delete_mission_samples(self):
-        button = StrictButton(load_svg('dash-square'), id=self.get_button_delete_mission_samples_id())
+        attrs = {
+            'title': _("Delete Visible Samples"),
+            'hx-confirm': _("Are you sure?"),
+            'hx-swap': "none",
+            'hx-post': reverse_lazy("core:form_mission_sample_type_delete", args=[self.mission_sample_type.pk])
+        }
+        button = StrictButton(
+            load_svg('dash-square'),
+            css_class='btn btn-sm btn-danger',
+            id=self.get_button_delete_mission_samples_id(),
+            **attrs
+        )
         return button
+
+    def get_card_header(self):
+        header = super().get_card_header()
+        spacer_row = Column(
+            css_class="col"
+        )
+
+        button_row = Column(
+            self.get_button_delete_mission_samples(),
+            css_class="col-auto"
+        )
+
+        header.fields[0].fields.append(spacer_row)
+        header.fields[0].fields.append(button_row)
+
+        return header
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
 
         body.append(self.get_input_hidden_mission_sample_type())
 
+        helptext = _("The start of the sample range. If no ending ID is provided only samples matching this "
+                     "ID will be returned.")
         sample_row = Row(
-            Column(self.get_input_sample_id_start()),
-            Column(self.get_input_sample_id_end())
+            Row(
+                Column(self.get_input_sample_id_start()),
+                Column(self.get_input_sample_id_end())
+            ),
+            Row(
+                HTML(f'<small class="form-text">{helptext}</small>')
+            ),
+            css_class='mb-3'
         )
         body.append(sample_row)
 
@@ -81,13 +124,16 @@ class MissionSampleTypeFilter(core_forms.CollapsableCardForm):
         url = reverse_lazy('core:mission_sample_type_sample_list', args=[self.mission_sample_type.pk])
         self.htmx_attributes = {
             'hx-target': "#div_id_card_mission_sample_type_samples",
-            'hx-trigger': "keyup changed delay:500ms",
             'hx-post': url,
             'hx-swap': 'outerHTML'
         }
-
         super().__init__(*args, card_name="missing_sample_type_filter", card_title=_("Sample Type Filter"),
                          collapsed=False, **kwargs)
+
+        samples = mission_sample_type.samples.order_by('bottle__bottle_id')
+        self.fields['sample_id_start'].widget.attrs['placeholder'] = samples.first().bottle.bottle_id
+        self.fields['sample_id_end'].widget.attrs['placeholder'] = samples.last().bottle.bottle_id
+
 
 
 class BioChemDataType(core_forms.CollapsableCardForm):
@@ -99,8 +145,51 @@ class BioChemDataType(core_forms.CollapsableCardForm):
     data_type_code = forms.IntegerField(label=_("Datatype Code"), required=False)
     data_type_description = forms.ChoiceField(label=_("Datatype Description"), required=False)
 
-    start_sample = forms.IntegerField(label=_("Start"))
-    end_sample = forms.IntegerField(label=_("End"))
+    def get_button_apply_to_row(self):
+        apply_attrs = {
+            'name': 'apply_data_type_row',
+            'title': _('Apply Datatype to row(s)'),
+            'hx-post': reverse_lazy('core:form_mission_sample_type_set_row', args=(self.mission_sample_type.pk,)),
+            'hx-swap': 'none'
+        }
+        button = StrictButton(
+            load_svg('arrow-down-square'),
+            css_class="btn btn-sm btn-primary btn-sm ms-2",
+            **apply_attrs
+        )
+        return button
+
+    def get_button_apply_to_mission(self):
+        apply_attrs = {
+            'name': 'apply_data_type_sensor',
+            'title': _('Apply Datatype to mission'),
+            'hx-post': reverse_lazy('core:form_mission_sample_type_set_mission', args=(self.mission_sample_type.pk,)),
+            'hx-swap': 'none'
+        }
+        button = StrictButton(
+            load_svg('arrow-up-square'),
+            css_class="btn btn-sm btn-primary btn-sm ms-2",
+            **apply_attrs
+        )
+        return button
+
+    def get_card_header(self):
+        header = super().get_card_header()
+
+        spacer_row = Column(
+            css_class="col"
+        )
+
+        button_row = Column(
+            self.get_button_apply_to_row(),
+            self.get_button_apply_to_mission(),
+            css_class="col-auto"
+        )
+
+        header.fields[0].fields.append(spacer_row)
+        header.fields[0].fields.append(button_row)
+
+        return header
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
@@ -126,26 +215,6 @@ class BioChemDataType(core_forms.CollapsableCardForm):
         data_type_description.attrs['hx-target'] = "#id_data_type_code"
         data_type_description.attrs['hx-select-oob'] = "#id_data_type_code"
 
-        apply_attrs = {
-            'name': 'apply_data_type_row',
-            'title': _('Apply Datatype to row(s)'),
-            'hx-get': reload_form_url,
-            'hx-target': "#div_id_data_type_message",
-            'hx-swap': 'innerHTML'
-        }
-        row_apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
-                                        **apply_attrs)
-
-        apply_attrs = {
-            'name': 'apply_data_type_sensor',
-            'title': _('Apply Datatype to mission'),
-            'hx-get': reload_form_url,
-            'hx-target': "#div_id_data_type_message",
-            'hx-swap': 'innerHTML'
-        }
-        sensor_apply_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm ms-2",
-                                           **apply_attrs)
-
         body.append(Hidden('sample_type_id', self.mission_sample_type.pk))
         body.append(Row(
             Column(data_type_filter, css_class='col'),
@@ -157,32 +226,12 @@ class BioChemDataType(core_forms.CollapsableCardForm):
             id="div_id_data_type_row"
         ))
 
-        body.append(Row(
-            Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
-            Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
-            Column(row_apply_button, css_class="col-auto align-self-end mb-3"),
-            Column(sensor_apply_button, css_class="col-auto align-self-end mb-3"),
-            id="div_id_sample_range"
-        ))
-        body.append(Row(
-            Column(id="div_id_data_type_message")
-        ))
-        # body.css_class = "alert alert-secondary mt-2"
-        # body.id = "div_id_data_type_form"
-
         return body
 
     def __init__(self, mission_sample_type: core_models.MissionSampleType, *args, **kwargs):
         self.mission_sample_type = mission_sample_type
 
-        super().__init__(*args, card_name="biochem_data_type_form", card_title=_("Biochem Data Type Form"), **kwargs)
-
-        mission = mission_sample_type.mission
-        min_max = core_models.Bottle.objects.filter(event__mission=mission).aggregate(
-            Min('bottle_id'), Max('bottle_id'))
-
-        self.fields['start_sample'].initial = min_max['bottle_id__min']
-        self.fields['end_sample'].initial = min_max['bottle_id__max']
+        super().__init__(*args, card_name="biochem_data_type_form", card_title=_("Apply Biochem Datatype"), **kwargs)
 
         data_type_choices_qs = bio_models.BCDataType.objects.all()
         data_type_choices = [(st.pk, st) for st in data_type_choices_qs]
@@ -432,62 +481,28 @@ def get_samples_card(mission_sample_type, context, show_scrollbar=True):
 
 def update_sample_type_row(request, mission_sample_type_id):
 
-    if request.method == "GET":
-        url = request.path
-        attrs = {
-            'component_id': "div_id_data_type_message_alert",
-            'message': _("Saving"),
-            'hx-post': url,
-            'hx-trigger': 'load'
-        }
-        alert = core_forms.save_load_component(**attrs)
-
-        soup = BeautifulSoup("", "html.parser")
-        soup.append(msg_div := soup.new_tag('div', attrs={'id': "div_id_data_type_message", 'hx-swap-oob': "true"}))
-
-        msg_div.append(alert)
-        return HttpResponse(soup)
-
     sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     data_type_code = request.POST['data_type_code']
-    start_sample = request.POST['start_sample']
-    end_sample = request.POST['end_sample']
 
     data_type = None
     if data_type_code:
         data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
 
-    discrete_update = core_models.DiscreteSampleValue.objects.filter(
-        sample__bottle__bottle_id__gte=start_sample,
-        sample__bottle__bottle_id__lte=end_sample,
-        sample__type=sample_type,
-    )
+    queryset = get_mission_samples_type_samples_queryset(request, sample_type)
+    discrete_update = core_models.DiscreteSampleValue.objects.filter(sample__in=queryset)
+
     for value in discrete_update:
         value.datatype = data_type
+
     core_models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['datatype'])
 
     response = list_samples(request, sample_type.pk)
+    response['HX-Trigger'] = 'reload_samples'
     return response
 
 
 def update_sample_type_mission(request, mission_sample_type_id):
-    if request.method == "GET":
-        url = request.path
-        attrs = {
-            'component_id': "div_id_data_type_message_alert",
-            'message': _("Saving"),
-            'hx-post': url,
-            'hx-trigger': 'load'
-        }
-        alert = core_forms.save_load_component(**attrs)
-
-        soup = BeautifulSoup("", "html.parser")
-        soup.append(msg_div := soup.new_tag('div', attrs={'id': "div_id_data_type_message", 'hx-swap-oob': "true"}))
-
-        msg_div.append(alert)
-        return HttpResponse(soup)
-
     sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
     data_type_code = request.POST['data_type_code']
@@ -500,6 +515,7 @@ def update_sample_type_mission(request, mission_sample_type_id):
     sample_type.save()
 
     response = list_samples(request, sample_type.pk)
+    response['HX-Trigger'] = 'reload_samples'
     return response
 
 
@@ -511,23 +527,6 @@ def update_sample_type(request, mission_sample_type_id):
             biochem_form = BioChemDataType(mission_sample_type=mission_sample_type)
             html = render_crispy_form(biochem_form)
             return HttpResponse(html)
-
-        attrs = {
-            'component_id': 'div_id_data_type_update_save',
-            'message': _("Saving"),
-            'hx-trigger': 'load',
-            'hx-target': '#div_id_data_type_message',
-            'hx-select': '#div_id_data_type_message',
-            'hx-select-oob': '#table_id_sample_table'
-        }
-        if 'apply_data_type_row' in request.GET:
-            attrs['hx-post'] = reverse_lazy('core:form_mission_sample_type_set_row', args=(mission_sample_type.pk,))
-            soup = core_forms.save_load_component(**attrs)
-            return HttpResponse(soup)
-        elif 'apply_data_type_sensor' in request.GET:
-            attrs['hx-post'] = reverse_lazy('core:form_mission_sample_type_set_mission', args=(mission_sample_type.pk,))
-            soup = core_forms.save_load_component(**attrs)
-            return HttpResponse(soup)
 
         if 'data_type_filter' in request.GET:
             initial = {'data_type_filter': request.GET['data_type_filter']}
@@ -553,31 +552,25 @@ def update_sample_type(request, mission_sample_type_id):
 def sample_delete(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
-    if request.method == "GET":
-        url = request.path
-        attrs = {
-            'component_id': "div_id_data_type_message_alert",
-            'message': _("Saving"),
-            'hx-post': url,
-            'hx-trigger': 'load'
-        }
-        alert = core_forms.save_load_component(**attrs)
+    queryset = get_mission_samples_type_samples_queryset(request, mission_sample_type)
+    discrete_update = core_models.DiscreteSampleValue.objects.filter(sample__in=queryset)
+    discrete_update.delete()
 
-        soup = BeautifulSoup("", "html.parser")
-        soup.append(msg_div := soup.new_tag('div', attrs={'id': "div_id_data_type_message", 'hx-swap-oob': "true"}))
-
-        msg_div.append(alert)
-        return HttpResponse(soup)
-
-    database = settings.DATABASES[mission_sample_type.mission._state.db]['LOADED'] if (
-            'LOADED' in settings.DATABASES[mission_sample_type.mission._state.db]) else 'default'
-    mission_sample_url = reverse_lazy('core:mission_samples_sample_details',
-                                      args=(database, mission_sample_type.mission.pk,))
-    mission_sample_type.samples.all().delete()
-    mission_sample_type.delete()
+    mission_sample_type.samples.filter(discrete_values__isnull=True).delete()
 
     response = HttpResponse()
-    response['Hx-Redirect'] = mission_sample_url
+    if mission_sample_type.samples.exists():
+        response['HX-Trigger'] = 'reload_samples'
+    else:
+        # if we delete all the samples we'll want to send the user back to the Mission Samples page
+        database = settings.DATABASES[mission_sample_type.mission._state.db]['LOADED'] if (
+                'LOADED' in settings.DATABASES[mission_sample_type.mission._state.db]) else 'default'
+        mission_sample_url = reverse_lazy('core:mission_samples_sample_details',
+                                          args=(database, mission_sample_type.mission.pk,))
+        mission_sample_type.samples.all().delete()
+        mission_sample_type.delete()
+        response['Hx-Redirect'] = mission_sample_url
+
     return response
 
 

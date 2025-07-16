@@ -109,9 +109,17 @@ class TestMissionSampleTypeFilter(DartTestCase):
         body = self.form_soup.find(id="div_id_card_body_missing_sample_type_filter")
         input = body.find('input', id='input_id_mission_sample_type')
         self.assertIsNotNone(input)
-        self.assertEqual(input.attrs['name'], 'mission_sample_type')
-        self.assertEqual(input.attrs['type'], 'hidden')
-        self.assertEqual(input.attrs['value'], str(self.mission_sample_type.pk))
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'mission_sample_type')
+        self.assertEqual(attrs['type'], 'hidden')
+        self.assertEqual(attrs['value'], str(self.mission_sample_type.pk))
+
+        # when a datatype, limit or flag is updated this element should make a request to update the visible samples
+        self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-trigger'], 'reload_samples from:body')
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+        self.assertEqual(attrs['hx-swap'], 'outerHTML')
 
     def test_sample_start_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
@@ -125,6 +133,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
 
         # needs some HTMX calls to update the visible samples on the page
         self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
 
@@ -140,6 +149,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
 
         # needs some HTMX calls to update the visible samples on the page
         self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
 
