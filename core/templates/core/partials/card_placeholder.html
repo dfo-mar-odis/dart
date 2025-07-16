@@ -1,13 +1,10 @@
-{% load i18n %}
-
 <div class="card mb-2" id="div_id_card_{{ card_name }}">
     <div class="card-header" id="div_id_card_header_{{ card_name }}">
         <div class="row">
-            <button aria-expanded="true" class="btn btn btn-light btn-sm collapsed col-auto" data-bs-toggle="collapse" href="#div_id_card_collapse_{{ card_name }}" id="button_id_collapse_{{ card_name }}" type="button"><svg class="bi bi-caret-down" fill="currentColor" height="16" viewBox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg"> <path d="M3.204 5h9.592L8 10.481 3.204 5zm-.753.659 4.796 5.48a1 1 0 0 0 1.506 0l4.796-5.48c.566-.647.106-1.659-.753-1.659H3.204a1 1 0 0 0-.753 1.659z"></path></svg></button>
             <div class="col-auto align-self-end">
-                <div class="card-title" id="div_id_card_title_{{ card_name }}"> <h6>{% trans card_title %}</h6></div>
+                <div class="card-title" id="div_id_card_title_{{ card_name }}"> <h6>{{ card_title }}</h6></div>
             </div>
         </div>
     </div>
-    <div class="collapse" id="div_id_card_collapse_{{ card_name }}"></div>
+    <div class="card-body" id="div_id_card_collapse_{{ card_name }}"></div>
 </div>

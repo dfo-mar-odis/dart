@@ -10,10 +10,12 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.db.models import Q, Min, Max
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
+from pywin.framework.stdin import get_input_line
 
 from bio_tables import models as bio_models
 from core import models as core_models
@@ -21,7 +23,74 @@ from core import forms as core_forms
 from config.utils import load_svg
 
 
-class BioChemDataType(forms.Form):
+class MissionSampleTypeFilter(core_forms.CollapsableCardForm):
+    sample_id_start = forms.IntegerField(label=_("Start"), required=False,
+                                         help_text=_("The start of the sample range. If no ending ID is provided only "
+                                                     "samples matching this ID will be returned."))
+    sample_id_end = forms.IntegerField(label=_("End"), required=False)
+
+    # I make these static methods so when functions outside of the form want to manipulate elements on the form
+    # we can be sure we're using the same IDs
+    @staticmethod
+    def get_input_mission_sample_type_id():
+        return "input_id_mission_sample_type"
+
+    @staticmethod
+    def get_input_sample_id_start_id():
+        return "input_id_sample_id_start"
+
+    @staticmethod
+    def get_input_sample_id_end_id():
+        return "input_id_sample_id_end"
+
+    @staticmethod
+    def get_button_delete_mission_samples_id():
+        return "btn_id_delete_mission_samples"
+
+    def get_input_hidden_mission_sample_type(self):
+        return Hidden(value=self.mission_sample_type.pk, name='mission_sample_type', id=self.get_input_mission_sample_type_id())
+
+    def get_input_sample_id_start(self):
+        attrs = self.htmx_attributes
+        return Field('sample_id_start', name='sample_id_start', id=self.get_input_sample_id_start_id(), **attrs)
+
+    def get_input_sample_id_end(self):
+        attrs = self.htmx_attributes
+        return Field('sample_id_end', name='sample_id_end', id=self.get_input_sample_id_end_id(), **attrs)
+
+    def get_button_delete_mission_samples(self):
+        button = StrictButton(load_svg('dash-square'), id=self.get_button_delete_mission_samples_id())
+        return button
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        body.append(self.get_input_hidden_mission_sample_type())
+
+        sample_row = Row(
+            Column(self.get_input_sample_id_start()),
+            Column(self.get_input_sample_id_end())
+        )
+        body.append(sample_row)
+
+        return body
+
+    def __init__(self, mission_sample_type: core_models.MissionSampleType, *args, **kwargs):
+        self.mission_sample_type = mission_sample_type
+
+        url = reverse_lazy('core:mission_sample_type_sample_list', args=[self.mission_sample_type.pk])
+        self.htmx_attributes = {
+            'hx-target': "#div_id_card_mission_sample_type_samples",
+            'hx-trigger': "keyup changed delay:500ms",
+            'hx-post': url,
+            'hx-swap': 'outerHTML'
+        }
+
+        super().__init__(*args, card_name="missing_sample_type_filter", card_title=_("Sample Type Filter"),
+                         collapsed=False, **kwargs)
+
+
+class BioChemDataType(core_forms.CollapsableCardForm):
     sample_type_id = forms.IntegerField(label=_("Sample Type"),
                                         help_text=_("The Sample Type to apply the BioChem datatype to"))
     mission_id = forms.IntegerField(label=_("Mission"),
@@ -33,8 +102,80 @@ class BioChemDataType(forms.Form):
     start_sample = forms.IntegerField(label=_("Start"))
     end_sample = forms.IntegerField(label=_("End"))
 
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        reload_form_url = reverse_lazy('core:form_mission_sample_type_set_get', args=(self.mission_sample_type.pk,))
+
+        data_type_filter = Field('data_type_filter', css_class="form-control form-control-sm")
+        data_type_filter.attrs['hx-get'] = reload_form_url
+        data_type_filter.attrs['hx-trigger'] = 'keyup changed delay:500ms'
+        data_type_filter.attrs['hx-target'] = "#div_id_data_type_row"
+        data_type_filter.attrs['hx-select'] = "#div_id_data_type_row"
+
+        data_type_code = Field('data_type_code', id='id_data_type_code', css_class="form-control-sm")
+        data_type_code.attrs['hx-get'] = reload_form_url
+        data_type_code.attrs['hx-trigger'] = 'keyup changed delay:500ms'
+        data_type_code.attrs['hx-target'] = "#id_data_type_description"
+        data_type_code.attrs['hx-select-oob'] = "#id_data_type_description"
+
+        data_type_description = Field('data_type_description', id='id_data_type_description',
+                                      css_class='form-control form-select-sm')
+        data_type_description.attrs['hx-get'] = reload_form_url
+        data_type_description.attrs['hx-trigger'] = 'change'
+        data_type_description.attrs['hx-target'] = "#id_data_type_code"
+        data_type_description.attrs['hx-select-oob'] = "#id_data_type_code"
+
+        apply_attrs = {
+            'name': 'apply_data_type_row',
+            'title': _('Apply Datatype to row(s)'),
+            'hx-get': reload_form_url,
+            'hx-target': "#div_id_data_type_message",
+            'hx-swap': 'innerHTML'
+        }
+        row_apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
+                                        **apply_attrs)
+
+        apply_attrs = {
+            'name': 'apply_data_type_sensor',
+            'title': _('Apply Datatype to mission'),
+            'hx-get': reload_form_url,
+            'hx-target': "#div_id_data_type_message",
+            'hx-swap': 'innerHTML'
+        }
+        sensor_apply_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm ms-2",
+                                           **apply_attrs)
+
+        body.append(Hidden('sample_type_id', self.mission_sample_type.pk))
+        body.append(Row(
+            Column(data_type_filter, css_class='col'),
+        ))
+
+        body.append(Row(
+            Column(data_type_code, css_class='col-auto'),
+            Column(data_type_description, css_class="col"),
+            id="div_id_data_type_row"
+        ))
+
+        body.append(Row(
+            Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
+            Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
+            Column(row_apply_button, css_class="col-auto align-self-end mb-3"),
+            Column(sensor_apply_button, css_class="col-auto align-self-end mb-3"),
+            id="div_id_sample_range"
+        ))
+        body.append(Row(
+            Column(id="div_id_data_type_message")
+        ))
+        # body.css_class = "alert alert-secondary mt-2"
+        # body.id = "div_id_data_type_form"
+
+        return body
+
     def __init__(self, mission_sample_type: core_models.MissionSampleType, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        self.mission_sample_type = mission_sample_type
+
+        super().__init__(*args, card_name="biochem_data_type_form", card_title=_("Biochem Data Type Form"), **kwargs)
 
         mission = mission_sample_type.mission
         min_max = core_models.Bottle.objects.filter(event__mission=mission).aggregate(
@@ -85,73 +226,18 @@ class BioChemDataType(forms.Form):
             if 'end_sample' in kwargs['initial']:
                 self.fields['end_sample'].initial = kwargs['initial']['end_sample']
 
-        self.helper = FormHelper(self)
 
-        reload_form_url = reverse_lazy('core:form_mission_sample_type_set_get', args=(mission_sample_type.pk,))
+def get_mission_samples_type_samples_queryset(request, mission_sample_type):
+    queryset = mission_sample_type.samples.order_by('bottle__bottle_id')
+    if request.method == 'POST':
+        sample_id_start = int(request.POST.get('sample_id_start', 0) or 0)
+        sample_id_end = int(request.POST.get('sample_id_end', 0) or 0)
+        if bool(sample_id_start) and not bool(sample_id_end):
+            queryset = queryset.filter(bottle__bottle_id=sample_id_start)
+        elif bool(sample_id_start) and bool(sample_id_end):
+            queryset = queryset.filter(bottle__bottle_id__gte=sample_id_start, bottle__bottle_id__lte=sample_id_end)
 
-        data_type_filter = Field('data_type_filter', css_class="form-control form-control-sm")
-        data_type_filter.attrs['hx-get'] = reload_form_url
-        data_type_filter.attrs['hx-trigger'] = 'keyup changed delay:500ms'
-        data_type_filter.attrs['hx-target'] = "#div_id_data_type_row"
-        data_type_filter.attrs['hx-select'] = "#div_id_data_type_row"
-
-        data_type_code = Field('data_type_code', id='id_data_type_code', css_class="form-control-sm")
-        data_type_code.attrs['hx-get'] = reload_form_url
-        data_type_code.attrs['hx-trigger'] = 'keyup changed delay:500ms'
-        data_type_code.attrs['hx-target'] = "#id_data_type_description"
-        data_type_code.attrs['hx-select-oob'] = "#id_data_type_description"
-
-        data_type_description = Field('data_type_description', id='id_data_type_description',
-                                      css_class='form-control form-select-sm')
-        data_type_description.attrs['hx-get'] = reload_form_url
-        data_type_description.attrs['hx-trigger'] = 'change'
-        data_type_description.attrs['hx-target'] = "#id_data_type_code"
-        data_type_description.attrs['hx-select-oob'] = "#id_data_type_code"
-
-        apply_attrs = {
-            'name': 'apply_data_type_row',
-            'title': _('Apply Datatype to row(s)'),
-            'hx-get': reload_form_url,
-            'hx-target': "#div_id_data_type_message",
-            'hx-swap': 'innerHTML'
-        }
-        row_apply_button = StrictButton(load_svg('arrow-down-square'), css_class="btn btn-primary btn-sm ms-2",
-                                        **apply_attrs)
-
-        apply_attrs = {
-            'name': 'apply_data_type_sensor',
-            'title': _('Apply Datatype to mission'),
-            'hx-get': reload_form_url,
-            'hx-target': "#div_id_data_type_message",
-            'hx-swap': 'innerHTML'
-        }
-        sensor_apply_button = StrictButton(load_svg('arrow-up-square'), css_class="btn btn-primary btn-sm ms-2",
-                                           **apply_attrs)
-
-        self.helper.form_tag = False
-        self.helper.layout = Layout(
-            Div(
-                Hidden('sample_type_id', mission_sample_type.pk),
-                Row(
-                    Column(data_type_filter, css_class='col'),
-                ),
-                Row(
-                    Column(data_type_code, css_class='col-auto'),
-                    Column(data_type_description, css_class="col"),
-                    id="div_id_data_type_row"
-                ),
-                Row(
-                    Column(Field('start_sample', css_class="form-control-sm"), css_class='col-auto'),
-                    Column(Field('end_sample', css_class="form-control-sm"), css_class="col-auto"),
-                    Column(row_apply_button, css_class="col-auto align-self-end mb-3"),
-                    Column(sensor_apply_button, css_class="col-auto align-self-end mb-3"),
-                    id="div_id_sample_range"
-                ),
-                Row(
-                    Column(id="div_id_data_type_message")
-                ), css_class="alert alert-secondary mt-2", id="div_id_data_type_form"
-            )
-        )
+    return queryset
 
 
 def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.MissionSampleType) -> BeautifulSoup:
@@ -163,48 +249,56 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
     # reformat the Datatype columns, which will be represented as floats, but we want them as integers
     for i in range(1, df['Datatype'].shape[1] + 1):
         df[('Datatype', i,)] = df[('Datatype', i)].astype('string')
-        df[('Datatype', i,)] = df[('Datatype', i,)].map(lambda x: int(float(x)) if x != '---' else x)
+        df[('Datatype', i,)] = df[('Datatype', i,)].map(lambda x: x.pk if isinstance(x, bio_models.BCDataType) else int(float(x)) if x != '---' else x)
 
     # Using BeautifulSoup for html manipulation to post process the HTML table Pandas created
     soup = BeautifulSoup('', 'html.parser')
-    soup.append(sample_table := soup.new_tag('div', attrs={'id': "div_id_sample_type_details",
-                                                           'class': "vertical-scrollbar"}))
 
     # convert the dataframe to an HTML table
-    sample_table.append(BeautifulSoup(df.to_html(), 'html.parser'))
-
-    # add a message area that will hold saving, loading, error alerts
-    msg_div = soup.new_tag("div")
-    msg_div.attrs['id'] = "div_id_sample_table_msg"
-    sample_table.insert(0, msg_div)
+    soup.append(BeautifulSoup(df.to_html(), 'html.parser'))
 
     # delete the row with the 'replicates' labels
     # soup.find("thead").find('tr').findNext('tr').decompose()
 
-    # The next few rows will be the 'Sensor' row with labels like C0SM, T090C, and oxy
-    # followed by the 'replicate' row that describes if this is a single, double, triple sample.
-
     # We're going to flatten the headers down to one row then remove the others.
 
-    sensor_headers = soup.find("thead").find("tr")
+    table_header = soup.find('thead')
+    table_header.attrs['class'] = 'sticky-top bg-white'
+
+    sensor_headers = table_header.find("tr")
+
+    # this is the replicate row, but we aren't doing anything with this row so get rid of it
+    if(replicate_headers := sensor_headers.findNext("tr")):
+        replicate_headers.decompose()
 
     # we now have two header rows. The first contains all the sensor/sample names. The second contains the "Sample"
     # and "Pressure" labels. I want to copy the first two columns from the second header to the first two columns
     # of the first header (because the labels might be translated) then delete the second row
-    replicate_header = soup.find('tr').findNext('tr')
-    if replicate_header:
-        replicate_header.decompose()
+    if (index_headers := sensor_headers.findNext('tr')) is None:
+        # if the index_header row is empty, it's because there's now data loaded and no point in continuing.
+        return
 
+    index_column = index_headers.find('th')
     sensor_column = sensor_headers.find('th')
-    column = sensor_column.findNext('th')  # 'Value' column
 
-    # if the sensor_id is present then we want to show the specific details for this sensor/sample
-    column.string = f'{mission_sample_type.name}'
+    # copy the 'Sample ID' label
+    sensor_column.attrs['class'] = "sticky-column"
+    sensor_column.attrs['style'] = "left: 89px;"
+    sensor_column.string = index_column.string
 
-    root = soup.findChildren()[0]
+    # copy the 'Pressure' label
+    index_column = index_column.findNext('th')
+    sensor_column = sensor_column.findNext('th')
+    sensor_column.attrs['class'] = "sticky-column"
+    sensor_column.attrs['style'] = "left: 89px;"
+    sensor_column.string = index_column.string
+
+    # remove the now unneeded index_header row
+    index_headers.decompose()
 
     table = soup.find('table')
     table.attrs['id'] = 'table_id_sample_table'
+    table.attrs['class'] = 'table table-striped'
     th = table.find('tr').find('th')
     th.attrs['class'] = 'text-center'
 
@@ -214,13 +308,15 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
         if th.string == 'Comments':
             th.attrs['class'] += ' w-100'
 
-    root.append(table)
-
     return soup
 
 
 def list_samples(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
+    sample_card_context = {
+        'card_name': 'mission_sample_type_samples',
+        'card_title': f'{mission_sample_type.long_name} - {mission_sample_type.datatype}'
+    }
 
     page = int(request.GET.get('page', 0) or 0)
     page_limit = 50
@@ -234,11 +330,21 @@ def list_samples(request, mission_sample_type_id):
         sample__type=mission_sample_type).order_by('sample__bottle__bottle_id')
 
     replicate_max = replicates.aggregate(Max('replicate'))['replicate__max']
-    queryset = mission_sample_type.samples.order_by('bottle__bottle_id')[page_start:(page_start + page_limit)]
+
+    queryset = get_mission_samples_type_samples_queryset(request, mission_sample_type)
 
     if not queryset.exists():
         # if there are no more bottles then we stop loading, otherwise weird things happen
-        return HttpResponse()
+        card_soup = get_samples_card(mission_sample_type, sample_card_context, show_scrollbar=False)
+
+        card_body = card_soup.find(id=f"div_id_card_collapse_{sample_card_context['card_name']}")
+        card_body.append(info:=card_soup.new_tag('div', attrs={'class': 'alert alert-info'}))
+        info.string = _("No Samples found")
+        response = HttpResponse(card_soup)
+        return response
+
+    pages = queryset.count()/page_limit if queryset.exists() else 0
+    queryset = queryset[page_start:(page_start + page_limit)]
 
     discrete_queryset = core_models.DiscreteSampleValue.objects.filter(
         sample__in=queryset
@@ -250,7 +356,7 @@ def list_samples(request, mission_sample_type_id):
         'value',
         'limit',
         'flag',
-        'datatype',
+        'datatype__pk',
         'comment',
     )
 
@@ -273,33 +379,56 @@ def list_samples(request, mission_sample_type_id):
 
     # add styles to the table so it's consistent with the rest of the application
     table = soup.find('table')
-    table.attrs['class'] = 'dataframe table table-striped table-sm tscroll horizontal-scrollbar'
+    table.attrs['class'] = 'table table-striped table-sm horizontal-scrollbar'
 
     # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
     # of samples will be loaded into the table.
     table_head = table.find('thead')
+    table_head.attrs['class'] = 'sticky-top'
 
     table_body = table.find('tbody')
 
-    last_tr = table_body.find_all('tr')[-1]
-    last_tr.attrs['hx-target'] = 'this'
-    last_tr.attrs['hx-trigger'] = 'intersect once'
-    last_tr.attrs['hx-get'] = reverse_lazy('core:mission_sample_type_sample_list',
-                                           args=(mission_sample_type_id,)) + f"?page={page + 1}"
-    last_tr.attrs['hx-swap'] = "afterend"
+    if pages > 1 and queryset.count() >= page_limit:
+        last_tr = table_body.find_all('tr')[-1]
+        last_tr.attrs['hx-target'] = 'this'
+        last_tr.attrs['hx-trigger'] = 'intersect once'
+        last_tr.attrs['hx-get'] = reverse_lazy('core:mission_sample_type_sample_list',
+                                               args=(mission_sample_type_id,)) + f"?page={page + 1}"
+        last_tr.attrs['hx-swap'] = "afterend"
 
     # finally, align all text in each column to the center of the cell
     tds = soup.find('table').find_all('td')
     for td in tds:
         td['class'] = 'text-center text-nowrap'
 
+    # If the page is <= zero then we're constructing the table for the first time and we'll want to encapsulate
+    # the whole table in a card with the mission sample type details as the cart title.
+    #
+    # if page is > 0 then the user is scrolling down and we only want to return new rows to be swapped into
+    # the table.
     if page > 0:
         response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
-    else:
-        response = HttpResponse(soup)
+        return response
+
+    card_soup = get_samples_card(mission_sample_type, sample_card_context, show_scrollbar=(pages>1 or queryset.count()>11))
+
+    card_body = card_soup.find(id=f"div_id_card_collapse_{sample_card_context['card_name']}")
+    card_body.append(soup.find('table'))
+    response = HttpResponse(card_soup)
 
     return response
 
+def get_samples_card(mission_sample_type, context, show_scrollbar=True):
+
+    card_html = render_to_string('core/partials/card_placeholder.html', context)
+    card_soup = BeautifulSoup(card_html, 'html.parser')
+
+    card_body = card_soup.find(id=f"div_id_card_collapse_{context['card_name']}")
+    card_body.attrs['class'] = ''  # We're clearing the class to get rid of the card-body class' margins
+    if show_scrollbar:
+        card_body.attrs['class'] = 'vertical-scrollbar'
+
+    return card_soup
 
 def update_sample_type_row(request, mission_sample_type_id):
 

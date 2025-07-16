@@ -1,9 +1,10 @@
 from bs4 import BeautifulSoup
+from crispy_forms.utils import render_crispy_form
 from django.template.loader import render_to_string
 from django.test import tag, Client
 from django.urls import reverse
 
-from core.form_mission_sample_type import BioChemDataType
+from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter
 from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
@@ -13,7 +14,7 @@ from core import models as core_models
 class AbstractTestMissionSampleType(DartTestCase):
 
     def setUp(self) -> None:
-        self.mission_sample_type = core_factory.MissionSampleTypeFactory()
+        self.mission_sample_type = core_factory.MissionSampleTypeFactory.create()
 
         event = core_factory.CTDEventFactory(mission=self.mission_sample_type.mission)
 
@@ -59,6 +60,7 @@ class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
         self.assertIsNotNone(end_input)
         self.assertEqual(int(end_input.attrs['value']), self.end_bottle)
 
+    # Todo: The delete button was removed from the Datatype form and will be placed on the filter form
     @tag("template_mission_sample_type_test_initial_template_delete_btn")
     def test_initial_template_delete_btn(self):
         # the delete sample type button should point to the delete url in the Form_mission_sample_type module
@@ -76,6 +78,70 @@ class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
         delete_btn = soup.find('button', attrs={'name': "delete"})
         self.assertIsNotNone(delete_btn)
         self.assertIn('hx-confirm', delete_btn.attrs)
+
+
+@tag("forms", "mission_sample_type", "form_filter_data_type")
+class TestMissionSampleTypeFilter(DartTestCase):
+
+    def setUp(self) -> None:
+        self.mission_sample_type = core_factory.MissionSampleTypeFactory.create()
+        self.form = MissionSampleTypeFilter(self.mission_sample_type)
+        self.expected_url = reverse('core:mission_sample_type_sample_list', args=[self.mission_sample_type.pk])
+        context = {
+        }
+
+        form_crispy = render_crispy_form(self.form, context=context)
+        self.form_soup = BeautifulSoup(form_crispy, 'html.parser')
+
+    def test_initial(self):
+        # test that the form was initialized with the title
+        title = self.form_soup.find(id="div_id_card_title_missing_sample_type_filter").findChildren()[0]
+        self.assertEqual(title.string, "Sample Type Filter")
+
+    def test_button_delete(self):
+        # test that the card header has a button to delete filtered samples
+        header = self.form_soup.find(id="div_id_card_header_missing_sample_type_filter")
+        input = header.find('button', id='btn_id_delete_mission_samples')
+        self.assertIsNotNone(input)
+
+    def test_hidden_mission_sample_type_input(self):
+        # test that a hidden input field with the name 'mission_sample_type' exists in the body of the card
+        body = self.form_soup.find(id="div_id_card_body_missing_sample_type_filter")
+        input = body.find('input', id='input_id_mission_sample_type')
+        self.assertIsNotNone(input)
+        self.assertEqual(input.attrs['name'], 'mission_sample_type')
+        self.assertEqual(input.attrs['type'], 'hidden')
+        self.assertEqual(input.attrs['value'], str(self.mission_sample_type.pk))
+
+    def test_sample_start_input(self):
+        # test that an input field with the name 'sample_id_start' exists in the body of the card
+        body = self.form_soup.find(id="div_id_card_body_missing_sample_type_filter")
+        input = body.find('input', id='input_id_sample_id_start')
+        self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'sample_id_start')
+        self.assertEqual(attrs['type'], 'number')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+        self.assertEqual(attrs['hx-swap'], 'outerHTML')
+
+    def test_sample_end_input(self):
+        # test that an input field with the name 'sample_id_end' exists in the body of the card
+        body = self.form_soup.find(id="div_id_card_body_missing_sample_type_filter")
+        input = body.find('input', id='input_id_sample_id_end')
+        self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'sample_id_end')
+        self.assertEqual(attrs['type'], 'number')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+        self.assertEqual(attrs['hx-swap'], 'outerHTML')
 
 
 @tag("forms", "mission_sample_type", "form_biochem_data_type")
@@ -121,6 +187,10 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         super().setUp()
         self.client = Client()
 
+    # Todo: This test needs to be rewritten. The sample type page will now have three sections. The top will be a
+    #       filter form allowing the user to filter samples for a provided mission sample type in multiple ways.
+    #       The middle section will be a form that allows the user to apply a biochem datatype. The bottom
+    #       section will be a table displaying samples based on the filter form criteria.
     @tag("form_mission_sample_type_test_entry_point")
     def test_entry_point(self):
         # a database and sample type a get request should return the initial sample type page
@@ -131,16 +201,20 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         soup = BeautifulSoup(response.content, "html.parser")
         self.assertIsNotNone(soup)
 
-        # The page consists of two main portions. The top is the sample type form to apply a Biochem datatype to a
-        # mission sample type. The bottom portion of the page consists of a table showing the data table for the
-        # selected mission sample type
+        # The page consists of three main portions.
+        # The top is a sample type filter form used to manipulate what samples certian actions are preformed on.
+        # The middle is the sample type form to apply a Biochem datatype to a mission sample type.
+        # The bottom portion is a table showing the data filtered from the sample type filter.
 
-        form = soup.find(id="div_id_sample_filter")
-        self.assertIsNotNone(form)
+        data_type_form = soup.find(id="div_id_card_mission_sample_type_filter")
+        self.assertIsNotNone(data_type_form)
 
-        # the data gets loaded after the page load so this is just going to be an empty place holder
+        data_type_form = soup.find(id="div_id_card_collapse_biochem_data_type_form")
+        self.assertIsNotNone(data_type_form)
+
+        # the data gets loaded after the page load so this is just going to be an empty placeholder
         # with hx-get=url and hx-trigger='load' attributes
-        table_card = soup.find(id="div_id_data_display")
+        table_card = soup.find(id="table_id_sample_table")
         self.assertIsNotNone(table_card)
 
         url = reverse("core:mission_sample_type_card", args=(self.mission_sample_type.pk,))
