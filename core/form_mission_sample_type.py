@@ -144,7 +144,7 @@ class MissionSampleTypeFilter(core_forms.CollapsableCardForm):
             'hx-post': url,
             'hx-swap': 'outerHTML'
         }
-        super().__init__(*args, card_name="missing_sample_type_filter", card_title=_("Sample Type Filter"),
+        super().__init__(*args, card_name="mission_sample_type_filter", card_title=_("Sample Type Filter"),
                          collapsed=collapsed, **kwargs)
 
         events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd, sample_id__isnull=False, sample_id__gt=0)
