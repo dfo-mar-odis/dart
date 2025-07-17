@@ -18,6 +18,14 @@ class SampleTypeDetails(GenericDetailView):
     page_title = _("Sample Type")
     template_name = "core/mission_sample_type.html"
 
+    help_text = _("The Mission Sample Type page provides a more detailed look at, and manipulation of, a specific "
+                  "sample type.\n\n"
+                  "Samples assigned to this data type can be filtered to remove some, or all, samples.\n"
+                  "Removing all samples from a mission sample type will remove the sample type from the mission.\n\n"
+                  "This page also allows for the application of a Biochem Datatype, either to all samples belonging to "
+                  "the sample type, or as a one off application to a specific series of samples belonging to the "
+                  "mission sample type.")
+
     def get_page_title(self):
         return _("Mission Sample Type") + f" : {self.object.mission.name} - {self.object.name}"
 

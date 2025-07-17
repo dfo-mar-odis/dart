@@ -47,13 +47,14 @@ class CardForm(forms.Form):
         return self.help_text
 
     def get_card_title(self):
+        title_string = ""
         if (help_text:=self.get_help_text()) is not None:
             svg = BeautifulSoup(load_svg('question-circle'), 'html.parser').svg
-            title_string = f'<h6 title="{help_text}"><span class="me-1">{svg}</span>{self.card_title}</h6>'
-        else:
-            title_string = f'<h6>{self.card_title}</h6>'
+            title_string = f'<span title="{help_text}" class="me-2">{svg}</span>'
+
+        title_string += f'<span id="{self.get_card_title_id()}" class="h6">{self.card_title}</span>'
         title = HTML(title_string) if self.card_title else None
-        return Div(title, css_class=self.get_card_title_class(), id=self.get_card_title_id())
+        return Div(title, css_class=self.get_card_title_class())
 
     def get_alert_area_id(self):
         return f"div_id_card_alert_{self.card_name}"

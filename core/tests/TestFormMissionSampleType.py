@@ -60,25 +60,6 @@ class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
         self.assertIsNotNone(end_input)
         self.assertEqual(int(end_input.attrs['value']), self.end_bottle)
 
-    # Todo: The delete button was removed from the Datatype form and will be placed on the filter form
-    @tag("template_mission_sample_type_test_initial_template_delete_btn")
-    def test_initial_template_delete_btn(self):
-        # the delete sample type button should point to the delete url in the Form_mission_sample_type module
-        # it should have an hx-confirm on it to make sure the user isn't accidentally deleting the sample type
-        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
-        context = {
-            'database': 'default',
-            'mission_sample_type': self.mission_sample_type,
-            'biochem_form': biochem_data_type_form
-        }
-
-        html = render_to_string(self.template, context)
-        soup = BeautifulSoup(html, "html.parser")
-
-        delete_btn = soup.find('button', attrs={'name': "delete"})
-        self.assertIsNotNone(delete_btn)
-        self.assertIn('hx-confirm', delete_btn.attrs)
-
 
 @tag("forms", "mission_sample_type", "form_filter_data_type")
 class TestMissionSampleTypeFilter(DartTestCase):
@@ -95,13 +76,13 @@ class TestMissionSampleTypeFilter(DartTestCase):
 
     def test_initial(self):
         # test that the form was initialized with the title
-        title = self.form_soup.find(id="div_id_card_title_missing_sample_type_filter").findChildren()[0]
+        title = self.form_soup.find(id="div_id_card_title_missing_sample_type_filter")
         self.assertEqual(title.string, "Sample Type Filter")
 
-    def test_button_delete(self):
-        # test that the card header has a button to delete filtered samples
+    def test_button_clear(self):
+        # test that the card header has a button to clear filtered samples
         header = self.form_soup.find(id="div_id_card_header_missing_sample_type_filter")
-        input = header.find('button', id='btn_id_delete_mission_samples')
+        input = header.find('button', id='btn_id_clear_filters')
         self.assertIsNotNone(input)
 
     def test_hidden_mission_sample_type_input(self):
