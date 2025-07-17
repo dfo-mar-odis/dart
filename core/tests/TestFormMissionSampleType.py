@@ -4,7 +4,7 @@ from django.template.loader import render_to_string
 from django.test import tag, Client
 from django.urls import reverse
 
-from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter
+from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter, samples_card_id
 from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
@@ -46,36 +46,35 @@ class TestMissionSampleTypeFilter(DartTestCase):
 
     def test_initial(self):
         # test that the form was initialized with the title
-        title = self.form_soup.find(id="div_id_card_title_mission_sample_type_filter")
+        title = self.form_soup.find(id=self.form.get_id_builder().get_card_title_id())
         self.assertEqual(title.string, "Sample Type Filter")
 
     def test_button_clear(self):
         # test that the card header has a button to clear filtered samples
-        header = self.form_soup.find(id="div_id_card_header_mission_sample_type_filter")
-        input = header.find('button', id='btn_id_clear_filters')
+        header = self.form_soup.find(id=self.form.get_id_builder().get_card_header_id())
+        input = header.find('button', id=self.form.get_id_builder().get_button_clear_filters_id())
         self.assertIsNotNone(input)
 
     def test_hidden_mission_sample_type_input(self):
         # test that a hidden input field with the name 'mission_sample_type' exists in the body of the card
-        body = self.form_soup.find(id="div_id_card_body_mission_sample_type_filter")
-        input = body.find('input', id='input_id_mission_sample_type')
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_hidden_refresh_id())
         self.assertIsNotNone(input)
 
         attrs = input.attrs
-        self.assertEqual(attrs['name'], 'mission_sample_type')
+        self.assertEqual(attrs['name'], 'refresh_samples')
         self.assertEqual(attrs['type'], 'hidden')
-        self.assertEqual(attrs['value'], str(self.mission_sample_type.pk))
 
         # when a datatype, limit or flag is updated this element should make a request to update the visible samples
-        self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-target'], f"#{samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], 'reload_samples from:body')
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
 
     def test_sample_start_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
-        body = self.form_soup.find(id="div_id_card_body_mission_sample_type_filter")
-        input = body.find('input', id='input_id_sample_id_start')
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_sample_id_start_id())
         self.assertIsNotNone(input)
 
         attrs = input.attrs
@@ -83,15 +82,15 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-target'], f"#{samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
 
     def test_sample_end_input(self):
         # test that an input field with the name 'sample_id_end' exists in the body of the card
-        body = self.form_soup.find(id="div_id_card_body_mission_sample_type_filter")
-        input = body.find('input', id='input_id_sample_id_end')
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_sample_id_end_id())
         self.assertIsNotNone(input)
 
         attrs = input.attrs
@@ -99,7 +98,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-target'], "#div_id_card_mission_sample_type_samples")
+        self.assertEqual(attrs['hx-target'], f"#{samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
@@ -142,10 +141,6 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         super().setUp()
         self.client = Client()
 
-    # Todo: This test needs to be rewritten. The sample type page will now have three sections. The top will be a
-    #       filter form allowing the user to filter samples for a provided mission sample type in multiple ways.
-    #       The middle section will be a form that allows the user to apply a biochem datatype. The bottom
-    #       section will be a table displaying samples based on the filter form criteria.
     @tag("form_mission_sample_type_test_entry_point")
     def test_entry_point(self):
         # a database and sample type a get request should return the initial sample type page
@@ -157,12 +152,12 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         self.assertIsNotNone(soup)
 
         # The page consists of three main portions.
-        # The top is a sample type filter form used to manipulate what samples certian actions are preformed on.
+        # The top is a sample type filter form used to manipulate what samples certain actions are preformed on.
         # The middle is the sample type form to apply a Biochem datatype to a mission sample type.
         # The bottom portion is a table showing the data filtered from the sample type filter.
 
-        data_type_form = soup.find(id="div_id_card_mission_sample_type_filter")
-        self.assertIsNotNone(data_type_form)
+        filter_form = soup.find(id="div_id_card_mission_sample_type_filter")
+        self.assertIsNotNone(filter_form)
 
         data_type_form = soup.find(id="div_id_card_collapse_biochem_data_type_form")
         self.assertIsNotNone(data_type_form)
