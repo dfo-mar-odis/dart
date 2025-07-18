@@ -4,7 +4,7 @@ from django.template.loader import render_to_string
 from django.test import tag, Client
 from django.urls import reverse
 
-from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter, samples_card_id
+from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter, SAMPLES_CARD_ID
 from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
@@ -66,7 +66,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'hidden')
 
         # when a datatype, limit or flag is updated this element should make a request to update the visible samples
-        self.assertEqual(attrs['hx-target'], f"#{samples_card_id}")
+        self.assertEqual(attrs['hx-target'], f"#{SAMPLES_CARD_ID}")
         self.assertEqual(attrs['hx-trigger'], 'reload_samples from:body')
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
@@ -82,7 +82,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-target'], f"#{samples_card_id}")
+        self.assertEqual(attrs['hx-target'], f"#{SAMPLES_CARD_ID}")
         self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
@@ -98,7 +98,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-target'], f"#{samples_card_id}")
+        self.assertEqual(attrs['hx-target'], f"#{SAMPLES_CARD_ID}")
         self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-post'], self.expected_url)
         self.assertEqual(attrs['hx-swap'], 'outerHTML')

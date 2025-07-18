@@ -24,37 +24,22 @@
 {% endblock %}
 
 {% block content %}
-    <div class="container-fluid">
-
-        {% include 'core/partials/mission_gear_type_filter.html' with form=gear_type_filter_form mission=object instrument_type=instrument_type  %}
-        <div id="div_id_sample_card" class="card">
-            <div class="card-header">
-                <div class="row">
-                    <div class="col">
-                        <div class="row">
-                        <h5 class="col-auto card-title">{% trans 'Samples' %}</h5>
-                        {% if instrument_type == 2 %}
-                        <button class="col-auto btn btn-primary btn-sm ms-2" title="{% trans "Load volume file" %}" hx-get="{% url 'core:form_gear_type_load_volume' object.pk %}" hx-swap="none">{% custom_icon 'plus-square' %}</button>
-                        {% endif %}
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col">
-                        <div id="div_id_sample_card_notifications"></div>
-                    </div>
-                </div>
+    <div id="div_content_block_id" class="container-fluid">
+        <form>
+            <div class="mb-2">
+            {% if filter_form %}
+                {% crispy filter_form %}
+            {% endif %}
             </div>
-            <div class="vertical-scrollbar">
-                <table id="table_id_gear_type_sample_table" class="datatable table table-striped tscroll">
-                    <thead class="sticky-top">
-                    <tr><th>{% trans 'Sample' %}</th><th>{% trans 'Event' %}</th><th>{% trans 'Mesh' %}</th><th>{% trans 'Volume' %}</th><th>{% trans 'Gear' %}</th><th>{% trans 'Gear Type Description' %}</th></tr>
-                    </thead>
-                    <tbody id="tbody_id_gear_type_sample_table" hx-swap="outerHTML">
-
-                    </tbody>
-                </table>
+            <div class="mb-2">
+            {% if gear_type_form %}
+                {% crispy gear_type_form %}
+            {% endif %}
             </div>
+        <div id="div_id_card_samples" hx-swap="outerHTML" hx-get="{% url 'core:mission_gear_type_sample_list' mission.pk instrument_type %}" hx-trigger="load">
+
         </div>
+        </form>
     </div>
 {% endblock %}
+

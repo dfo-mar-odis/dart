@@ -7,9 +7,8 @@ from crispy_forms.layout import Field, Div, Row, Column, Hidden, HTML
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
-from django.db.models import Q, Max
+from django.db.models import Q, Max, QuerySet
 from django.http import HttpResponse
-from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
@@ -19,11 +18,9 @@ from bio_tables import models as bio_models
 from core import models as core_models
 from core import forms as core_forms
 from config.utils import load_svg
-from core.form_mission_sample_filter import SampleFilterForm
+from core import form_mission_sample_filter
+from core.form_mission_sample_filter import SampleFilterForm, get_samples_card, SAMPLES_CARD_NAME, SAMPLES_CARD_ID
 
-
-samples_card_name = "filtered_samples_card"
-samples_card_id = f"div_id_card_{samples_card_name}"
 
 class MissionSampleTypeFilter(SampleFilterForm):
 
@@ -38,7 +35,7 @@ class MissionSampleTypeFilter(SampleFilterForm):
         self.mission_sample_type = mission_sample_type
         self.events = core_models.Event.objects.filter(instrument__type=core_models.InstrumentType.ctd, sample_id__isnull=False, sample_id__gt=0)
 
-        super().__init__(*args, samples_card_id=samples_card_id, card_name=self.card_name, card_title=_("Sample Type Filter"), collapsed=collapsed, **kwargs)
+        super().__init__(*args, card_name=self.card_name, collapsed=collapsed, **kwargs)
 
         samples = mission_sample_type.samples.order_by('bottle__bottle_id')
         if samples.exists():
@@ -208,39 +205,7 @@ class BioChemDataType(core_forms.CollapsableCardForm):
         self.fields['data_type_code'].initial = self.initial_choice
 
 
-def get_mission_samples_type_samples_queryset(request, mission_sample_type):
-    queryset = mission_sample_type.samples.order_by('bottle__bottle_id')
-    if request.method == 'POST':
-        if (event_id := int(request.POST.get('event', 0) or 0)) > 0:
-            event = core_models.Event.objects.get(pk=event_id)
-            sample_id_start = event.sample_id
-            sample_id_end = event.end_sample_id
-        else:
-            sample_id_start = int(request.POST.get('sample_id_start', 0) or 0)
-            sample_id_end = int(request.POST.get('sample_id_end', 0) or 0)
-
-        if bool(sample_id_start) and not bool(sample_id_end):
-            queryset = queryset.filter(bottle__bottle_id=sample_id_start)
-        elif bool(sample_id_start) and bool(sample_id_end):
-            queryset = queryset.filter(bottle__bottle_id__gte=sample_id_start, bottle__bottle_id__lte=sample_id_end)
-
-    return queryset
-
-
-def get_samples_card(context, show_scrollbar=True):
-
-    card_html = render_to_string('core/partials/card_placeholder.html', context)
-    card_soup = BeautifulSoup(card_html, 'html.parser')
-
-    card_body = card_soup.find(id=f"div_id_card_collapse_{context['card_name']}")
-    card_body.attrs['class'] = ''  # We're clearing the class to get rid of the card-body class' margins
-    if show_scrollbar:
-        card_body.attrs['class'] = 'vertical-scrollbar'
-
-    return card_soup
-
-
-def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.MissionSampleType) -> BeautifulSoup:
+def format_sensor_table(df: pd.DataFrame) -> BeautifulSoup:
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
 
     # start by replacing nan values with '---'
@@ -276,7 +241,7 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
     # of the first header (because the labels might be translated) then delete the second row
     if (index_headers := sensor_headers.findNext('tr')) is None:
         # if the index_header row is empty, it's because there's now data loaded and no point in continuing.
-        return
+        return soup
 
     index_column = index_headers.find('th')
     sensor_column = sensor_headers.find('th')
@@ -311,45 +276,28 @@ def format_sensor_table(df: pd.DataFrame, mission_sample_type: core_models.Missi
     return soup
 
 
-def list_samples(request, mission_sample_type_id):
-    mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
+def get_samples_queryset(filter_dict: dict, initial_samples_queryset: QuerySet):
+    queryset = initial_samples_queryset.order_by('bottle__bottle_id')
 
-    sample_card_context = {
-        'card_name': samples_card_name,
-        'card_title': f'{mission_sample_type.name}'
-    }
-    if mission_sample_type.datatype:
-        sample_card_context['card_title'] = f'{mission_sample_type.name} - {mission_sample_type.datatype} '\
-                                            f'[{mission_sample_type.datatype.data_retrieval.minimum_value} : '\
-                                            f'{mission_sample_type.datatype.data_retrieval.maximum_value}]'
+    event_id = int(filter_dict.get('event', 0) or 0)
+    if event_id > 0:
+        event = core_models.Event.objects.get(pk=event_id)
+        sample_id_start = event.sample_id
+        sample_id_end = event.end_sample_id
+    else:
+        sample_id_start = int(filter_dict.get('sample_id_start', 0) or 0)
+        sample_id_end = int(filter_dict.get('sample_id_end', 0) or 0)
 
-    page = int(request.GET.get('page', 0) or 0)
-    page_limit = 50
-    page_start = page_limit * page
+    if bool(sample_id_start) and not bool(sample_id_end):
+        queryset = queryset.filter(bottle__bottle_id=sample_id_start)
+    elif bool(sample_id_start) and bool(sample_id_end):
+        queryset = queryset.filter(bottle__bottle_id__gte=sample_id_start, bottle__bottle_id__lte=sample_id_end)
 
-    # unfortunately if a page doesn't contain columns for 1 or 2 replicates when there's more the
-    # HTML table that gets returned to the interface will be missing columns and it throws everything
-    # out of alignment. We'll get the replicate columns here and use that value to insert blank
-    # columns into the dataframe if a replicate column is missing from the query set.
-    replicates = core_models.DiscreteSampleValue.objects.filter(
-        sample__type=mission_sample_type).order_by('sample__bottle__bottle_id')
+    return queryset
 
-    replicate_max = replicates.aggregate(Max('replicate'))['replicate__max']
-
-    queryset = get_mission_samples_type_samples_queryset(request, mission_sample_type)
-
-    if not queryset.exists():
-        # if there are no more bottles then we stop loading, otherwise weird things happen
-        card_soup = get_samples_card(sample_card_context, show_scrollbar=False)
-
-        card_body = card_soup.find(id=f"div_id_card_collapse_{sample_card_context['card_name']}")
-        card_body.append(info:=card_soup.new_tag('div', attrs={'class': 'alert alert-info'}))
-        info.string = _("No Samples found")
-        response = HttpResponse(card_soup)
-        return response
-
-    pages = queryset.count()/page_limit if queryset.exists() else 0
-    queryset = queryset[page_start:(page_start + page_limit)]
+# provided an initial queryset, build a table using BeautifulSoup
+def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
+    mission_sample_type = kwargs['mission_sample_type']
 
     discrete_queryset = core_models.DiscreteSampleValue.objects.filter(
         sample__in=queryset
@@ -370,6 +318,15 @@ def list_samples(request, mission_sample_type_id):
     df.columns = ["Sample", "Pressure", "Replicate", ] + headings
     df = df.pivot(index=['Sample', 'Pressure', ], columns=['Replicate'])
 
+    # unfortunately if a page doesn't contain columns for all possible replicates when there's more than 1 or 2
+    # the HTML table that gets returned to the interface will be missing columns and it throws everything
+    # out of alignment. We'll get the replicate columns here and use that value to insert blank
+    # columns into the dataframe if a replicate column is missing from the query set.
+    replicates = core_models.DiscreteSampleValue.objects.filter(
+        sample__type=mission_sample_type).order_by('sample__bottle__bottle_id')
+
+    replicate_max = replicates.aggregate(Max('replicate'))['replicate__max']
+
     for j, column in enumerate(headings):
         for i in range(1, replicate_max + 1):
             col_index = (column, i,)
@@ -380,63 +337,23 @@ def list_samples(request, mission_sample_type_id):
                 else:
                     df[col_index] = np.nan
 
-    soup = format_sensor_table(df, mission_sample_type)
+    return format_sensor_table(df)
 
-    # add styles to the table so it's consistent with the rest of the application
-    table = soup.find('table')
-    table.attrs['class'] = 'table table-striped table-sm horizontal-scrollbar'
 
-    # now we'll attach an HTMX call to the last queried table row so when the user scrolls to it the next batch
-    # of samples will be loaded into the table.
-    table_head = table.find('thead')
-    table_head.attrs['class'] = 'sticky-top'
+def list_samples(request, mission_sample_type_id):
+    mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
+    delete_samples_url = reverse_lazy("core:form_mission_sample_type_delete", args=[mission_sample_type_id])
 
-    table_body = table.find('tbody')
+    card_title = mission_sample_type.name
+    if mission_sample_type.datatype:
+        card_title = (f'{mission_sample_type.name} - {mission_sample_type.datatype} '
+                      f'[{mission_sample_type.datatype.data_retrieval.minimum_value} : '
+                      f'{mission_sample_type.datatype.data_retrieval.maximum_value}]')
 
-    if pages > 1 and queryset.count() >= page_limit:
-        last_tr = table_body.find_all('tr')[-1]
-        last_tr.attrs['hx-target'] = 'this'
-        last_tr.attrs['hx-trigger'] = 'intersect once'
-        last_tr.attrs['hx-get'] = reverse_lazy('core:mission_sample_type_sample_list',
-                                               args=(mission_sample_type_id,)) + f"?page={page + 1}"
-        last_tr.attrs['hx-swap'] = "afterend"
+    queryset = get_samples_queryset(request.GET, mission_sample_type.samples.all())
 
-    # finally, align all text in each column to the center of the cell
-    tds = soup.find('table').find_all('td')
-    for td in tds:
-        td['class'] = 'text-center text-nowrap'
-
-    # If the page is <= zero then we're constructing the table for the first time and we'll want to encapsulate
-    # the whole table in a card with the mission sample type details as the cart title.
-    #
-    # if page is > 0 then the user is scrolling down and we only want to return new rows to be swapped into
-    # the table.
-    if page > 0:
-        response = HttpResponse(soup.find('tbody').findAll('tr', recursive=False))
-        return response
-
-    card_soup = get_samples_card(sample_card_context, show_scrollbar=(pages>1 or queryset.count()>11))
-
-    card_body = card_soup.find(id=f"div_id_card_collapse_{sample_card_context['card_name']}")
-    card_body.append(soup.find('table'))
-
-    attrs = {
-        'class': 'btn btn-sm btn-danger',
-        'title': _("Delete Visible Samples"),
-        'hx-confirm': _("Are you sure?"),
-        'hx-swap': "none",
-        'hx-post': reverse_lazy("core:form_mission_sample_type_delete", args=[mission_sample_type_id])
-    }
-
-    button_row = card_soup.find(id=f"div_id_card_title_buttons_{sample_card_context['card_name']}")
-    button_row.append(btn_delete:=card_soup.new_tag('button', attrs=attrs))
-
-    icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
-    btn_delete.append(icon)
-
-    response = HttpResponse(card_soup)
-
-    return response
+    return form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
+                                                   process_samples_func, mission_sample_type=mission_sample_type)
 
 
 def update_sample_type(request, mission_sample_type_id):
@@ -455,7 +372,7 @@ def update_sample_type(request, mission_sample_type_id):
         sample_type.datatype = data_type
         sample_type.save()
     else:
-        queryset = get_mission_samples_type_samples_queryset(request, sample_type)
+        queryset = get_samples_queryset(request.POST, sample_type.samples.all())
         discrete_update = core_models.DiscreteSampleValue.objects.filter(sample__in=queryset)
 
         for value in discrete_update:
@@ -506,7 +423,7 @@ def filter_datatype(request, mission_sample_type_id):
 def sample_delete(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
-    queryset = get_mission_samples_type_samples_queryset(request, mission_sample_type)
+    queryset = get_samples_queryset(request.POST, mission_sample_type.samples.all())
     discrete_update = core_models.DiscreteSampleValue.objects.filter(sample__in=queryset)
     discrete_update.delete()
 
@@ -531,17 +448,8 @@ def sample_delete(request, mission_sample_type_id):
 def clear_filters(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
     form = MissionSampleTypeFilter(mission_sample_type=mission_sample_type, collapsed=False)
-    crispy = render_crispy_form(form)
-    soup = BeautifulSoup(crispy, 'html.parser')
 
-    card = soup.find(id=form.get_card_id())
-    card.attrs['hx-swap-oob'] = 'true'
-    card.attrs['hx-get'] = form.get_samples_card_update_url()
-    card.attrs['hx-trigger'] = 'load'
-    card.attrs['hx-target'] = f"#{samples_card_id}"
-
-    response = HttpResponse(soup)
-    return response
+    return form_mission_sample_filter.clear_filters(form)
 
 
 url_prefix = "sample_type"

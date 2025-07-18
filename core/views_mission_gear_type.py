@@ -23,7 +23,7 @@ class GearTypeDetails(GenericDetailView):
         context['database'] = self.kwargs['database']
         context['mission'] = self.object
         context['instrument_type'] = models.InstrumentType(self.kwargs['instrument_type'])
-        context['gear_type_filter_form'] = GearTypeFilterForm(mission_id=self.object.pk, instrument_type=context['instrument_type'])
+        context['filter_form'] = GearTypeFilterForm(mission_id=self.object.pk, instrument_type=context['instrument_type'])
 
         return context
 
