@@ -1,0 +1,36 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div id="div_id_card_plankton_form" class="card">
+    <div class="card-header">
+        <div class="card-title row">
+            <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                    href="#div_new_sample">{% custom_icon 'caret-down' %}</button>
+            <h6 class="col-auto align-self-end">{% trans "Load Sample from file" %}</h6></div>
+    </div>
+    <div class="collapse col" id="div_new_sample">
+        <div class="card-body">
+            <div class="mb-2 col">
+                <div id="new_plankton_form">
+                <form id="form_id_plankton_upload" hx-encoding="multipart/form-data" onkeydown="return event.key != 'Enter';">
+                    <input type="hidden" name="mission_id" value="{{ mission.pk }}" />
+                    <div class="row">
+                        <div class="col">
+                            {# choose file input #}
+                            <input id="id_input_sample_file" class="form-control form-control-sm"
+                                   {# for now plankton comes from an xls file so only allow xls types. #}
+                                   type="file" name="plankton_file" accept=".xls,.xlsx,.xlsm"
+                                   hx-trigger="change"
+                                   hx-get="{% url 'core:form_plankton_load_plankton' mission.pk %}"
+                                   hx-swap="none"
+                            />
+                        </div>
+                    </div>
+                    <div id="div_id_plankton_message" class="row"></div>
+                    <div id="div_id_plankton_form" class="row mt-2"></div>
+                </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

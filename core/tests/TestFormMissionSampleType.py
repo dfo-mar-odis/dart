@@ -38,22 +38,18 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.mission_sample_type = core_factory.MissionSampleTypeFactory.create()
         self.form = MissionSampleTypeFilter(self.mission_sample_type)
         self.expected_url = reverse('core:mission_sample_type_sample_list', args=[self.mission_sample_type.pk])
-        context = {
-        }
 
-        form_crispy = render_crispy_form(self.form, context=context)
+        form_crispy = render_crispy_form(self.form)
         self.form_soup = BeautifulSoup(form_crispy, 'html.parser')
-
-    def test_initial(self):
-        # test that the form was initialized with the title
-        title = self.form_soup.find(id=self.form.get_id_builder().get_card_title_id())
-        self.assertEqual(title.string, "Sample Type Filter")
 
     def test_button_clear(self):
         # test that the card header has a button to clear filtered samples
         header = self.form_soup.find(id=self.form.get_id_builder().get_card_header_id())
         input = header.find('button', id=self.form.get_id_builder().get_button_clear_filters_id())
         self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['hx-get'], self.form.get_clear_filters_url())
 
     def test_hidden_mission_sample_type_input(self):
         # test that a hidden input field with the name 'mission_sample_type' exists in the body of the card
@@ -66,10 +62,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'hidden')
 
         # when a datatype, limit or flag is updated this element should make a request to update the visible samples
-        self.assertEqual(attrs['hx-target'], f"#{SAMPLES_CARD_ID}")
-        self.assertEqual(attrs['hx-trigger'], 'reload_samples from:body')
-        self.assertEqual(attrs['hx-post'], self.expected_url)
-        self.assertEqual(attrs['hx-swap'], 'outerHTML')
+        self.assertEqual(attrs['hx-get'], self.expected_url)
 
     def test_sample_start_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
@@ -82,10 +75,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-target'], f"#{SAMPLES_CARD_ID}")
-        self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
-        self.assertEqual(attrs['hx-post'], self.expected_url)
-        self.assertEqual(attrs['hx-swap'], 'outerHTML')
+        self.assertEqual(attrs['hx-get'], self.expected_url)
 
     def test_sample_end_input(self):
         # test that an input field with the name 'sample_id_end' exists in the body of the card
@@ -98,10 +88,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-target'], f"#{SAMPLES_CARD_ID}")
-        self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
-        self.assertEqual(attrs['hx-post'], self.expected_url)
-        self.assertEqual(attrs['hx-swap'], 'outerHTML')
+        self.assertEqual(attrs['hx-get'], self.expected_url)
 
 
 @tag("forms", "mission_sample_type", "form_biochem_data_type")

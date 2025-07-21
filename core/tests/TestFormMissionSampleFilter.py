@@ -151,9 +151,7 @@ class TestMissionSampleFilterFunctions(DartTestCase):
         # as an HttpResponse with a "No Samples" Message
         expected_title = "Sample Title"
         queryset = core_models.Bottle.objects.none()
-        response = form_mission_sample_filter.list_samples(None, queryset, expected_title, '', None)
-
-        test_card_soup = BeautifulSoup(response.content, 'html.parser')
+        test_card_soup = form_mission_sample_filter.list_samples(None, queryset, expected_title, '', None)
 
         card = test_card_soup.find(id=f"div_id_card_{form_mission_sample_filter.SAMPLES_CARD_NAME}")
         self.assertIsNotNone(card)
@@ -186,9 +184,7 @@ class TestMissionSampleFilterFunctions(DartTestCase):
         fake_request = RequestFactory().get('/some/path/')
         fake_delete_url = "/some/path/delete/"
 
-        response = form_mission_sample_filter.list_samples(fake_request, initial_queryset, expected_title, fake_delete_url, fake_process_samples_proc)
-
-        test_card_soup = BeautifulSoup(response.content, 'html.parser')
+        test_card_soup = form_mission_sample_filter.list_samples(fake_request, initial_queryset, expected_title, fake_delete_url, fake_process_samples_proc)
 
         card = test_card_soup.find(id=f"div_id_card_{form_mission_sample_filter.SAMPLES_CARD_NAME}")
         self.assertIsNotNone(card)
@@ -225,8 +221,7 @@ class TestMissionSampleFilterFunctions(DartTestCase):
         fake_request = RequestFactory().get('/some/path/', {'page': 1})
         fake_delete_url = "/some/path/delete/"
 
-        response = form_mission_sample_filter.list_samples(fake_request, initial_queryset, expected_title, fake_delete_url, fake_process_samples_proc)
-
-        test_card_soup = BeautifulSoup(response.content, 'html.parser')
-        trs = test_card_soup.find_all('tr')
-        self.assertEqual(len(trs), 50)
+        # This should return a list of table elements
+        test_card_soup = form_mission_sample_filter.list_samples(fake_request, initial_queryset, expected_title, fake_delete_url, fake_process_samples_proc)
+        # trs = test_card_soup.find_all('tr')
+        self.assertEqual(len(test_card_soup), 50)

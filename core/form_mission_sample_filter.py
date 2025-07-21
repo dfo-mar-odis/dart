@@ -223,7 +223,7 @@ def clear_filters(form: SampleFilterForm):
     return response
 
 
-def list_samples(request, queryset, card_title, delete_samples_url, process_samples_func, **kwargs):
+def list_samples(request, queryset, card_title, delete_samples_url, process_samples_func, **kwargs) -> BeautifulSoup:
     """
     Generates a paginated list of samples and renders them inside a card layout.
 
@@ -236,7 +236,7 @@ def list_samples(request, queryset, card_title, delete_samples_url, process_samp
         **kwargs: Additional keyword arguments to pass to the `process_samples_func`.
 
     Returns:
-        HttpResponse: An HTTP response containing the rendered HTML for the samples card or table rows.
+        The Samples card or table rows.
 
     Behavior:
         - Paginates the `queryset` based on the `page` parameter in the request.
@@ -290,8 +290,7 @@ def list_samples(request, queryset, card_title, delete_samples_url, process_samp
     # if page is > 0 then the user is scrolling down and we only want to return new rows to be swapped into
     # the table.
     if page > 0:
-        response = HttpResponse(table_soup.find('tbody').findAll('tr', recursive=False))
-        return response
+        return table_soup.find('tbody').findAll('tr', recursive=False)
 
     card_soup = get_samples_card(card_title, show_scrollbar=(pages > 1 or queryset.count() > 11))
 
@@ -299,8 +298,10 @@ def list_samples(request, queryset, card_title, delete_samples_url, process_samp
     card_body.append(table)
 
     attrs = {
+        'id': f'btn_id_delete_samples_{SAMPLES_CARD_NAME}',
         'class': 'btn btn-sm btn-danger',
         'title': _("Delete Visible Samples"),
+        'name': 'delete_samples',
         'hx-confirm': _("Are you sure?"),
         'hx-swap': "none",
         'hx-post': delete_samples_url
@@ -312,17 +313,14 @@ def list_samples(request, queryset, card_title, delete_samples_url, process_samp
     icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
     btn_delete.append(icon)
 
-    response = HttpResponse(card_soup)
-
-    return response
+    return card_soup
 
 
-def empty_sample_card(card_title):
+def empty_sample_card(card_title) -> BeautifulSoup:
     # if there are no more bottles then we stop loading, otherwise weird things happen
     card_soup = get_samples_card(card_title, show_scrollbar=False)
 
     card_body = card_soup.find(id=SAMPLES_CARD_ID)
     card_body.append(info := card_soup.new_tag('div', attrs={'class': 'alert alert-info'}))
     info.string = _("No Samples found")
-    response = HttpResponse(card_soup)
-    return response
+    return card_soup

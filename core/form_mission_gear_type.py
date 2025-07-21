@@ -1,28 +1,31 @@
 import os
 import threading
 import time
+
 import numpy as np
 
 from tkinter import filedialog
 
 import pandas as pd
 from bs4 import BeautifulSoup
+from crispy_forms.bootstrap import StrictButton
+from crispy_forms.layout import Column, Field, Div, Row
 from crispy_forms.utils import render_crispy_form
 from django.db.models import QuerySet
 
+from django import forms
 from django.http import HttpResponse
-from django.template.context_processors import csrf
-from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import path, reverse_lazy
 from django_pandas.io import read_frame
 
 from config.utils import load_svg
 from core import models as core_models
-from core import forms, utils
+from core import forms as core_forms
+from core import utils
 
 from core import form_mission_sample_filter
-from core.form_mission_sample_filter import SampleFilterForm, get_samples_card, SAMPLES_CARD_NAME, SAMPLES_CARD_ID
+from core.form_mission_sample_filter import SampleFilterForm
 from bio_tables import models as biochem_models
 
 import logging
@@ -45,6 +48,100 @@ class GearTypeFilterForm(SampleFilterForm):
         self.events = core_models.Event.objects.filter(mission_id=mission_id, instrument__type=instrument_type)
 
         super().__init__(*args, card_name=self.card_name, collapsed=collapsed, **kwargs)
+
+
+class GearTypeSelectionForm(core_forms.CollapsableCardForm):
+
+    class GearTypeSelectionIdBuilder(core_forms.CollapsableCardForm.CollapsableCardIDBuilder):
+        def get_button_apply_id(self):
+            return f'btn_id_apply_gear_type_{self.card_name}'
+
+        def get_button_volume_id(self):
+            return f'btn_id_apply_gear_type_{self.card_name}'
+
+        def get_input_gear_code_id(self):
+            return f'input_id_gear_code_{self.card_name}'
+
+        def get_select_gear_description_id(self):
+            return f'input_id_gear_description_{self.card_name}'
+
+    @staticmethod
+    def get_id_builder_class():
+        return GearTypeSelectionForm.GearTypeSelectionIdBuilder
+
+    gear_type_code = forms.IntegerField(label=_("Gear Type Code"), required=False)
+    gear_type_description = forms.ChoiceField(label=_("Gear Type Description"), required=False)
+
+    def get_btn_apply_gear_type(self):
+        attrs = {
+            'id': self.get_id_builder().get_button_apply_id(),
+            'hx-post': reverse_lazy('core:form_mission_gear_type_update_gear_type', args=[self.mission_id, self.instrument_type]),
+            'hx-swap': 'none',
+        }
+        icon = load_svg("check-square")
+
+        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
+
+    def get_btn_load_volume(self):
+        attrs = {
+            'id': self.get_id_builder().get_button_volume_id(),
+            'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=[self.mission_id]),
+            'hx-swap': 'none',
+        }
+        icon = load_svg("check-square")
+
+        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
+
+    def get_input_gear_code(self):
+        attrs = {
+            'id': self.get_id_builder().get_input_gear_code_id(),
+            'hx-trigger': 'keyup changed delay:500ms',
+            'hx-swap': 'none',
+            'hx-get': self.update_form_url,
+        }
+        return Field('gear_type_code', css_class="form-control-sm", **attrs)
+
+    def get_select_gear_description(self):
+        attrs = {
+            'id': self.get_id_builder().get_select_gear_description_id(),
+            'hx-swap': 'none',
+            'hx-get': self.update_form_url,
+        }
+        return Field('gear_type_description', css_class="form-control-sm", **attrs)
+
+    def get_card_header(self):
+        header = super().get_card_header()
+        spacer_row = Column(
+            css_class="col"
+        )
+
+        button_row = Column(
+            self.get_btn_apply_gear_type(),
+            css_class="col-auto"
+        )
+
+        header.fields[0].fields.append(spacer_row)
+        header.fields[0].fields.append(button_row)
+        return header
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        gear_details_row = Row(
+            Column(
+                self.get_input_gear_code(),
+            )
+        )
+
+        body.append(gear_details_row)
+        return body
+
+    def __init__(self, mission_id, instrument_type, render_description_list=True, *args, **kwargs):
+        self.mission_id = mission_id
+        self.instrument_type = instrument_type
+        self.update_form_url = reverse_lazy('core:form_mission_gear_type_filter_datatype', args=[self.mission_id, self.instrument_type])
+
+        super().__init__(*args, card_name="gear_type_selection", card_title=_("Gear Type Selection"), **kwargs)
 
 
 def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> QuerySet:
@@ -89,7 +186,6 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
     bottle_list = queryset.values(*value_headers)
 
     df = read_frame(bottle_list)
-    df.columns = table_headers
 
     if instrument_type == core_models.InstrumentType.net:
         bottle_dict = {b.bottle_id: b for b in queryset}
@@ -99,6 +195,8 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
 
                 df.at[i, 'volume'] = volume if volume else "-----"
 
+    df.columns = table_headers
+
     html = df.to_html(index=False)
     return BeautifulSoup(html, 'html.parser')
 
@@ -107,8 +205,27 @@ def list_samples(request, mission_id, instrument_type, **kwargs):
     delete_samples_url = reverse_lazy("core:form_gear_type_delete_samples", args=[mission_id, instrument_type])
     queryset = get_samples_queryset(request.GET, mission_id, instrument_type)
 
-    return form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
+    soup = form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
                                                    process_samples_func, instrument_type=instrument_type)
+
+    if instrument_type == core_models.InstrumentType.net:
+        button_row = soup.find(id=f"div_id_card_title_buttons_{form_mission_sample_filter.SAMPLES_CARD_NAME}")
+
+        attrs = {
+            'id': f'btn_id_load_volumes_{form_mission_sample_filter.SAMPLES_CARD_NAME}',
+            'name': 'load_volumes',
+            'title': _('Load Volume File'),
+            'class': 'btn btn-sm btn-primary me-2',
+            'hx-swap': 'none',
+            'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=[mission_id])
+        }
+        icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
+        button_load_volumes = soup.new_tag('button', attrs=attrs)
+        button_load_volumes.append(icon)
+
+        button_row.insert(0, button_load_volumes)
+
+    return HttpResponse(soup)
 
 
 def delete_samples(request, mission_id, instrument_type):
@@ -168,6 +285,7 @@ def process_file(mission, file_path):
 def load_volume(request, mission_id, thread_id=None, **kwargs):
     soup = BeautifulSoup('', 'html.parser')
     mission = core_models.Mission.objects.get(pk=mission_id)
+    base_notifications_id = f'div_id_card_notifications_{form_mission_sample_filter.SAMPLES_CARD_NAME}'
 
     if thread_id:
         user_logger.info("checking logger")
@@ -178,7 +296,7 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
                 break
 
         attrs = {
-            'component_id': 'div_id_sample_card_notifications',
+            'component_id': base_notifications_id,
             'message': _("Success"),
             'alert_type': 'success'
         }
@@ -189,8 +307,8 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
         if errors.exists():
             attrs['alert_type'] = 'danger'
             attrs['message'] = _("Errors found in the file:")
-            alert_soup = forms.blank_alert(**attrs)
-            message_div = alert_soup.find('div', id='div_id_sample_card_notifications_message')
+            alert_soup = core_forms.blank_alert(**attrs)
+            message_div = alert_soup.find('div', id=f'{base_notifications_id}_message')
             message_div.append(ul_elm := soup.new_tag('ul'))
             for error in errors:
                 ul_elm.append(li_elm := soup.new_tag('li'))
@@ -201,9 +319,9 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
             soup.append(alert_soup)
             return HttpResponse(soup)
 
-        soup.append(forms.blank_alert(**attrs))
+        soup.append(core_forms.blank_alert(**attrs))
         response = HttpResponse(soup)
-        response['HX-Trigger'] = 'reload_sample_list'
+        response['HX-Trigger'] = 'reload_samples'
         return response
 
     file_path = filedialog.askopenfilename(title="Select a file")
@@ -212,26 +330,21 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
         (t := threading.Thread(target=process_file, args=(mission, file_path,), daemon=True)).start()
 
         attrs = {
-            'alert_area_id': 'div_id_sample_card_notifications',
+            'alert_area_id': base_notifications_id,
             'logger': user_logger.name,
             'message': _("Loading"),
             'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=(mission_id, t.ident,)),
             'hx-trigger': 'load',
         }
 
-        return HttpResponse(forms.websocket_post_request_alert(**attrs))
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
     return HttpResponse(soup)
 
 
-def apply_gear_type_samples(request, mission_id, instrument_type=None, **kwargs):
-    soup = BeautifulSoup('', 'html.parser')
-    bottles = core_models.Bottle.objects.filter(
-        event__mission_id=mission_id, event__instrument__type=instrument_type
-    ).order_by("bottle_id")
-
-    bottles = get_samples_queryset(request.POST, bottles)
-    gear_type = request.POST.get('set_gear_type', None)
+def update_gear_type_samples(request, mission_id, instrument_type=None, **kwargs):
+    bottles = get_samples_queryset(request.POST, mission_id, instrument_type)
+    gear_type = request.POST.get('gear_type_code', None)
 
     for bottle in bottles:
         bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(
@@ -239,8 +352,8 @@ def apply_gear_type_samples(request, mission_id, instrument_type=None, **kwargs)
 
     core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 
-    response = HttpResponse(soup)
-    response['HX-Trigger'] = 'reload_sample_list'
+    response = HttpResponse()
+    response['HX-Trigger'] = 'reload_samples'
     return response
 
 def clear_filters(request, mission_id, instrument_type):
@@ -249,13 +362,24 @@ def clear_filters(request, mission_id, instrument_type):
     return form_mission_sample_filter.clear_filters(form)
 
 
+def filter_gear_type(request, mission_id, instrument_type):
+    render_description_list = True
+
+    initial = {}
+    form = GearTypeSelectionForm(mission_id=mission_id, instrument_type=instrument_type, collapsed=False,
+                                 render_description_list=render_description_list, initial=initial)
+    html = render_crispy_form(form)
+    return HttpResponse(html)
+
+
 url_patterns = [
     path(f'geartype/load_volume/<int:mission_id>/', load_volume, name="form_gear_type_load_volume"),
     path(f'geartype/load_volume/<int:mission_id>/<str:thread_id>/', load_volume, name="form_gear_type_load_volume"),
 
     path(f'geartype/delete/<int:mission_id>/<str:instrument_type>/', delete_samples, name="form_gear_type_delete_samples"),
-    path(f'geartype/apply/<int:mission_id>/<str:instrument_type>/', apply_gear_type_samples, name="form_gear_type_apply_samples"),
 
+    path(f'geartype/<int:mission_id>/<str:instrument_type>/', filter_gear_type, name="form_mission_gear_type_filter_datatype"),
+    path(f'geartype/apply/<int:mission_id>/<str:instrument_type>/', update_gear_type_samples, name="form_mission_gear_type_update_gear_type"),
     path(f'geartype/clear/<int:mission_id>/<int:instrument_type>/', clear_filters, name="form_mission_sample_type_clear"),
 
     path(f'geartype/<int:mission_id>/<int:instrument_type>/list_samples/', list_samples,

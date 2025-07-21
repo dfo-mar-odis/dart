@@ -139,7 +139,6 @@ class BioChemDataType(core_forms.CollapsableCardForm):
         data_type_description = Field('data_type_description', id=data_type_description_id,
                                       css_class='form-control form-select-sm')
         data_type_description.attrs['hx-get'] = reload_form_url
-        data_type_description.attrs['hx-trigger'] = 'change'
         data_type_description.attrs['hx-swap'] = 'none'
         data_type_description.attrs['hx-select'] = "#" + self.get_collapsable_card_body_id()
         data_type_description.attrs['hx-select-oob'] = f"#{data_type_code_id}, #{range_row_id}"
@@ -352,8 +351,10 @@ def list_samples(request, mission_sample_type_id):
 
     queryset = get_samples_queryset(request.GET, mission_sample_type.samples.all())
 
-    return form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
+    soup = form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
                                                    process_samples_func, mission_sample_type=mission_sample_type)
+
+    return HttpResponse(soup)
 
 
 def update_sample_type(request, mission_sample_type_id):
