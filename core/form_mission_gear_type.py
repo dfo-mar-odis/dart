@@ -98,6 +98,7 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
             'hx-trigger': 'keyup changed delay:500ms',
             'hx-swap': 'none',
             'hx-get': self.update_form_url,
+            'hx-select-oob': f"#{self.get_id_builder().get_select_gear_description_id()}",
         }
         return Field('gear_type_code', css_class="form-control-sm", **attrs)
 
@@ -106,8 +107,9 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
             'id': self.get_id_builder().get_select_gear_description_id(),
             'hx-swap': 'none',
             'hx-get': self.update_form_url,
+            'hx-select-oob': f"#{self.get_id_builder().get_input_gear_code_id()}",
         }
-        return Field('gear_type_description', css_class="form-control-sm", **attrs)
+        return Field('gear_type_description', css_class="form-select form-select-sm", **attrs)
 
     def get_card_header(self):
         header = super().get_card_header()
@@ -130,6 +132,10 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
         gear_details_row = Row(
             Column(
                 self.get_input_gear_code(),
+                css_class='col-auto'
+            ),
+            Column(
+                self.get_select_gear_description(),
             )
         )
 
@@ -142,6 +148,13 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
         self.update_form_url = reverse_lazy('core:form_mission_gear_type_filter_datatype', args=[self.mission_id, self.instrument_type])
 
         super().__init__(*args, card_name="gear_type_selection", card_title=_("Gear Type Selection"), **kwargs)
+
+        self.fields['gear_type_description'].choices = [(0, '------')]
+        if render_description_list:
+            gear_qs = biochem_models.BCGear.objects.all().order_by('type', 'gear_seq')
+            self.fields['gear_type_description'].choices += [(b.gear_seq, f"{b.gear_seq} : {b.type} : {b.description}") for b in gear_qs]
+            if 'gear_type_code' in self.initial:
+                self.fields['gear_type_description'].initial = self.initial['gear_type_code']
 
 
 def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> QuerySet:
@@ -203,7 +216,7 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
 def list_samples(request, mission_id, instrument_type, **kwargs):
     card_title = _('Samples')
     delete_samples_url = reverse_lazy("core:form_gear_type_delete_samples", args=[mission_id, instrument_type])
-    queryset = get_samples_queryset(request.GET, mission_id, instrument_type)
+    queryset = get_samples_queryset(request.POST, mission_id, instrument_type)
 
     soup = form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
                                                    process_samples_func, instrument_type=instrument_type)
@@ -365,7 +378,14 @@ def clear_filters(request, mission_id, instrument_type):
 def filter_gear_type(request, mission_id, instrument_type):
     render_description_list = True
 
+    gear_code = 0
     initial = {}
+    if (gear_code := int(request.GET.get('gear_type_code', 0) or 0)):
+        initial = {'gear_type_code': gear_code}
+    elif (gear_code := int(request.GET.get('gear_type_description', 0) or 0)):
+        initial = {'gear_type_code': gear_code}
+        render_description_list = False
+
     form = GearTypeSelectionForm(mission_id=mission_id, instrument_type=instrument_type, collapsed=False,
                                  render_description_list=render_description_list, initial=initial)
     html = render_crispy_form(form)

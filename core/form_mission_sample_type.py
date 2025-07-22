@@ -349,7 +349,7 @@ def list_samples(request, mission_sample_type_id):
                       f'[{mission_sample_type.datatype.data_retrieval.minimum_value} : '
                       f'{mission_sample_type.datatype.data_retrieval.maximum_value}]')
 
-    queryset = get_samples_queryset(request.GET, mission_sample_type.samples.all())
+    queryset = get_samples_queryset(request.POST, mission_sample_type.samples.all())
 
     soup = form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
                                                    process_samples_func, mission_sample_type=mission_sample_type)

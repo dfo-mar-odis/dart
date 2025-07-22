@@ -152,7 +152,7 @@ class SampleFilterForm(core_forms.CollapsableCardForm):
         self.htmx_attributes = {
             # The target is a card that's expected to be returned by the url
             'hx-target': f"#{SAMPLES_CARD_ID}",
-            'hx-get': self.get_samples_card_update_url(),
+            'hx-post': self.get_samples_card_update_url(),
             'hx-swap': 'outerHTML'
         }
         super().__init__(*args, card_title=_("Sample Filter"), **kwargs)

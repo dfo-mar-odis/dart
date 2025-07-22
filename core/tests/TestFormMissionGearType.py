@@ -49,7 +49,7 @@ class TestMissionGearTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'hidden')
 
         # when a datatype, limit or flag is updated this element should make a request to update the visible samples
-        self.assertEqual(attrs['hx-get'], self.expected_url)
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
     def test_sample_start_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
@@ -62,7 +62,7 @@ class TestMissionGearTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-get'], self.expected_url)
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
     def test_sample_end_input(self):
         # test that an input field with the name 'sample_id_end' exists in the body of the card
@@ -75,7 +75,7 @@ class TestMissionGearTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-get'], self.expected_url)
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
 @tag("forms", "mission_gear_type", "gear_type_selection")
 class TestGearTypeForm(DartTestCase):
@@ -126,6 +126,19 @@ class TestGearTypeForm(DartTestCase):
         self.assertEqual(attrs['hx-trigger'], 'keyup changed delay:500ms')
         self.assertEqual(attrs['hx-swap'], 'none')
         self.assertEqual(attrs['hx-get'], self.expected_gear_form_url)
+
+    def test_gear_code_description(self):
+        id_builder = self.form.get_id_builder()
+        card_body = self.soup.find(id=id_builder.get_card_body_id())
+        gear_description_field = card_body.find(id=id_builder.get_select_gear_description_id())
+        self.assertIsNotNone(gear_description_field)
+
+        attrs = gear_description_field.attrs
+        self.assertEqual(attrs['name'], 'gear_type_description')
+
+        self.assertEqual(attrs['hx-swap'], 'none')
+        self.assertEqual(attrs['hx-get'], self.expected_gear_form_url)
+        self.assertEqual(attrs['hx-select-oob'], f'#{id_builder.get_input_gear_code_id()}')
 
     def test_update_gear_type_function_no_filter(self):
         bottles = core_models.Bottle.objects.filter(event=self.event)

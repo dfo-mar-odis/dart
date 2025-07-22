@@ -57,7 +57,7 @@ class TestSampleFilterForm(DartTestCase):
         self.assertEqual(attrs['hx-target'], f"#{self.samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], 'reload_samples from:body')
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
-        self.assertEqual(attrs['hx-get'], self.form.get_samples_card_update_url())
+        self.assertEqual(attrs['hx-post'], self.form.get_samples_card_update_url())
 
     def test_event_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
@@ -72,7 +72,7 @@ class TestSampleFilterForm(DartTestCase):
         self.assertEqual(attrs['hx-target'], f"#{self.samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], "change")
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
-        self.assertEqual(attrs['hx-get'], self.form.get_samples_card_update_url())
+        self.assertEqual(attrs['hx-post'], self.form.get_samples_card_update_url())
 
     def test_sample_start_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
@@ -88,7 +88,7 @@ class TestSampleFilterForm(DartTestCase):
         self.assertEqual(attrs['hx-target'], f"#{self.samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
-        self.assertEqual(attrs['hx-get'], self.form.get_samples_card_update_url())
+        self.assertEqual(attrs['hx-post'], self.form.get_samples_card_update_url())
 
     def test_sample_end_input(self):
         # test that an input field with the name 'sample_id_end' exists in the body of the card
@@ -104,7 +104,7 @@ class TestSampleFilterForm(DartTestCase):
         self.assertEqual(attrs['hx-target'], f"#{self.samples_card_id}")
         self.assertEqual(attrs['hx-trigger'], "keyup changed delay:500ms")
         self.assertEqual(attrs['hx-swap'], 'outerHTML')
-        self.assertEqual(attrs['hx-get'], self.form.get_samples_card_update_url())
+        self.assertEqual(attrs['hx-post'], self.form.get_samples_card_update_url())
 
 
 @tag("forms", "filter_samples", "functions_filter_samples")

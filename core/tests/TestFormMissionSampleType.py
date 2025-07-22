@@ -62,7 +62,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'hidden')
 
         # when a datatype, limit or flag is updated this element should make a request to update the visible samples
-        self.assertEqual(attrs['hx-get'], self.expected_url)
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
     def test_sample_start_input(self):
         # test that an input field with the name 'sample_id_start' exists in the body of the card
@@ -75,7 +75,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-get'], self.expected_url)
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
     def test_sample_end_input(self):
         # test that an input field with the name 'sample_id_end' exists in the body of the card
@@ -88,7 +88,7 @@ class TestMissionSampleTypeFilter(DartTestCase):
         self.assertEqual(attrs['type'], 'number')
 
         # needs some HTMX calls to update the visible samples on the page
-        self.assertEqual(attrs['hx-get'], self.expected_url)
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
 
 @tag("forms", "mission_sample_type", "form_biochem_data_type")
