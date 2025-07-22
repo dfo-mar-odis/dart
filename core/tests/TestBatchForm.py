@@ -2,6 +2,7 @@ from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
 from django.core.cache import caches
 
+from config.tests.DartTestCase import DartTestCase
 from settingsdb.tests import utilities
 from settingsdb.tests import SettingsFactoryFloor as settings_factory
 
@@ -37,6 +38,21 @@ class BatchTestDatabase(AbstractTestDatabase):
             utilities.delete_model('biochem', self.bio_model)
 
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
+
+
+@tag('batch_form', 'discrete_batch_form_no_db')
+class TestDiscreteBatchFormNoDB(DartTestCase):
+    # When there's no database connection this form should still be visible to the user
+
+    def setUp(self):
+        self.mission = CoreFactoryFloor.MissionFactory()
+
+    def test_no_connection_visible(self):
+        form = form_biochem_discrete.BiochemDiscreteBatchForm(mission_id=self.mission.pk)
+        html = render_crispy_form(form)
+        soup = BeautifulSoup(html, 'html.parser')
+
+        self.assertIsNotNone(soup.find(id=form.get_card_id()))
 
 
 @tag('batch_form', 'discrete_batch_form')

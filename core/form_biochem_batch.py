@@ -12,7 +12,6 @@ from crispy_forms.utils import render_crispy_form
 
 from django import forms
 from django.conf import settings
-from django.core.cache import caches
 from django.db import connections
 from django.http import HttpResponse
 from django.template.context_processors import csrf
@@ -22,7 +21,8 @@ from django.utils.translation import gettext as _
 
 from core import models as core_models
 from core import forms as core_forms
-from biochem import models as biochem_models, upload
+from core import form_biochem_database
+from biochem import models as biochem_models
 
 from config.utils import load_svg
 
@@ -294,16 +294,12 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         self.fields['selected_batch'].label = False
         self.fields['selected_batch'].choices = [(None, '--- NEW ---')]
 
-        database_id = caches['biochem_keys'].get('database_id', default=None)
-        password = caches['biochem_keys'].get('pwd', version=database_id, default=None)
-        if not database_id or not password:
-            return
-
-        try:
-            self.get_batch_choices()
-        except django.db.utils.DatabaseError as err:
-            if err.args[0].code != 942:
-                raise err
+        if form_biochem_database.is_connected():
+            try:
+                self.get_batch_choices()
+            except django.db.utils.DatabaseError as err:
+                if err.args[0].code != 942:
+                    raise err
 
 
 # this is a function that can be passed to the MergeTables object, merge tables will

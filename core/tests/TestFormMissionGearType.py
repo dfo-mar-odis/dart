@@ -80,7 +80,7 @@ class TestMissionGearTypeFilter(DartTestCase):
         self.assertIsNotNone(input)
 
         attrs = input.attrs
-        self.assertEqual(attrs['name'], 'gear_type_description')
+        self.assertEqual(attrs['name'], 'filter_gear_type_description')
 
         # needs some HTMX calls to update the visible samples on the page
         self.assertEqual(attrs['hx-post'], self.expected_url)
