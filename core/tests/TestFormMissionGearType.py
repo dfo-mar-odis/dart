@@ -1,5 +1,3 @@
-from unittest import TestCase
-
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
 from django.test import tag, RequestFactory
@@ -10,8 +8,6 @@ from config.tests.DartTestCase import DartTestCase
 from core import form_mission_gear_type, form_mission_sample_filter
 from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
-
-from biochem import models as bio_models
 
 
 @tag("forms", "mission_gear_type", "form_filter_gear_type")
@@ -76,6 +72,19 @@ class TestMissionGearTypeFilter(DartTestCase):
 
         # needs some HTMX calls to update the visible samples on the page
         self.assertEqual(attrs['hx-post'], self.expected_url)
+
+    def test_select_gear_type_description(self):
+        # test that an input to filter samples based on their current gear type exists
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('select', id=self.form.get_id_builder().get_select_gear_type_description_id())
+        self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'gear_type_description')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+
 
 @tag("forms", "mission_gear_type", "gear_type_selection")
 class TestGearTypeForm(DartTestCase):

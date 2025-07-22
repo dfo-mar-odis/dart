@@ -20,12 +20,13 @@ from django.urls import path, reverse_lazy
 from django_pandas.io import read_frame
 
 from config.utils import load_svg
+
+from core import form_mission_sample_filter
+from core.form_mission_sample_filter import SampleFilterForm
 from core import models as core_models
 from core import forms as core_forms
 from core import utils
 
-from core import form_mission_sample_filter
-from core.form_mission_sample_filter import SampleFilterForm
 from bio_tables import models as biochem_models
 
 import logging
@@ -34,6 +35,38 @@ user_logger = logging.getLogger('dart.user.gear_type')
 logger = logging.getLogger('dart')
 
 class GearTypeFilterForm(SampleFilterForm):
+
+    filter_gear_type_description = forms.ChoiceField(
+        help_text=_("Filter Samples based on existing gear type assigned"),
+        required=False,
+    )
+
+    class GearTypeFilterIdBuilder(SampleFilterForm.SampleFilterIdBuilder):
+
+        def get_select_gear_type_description_id(self):
+            return f'select_id_gear_type_description_{self.card_name}'
+
+    @staticmethod
+    def get_id_builder_class():
+        return GearTypeFilterForm.GearTypeFilterIdBuilder
+
+    def get_select_gear_type_description(self):
+        attrs = self.htmx_attributes.copy()
+
+        return Field('filter_gear_type_description', css_class='form-select form-select-sm',
+                     id=self.get_id_builder().get_select_gear_type_description_id(), **attrs)
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        row = Row(
+            Column(
+                self.get_select_gear_type_description()
+            )
+        )
+
+        body.append(row)
+        return body
 
     def get_samples_card_update_url(self):
         return reverse_lazy('core:mission_gear_type_sample_list', args=[self.mission_id, self.instrument_type])
@@ -48,6 +81,11 @@ class GearTypeFilterForm(SampleFilterForm):
         self.events = core_models.Event.objects.filter(mission_id=mission_id, instrument__type=instrument_type)
 
         super().__init__(*args, card_name=self.card_name, collapsed=collapsed, **kwargs)
+
+        gear_list = biochem_models.BCGear.objects.all().order_by('type', 'gear_seq')
+        self.fields['filter_gear_type_description'].choices = ([(0, '------')] +
+                                                               [(g.pk, f'{g.gear_seq} : {g.type} : {g.description}')
+                                                               for g in gear_list])
 
 
 class GearTypeSelectionForm(core_forms.CollapsableCardForm):
@@ -176,6 +214,11 @@ def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> Quer
         queryset = queryset.filter(bottle_id=sample_id_start)
     elif bool(sample_id_start) and bool(sample_id_end):
         queryset = queryset.filter(bottle_id__gte=sample_id_start, bottle_id__lte=sample_id_end)
+
+    gear_code = int(filter_dict.get('filter_gear_type_code', 0) or filter_dict.get('filter_gear_type_description', 0) or 0)
+
+    if gear_code:
+        queryset = queryset.filter(gear_type_id=gear_code)
 
     return queryset
 
