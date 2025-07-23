@@ -1,14 +1,16 @@
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
-from django.template.loader import render_to_string
 from django.test import tag, Client
 from django.urls import reverse
 
-from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter, SAMPLES_CARD_ID
+from core import form_mission_sample_type
+from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter
 from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
+from bio_tables.tests import BioTableFactoryFloor as bio_factory
 from core import models as core_models
+from bio_tables import models as bio_models
 
 
 class AbstractTestMissionSampleType(DartTestCase):
@@ -86,6 +88,21 @@ class TestMissionSampleTypeFilter(DartTestCase):
         attrs = input.attrs
         self.assertEqual(attrs['name'], 'sample_id_end')
         self.assertEqual(attrs['type'], 'number')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+
+    def test_input_filter_out_of_range_samples(self):
+        # if this input is checked then the queryset should only contain samples that are outside
+        # of the BCRetrivals range for the selected data type.
+        # test that an input field with the name 'sample_id_end' exists in the body of the card
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_out_of_range_id())
+        self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'out_of_range')
+        self.assertEqual(attrs['type'], 'checkbox')
 
         # needs some HTMX calls to update the visible samples on the page
         self.assertEqual(attrs['hx-post'], self.expected_url)
@@ -234,3 +251,47 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
 
         self.assertIn('Hx-Redirect', response.headers)
         self.assertEqual(expected_redirect, response.headers['Hx-Redirect'])
+
+
+@tag("forms", "mission_sample_type", "mission_sample_type_query")
+class TestGetSamplesQueryset(DartTestCase):
+    def setUp(self):
+        # Set up test data using core_factory
+
+        data_retrieval = bio_factory.BCDataRetrievalFactory.create(minimum_value=10, maximum_value=20)
+        datatype = bio_factory.BCDataTypeFactory.create(data_retrieval=data_retrieval)
+
+        self.sample_type = core_factory.MissionSampleTypeFactory.create(name="Test Sample Type", datatype=datatype)
+        self.event = core_factory.CTDEventFactory.create(sample_id=1, end_sample_id=5)
+        self.samples = [
+            core_factory.SampleFactory.create(
+                bottle=core_factory.BottleFactory.create(event=self.event, bottle_id=i),
+                type=self.sample_type
+            ) for i in range(1, 6)
+        ]
+
+        for sample in self.samples:
+            core_factory.DiscreteValueFactory.create_batch(2, value=15, sample=sample)
+
+        self.initial_queryset = core_models.Sample.objects.filter(type=self.sample_type)
+
+    def test_filter_by_event(self):
+        filter_dict = {'event': self.event.pk}
+        queryset = form_mission_sample_type.get_samples_queryset(filter_dict, self.sample_type, self.initial_queryset)
+
+        # 5 samples were created, each with 2 discrete values in the setUp function
+        self.assertEqual(queryset.count(), 10)
+
+    def test_filter_by_sample_id_range(self):
+        filter_dict = {'sample_id_start': 2, 'sample_id_end': 4}
+        queryset = form_mission_sample_type.get_samples_queryset(filter_dict, self.sample_type, self.initial_queryset)
+        self.assertEqual(queryset.count(), 6)
+
+    def test_filter_out_of_range(self):
+        core_models.DiscreteSampleValue.objects.create(
+            sample=self.samples[0], value=5
+        )
+
+        filter_dict = {'out_of_range': True}
+        queryset = form_mission_sample_type.get_samples_queryset(filter_dict, self.sample_type, self.initial_queryset)
+        self.assertEqual(queryset.count(), 1)  # Only the in-range sample should be excluded

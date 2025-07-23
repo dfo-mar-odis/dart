@@ -595,7 +595,6 @@ def get_batch(soup, batch_form: BiochemBatchForm, bcd_model, stage1_valid_proc):
 
     crispy_form = render_crispy_form(batch_form)
     form_soup = BeautifulSoup(crispy_form, 'html.parser')
-    # batch_id = request.POST.get('selected_batch', None)
 
     soup.append(download_button := form_soup.find(id=batch_form.get_download_button_id()))
     soup.append(upload_button := form_soup.find(id=batch_form.get_upload_button_id()))
@@ -645,11 +644,6 @@ def get_batch(soup, batch_form: BiochemBatchForm, bcd_model, stage1_valid_proc):
                 else:
                     merge_button.attrs.pop('disabled')
                     checkin_button.attrs.pop('disabled')
-
-    # validate2_button.attrs['hx-get'] = reverse_lazy(validate2_url, args=(batch_id,))
-    # checkin_button.attrs['hx-get'] = reverse_lazy(checkin_url, args=(batch_id,))
-    # merge_button.attrs['hx-get'] = reverse_lazy(merge_url, args=(mission_id, batch_id,))
-    # delete_button.attrs['hx-get'] = reverse_lazy(delete_url, args=(mission_id, batch_id,))
 
     return soup
 

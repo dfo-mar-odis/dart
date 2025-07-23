@@ -19,10 +19,35 @@ from core import models as core_models
 from core import forms as core_forms
 from config.utils import load_svg
 from core import form_mission_sample_filter
-from core.form_mission_sample_filter import SampleFilterForm, get_samples_card, SAMPLES_CARD_NAME, SAMPLES_CARD_ID
+from core.form_mission_sample_filter import SampleFilterForm
 
 
 class MissionSampleTypeFilter(SampleFilterForm):
+
+    class MissionSampleTypeIdBuilder(SampleFilterForm.SampleFilterIdBuilder):
+        def get_input_out_of_range_id(self):
+            return f'input_id_out_of_range_{self.card_name}'
+
+    @staticmethod
+    def get_id_builder_class():
+        return MissionSampleTypeFilter.MissionSampleTypeIdBuilder
+
+    out_of_range = forms.BooleanField(help_text=_("filter replicate values outside of the expected datatype range"),
+                                      required=False)
+
+    def get_input_out_of_range(self):
+        attrs = self.htmx_attributes
+        return Field('out_of_range', id=self.get_id_builder().get_input_out_of_range_id(), **attrs)
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        row = Row(
+            Column(self.get_input_out_of_range())
+        )
+        body.append(row)
+
+        return body
 
     def get_samples_card_update_url(self):
         return reverse_lazy('core:mission_sample_type_sample_list', args=[self.mission_sample_type.pk])
@@ -154,7 +179,13 @@ class BioChemDataType(core_forms.CollapsableCardForm):
             id="div_id_data_type_row"
         ))
 
-        retrival = bio_models.BCDataType.objects.get(pk=(self.initial_choice if self.initial_choice else self.mission_sample_type.datatype.pk)).data_retrieval
+        retrival = ""
+        if self.mission_sample_type.datatype:
+            try:
+                retrival = bio_models.BCDataType.objects.get(pk=(self.initial_choice if self.initial_choice else self.mission_sample_type.datatype.pk)).data_retrieval
+            except bio_models.BCDataType.DoesNotExist:
+                pass # retrival text will remain blank
+
         body.append(Row(
             Column(HTML(str(retrival)), css_class='col-auto'),
             id=range_row_id
@@ -275,7 +306,7 @@ def format_sensor_table(df: pd.DataFrame) -> BeautifulSoup:
     return soup
 
 
-def get_samples_queryset(filter_dict: dict, initial_samples_queryset: QuerySet):
+def get_samples_queryset(filter_dict: dict, sample_type: core_models.MissionSampleType, initial_samples_queryset: QuerySet):
     queryset = initial_samples_queryset.order_by('bottle__bottle_id')
 
     event_id = int(filter_dict.get('event', 0) or 0)
@@ -292,16 +323,21 @@ def get_samples_queryset(filter_dict: dict, initial_samples_queryset: QuerySet):
     elif bool(sample_id_start) and bool(sample_id_end):
         queryset = queryset.filter(bottle__bottle_id__gte=sample_id_start, bottle__bottle_id__lte=sample_id_end)
 
+    queryset = core_models.DiscreteSampleValue.objects.filter(
+        sample__in=queryset
+    ).order_by('sample__bottle__bottle_id')
+
+    if sample_type.datatype and 'out_of_range' in filter_dict:
+        bounds = sample_type.datatype.data_retrieval
+        queryset = queryset.exclude(value__gte=bounds.minimum_value, value__lte=bounds.maximum_value)
+
     return queryset
 
 # provided an initial queryset, build a table using BeautifulSoup
 def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
     mission_sample_type = kwargs['mission_sample_type']
 
-    discrete_queryset = core_models.DiscreteSampleValue.objects.filter(
-        sample__in=queryset
-    ).order_by('sample__bottle__bottle_id')
-    queryset_vals = discrete_queryset.values(
+    queryset_vals = queryset.values(
         'sample__bottle__bottle_id',
         'sample__bottle__pressure',
         'replicate',
@@ -349,7 +385,7 @@ def list_samples(request, mission_sample_type_id):
                       f'[{mission_sample_type.datatype.data_retrieval.minimum_value} : '
                       f'{mission_sample_type.datatype.data_retrieval.maximum_value}]')
 
-    queryset = get_samples_queryset(request.POST, mission_sample_type.samples.all())
+    queryset = get_samples_queryset(request.POST, mission_sample_type, mission_sample_type.samples.all())
 
     soup = form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
                                                    process_samples_func, mission_sample_type=mission_sample_type)
@@ -373,13 +409,12 @@ def update_sample_type(request, mission_sample_type_id):
         sample_type.datatype = data_type
         sample_type.save()
     else:
-        queryset = get_samples_queryset(request.POST, sample_type.samples.all())
-        discrete_update = core_models.DiscreteSampleValue.objects.filter(sample__in=queryset)
+        queryset = get_samples_queryset(request.POST, sample_type, sample_type.samples.all())
 
-        for value in discrete_update:
+        for value in queryset:
             value.datatype = data_type
 
-        core_models.DiscreteSampleValue.objects.bulk_update(discrete_update, ['datatype'])
+        core_models.DiscreteSampleValue.objects.bulk_update(queryset, ['datatype'])
 
     response = list_samples(request, sample_type.pk)
     response['HX-Trigger'] = 'reload_samples'
@@ -424,9 +459,8 @@ def filter_datatype(request, mission_sample_type_id):
 def sample_delete(request, mission_sample_type_id):
     mission_sample_type = core_models.MissionSampleType.objects.get(pk=mission_sample_type_id)
 
-    queryset = get_samples_queryset(request.POST, mission_sample_type.samples.all())
-    discrete_update = core_models.DiscreteSampleValue.objects.filter(sample__in=queryset)
-    discrete_update.delete()
+    queryset = get_samples_queryset(request.POST, mission_sample_type, mission_sample_type.samples.all())
+    queryset.delete()
 
     mission_sample_type.samples.filter(discrete_values__isnull=True).delete()
 

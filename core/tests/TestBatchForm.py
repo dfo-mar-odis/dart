@@ -1,3 +1,5 @@
+from unittest.mock import patch, MagicMock
+
 from bs4 import BeautifulSoup
 from crispy_forms.utils import render_crispy_form
 from django.core.cache import caches
@@ -25,6 +27,7 @@ class BatchTestDatabase(AbstractTestDatabase):
     def setup(self, sample_database, bio_model):
         self.bio_model = bio_model
         self.mission = CoreFactoryFloor.MissionFactory()
+        self.database_connection = sample_database
 
         utilities.create_model_table([bio_models.Bcbatches], 'biochem')
 
@@ -342,3 +345,67 @@ class TestPlanktonBatchForm(BatchTestDatabase):
 
         url = reverse_lazy(self.delete_batch_url, args=(self.mission.pk, batch.pk,))
         self.assertEqual(btn['hx-get'], url)
+
+    @tag('form_plankton_test_biochem_validation_pass')
+    @patch('core.form_biochem_plankton.connections')
+    def test_validation_proc_success(self, mock_connections):
+        # Mock the cursor and its methods
+        mock_cursor = MagicMock()
+        mock_connections.__getitem__.return_value.cursor.return_value.__enter__.return_value = mock_cursor
+
+        # Simulate successful validation
+        mock_cursor.callfunc.side_effect = ['T', 'T', 'T']  # stn_pass_var, data_pass_var
+
+        # Call the function
+        form_biochem_plankton.validation_proc(batch_id=123)
+
+        # Assertions
+        mock_cursor.callfunc.assert_any_call("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_STATION", str,
+                                             [123])
+        mock_cursor.callfunc.assert_any_call("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_DATA", str, [123])
+        mock_cursor.callfunc.assert_any_call("POPULATE_PLANKTON_EDITS_PKG.POPULATE_PLANKTON_EDITS", str, [123])
+        mock_cursor.execute.assert_called_once_with('commit')
+
+    @tag('form_plankton_test_biochem_validation_fail')
+    @patch('core.form_biochem_plankton.connections')
+    def test_validation_proc_failure(self, mock_connections):
+        # Mock the cursor and its methods
+        mock_cursor = MagicMock()
+        mock_connections.__getitem__.return_value.cursor.return_value.__enter__.return_value = mock_cursor
+
+        # Simulate validation failure
+        mock_cursor.callfunc.side_effect = ['F', 'T']  # stn_pass_var, data_pass_var
+
+        # Call the function
+        form_biochem_plankton.validation_proc(batch_id=123)
+
+        # Assertions
+        mock_cursor.callfunc.assert_any_call("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_STATION", str,
+                                             [123])
+        mock_cursor.callfunc.assert_any_call("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_DATA", str, [123])
+        mock_cursor.execute.assert_called_once_with('commit')
+
+    @tag('form_plankton_test_biochem_validation_2')
+    @patch('core.form_biochem_plankton.connections')
+    def test_validation2_proc_failure(self, mock_connections):
+        # Mock the cursor and its methods
+        mock_cursor = MagicMock()
+        mock_connections.__getitem__.return_value.cursor.return_value.__enter__.return_value = mock_cursor
+
+        batch_id = 123
+        user = self.database_connection.uploader.upper()
+
+        # Simulate validation failure
+        mock_cursor.callfunc.side_effect = ['T', 'T', 'T', 'T', 'T', 'T', 'T']  # stn_pass_var, data_pass_var
+
+        # Call the function
+        form_biochem_plankton.validation2_proc(batch_id=batch_id)
+
+        # Assertions
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_MISSION_ERRORS", str, [batch_id, user])
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_EVENT_ERRORS", str, [batch_id, user])
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_HEDR_ERRORS", str, [batch_id, user])
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_GENERL_ERRS", str, [batch_id, user])
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_DTAIL_ERRS", str, [batch_id, user])
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_FREQ_ERRS", str, [batch_id, user])
+        mock_cursor.callfunc.assert_any_call("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_INDIV_ERRS", str, [batch_id, user])
