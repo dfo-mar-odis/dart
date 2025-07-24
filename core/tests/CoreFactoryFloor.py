@@ -10,6 +10,7 @@ from factory.django import DjangoModelFactory
 from faker import Faker
 
 import bio_tables.models
+from bio_tables.tests import BioTableFactoryFloor as BioFactory
 from core import models
 
 faker = Faker()
@@ -23,6 +24,7 @@ class MissionFactory(DjangoModelFactory):
 
     name = factory.lazy_attribute(lambda o: faker.word())
     geographic_region = factory.lazy_attribute(lambda o: faker.word())
+    data_center = factory.SubFactory(BioFactory.BCDataCenterFactory)
 
 
 class StationFactory(DjangoModelFactory):
@@ -174,3 +176,18 @@ class PhytoplanktonSampleFactory(DjangoModelFactory):
     bottle = factory.SubFactory(BottleFactory)
     taxa = factory.lazy_attribute(lambda o: random.choice(bio_tables.models.BCNatnlTaxonCode.objects.all()))
     count = factory.lazy_attribute(lambda o: faker.random.randint(0, 10000))
+
+
+class FileErrorFactory(DjangoModelFactory):
+    class Meta:
+        model = models.FileError
+
+    mission = factory.SubFactory(MissionFactory)
+    file_name = factory.lazy_attribute(lambda o: faker.word() + ".csv")
+
+
+class ValidationError(DjangoModelFactory):
+    class Meta:
+        model = models.ValidationError
+
+    event = factory.SubFactory(EventFactory)

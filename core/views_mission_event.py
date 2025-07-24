@@ -317,7 +317,8 @@ def get_file_validation_card(request, mission_id, **kwargs):
 
 
 def get_event_error_count(request, mission_id):
-
+    # Create and return a bootstrap badge with the number of validation errors
+    # present for the provided mission
     mission = models.Mission.objects.get(pk=mission_id)
     issue_count = models.ValidationError.objects.filter(event__mission=mission).count()
 
@@ -336,7 +337,8 @@ def get_event_error_count(request, mission_id):
 
 
 def get_file_error_count(request, mission_id):
-
+    # Create and return a bootstrap badge with the number of File errors
+    # present for the provided mission
     mission = models.Mission.objects.get(pk=mission_id)
     issue_count = mission.file_errors.filter(type=models.ErrorType.event).count()
 
@@ -354,6 +356,7 @@ def get_file_error_count(request, mission_id):
     return HttpResponse(soup)
 
 def revalidate_events(request, mission_id):
+    # run event validation on a mission
     mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == "GET":
