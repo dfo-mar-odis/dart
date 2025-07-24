@@ -1,3 +1,6 @@
+# Starts an application and the web server in a separate thread
+pyqt6==6.8.0
+
 # we have to use Django3 because Django4 doesn't support Oracle12
 Django<=4.2.0,>=4.1.0
 asgiref<4,>=3.6.0
