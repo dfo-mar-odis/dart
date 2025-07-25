@@ -37,7 +37,7 @@ class MissionEventsTests(TestCase):
         mock_render.return_value = "<div>Event Details</div>"
 
         request = RequestFactory().get("/fake-url/")
-        response = mission_events.event_selection(request, mission_id=1, event_pk=2)
+        response = mission_events.event_selection(request, mission_id=1, event_id=2)
         self.assertIsInstance(response, HttpResponse)
         self.assertIn("table-success", response.content.decode())
         self.assertEqual(response["HX-Trigger"], "deselect")
@@ -54,7 +54,7 @@ class MissionEventsTests(TestCase):
         mock_event.objects.get.return_value = mock_obj
 
         request = RequestFactory().get("/fake-url/?deselect=true")
-        response = mission_events.event_selection(request, mission_id=1, event_pk=3)
+        response = mission_events.event_selection(request, mission_id=1, event_id=3)
         self.assertIsInstance(response, HttpResponse)
         self.assertNotIn("table-success", response.content.decode())
         self.assertNotIn("HX-Trigger", response.headers)

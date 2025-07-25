@@ -6,16 +6,23 @@
 <div id="div_id_event_details_container" hx-swap-oob="true">
     <form>
         {{ form.mission }}
+        <div class="card">
+            <div class="card-header">
+
+            </div>
+            <div class="card-body">
+                <div class="col-auto">
+                    {% include 'dart/forms/components/field_form_input.html' with form_element=form.event_id %}
+                </div>
+                <div class="col">
+                    {% include 'dart/forms/components/field_form_input.html' with form_element=form.global_station %}
+                </div>
+                <div class="col">
+                    {% include 'dart/forms/components/field_form_input.html' with form_element=form.instrument %}
+                </div>
+            </div>
+        </div>
         <div class="row mb-2">
-            <div class="col-auto">
-                {% include 'dart/forms/components/field_form_input.html' with form_element=form.event_id %}
-            </div>
-            <div class="col">
-                {% include 'dart/forms/components/field_form_input.html' with form_element=form.global_station %}
-            </div>
-            <div class="col">
-                {% include 'dart/forms/components/field_form_input.html' with form_element=form.instrument %}
-            </div>
         </div>
         <div class="row mb-2">
             <div class="col">
@@ -68,5 +75,8 @@
     </form>
     {% if action_form %}
     {% include 'dart/forms/action_form.html' with form=action_form event=event %}
+    {% endif %}
+    {% if action_form %}
+    {% include 'dart/forms/attachment_form.html' with form=attachment_form event=event %}
     {% endif %}
 </div>

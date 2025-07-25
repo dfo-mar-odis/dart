@@ -12,7 +12,7 @@ from django.utils.translation import gettext_lazy as _
 
 from config.utils import load_svg
 from dart import models
-from dart.forms import event_action_form
+from dart.forms import event_action_form, event_attachment_form
 
 from user_settings import models as user_models
 
@@ -128,12 +128,14 @@ def get_form(request, mission_id, event_id=None):
                 'global_station': user_models.GlobalStation.objects.get_or_create(name=event.station)[0].pk
             })})
             context['action_form'] = event_action_form.ActionsModelForm(initial={'event': event.pk})
+            context['attachment_form'] = event_attachment_form.AttachmentsForm(initial={'event': event.pk})
     elif event and 'copy' not in request.path:
         station = user_models.GlobalStation.objects.get_or_create(name=event.station)[0]
         initial['global_station'] = station.pk
         context.update({
             'form': EventDetailForm(instance=event, initial=initial),
-            'action_form': event_action_form.ActionsModelForm(initial={'event': event.pk})
+            'action_form': event_action_form.ActionsModelForm(initial={'event': event.pk}),
+            'attachment_form': event_attachment_form.AttachmentsForm(initial={'event': event.pk})
         })
     else:
         if event:

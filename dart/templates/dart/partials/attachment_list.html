@@ -1,0 +1,27 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div id="div_id_action_table">
+    <table id="table_id_action_table" class="table table-striped table-sm">
+        <thead>
+        <tr>
+            <th>{% trans 'Attachment' %}</th>
+            <th></th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for attachment in event.attachments.all %}
+        <tr>
+            <td>{{ attachment.name }}</td>
+            <td>
+                {% if form %}
+                <div class="d-flex justify-content-end">
+                    <button class="btn btn-danger btn-sm ms-1" hx-post="{% url 'dart:form_event_attachment_delete' event.pk attachment.pk %}" >{% custom_icon 'dash-square' %}</button>
+                </div>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</div>
