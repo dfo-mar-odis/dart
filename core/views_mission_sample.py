@@ -119,6 +119,11 @@ class SampleDetails(GenericDetailView):
     model = models.Mission
     page_title = _("Mission Samples")
     template_name = "core/mission_samples.html"
+    help_text = _(
+        "The mission samples page allows bulk loading of sensor and sample data, provides utilities for setting gear "
+        "information, modifying sample details, runing pre-validation to identify and correct issues, and finally "
+        "upload discrete details to the BioChem database."
+    )
 
     def get_page_title(self):
         return _("Mission Samples") + " : " + self.object.name

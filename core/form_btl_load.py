@@ -1,11 +1,10 @@
 import os
 import queue
 import time
-import ctypes
-import easygui
 
 import concurrent.futures
 
+from PyQt6.QtWidgets import QFileDialog
 from bs4 import BeautifulSoup
 
 from crispy_forms.bootstrap import StrictButton
@@ -18,9 +17,9 @@ from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
-import core.forms
 from core import models
 from core.parsers import ctd
+from core import forms as core_forms
 from core.forms import CollapsableCardForm
 from config.utils import load_svg
 
@@ -40,6 +39,18 @@ class BottleLoadForm(CollapsableCardForm):
 
     open_folder_url = None
 
+    help_text = _("Bulk loading sensor data requires existing events, specifically CTD events. Select a directory "
+                  "that contains .BTL and .ROS files. The ROS file provides important context about the sensors in "
+                  "the BTL file.\n\nIf bottle files are found in the directory, they will be displayed on the "
+                  "multi-select input list. Initially all files will be selected for upload, but clicking and clicking "
+                  "while holding the shift or CTRL keys can be used to select a file, a range of files, or select "
+                  "individual files to load.\n\nOnce the files to be uploaded are selected use the 'Load Selected "
+                  "Bottle Files' button to start the bulk load process, which may take a few minutes.\n\n"
+                  "When loading, Dart will expect to find the label '** Event_Number:' in the bottle "
+                  "file which identifies what event the file is linked to.\n\n"
+                  "After loading, loaded files in the input list will be hidden. Their visiblity can be toggled with "
+                  "the hide and show button. If there was a problem loading a file it will be noted on the 'Bottle "
+                  "File Errors' card" )
     # I had to override the default Bootstrap template for fields, because someone thought putting 'mb-3'
     # as a default for field wrappers was a good idea and it creates a massive gap under the inputs when
     # used in a card title
@@ -56,9 +67,8 @@ class BottleLoadForm(CollapsableCardForm):
             'id': button_id,
             'name': 'change_dir',
             'title': _("Select BTL directory"),
-            'hx-get': self.get_open_folder_url(),
-            'hx-swap': 'outerHTML',
-            'hx-target': f"#{self.get_card_id()}",
+            'hx-post': self.get_open_folder_url(),
+            'hx-swap': 'none',
         }
         upload_button = StrictButton(button_icon, css_class='btn btn-sm btn-secondary', **button_attrs)
 
@@ -83,26 +93,32 @@ class BottleLoadForm(CollapsableCardForm):
     def get_card_header(self):
         header = super().get_card_header()
 
-        url = reverse_lazy("core:form_btl_choose_bottle_dir", args=(self.mission.pk,))
+        url = reverse_lazy("core:form_btl_set_bottle_dir", args=(self.mission.pk,))
         button_icon = load_svg('arrow-clockwise')
         button_attrs = {
             'id': f"{self.card_name}_refresh_files",
             'name': 'reload',
             'title': _("Refresh files in directory"),
             'hx-post': url,
-            'hx-swap': 'outerHTML',
-            'hx-target': f"#{self.get_card_id()}",
-            'value': "true"
+            'hx-swap': 'none',
+            'hx-select-oob': f"#{self.get_id_builder().get_collapsable_card_body_id()}",
         }
         refresh_button = StrictButton(
             button_icon, **button_attrs, css_class="btn btn-secondary btn-sm"
         )
 
+        input_attrs = {
+            'hx-post': url,
+            'hx-swap': 'none',
+            'hx-select-oob': f"#{self.get_id_builder().get_collapsable_card_body_id()}",
+            'hx-trigger': "keyup[key=='Enter']"
+        }
         dir_input = Column(
             Div(
                 Field("dir_field", template=self.field_template,
                       css_class="input-group-sm form-control form-control-sm",
-                      wrapper_class="d-flex flex-fill"
+                      wrapper_class="d-flex flex-fill",
+                      **input_attrs
                       ),
                 refresh_button,
                 css_class="input-group",
@@ -123,6 +139,7 @@ class BottleLoadForm(CollapsableCardForm):
         load_icon = load_svg("arrow-down-square")
         url = reverse_lazy("core:form_btl_upload_bottles", args=(self.mission.pk,))
         load_attrs = {
+            'title': _("Load Selected Bottle Files"),
             'id': f"{self.card_name}_load_bottles",
             'hx-get': url,
             'hx-swap': 'none'
@@ -137,8 +154,10 @@ class BottleLoadForm(CollapsableCardForm):
         }
         if 'hide_loaded' in self.initial:
             view_icon = load_svg("eye-slash")
+            view_attrs['title'] = _("Show All Bottle Files")
         else:
             view_icon = load_svg("eye")
+            view_attrs['title'] = _("Hide Loaded Bottle Files")
 
         view_btn = StrictButton(view_icon, css_class="btn btn-primary btn-sm mb-2", **view_attrs)
 
@@ -158,7 +177,7 @@ class BottleLoadForm(CollapsableCardForm):
         self.mission = mission
 
         self.open_folder_url = reverse_lazy('core:form_btl_choose_bottle_dir', args=(self.mission.pk,))
-        super().__init__(card_name="bottle_load", card_title=_("Load Bottles"), *args, **kwargs)
+        super().__init__(card_name="bottle_load", card_title=_("Bulk Load Bottles"), *args, **kwargs)
 
         self.fields['dir_field'].label = False
         self.fields['files'].label = False
@@ -248,7 +267,8 @@ def bottle_load_card(request, mission_id, **kwargs):
     bottle_load_soup = get_bottle_load_card(request, mission_id, **kwargs)
     first_elm = bottle_load_soup.find(recursive=False)
     form_id = first_elm.attrs['id']
-    form_soup = BeautifulSoup(f'<form id="form_id_{form_id}"></form>', 'html.parser')
+    disable_enter_submit = 'onkeydown="return event.key != \'Enter\';"'
+    form_soup = BeautifulSoup(f'<form id="form_id_{form_id}" {disable_enter_submit}></form>', 'html.parser')
     form = form_soup.find('form')
     form.append(bottle_load_soup)
 
@@ -335,63 +355,67 @@ def load_ctd_files(mission):
 
     ctd.logger_notifications.info(f"Complete")
 
-
-def force_foreground_window():
-    # Give system time to create the dialog
-    time.sleep(0.25)
-    # Get the foreground window handle
-    dialog_title = _("Choose BTL directory")
-    hwnd = ctypes.windll.user32.FindWindowW(None, dialog_title)
-
-    if hwnd:
-        # Try more aggressive techniques to force to front
-        # This combination works better for dialog windows
-        ctypes.windll.user32.ShowWindow(hwnd, 5)  # SW_SHOW
-        ctypes.windll.user32.BringWindowToTop(hwnd)
-        ctypes.windll.user32.SetForegroundWindow(hwnd)
-        ctypes.windll.user32.FlashWindow(hwnd, True)
-    else:
-        # Fall back to the original method if we can't find by title
-        hwnd = ctypes.windll.user32.GetForegroundWindow()
-        if hwnd:
-            ctypes.windll.user32.SetForegroundWindow(hwnd)
-            ctypes.windll.user32.FlashWindow(hwnd, True)
-
-
-def diropenbox_on_top(*args, **kwargs):
-    import platform
-
-    # For Windows, use the dialog-forcing approach
-    if platform.system() == 'Windows':
-        # Start the dialog in a way that allows us to force it to the top
-        result = None
-        import threading
-        threading.Timer(0.2, force_foreground_window).start()
-        result = easygui.diropenbox(*args, **kwargs)
-        return result
-    else:
-        # For non-Windows platforms, just use the standard dialog
-        return easygui.diropenbox(*args, **kwargs)
-
-
 def choose_bottle_dir(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
-    if request.method == "POST" and 'dir_field' in request.POST:
-        result = request.POST['dir_field']
-    else:
-        result = diropenbox_on_top(title=_("Choose BTL directory"))
+
+    soup = BeautifulSoup('', 'html.parser')
+
+    app = settings.app if hasattr(settings, 'app') else None
+    if not app:
+        soup.append(msg_area := soup.new_tag("div", id="div_id_alert_bottle_load"))
+        msg_area.attrs['hx-swap-oob'] = 'true'
+        return HttpResponse(soup)
+
+    start_dir = settings.dir if hasattr(settings, 'dir') else None
+
+    # This only works if Dart was started using 'python manage.py dart'
+    # Create and configure the file dialog
+    file_dialog = QFileDialog()
+    file_dialog.setWindowTitle("Select a BTL File Directory")
+    file_dialog.setFileMode(QFileDialog.FileMode.Directory)
+    file_dialog.setDirectory(start_dir)
+
+    # Open the dialog and get the selected file
+    if not file_dialog.exec():
+        soup.append(msg_area := soup.new_tag("div", id="div_id_alert_bottle_load"))
+        return HttpResponse(soup)
+
+    result = file_dialog.selectedFiles()[0]
 
     if result:
+        settings.dir = result
         mission.bottle_directory = result
         mission.save()
 
-    return reload_files(request, mission_id, **kwargs)
+        card_soup = get_bottle_load_card(request, mission_id=mission_id, collapsed=False)
+        card_soup.find(id="div_id_card_bottle_load").attrs['hx-swap-oob'] = 'true'
+        soup.append(card_soup)
+
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'file_errors_updated'
+    return response
+    # return reload_files(request, mission_id, **kwargs)
+
+
+def set_bottle_dir(request, mission_id, **kwargs):
+    mission = models.Mission.objects.get(pk=mission_id)
+    soup = BeautifulSoup('', 'html.parser')
+    if request.method == 'POST' and 'dir_field' in request.POST:
+        mission.bottle_directory = request.POST.getlist('dir_field')[0]
+        mission.save()
+
+        card_soup = get_bottle_load_card(request, mission_id=mission_id, collapsed=False)
+        soup.append(card_soup)
+
+    response = HttpResponse(soup)
+    response['HX-Trigger'] = 'file_errors_updated'
+    return response
 
 
 def reload_files(request, mission_id, **kwargs):
     soup = get_bottle_load_card(request, mission_id, collapsed=False, **kwargs)
     response = HttpResponse(soup)
-    response['HX-Trigger'] = 'update_samples, file_errors_updated'
+    response['HX-Trigger'] = 'file_errors_updated'
     return response
 
 
@@ -408,7 +432,7 @@ def upload_btl_files(request, mission_id, **kwargs):
             'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(mission_id,)),
             'hx-trigger': 'load'
         }
-        alert = core.forms.websocket_post_request_alert(**attrs)
+        alert = core_forms.websocket_post_request_alert(**attrs)
         response = HttpResponse(alert)
         return response
     else:
@@ -421,7 +445,7 @@ def upload_btl_files(request, mission_id, **kwargs):
         soup = get_bottle_load_card(request, mission_id, collapsed=False, **kwargs)
 
         reload_url = reverse_lazy('core:form_btl_reload_files', args=(mission_id,)) + "?hide_loaded=true"
-        alert = core.forms.blank_alert(component_id="div_id_alert_bottle_load", message="Done", alert_type="success")
+        alert = core_forms.blank_alert(component_id="div_id_alert_bottle_load", message="Done", alert_type="success")
         div = soup.new_tag("div", id="div_id_alert_bottle_load", attrs={'hx-swap-oob': 'true'})
         div.attrs['hx-target'] = "#div_id_card_bottle_load"
         div.attrs['hx-trigger'] = 'load'
@@ -448,6 +472,7 @@ bottle_load_urls = [
     path(f'{url_prefix}/card/<int:mission_id>/', bottle_load_card, name="form_btl_card"),
 
     path(f'{url_prefix}/reload/<int:mission_id>/', reload_files, name="form_btl_reload_files"),
-    path(f'{url_prefix}/dir/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
+    path(f'{url_prefix}/dir/choose/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
+    path(f'{url_prefix}/dir/set/<int:mission_id>/', set_bottle_dir, name="form_btl_set_bottle_dir"),
     path(f'{url_prefix}/load/<int:mission_id>/', upload_btl_files, name="form_btl_upload_bottles"),
 ]

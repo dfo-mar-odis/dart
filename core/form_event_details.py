@@ -20,9 +20,10 @@ from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
 
 from PyQt6.QtWidgets import QFileDialog
+from PyQt6.QtGui import QIcon
 from render_block import render_block_to_string
 
-from core import forms as core_forms, models, validation
+from core import forms as core_forms, models
 from core.parsers import FilterLogParser, elog, andes, event_csv
 from core.parsers.FixStationParser import FixStationParser
 
@@ -1170,19 +1171,20 @@ def load_bottle_file(request, event_id):
     soup.append(msg_area := soup.new_tag("div", id="div_id_card_message_area_event_details"))
 
     app = settings.app if hasattr(settings, 'app') else None
-    start_dir = settings.dir if hasattr(settings, 'dir') else None
-    if app:
-        # Create and configure the file dialog
-        file_dialog = QFileDialog()
-        file_dialog.setWindowTitle("Select a BTL File")
-        file_dialog.setNameFilter("BTL Files (*.btl)")
-        file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
-        file_dialog.setDirectory(start_dir)
+    if not app:
+        return HttpResponse(soup)
 
-        # Open the dialog and get the selected file
-        if not file_dialog.exec():
-            return HttpResponse(soup)
-    else:
+    start_dir = settings.dir if hasattr(settings, 'dir') else None
+
+    # Create and configure the file dialog
+    file_dialog = QFileDialog()
+    file_dialog.setWindowTitle("Select a BTL File")
+    file_dialog.setNameFilter("BTL Files (*.btl)")
+    file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
+    file_dialog.setDirectory(start_dir)
+
+    # Open the dialog and get the selected file
+    if not file_dialog.exec():
         return HttpResponse(soup)
 
     event = models.Event.objects.get(pk=event_id)

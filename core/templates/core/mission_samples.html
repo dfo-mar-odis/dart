@@ -27,7 +27,7 @@
 {% block content %}
     <div class="" hx-trigger="load" hx-get="{% url "core:form_btl_card" mission.pk %}?hide_loaded=true" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {# The Load Bottle form will be swapped in here #}
-        {% trans "Load Bottles" as card_title %}
+        {% trans "Bulk Load Bottles" as card_title %}
         {% include 'core/partials/card_collapsable_placeholder.html' with card_name="bottle_load"%}
     </div>
     <div class="mb-2" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
