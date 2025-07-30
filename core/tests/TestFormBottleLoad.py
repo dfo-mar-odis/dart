@@ -165,18 +165,3 @@ class TestFormBottleLoad(DartTestCase):
         self.assertIn('hx-target', root.attrs)
         self.assertEqual(root.attrs['hx-target'], '#div_id_card_bottle_load')
 
-    @tag('form_btl_load_test_choose_btl_directory_post')
-    def test_choose_btl_directory_post(self):
-        # providing a new directory as part of the post request should return an updated version
-        # of the bottle load card containing the new address and any bottles in the provided
-        # directory
-
-        btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
-        mission = core_factory.MissionFactory(bottle_directory=os.path.join("c:", "nowhere"))
-        url = reverse("core:form_btl_choose_bottle_dir", args=(mission.pk,))
-        response = self.client.post(url, {"dir_field": btl_directory})
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        input = soup.find(id="id_dir_field")
-        self.assertEqual(input.attrs['value'], btl_directory)

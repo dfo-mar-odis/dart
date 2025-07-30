@@ -68,9 +68,11 @@ class TestMissionSamplesForm(DartTestCase):
             'alert_area_id': "div_id_alert_bottle_load",
             'message': _("Loading Bottles"),
             'logger': ctd.logger_notifications.name,
-            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(self.mission.pk,)),
-            'hx-trigger': 'load'
+            'hx-post': url,
+            'hx-trigger': 'load',
+            'hx-swap': "none"
         }
+
         alert = core_forms.websocket_post_request_alert(**attrs)
 
         sample_dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')

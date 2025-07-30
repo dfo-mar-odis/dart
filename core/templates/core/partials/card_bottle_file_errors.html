@@ -1,0 +1,42 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div class="card mb-2 mt-2" id="div_id_card_bottle_file_errors" hx-swap="outerHTML" hx-get="{% url 'core:form_btl_load_update_errors' mission.id %}" hx-trigger="recount_file_errors from:body">
+    <div class="card-header text-bg-warning" id="div_id_card_header_bottle_file_errors">
+        <div class="row">
+            <button aria-expanded="true" class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
+                    href="#div_id_card_collapse_bottle_file_errors" id="button_id_collapse_bottle_file_errors"
+                    type="button">{% custom_icon 'caret-down' %}</button>
+            <div class="col-auto align-self-end">
+                <div class="card-title"><span class="h6"
+                                              id="div_id_card_title_bottle_file_errors">Bottle File Errors</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="collapse show" id="div_id_card_collapse_bottle_file_errors" style="">
+        <div class="card-body" id="div_id_card_body_bottle_file_errors">
+            {% for error in errors %}
+            <div class="card" id="div_id_card_file_validation_{{ forloop.counter }}">
+                <div class="card-header">
+                    <div class="card-title"><h6>{{ error.file_name }}</h6></div>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group">
+                        <li class="list-group-item" id="li_id_btl_error_{{ error.id }}">
+                            <div class="row">
+                                <div class="col">{{ error.message }}</div>
+                                <button class="btn btn-danger btn-sm col-auto" hx-confirm="Are you Sure?"
+                                        hx-delete="{% url 'core:mission_event_delete_log_file_error' error.pk forloop.counter %}" hx-swap="delete"
+                                        hx-target="#li_id_btl_error_{{ error.id }}">
+                                    {% custom_icon 'dash-square' %}
+                                </button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>

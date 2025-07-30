@@ -17,7 +17,7 @@ from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
 
-from core import forms, form_biochem_database, form_biochem_discrete
+from core import forms, form_biochem_discrete, form_btl_load
 
 from core import models
 from core import views
@@ -138,6 +138,7 @@ class SampleDetails(GenericDetailView):
                               views.reports.keys()}
 
         context['mission'] = self.object
+        context['bulk_load_form'] = form_btl_load.BottleLoadForm(mission=self.object)
         return context
 
 
