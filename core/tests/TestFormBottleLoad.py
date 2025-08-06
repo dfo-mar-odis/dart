@@ -18,51 +18,6 @@ class TestFormBottleLoad(DartTestCase):
     def setUp(self) -> None:
         self.client = Client()
 
-    @tag('form_btl_load_test_bottle_load_get')
-    def test_bottle_load_get(self):
-        # provided a mission and database the form_btl_card url on a get request should return a "Load Sample from file"
-        # card
-        mission = core_factory.MissionFactory()
-
-        url = reverse("core:form_btl_card", args=(mission.pk,))
-
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        sample_card = soup.find(id="div_id_card_bottle_load")
-        self.assertIsNotNone(sample_card)
-
-        # by default loaded BTL files should be hidden
-        show_hide_field = soup.find(id="id_hide_loaded")
-        self.assertNotIn('value', show_hide_field.attrs)
-
-    @tag('form_btl_load_test_bottle_load_get_with_dir')
-    def test_bottle_load_get_with_dir(self):
-        # provided a mission with a directory containing BTL files and database the form_btl_card url on a get request
-        # should return a "Load Sample from file" with the dir field populated with the missions bottle_directory
-        # and the files field in the body of the card should list BTL files from the directory
-        btl_directory = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
-        btl_files = [file for file in os.listdir(btl_directory) if file.upper().endswith('BTL')]
-
-        mission = core_factory.MissionFactory(bottle_directory=btl_directory)
-
-        url = reverse("core:form_btl_card", args=(mission.pk,))
-
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, "html.parser")
-
-        bottle_dir_field = soup.find(id="id_dir_field")
-        self.assertIsNotNone(bottle_dir_field)
-        self.assertEqual(bottle_dir_field.attrs['value'], btl_directory)
-
-        files_field = soup.find(id="id_files")
-        self.assertIsNotNone(files_field)
-        for file in btl_files:
-            file_option = files_field.find(attrs={'value': file})
-            self.assertIsNotNone(file_option)
-
     @tag('form_btl_load_test_reload_files')
     def test_reload_files(self):
         # provided a mission and database the reload files url, called when the user updates

@@ -248,63 +248,7 @@ def get_bottle_load_card(request, mission_id, **kwargs):
     bottle_load_html = render_crispy_form(bottle_load_form, context=context)
     bottle_load_soup = BeautifulSoup(bottle_load_html, 'html.parser')
 
-    # if (errors := mission.file_errors.filter(file_name__icontains='BTL')).exists():
-    #     dir_input = bottle_load_soup.find(id=bottle_load_form.get_card_header_id())
-    #     dir_input.attrs['class'].append("text-bg-warning")
-    #
-    #     form_body = bottle_load_soup.find(id=bottle_load_form.get_card_body_id())
-    #
-    #     btl_error_form = CollapsableCardForm(card_name="bottle_file_errors", card_title=_("Bottle File Errors"))
-    #     btl_errors_html = render_crispy_form(btl_error_form)
-    #     btl_errors_soup = BeautifulSoup(btl_errors_html, 'html.parser')
-    #     btl_errors_soup.find("div").attrs['class'].append("mt-2")
-    #
-    #     body = btl_errors_soup.find(id=btl_error_form.get_card_body_id())
-    #
-    #     files = errors.values_list('file_name', flat=True).distinct()
-    #     for index, file in enumerate(files):
-    #         body.append(card := bottle_load_soup.new_tag('div', attrs={'class': 'card',
-    #                                                                    'id': f'div_id_card_file_validation_{index}'}))
-    #         card.append(card_header := bottle_load_soup.new_tag('div', attrs={'class': 'card-header'}))
-    #         card_header.append(card_title := bottle_load_soup.new_tag('div', attrs={'class': 'card-title'}))
-    #         card_title.append(title := bottle_load_soup.new_tag('h6'))
-    #         title.string = str(file)
-    #
-    #         card.append(card_body := bottle_load_soup.new_tag('div', attrs={'class': 'card-body'}))
-    #         card_body.append(ul_file := bottle_load_soup.new_tag('ul', attrs={'class': 'list-group'}))
-    #         for error in errors.filter(file_name=file):
-    #             li_error_id = f'li_id_btl_error_{error.pk}'
-    #             ul_file.append(li_error := bottle_load_soup.new_tag('li', attrs={'class': 'list-group-item',
-    #                                                                              'id': li_error_id}))
-    #             li_error.append(div_row := bottle_load_soup.new_tag('div', attrs={'class': "row"}))
-    #             div_row.append(div := bottle_load_soup.new_tag('div', attrs={'class': "col"}))
-    #             div.string = error.message
-    #
-    #             button_attrs = {
-    #                 'class': "btn btn-danger btn-sm col-auto",
-    #                 'hx-delete': reverse_lazy('core:mission_event_delete_log_file_error', args=(error.pk, index,)),
-    #                 'hx-target': f"#{li_error_id}",
-    #                 'hx-confirm': _("Are you Sure?"),
-    #                 'hx-swap': 'delete'
-    #             }
-    #             div_row.append(button := bottle_load_soup.new_tag('button', attrs=button_attrs))
-    #             button.append(BeautifulSoup(load_svg('x-square'), "html.parser").svg)
-    #
-    #     form_body.append(btl_errors_soup)
-
     return bottle_load_soup
-
-
-def bottle_load_card(request, mission_id, **kwargs):
-    bottle_load_soup = get_bottle_load_card(request, mission_id, **kwargs)
-    first_elm = bottle_load_soup.find(recursive=False)
-    form_id = first_elm.attrs['id']
-    disable_enter_submit = 'onkeydown="return event.key != \'Enter\';"'
-    form_soup = BeautifulSoup(f'<form id="form_id_{form_id}" {disable_enter_submit}></form>', 'html.parser')
-    form = form_soup.find('form')
-    form.append(bottle_load_soup)
-
-    return HttpResponse(form_soup)
 
 
 def load_ctd_file(ctd_mission: models.Mission, ctd_file):
@@ -517,8 +461,6 @@ def update_errors(request, mission_id, **kwargs):
 # ###### Bottle Load ###### #
 url_prefix = "bottleload"
 bottle_load_urls = [
-    path(f'{url_prefix}/card/<int:mission_id>/', bottle_load_card, name="form_btl_card"),
-
     path(f'{url_prefix}/reload/errors/<int:mission_id>/', update_errors, name="form_btl_load_update_errors"),
     path(f'{url_prefix}/reload/<int:mission_id>/', reload_files, name="form_btl_reload_files"),
     path(f'{url_prefix}/dir/choose/<int:mission_id>/', choose_bottle_dir, name="form_btl_choose_bottle_dir"),
