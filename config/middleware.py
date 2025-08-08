@@ -13,7 +13,7 @@ class HtmxDatabaseMiddleware(MiddlewareMixin):
     - Checks if the incoming request has the 'HX-Request' header (indicating an HTMX request).
     - Parses the database name from the HTTP_REFERER header.
     - If the database name starts with 'DART_' and is not already active, connects to it using utils.connect_database.
-    - Only acts if 'dart_active' is not present in settings.DATABASES.
+    - Only acts if 'dart_active', the alias given to dart mission databases, is present in settings.DATABASES.
     """
     logger.debug("HtmxDatabaseMiddleware initialized")
     def process_request(self, request):

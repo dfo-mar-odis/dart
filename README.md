@@ -1,3 +1,25 @@
+# Notes
+I started 4.2.x as a complete rewrite for Dart that didn't use Crispy forms and had planed on porting over the logic 
+while just rewriting the interface. As Dart developed into 4.1.x I realized there were far too many ways to work with 
+HTML and it would be a headache for anyone comming in that was new to the project to figure out what method to use and 
+when. This version of Dart does have a better way of interacting with local SQL database and the project is better 
+organized based on lessons learned, but as I've been working with it I realize how much crispy forms actually does in 
+terms of validation. It adds complexity, and HTML templates are easier to read, but the extra work required to handle 
+validation, labels, passing variables to the templates and how unreadale the templates become anyway with Django 
+templating statements is a headache as well. It's better to use crispy forms. 
+
+So I'm putting this version on the back burner.
+
+Some of the things I'd like to take from this 4.2.x and incorporate into 4.1.x are the DB handling, with the middleware 
+that checks what DB the user is connected to. At the moment in 4.1.x if a user opens one mission, then opens another in 
+another tab and makes changes, then switches back to the first tab to make changes to the first mission they can 
+override/corrupt the second mission's database. The config.middleware.py module fixes the issue by checking the user 
+is connected to the database specified in the URL before letting them update data so switching between multiple 
+missions in multiple tabs is fine.
+
+I'd also like to include a modal dialog for websocket communications instead of having a notification area in the
+title of cards that have interactive features.
+
 # Requirements
 * Python 3.13+
 * Git
