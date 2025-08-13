@@ -7,7 +7,7 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 from core import views, models, forms
-from core.form_mission_sample_type import BioChemDataType
+from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter
 
 from config.views import GenericDetailView
 from settingsdb import models as settingsdb_models
@@ -17,6 +17,14 @@ class SampleTypeDetails(GenericDetailView):
     model = models.MissionSampleType
     page_title = _("Sample Type")
     template_name = "core/mission_sample_type.html"
+
+    help_text = _("The Mission Sample Type page provides a more detailed look at, and manipulation of, a specific "
+                  "sample type.\n\n"
+                  "Samples assigned to this data type can be filtered to remove some, or all, samples.\n"
+                  "Removing all samples from a mission sample type will remove the sample type from the mission.\n\n"
+                  "This page also allows for the application of a Biochem Datatype, either to all samples belonging to "
+                  "the sample type, or as a one off application to a specific series of samples belonging to the "
+                  "mission sample type.")
 
     def get_page_title(self):
         return _("Mission Sample Type") + f" : {self.object.mission.name} - {self.object.name}"
@@ -35,6 +43,7 @@ class SampleTypeDetails(GenericDetailView):
             initial['data_type_code'] = data_type_seq.data_type_seq
 
         context['biochem_form'] = BioChemDataType(mission_sample_type=self.object)
+        context['filter_form'] = MissionSampleTypeFilter(mission_sample_type=self.object)
 
         context['reports'] = {key: reverse_lazy(views.reports[key], args=(database, self.object.mission.pk,)) for key in
                               views.reports.keys()}
@@ -50,11 +59,10 @@ def sample_type_card(request, sample_type_id):
     sample_type_soup = BeautifulSoup(sample_type_html, 'html.parser')
 
     card_body_div = sample_type_soup.find(id=sample_type_form.get_card_body_id())
-    card_body_div.attrs['hx-get'] = reverse_lazy("core:mission_sample_type_sample_list", args=(sample_type_id,))
-    card_body_div.attrs['hx-trigger'] = 'load'
 
     form_soup = BeautifulSoup(f'<div id="div_id_{sample_type_form.get_card_name()}"></div>', 'html.parser')
     form = form_soup.find('div')
+    form.attrs['hx-swap-oob'] = "true"
     form.append(sample_type_soup)
 
     return HttpResponse(form_soup)
@@ -64,7 +72,6 @@ def delete_config(request, config_id):
 
     settingsdb_models.SampleTypeConfig.objects.get(pk=config_id).delete()
     return HttpResponse()
-
 
 # ###### Mission Sample ###### #
 mission_sample_type_urls = [

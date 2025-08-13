@@ -207,7 +207,7 @@ def checkin_batch_proc(batch_id: int):
         if bc_mission and bc_mission.locked_missions:
             old_batch_id = biochem_models.Bcmissionedits.objects.using('biochem').filter(
                 mission_edt_seq=bc_mission.mission_seq).first().batch.batch_seq
-            delete_plankton_proc(old_batch_id)
+            delete_discrete_proc(old_batch_id)
             bc_mission.locked_missions.delete()
 
         raise ValueError(return_value[1])

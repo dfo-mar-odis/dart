@@ -7,6 +7,10 @@
 {% block nav_button_block %}
     {% with mission_sample_type.mission as mission %}
     <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:mission_edit' database mission.pk %}"
+           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
+    </li>
+    <li class="nav-item me-2">
         <a href="{% url 'core:mission_events_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
     </li>
@@ -18,20 +22,25 @@
         <a href="{% url 'core:mission_plankton_plankton_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
     </li>
-    <li class="nav-item me-2">
-        <a class="btn btn-primary" href="{% url 'core:mission_edit' database mission.pk %}"
-           title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
-    </li>
     {% endwith %}
 {% endblock %}
 
 {% block content %}
-    <div id="div_content_block_id" class="container-fluid" hx-swap-oob="true">
-        <div class="container-fluid">
-            {% include 'core/partials/card_sample_upload_header.html' with mission_sample=mission_sample_type %}
+    <div id="div_content_block_id" class="container-fluid">
+        <form>
+            <div class="mb-2">
+            {% if filter_form %}
+                {% crispy filter_form %}
+            {% endif %}
+            </div>
+            <div class="mb-2">
+            {% if biochem_form %}
+                {% crispy biochem_form %}
+            {% endif %}
+            </div>
+        <div id="div_id_card_mission_sample_type_samples" hx-swap="outerHTML" hx-get="{% url 'core:mission_sample_type_sample_list' mission_sample_type.pk %}" hx-trigger="load">
+
         </div>
-        <div id="div_id_data_display" class="container-fluid mt-2" hx-swap-oob="#div_id_data_display"
-             hx-trigger="load" hx-get="{% url "core:mission_sample_type_card" mission_sample_type.pk %}">
-        </div>
+        </form>
     </div>
 {% endblock %}

@@ -1,19 +1,22 @@
 from bs4 import BeautifulSoup
-from django.template.loader import render_to_string
+from crispy_forms.utils import render_crispy_form
 from django.test import tag, Client
 from django.urls import reverse
 
-from core.form_mission_sample_type import BioChemDataType
+from core import form_mission_sample_type
+from core.form_mission_sample_type import BioChemDataType, MissionSampleTypeFilter
 from config.tests.DartTestCase import DartTestCase
 
 from core.tests import CoreFactoryFloor as core_factory
+from bio_tables.tests import BioTableFactoryFloor as bio_factory
 from core import models as core_models
+from bio_tables import models as bio_models
 
 
 class AbstractTestMissionSampleType(DartTestCase):
 
     def setUp(self) -> None:
-        self.mission_sample_type = core_factory.MissionSampleTypeFactory()
+        self.mission_sample_type = core_factory.MissionSampleTypeFactory.create()
 
         event = core_factory.CTDEventFactory(mission=self.mission_sample_type.mission)
 
@@ -30,52 +33,79 @@ class AbstractTestMissionSampleType(DartTestCase):
             core_factory.DiscreteValueFactory(sample=self.samples[bottle.bottle_id])
 
 
-@tag("templates", "mission_sample_type", "template_mission_sample_type")
-class TestTemplateMissionSampleType(AbstractTestMissionSampleType):
+@tag("forms", "mission_sample_type", "form_filter_data_type")
+class TestMissionSampleTypeFilter(DartTestCase):
 
     def setUp(self) -> None:
-        super().setUp()
-        self.template = "core/mission_sample_type.html"
+        self.mission_sample_type = core_factory.MissionSampleTypeFactory.create()
+        self.form = MissionSampleTypeFilter(self.mission_sample_type)
+        self.expected_url = reverse('core:mission_sample_type_sample_list', args=[self.mission_sample_type.pk])
 
-    @tag("template_mission_sample_type_test_initial_template")
-    def test_initial_template(self):
+        form_crispy = render_crispy_form(self.form)
+        self.form_soup = BeautifulSoup(form_crispy, 'html.parser')
 
-        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
-        context = {
-            'database': 'default',
-            'mission_sample_type': self.mission_sample_type,
-            'biochem_form': biochem_data_type_form
-        }
+    def test_button_clear(self):
+        # test that the card header has a button to clear filtered samples
+        header = self.form_soup.find(id=self.form.get_id_builder().get_card_header_id())
+        input = header.find('button', id=self.form.get_id_builder().get_button_clear_filters_id())
+        self.assertIsNotNone(input)
 
-        html = render_to_string(self.template, context)
-        soup = BeautifulSoup(html, "html.parser")
+        attrs = input.attrs
+        self.assertEqual(attrs['hx-get'], self.form.get_clear_filters_url())
 
-        # initially the start and end bottle should be filled in
-        start_input = soup.find(id="id_start_sample")
-        self.assertIsNotNone(start_input)
-        self.assertEqual(int(start_input.attrs['value']), self.start_bottle)
+    def test_hidden_mission_sample_type_input(self):
+        # test that a hidden input field with the name 'mission_sample_type' exists in the body of the card
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_hidden_refresh_id())
+        self.assertIsNotNone(input)
 
-        end_input = soup.find(id="id_end_sample")
-        self.assertIsNotNone(end_input)
-        self.assertEqual(int(end_input.attrs['value']), self.end_bottle)
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'refresh_samples')
+        self.assertEqual(attrs['type'], 'hidden')
 
-    @tag("template_mission_sample_type_test_initial_template_delete_btn")
-    def test_initial_template_delete_btn(self):
-        # the delete sample type button should point to the delete url in the Form_mission_sample_type module
-        # it should have an hx-confirm on it to make sure the user isn't accidentally deleting the sample type
-        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
-        context = {
-            'database': 'default',
-            'mission_sample_type': self.mission_sample_type,
-            'biochem_form': biochem_data_type_form
-        }
+        # when a datatype, limit or flag is updated this element should make a request to update the visible samples
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
-        html = render_to_string(self.template, context)
-        soup = BeautifulSoup(html, "html.parser")
+    def test_sample_start_input(self):
+        # test that an input field with the name 'sample_id_start' exists in the body of the card
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_sample_id_start_id())
+        self.assertIsNotNone(input)
 
-        delete_btn = soup.find('button', attrs={'name': "delete"})
-        self.assertIsNotNone(delete_btn)
-        self.assertIn('hx-confirm', delete_btn.attrs)
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'sample_id_start')
+        self.assertEqual(attrs['type'], 'number')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+
+    def test_sample_end_input(self):
+        # test that an input field with the name 'sample_id_end' exists in the body of the card
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_sample_id_end_id())
+        self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'sample_id_end')
+        self.assertEqual(attrs['type'], 'number')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-post'], self.expected_url)
+
+    def test_input_filter_out_of_range_samples(self):
+        # if this input is checked then the queryset should only contain samples that are outside
+        # of the BCRetrivals range for the selected data type.
+        # test that an input field with the name 'sample_id_end' exists in the body of the card
+        body = self.form_soup.find(id=self.form.get_id_builder().get_card_body_id())
+        input = body.find('input', id=self.form.get_id_builder().get_input_out_of_range_id())
+        self.assertIsNotNone(input)
+
+        attrs = input.attrs
+        self.assertEqual(attrs['name'], 'out_of_range')
+        self.assertEqual(attrs['type'], 'checkbox')
+
+        # needs some HTMX calls to update the visible samples on the page
+        self.assertEqual(attrs['hx-post'], self.expected_url)
 
 
 @tag("forms", "mission_sample_type", "form_biochem_data_type")
@@ -88,8 +118,6 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
 
         biochem_data_type_form = BioChemDataType(self.mission_sample_type)
 
-        self.assertEqual(biochem_data_type_form.fields['start_sample'].initial, self.start_bottle)
-        self.assertEqual(biochem_data_type_form.fields['end_sample'].initial, self.end_bottle)
         self.assertEqual(biochem_data_type_form.fields['data_type_description'].initial,
                           self.mission_sample_type.datatype.pk)
 
@@ -98,18 +126,14 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
 
     @tag("form_biochem_data_type_test_initial")
     def test_initial(self):
-        # provided a database and the mission_sample_type, and initial values, the BioChemDataType form should
-        # set the initial values on the form for the biochem data type, and start/end bottle ids
+        # provided a database and the mission_sample_type, and no initial values, the BioChemDataType form should
+        # set the initial values on the form for the biochem data type
 
         initial = {
-            'start_sample': (self.start_bottle + 2),
-            'end_sample': (self.end_bottle - 2),
-            'data_type_code': 90000000
+            'data_type_code': self.mission_sample_type.datatype.pk
         }
-        biochem_data_type_form = BioChemDataType(self.mission_sample_type, initial=initial)
+        biochem_data_type_form = BioChemDataType(self.mission_sample_type)
 
-        self.assertEqual(biochem_data_type_form.fields['start_sample'].initial, initial['start_sample'])
-        self.assertEqual(biochem_data_type_form.fields['end_sample'].initial, initial['end_sample'])
         self.assertEqual(biochem_data_type_form.fields['data_type_description'].initial, initial['data_type_code'])
         self.assertEqual(biochem_data_type_form.fields['data_type_code'].initial, initial['data_type_code'])
 
@@ -131,56 +155,41 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         soup = BeautifulSoup(response.content, "html.parser")
         self.assertIsNotNone(soup)
 
-        # The page consists of two main portions. The top is the sample type form to apply a Biochem datatype to a
-        # mission sample type. The bottom portion of the page consists of a table showing the data table for the
-        # selected mission sample type
+        # The page consists of three main portions.
+        # The top is a sample type filter form used to manipulate what samples certain actions are preformed on.
+        # The middle is the sample type form to apply a Biochem datatype to a mission sample type.
+        # The bottom portion is a table showing the data filtered from the sample type filter.
 
-        form = soup.find(id="div_id_sample_filter")
-        self.assertIsNotNone(form)
+        filter_form = soup.find(id="div_id_card_mission_sample_type_filter")
+        self.assertIsNotNone(filter_form)
 
-        # the data gets loaded after the page load so this is just going to be an empty place holder
+        data_type_form = soup.find(id="div_id_card_collapse_biochem_data_type_form")
+        self.assertIsNotNone(data_type_form)
+
+        # the data gets loaded after the page load so this is just going to be an empty placeholder
         # with hx-get=url and hx-trigger='load' attributes
-        table_card = soup.find(id="div_id_data_display")
+        table_card = soup.find(id="div_id_card_mission_sample_type_samples")
         self.assertIsNotNone(table_card)
 
-        url = reverse("core:mission_sample_type_card", args=(self.mission_sample_type.pk,))
+        url = reverse("core:mission_sample_type_sample_list", args=(self.mission_sample_type.pk,))
         self.assertIn('hx-get', table_card.attrs)
         self.assertEqual(table_card.attrs['hx-get'], url)
 
         self.assertIn('hx-trigger', table_card.attrs)
         self.assertEqual(table_card.attrs['hx-trigger'], 'load')
 
-    @tag("form_mission_sample_type_test_set_row_sample_type_get")
-    def test_set_row_sample_type_get(self):
-        # give a database and a mission_sample_type id, calling the set row url as a get request should
-        # return a save/load alert that contains an hx-post url calling the same url on hx-trigger='load'
-
-        url = reverse("core:form_mission_sample_type_set_row", args=(self.mission_sample_type.pk,))
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        alert = soup.find(id="div_id_data_type_message")
-        self.assertIsNotNone(alert)
-        self.assertIn('hx-swap-oob', alert.attrs)
-        self.assertEqual(alert.attrs['hx-swap-oob'], 'true')
-
-        alert = soup.find(id="div_id_data_type_message_alert")
-        self.assertIsNotNone(alert)
-        self.assertIn('hx-post', alert.attrs)
-        self.assertEqual(alert['hx-post'], url)
-
     @tag("form_mission_sample_type_test_set_row_sample_type_post")
-    def test_set_row_sample_type_post(self):
-        # given a database and a mission_sample_type id, calling the set row url as a post request,
+    def test_set_sample_type_post(self):
+        # given a mission_sample_type id, calling the set row url as a post request,
         # with a data_type_code should set the BioChem data type for the rows specified by the start - end sample ids
 
         post_vars = {
-            'start_sample': self.start_bottle + 1,
-            'end_sample': self.end_bottle - 1,
+            'sample_id_start': self.start_bottle + 1,
+            'sample_id_end': self.end_bottle - 1,
             'data_type_code': 90000001
         }
 
-        url = reverse("core:form_mission_sample_type_set_row", args=(self.mission_sample_type.pk,))
+        url = reverse("core:form_mission_sample_type_set", args=(self.mission_sample_type.pk,))
         response = self.client.post(url, post_vars)
 
         # the start and end bottles should be unchanged, they should be none, because the mission_sample_type.data_type
@@ -194,46 +203,27 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         self.assertEqual(end_sample.datatype, None)
 
         start_sample = core_models.DiscreteSampleValue.objects.get(
-            sample__bottle__bottle_id=post_vars['start_sample'])
+            sample__bottle__bottle_id=post_vars['sample_id_start'])
         self.assertEqual(start_sample.datatype.pk, post_vars['data_type_code'])
 
         end_sample = core_models.DiscreteSampleValue.objects.get(
-            sample__bottle__bottle_id=post_vars['end_sample'])
+            sample__bottle__bottle_id=post_vars['sample_id_end'])
         self.assertEqual(end_sample.datatype.pk, post_vars['data_type_code'])
 
         # the function call itself should return a reloaded sample list
         soup = BeautifulSoup(response.content, 'html.parser')
         soup.find(id="div_id_sample_type_details")
 
-    @tag("form_mission_sample_type_test_set_mission_sample_type_get")
-    def test_set_mission_sample_type_get(self):
-        # give a database and a mission_sample_type id, calling the set mission url as a get request should
-        # return a save/load alert that contains an hx-post url calling the same url on hx-trigger='load'
-
-        url = reverse("core:form_mission_sample_type_set_mission", args=(self.mission_sample_type.pk,))
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        alert = soup.find(id="div_id_data_type_message")
-        self.assertIsNotNone(alert)
-        self.assertIn('hx-swap-oob', alert.attrs)
-        self.assertEqual(alert.attrs['hx-swap-oob'], 'true')
-
-        alert = soup.find(id="div_id_data_type_message_alert")
-        self.assertIsNotNone(alert)
-        self.assertIn('hx-post', alert.attrs)
-        self.assertEqual(alert['hx-post'], url)
-
     @tag("form_mission_sample_type_test_set_mission_sample_type_post")
     def test_set_mission_sample_type_post(self):
-        # given a database and a mission_sample_type id, calling the set mission url as a get request,
+        # given a mission_sample_type id, calling the set mission url as a post request,
         # with a data_type_code should set the BioChem data type for the mission_sample_type
 
         post_vars = {
             'data_type_code': 90000001
         }
 
-        url = reverse("core:form_mission_sample_type_set_mission", args=(self.mission_sample_type.pk,))
+        url = reverse("core:form_mission_sample_type_set", args=(self.mission_sample_type.pk,))
         response = self.client.post(url, post_vars)
 
         sample_type = core_models.MissionSampleType.objects.get(pk=self.mission_sample_type.pk)
@@ -242,24 +232,6 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         # the function call itself should return a reloaded sample list
         soup = BeautifulSoup(response.content, 'html.parser')
         soup.find(id="div_id_sample_type_details")
-
-    @tag("form_mission_sample_type_test_delete_sample_type_get")
-    def test_delete_sample_type_get(self):
-        # provided a database and a mission_sample_type id, this get request should return a save/load alert
-        # with hx-post=url and hx-trigger='load'
-        url = reverse("core:form_mission_sample_type_delete", args=(self.mission_sample_type.pk,))
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        alert = soup.find(id="div_id_data_type_message")
-        self.assertIsNotNone(alert)
-        self.assertIn('hx-swap-oob', alert.attrs)
-        self.assertEqual(alert.attrs['hx-swap-oob'], 'true')
-
-        alert = soup.find(id="div_id_data_type_message_alert")
-        self.assertIsNotNone(alert)
-        self.assertIn('hx-post', alert.attrs)
-        self.assertEqual(alert['hx-post'], url)
 
     @tag("form_mission_sample_type_test_delete_sample_type_post")
     def test_delete_sample_type_post(self):
@@ -279,3 +251,47 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
 
         self.assertIn('Hx-Redirect', response.headers)
         self.assertEqual(expected_redirect, response.headers['Hx-Redirect'])
+
+
+@tag("forms", "mission_sample_type", "mission_sample_type_query")
+class TestGetSamplesQueryset(DartTestCase):
+    def setUp(self):
+        # Set up test data using core_factory
+
+        data_retrieval = bio_factory.BCDataRetrievalFactory.create(minimum_value=10, maximum_value=20)
+        datatype = bio_factory.BCDataTypeFactory.create(data_retrieval=data_retrieval)
+
+        self.sample_type = core_factory.MissionSampleTypeFactory.create(name="Test Sample Type", datatype=datatype)
+        self.event = core_factory.CTDEventFactory.create(sample_id=1, end_sample_id=5)
+        self.samples = [
+            core_factory.SampleFactory.create(
+                bottle=core_factory.BottleFactory.create(event=self.event, bottle_id=i),
+                type=self.sample_type
+            ) for i in range(1, 6)
+        ]
+
+        for sample in self.samples:
+            core_factory.DiscreteValueFactory.create_batch(2, value=15, sample=sample)
+
+        self.initial_queryset = core_models.Sample.objects.filter(type=self.sample_type)
+
+    def test_filter_by_event(self):
+        filter_dict = {'event': self.event.pk}
+        queryset = form_mission_sample_type.get_samples_queryset(filter_dict, self.sample_type, self.initial_queryset)
+
+        # 5 samples were created, each with 2 discrete values in the setUp function
+        self.assertEqual(queryset.count(), 10)
+
+    def test_filter_by_sample_id_range(self):
+        filter_dict = {'sample_id_start': 2, 'sample_id_end': 4}
+        queryset = form_mission_sample_type.get_samples_queryset(filter_dict, self.sample_type, self.initial_queryset)
+        self.assertEqual(queryset.count(), 6)
+
+    def test_filter_out_of_range(self):
+        core_models.DiscreteSampleValue.objects.create(
+            sample=self.samples[0], value=5
+        )
+
+        filter_dict = {'out_of_range': True}
+        queryset = form_mission_sample_type.get_samples_queryset(filter_dict, self.sample_type, self.initial_queryset)
+        self.assertEqual(queryset.count(), 1)  # Only the in-range sample should be excluded

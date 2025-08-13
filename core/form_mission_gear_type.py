@@ -1,23 +1,31 @@
 import os
 import threading
 import time
+
 import numpy as np
 
 from tkinter import filedialog
 
 import pandas as pd
 from bs4 import BeautifulSoup
-from django.db.models import Count
+from crispy_forms.bootstrap import StrictButton
+from crispy_forms.layout import Column, Field, Div, Row
+from crispy_forms.utils import render_crispy_form
+from django.db.models import QuerySet
 
+from django import forms
 from django.http import HttpResponse
-from django.template.context_processors import csrf
-from django.template.loader import render_to_string
 from django.utils.translation import gettext as _
 from django.urls import path, reverse_lazy
-from django import forms as django_forms
-from django.db.models import Q
 from django_pandas.io import read_frame
-from core import models, forms, utils
+
+from config.utils import load_svg
+
+from core import form_mission_sample_filter
+from core.form_mission_sample_filter import SampleFilterForm
+from core import models as core_models
+from core import forms as core_forms
+from core import utils
 
 from bio_tables import models as biochem_models
 
@@ -26,159 +34,262 @@ import logging
 user_logger = logging.getLogger('dart.user.gear_type')
 logger = logging.getLogger('dart')
 
+class GearTypeFilterForm(SampleFilterForm):
 
-class GearTypeFilterForm(django_forms.ModelForm):
-    set_gear_type = django_forms.ChoiceField(
+    filter_gear_type_description = forms.ChoiceField(
+        help_text=_("Filter Samples based on existing gear type assigned"),
         required=False,
-        label=_("Set Gear Type"),
-        widget=django_forms.Select(attrs={'class': 'form-select'})
     )
 
-    class Meta:
-        model = models.Bottle
-        fields = '__all__'
-        widgets = {
-            'event': django_forms.Select(attrs={'class': 'form-select'}),
-        }
+    class GearTypeFilterIdBuilder(SampleFilterForm.SampleFilterIdBuilder):
 
-    def __init__(self, mission_id, instrument_type=None, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        def get_select_gear_type_description_id(self):
+            return f'select_id_gear_type_description_{self.card_name}'
 
-        instrument_type = instrument_type if instrument_type else models.InstrumentType.other
-        if instrument_type is not None:
-            # get events mathing the instrument type, but only if it has samples
-            self.fields['event'].queryset = self.fields['event'].queryset.filter(
-                instrument__type=instrument_type
-            ).annotate(
-                sample_count=Count('bottles__samples'), pk_sample_count=Count('bottles__plankton_data')
-            ).filter(
-                Q(sample_count__gt=0) | Q(pk_sample_count__gt=0)
+    @staticmethod
+    def get_id_builder_class():
+        return GearTypeFilterForm.GearTypeFilterIdBuilder
+
+    def get_select_gear_type_description(self):
+        attrs = self.htmx_attributes.copy()
+
+        return Field('filter_gear_type_description', css_class='form-select form-select-sm',
+                     id=self.get_id_builder().get_select_gear_type_description_id(), **attrs)
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        row = Row(
+            Column(
+                self.get_select_gear_type_description()
             )
+        )
 
-        self.fields['event'].widget.attrs.update({
-            'hx-get': reverse_lazy('core:form_gear_type_list_samples', args=(mission_id, instrument_type,)),
-            'hx-trigger': 'change',
+        body.append(row)
+        return body
+
+    def get_samples_card_update_url(self):
+        return reverse_lazy('core:mission_gear_type_sample_list', args=[self.mission_id, self.instrument_type])
+
+    def get_clear_filters_url(self):
+        return reverse_lazy("core:form_mission_sample_type_clear", args=[self.mission_id, self.instrument_type])
+
+    def __init__(self, *args, mission_id, instrument_type, collapsed=True, **kwargs):
+        self.card_name = "gear_type_filter"
+        self.mission_id = mission_id
+        self.instrument_type = instrument_type
+        self.events = core_models.Event.objects.filter(mission_id=mission_id, instrument__type=instrument_type)
+
+        super().__init__(*args, card_name=self.card_name, collapsed=collapsed, **kwargs)
+
+        gear_list = biochem_models.BCGear.objects.all().order_by('type', 'gear_seq')
+        self.fields['filter_gear_type_description'].choices = ([(0, '------')] +
+                                                               [(g.pk, f'{g.gear_seq} : {g.type} : {g.description}')
+                                                               for g in gear_list])
+
+
+class GearTypeSelectionForm(core_forms.CollapsableCardForm):
+
+    class GearTypeSelectionIdBuilder(core_forms.CollapsableCardForm.CollapsableCardIDBuilder):
+        def get_button_apply_id(self):
+            return f'btn_id_apply_gear_type_{self.card_name}'
+
+        def get_button_volume_id(self):
+            return f'btn_id_apply_gear_type_{self.card_name}'
+
+        def get_input_gear_code_id(self):
+            return f'input_id_gear_code_{self.card_name}'
+
+        def get_select_gear_description_id(self):
+            return f'input_id_gear_description_{self.card_name}'
+
+    @staticmethod
+    def get_id_builder_class():
+        return GearTypeSelectionForm.GearTypeSelectionIdBuilder
+
+    gear_type_code = forms.IntegerField(label=_("Gear Type Code"), required=False)
+    gear_type_description = forms.ChoiceField(label=_("Gear Type Description"), required=False)
+
+    def get_btn_apply_gear_type(self):
+        attrs = {
+            'id': self.get_id_builder().get_button_apply_id(),
+            'hx-post': reverse_lazy('core:form_mission_gear_type_update_gear_type', args=[self.mission_id, self.instrument_type]),
             'hx-swap': 'none',
-        })
+        }
+        icon = load_svg("check-square")
 
-        gear_type_choices = [('', '--------------')] + [
-            (g.gear_seq,
-             f"{g.gear_seq} - {g.type} - {(g.description[:100] + "...") if len(g.description) > 100 else g.description}")
-            for g in biochem_models.BCGear.objects.all().order_by("type", "gear_seq")
-        ]
-        self.fields['set_gear_type'].choices = gear_type_choices
+        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
+
+    def get_btn_load_volume(self):
+        attrs = {
+            'id': self.get_id_builder().get_button_volume_id(),
+            'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=[self.mission_id]),
+            'hx-swap': 'none',
+        }
+        icon = load_svg("check-square")
+
+        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
+
+    def get_input_gear_code(self):
+        attrs = {
+            'id': self.get_id_builder().get_input_gear_code_id(),
+            'hx-trigger': 'keyup changed delay:500ms',
+            'hx-swap': 'none',
+            'hx-get': self.update_form_url,
+            'hx-select-oob': f"#{self.get_id_builder().get_select_gear_description_id()}",
+        }
+        return Field('gear_type_code', css_class="form-control-sm", **attrs)
+
+    def get_select_gear_description(self):
+        attrs = {
+            'id': self.get_id_builder().get_select_gear_description_id(),
+            'hx-swap': 'none',
+            'hx-get': self.update_form_url,
+            'hx-select-oob': f"#{self.get_id_builder().get_input_gear_code_id()}",
+        }
+        return Field('gear_type_description', css_class="form-select form-select-sm", **attrs)
+
+    def get_card_header(self):
+        header = super().get_card_header()
+        spacer_row = Column(
+            css_class="col"
+        )
+
+        button_row = Column(
+            self.get_btn_apply_gear_type(),
+            css_class="col-auto"
+        )
+
+        header.fields[0].fields.append(spacer_row)
+        header.fields[0].fields.append(button_row)
+        return header
+
+    def get_card_body(self) -> Div:
+        body = super().get_card_body()
+
+        gear_details_row = Row(
+            Column(
+                self.get_input_gear_code(),
+                css_class='col-auto'
+            ),
+            Column(
+                self.get_select_gear_description(),
+            )
+        )
+
+        body.append(gear_details_row)
+        return body
+
+    def __init__(self, mission_id, instrument_type, render_description_list=True, *args, **kwargs):
+        self.mission_id = mission_id
+        self.instrument_type = instrument_type
+        self.update_form_url = reverse_lazy('core:form_mission_gear_type_filter_datatype', args=[self.mission_id, self.instrument_type])
+
+        super().__init__(*args, card_name="gear_type_selection", card_title=_("Gear Type Selection"), **kwargs)
+
+        self.fields['gear_type_description'].choices = [(0, '------')]
+        if render_description_list:
+            gear_qs = biochem_models.BCGear.objects.all().order_by('type', 'gear_seq')
+            self.fields['gear_type_description'].choices += [(b.gear_seq, f"{b.gear_seq} : {b.type} : {b.description}") for b in gear_qs]
+            if 'gear_type_code' in self.initial:
+                self.fields['gear_type_description'].initial = self.initial['gear_type_code']
 
 
-def query_samples(mission_id, instrument_type, arguments: dict = None):
-    bottles = models.Bottle.objects.filter(event__mission_id=mission_id,
-                                           event__instrument__type=instrument_type).order_by("bottle_id")
+def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> QuerySet:
+    queryset = core_models.Bottle.objects.filter(
+        event__mission_id=mission_id,
+        event__instrument__type=instrument_type
+    ).order_by("bottle_id")
 
-    if arguments is None:
-        return bottles
+    event_id = int(filter_dict.get('event', 0) or 0)
+    if event_id > 0:
+        event = core_models.Event.objects.get(pk=event_id)
+        sample_id_start = event.sample_id
+        sample_id_end = event.end_sample_id
+    else:
+        sample_id_start = int(filter_dict.get('sample_id_start', 0) or 0)
+        sample_id_end = int(filter_dict.get('sample_id_end', 0) or 0)
 
-    if event := arguments.get('event', None):
-        bottles = bottles.filter(event__pk=event)
+    if bool(sample_id_start) and not bool(sample_id_end):
+        queryset = queryset.filter(bottle_id=sample_id_start)
+    elif bool(sample_id_start) and bool(sample_id_end):
+        queryset = queryset.filter(bottle_id__gte=sample_id_start, bottle_id__lte=sample_id_end)
 
-    return bottles
+    gear_code = int(filter_dict.get('filter_gear_type_code', 0) or filter_dict.get('filter_gear_type_description', 0) or 0)
 
+    if gear_code:
+        queryset = queryset.filter(gear_type_id=gear_code)
 
-def list_samples(request, mission_id, instrument_type, **kwargs):
-    soup = BeautifulSoup('', 'html.parser')
+    return queryset
 
-    # When ever the table list is updated we'll clear any notifications from the forms card.
-    soup.append('<div id="div_id_sample_card_notifications" hx-swap-oob="true" ></div>')
+def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
 
-    bottles = query_samples(mission_id, instrument_type, request.GET if request.method == "GET" else request.POST)
+    instrument_type = kwargs['instrument_type']
 
-    # if the table is being paged then we want to truncate the result set to just what we're working with
-    page = None
-    if 'page' in request.GET:
-        page = int(request.GET.get('page', 0))
-        results = 100
-        start = int(page) * results
-        end = start + results
-        bottles = bottles[start:end]
+    headers = [
+        ('bottle_id', _("Sample")),
+        ('event__event_id', _("Event")),
+        ('mesh_size', _("Mesh")),
+        ('gear_type__gear_seq', _("Gear Type ID")),
+        ('gear_type__description', _("Gear Type Description"))
+    ]
+    if instrument_type == core_models.InstrumentType.net:
+        headers.insert(3, ('volume', _("Volume")))
 
-    bottles_values = bottles.values(
-        'bottle_id',
-        'event__event_id',
-        'mesh_size',
-        'volume',
-        'gear_type__gear_seq',
-        'gear_type__description',
-    )
+    value_headers = [h[0] for h in headers]
+    table_headers = [h[1] for h in headers]
 
-    df = read_frame(bottles_values)
-    if instrument_type == models.InstrumentType.net:
-        bottle_dict = {b.bottle_id: b for b in bottles}
+    bottle_list = queryset.values(*value_headers)
+
+    df = read_frame(bottle_list)
+
+    if instrument_type == core_models.InstrumentType.net:
+        bottle_dict = {b.bottle_id: b for b in queryset}
         for i, row in df.iterrows():
-            if row['volume'] == None:
+            if row['volume'] is None:
                 volume = bottle_dict[row['bottle_id']].computed_volume[1]
 
                 df.at[i, 'volume'] = volume if volume else "-----"
 
-    # Note:
-    #   The template 'mission_gear_type.html' has the table header, but if I was going to set
-    #   the human-readable column names, I'd do it here. The table header has to agree with
-    #   the 'bottles = bottles.values' statement above, they have to have the same elements
-    #   in the same order
-
-    # df.columns = ["Sample", "Event", "Mesh", "Volume", "GearType", "Description"]
+    df.columns = table_headers
 
     html = df.to_html(index=False)
-    table_soup = BeautifulSoup(html, 'html.parser')
+    return BeautifulSoup(html, 'html.parser')
 
-    table = table_soup.find('table')
-    # we don't need the head of the table, just the body. It's a waste of bandwidth to send it.
-    table.find('thead').decompose()
+def list_samples(request, mission_id, instrument_type, **kwargs):
+    card_title = _('Samples')
+    delete_samples_url = reverse_lazy("core:form_gear_type_delete_samples", args=[mission_id, instrument_type])
+    queryset = get_samples_queryset(request.POST, mission_id, instrument_type)
 
-    table_body = table.find('tbody')
-    table_body.attrs['id'] = "tbody_id_gear_type_sample_table"
-    table_body.attrs['hx-swap-oob'] = "true"
+    soup = form_mission_sample_filter.list_samples(request, queryset, card_title, delete_samples_url,
+                                                   process_samples_func, instrument_type=instrument_type)
 
-    if isinstance(page, int):
-        # add a pageing trigger to the second last row of the table. This way the next table update will
-        # start before the user reaches the end of the table.
-        page_trigger = 2
-        if len(tr_list := table_body.findAll('tr', recursive=False)) > page_trigger:
-            url = request.path
-            last_tr = tr_list[-page_trigger]
-            last_tr.attrs['hx-target'] = '#tbody_id_gear_type_sample_table'
-            last_tr.attrs['hx-trigger'] = 'intersect once'
-            last_tr.attrs['hx-get'] = url + f"?page={page + 1}"
-            last_tr.attrs['hx-swap'] = "beforeend"
+    if instrument_type == core_models.InstrumentType.net:
+        button_row = soup.find(id=f"div_id_card_title_buttons_{form_mission_sample_filter.SAMPLES_CARD_NAME}")
 
-        # after the initial load of the table, we now only want to send
-        # back rows to be swapped in at the end of the table.
-        if page > 0:
-            return HttpResponse(tr_list)
+        attrs = {
+            'id': f'btn_id_load_volumes_{form_mission_sample_filter.SAMPLES_CARD_NAME}',
+            'name': 'load_volumes',
+            'title': _('Load Volume File'),
+            'class': 'btn btn-sm btn-primary me-2',
+            'hx-swap': 'none',
+            'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=[mission_id])
+        }
+        icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
+        button_load_volumes = soup.new_tag('button', attrs=attrs)
+        button_load_volumes.append(icon)
 
-    soup.append(table)
-    return HttpResponse(soup.prettify())
+        button_row.insert(0, button_load_volumes)
+
+    return HttpResponse(soup)
 
 
 def delete_samples(request, mission_id, instrument_type):
-    bottles = query_samples(mission_id, instrument_type, request.POST)
+    bottles = get_samples_queryset(request.POST, mission_id, instrument_type)
     bottles.delete()
 
-    mission = models.Mission.objects.get(pk=mission_id)
-    form = GearTypeFilterForm(mission_id, instrument_type)
-
-    context = {
-        'form': form,
-        'mission': mission,
-        'instrument_type': instrument_type
-    }
-    context.update(csrf(request))
-
-    html = render_to_string('core/partials/mission_gear_type_filter.html', context=context)
-    soup = BeautifulSoup(html, 'html.parser')
-    form_soup = soup.find('form')
-    form_soup.attrs['hx-swap-oob'] = "true"
-
-    response = HttpResponse(form_soup.parent)
-    response['HX-Trigger'] = 'reload_sample_list'
-
+    response = HttpResponse()
+    response['HX-Trigger'] = 'reload_samples'
     return response
 
 
@@ -192,20 +303,20 @@ def validate_event_and_bottle(df):
         sample_id = row['sample_id']
         volume = float(row['volume']) if utils.is_number(row['volume']) else np.nan
         try:
-            event = models.Event.objects.get(event_id=event_id)
+            event = core_models.Event.objects.get(event_id=event_id)
             try:
-                bottle = models.Bottle.objects.get(event=event, bottle_id=sample_id)
-            except models.Bottle.DoesNotExist:
+                bottle = core_models.Bottle.objects.get(event=event, bottle_id=sample_id)
+            except core_models.Bottle.DoesNotExist:
                 errors.append((idx + 1, f"No Bottle with bottle_id={sample_id} for Event {event_id}"))
                 continue
 
             bottle.volume = volume
             update_bottles.append(bottle)
-        except models.Event.DoesNotExist:
+        except core_models.Event.DoesNotExist:
             errors.append((idx + 1, f"No Bottle with bottle_id={sample_id} for Event {event_id}"))
 
     if len(errors) == 0 and len(update_bottles) > 0:
-        models.Bottle.objects.bulk_update(update_bottles, ['volume'])
+        core_models.Bottle.objects.bulk_update(update_bottles, ['volume'])
         return None
 
     return errors
@@ -213,7 +324,7 @@ def validate_event_and_bottle(df):
 
 def process_file(mission, file_path):
     file_name = os.path.basename(file_path)
-    models.FileError.objects.filter(mission=mission, file_name=file_name).delete()
+    core_models.FileError.objects.filter(mission=mission, file_name=file_name).delete()
 
     expected_columns = ["mission", "tow", "event", "sample_id", "net_number", "volume"]
     df = pd.read_excel(file_path)
@@ -223,13 +334,14 @@ def process_file(mission, file_path):
     errors = validate_event_and_bottle(df)
     if errors:
         for error in errors:
-            models.FileError.objects.create(mission=mission, message=error[1], line=error[0],
-                                            file_name=file_name, type=models.ErrorType.validation, code=1000)
+            core_models.FileError.objects.create(mission=mission, message=error[1], line=error[0],
+                                            file_name=file_name, type=core_models.ErrorType.validation, code=1000)
 
 
 def load_volume(request, mission_id, thread_id=None, **kwargs):
     soup = BeautifulSoup('', 'html.parser')
-    mission = models.Mission.objects.get(pk=mission_id)
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    base_notifications_id = f'div_id_card_notifications_{form_mission_sample_filter.SAMPLES_CARD_NAME}'
 
     if thread_id:
         user_logger.info("checking logger")
@@ -240,19 +352,19 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
                 break
 
         attrs = {
-            'component_id': 'div_id_sample_card_notifications',
+            'component_id': base_notifications_id,
             'message': _("Success"),
             'alert_type': 'success'
         }
         while thread.is_alive():
             time.sleep(2)
 
-        errors = models.FileError.objects.filter(mission=mission, type=models.ErrorType.validation, code=1000)
+        errors = core_models.FileError.objects.filter(mission=mission, type=core_models.ErrorType.validation, code=1000)
         if errors.exists():
             attrs['alert_type'] = 'danger'
             attrs['message'] = _("Errors found in the file:")
-            alert_soup = forms.blank_alert(**attrs)
-            message_div = alert_soup.find('div', id='div_id_sample_card_notifications_message')
+            alert_soup = core_forms.blank_alert(**attrs)
+            message_div = alert_soup.find('div', id=f'{base_notifications_id}_message')
             message_div.append(ul_elm := soup.new_tag('ul'))
             for error in errors:
                 ul_elm.append(li_elm := soup.new_tag('li'))
@@ -263,9 +375,9 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
             soup.append(alert_soup)
             return HttpResponse(soup)
 
-        soup.append(forms.blank_alert(**attrs))
+        soup.append(core_forms.blank_alert(**attrs))
         response = HttpResponse(soup)
-        response['HX-Trigger'] = 'reload_sample_list'
+        response['HX-Trigger'] = 'reload_samples'
         return response
 
     file_path = filedialog.askopenfilename(title="Select a file")
@@ -274,42 +386,65 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
         (t := threading.Thread(target=process_file, args=(mission, file_path,), daemon=True)).start()
 
         attrs = {
-            'alert_area_id': 'div_id_sample_card_notifications',
+            'alert_area_id': base_notifications_id,
             'logger': user_logger.name,
             'message': _("Loading"),
             'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=(mission_id, t.ident,)),
             'hx-trigger': 'load',
         }
 
-        return HttpResponse(forms.websocket_post_request_alert(**attrs))
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
     return HttpResponse(soup)
 
 
-def apply_gear_type_samples(request, mission_id, instrument_type=None, **kwargs):
-    soup = BeautifulSoup('', 'html.parser')
-    bottles = query_samples(mission_id, instrument_type, request.POST)
-    gear_type = request.POST.get('set_gear_type', None)
+def update_gear_type_samples(request, mission_id, instrument_type=None, **kwargs):
+    bottles = get_samples_queryset(request.POST, mission_id, instrument_type)
+    gear_type = request.POST.get('gear_type_code', None)
 
     for bottle in bottles:
         bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(
             gear_type) else gear_type
 
-    models.Bottle.objects.bulk_update(bottles, ['gear_type'])
+    core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 
-    response = HttpResponse(soup)
-    response['HX-Trigger'] = 'reload_sample_list'
+    response = HttpResponse()
+    response['HX-Trigger'] = 'reload_samples'
     return response
+
+def clear_filters(request, mission_id, instrument_type):
+
+    form = GearTypeFilterForm(mission_id=mission_id, instrument_type=instrument_type, collapsed=False)
+    return form_mission_sample_filter.clear_filters(form)
+
+
+def filter_gear_type(request, mission_id, instrument_type):
+    render_description_list = True
+
+    gear_code = 0
+    initial = {}
+    if (gear_code := int(request.GET.get('gear_type_code', 0) or 0)):
+        initial = {'gear_type_code': gear_code}
+    elif (gear_code := int(request.GET.get('gear_type_description', 0) or 0)):
+        initial = {'gear_type_code': gear_code}
+        render_description_list = False
+
+    form = GearTypeSelectionForm(mission_id=mission_id, instrument_type=instrument_type, collapsed=False,
+                                 render_description_list=render_description_list, initial=initial)
+    html = render_crispy_form(form)
+    return HttpResponse(html)
 
 
 url_patterns = [
-    path(f'geartype/<int:mission_id>/<int:instrument_type>/list_samples/', list_samples,
-         name="form_gear_type_list_samples"),
     path(f'geartype/load_volume/<int:mission_id>/', load_volume, name="form_gear_type_load_volume"),
     path(f'geartype/load_volume/<int:mission_id>/<str:thread_id>/', load_volume, name="form_gear_type_load_volume"),
 
-    path(f'geartype/delete/<int:mission_id>/<str:instrument_type>/', delete_samples,
-         name="form_gear_type_delete_samples"),
-    path(f'geartype/apply/<int:mission_id>/<str:instrument_type>/', apply_gear_type_samples,
-         name="form_gear_type_apply_samples"),
+    path(f'geartype/delete/<int:mission_id>/<str:instrument_type>/', delete_samples, name="form_gear_type_delete_samples"),
+
+    path(f'geartype/<int:mission_id>/<str:instrument_type>/', filter_gear_type, name="form_mission_gear_type_filter_datatype"),
+    path(f'geartype/apply/<int:mission_id>/<str:instrument_type>/', update_gear_type_samples, name="form_mission_gear_type_update_gear_type"),
+    path(f'geartype/clear/<int:mission_id>/<int:instrument_type>/', clear_filters, name="form_mission_sample_type_clear"),
+
+    path(f'geartype/<int:mission_id>/<int:instrument_type>/list_samples/', list_samples,
+         name="mission_gear_type_sample_list"),
 ]

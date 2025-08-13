@@ -1,0 +1,17 @@
+<table class="table table-striped">
+    <thead class="sticky-top">
+        <tr>
+            <th>Sample ID</th>
+            {% for sample in sample_type.samples.first.discrete_values.all %}
+            <td>value_{{ sample.replicate }}</td>
+            {% endfor %}
+        </tr>
+    </thead>
+    <tbody>
+    {% for sample in sample_type.samples.all %}
+        <tr>
+            <td>{{ sample.bottle.bottle_id }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

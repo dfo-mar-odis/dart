@@ -53,6 +53,7 @@ my_conf.py
 prod.cnf
 test_start_dart.bat
 
+.coverage
 .env
 current_version.txt
 /bio_tables/fixtures/biochem_fixtures.json

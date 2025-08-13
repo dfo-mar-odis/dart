@@ -13,6 +13,7 @@ from crispy_forms.utils import render_crispy_form
 
 from django import forms
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
@@ -20,6 +21,7 @@ from django.conf import settings
 
 from core import models as core_models
 from core import forms as core_forms
+from core.parsers import PlanktonParser
 from core.parsers.PlanktonParser import parse_zooplankton, parse_phytoplankton, parse_zooplankton_bioness
 from core.parsers.SampleParser import get_excel_dataframe
 from core.parsers.BionessParser import parse_bioness
@@ -65,7 +67,7 @@ class PlanktonForm(forms.Form):
         tab_field = Field('tab')
         tab_field.attrs['hx-post'] = url
         tab_field.attrs['hx-swap'] = "none"
-        tab_field.attrs['class'] = "form-control form-control-sm"
+        tab_field.attrs['class'] = "form-select form-select-sm"
 
         header_field = Field('header')
         header_field.attrs['hx-post'] = url
@@ -210,47 +212,47 @@ def import_plankton(request, mission_id):
 
     if request.method == 'GET':
         # you can only get the file though a POST request
-        url = reverse_lazy('core:form_plankton_import_plankton', args=(mission.pk,))
+        url = request.path
         component_id = "div_id_plankton_message"
         attrs = {
-            'component_id': component_id,
+            'alert_area_id': component_id,
             'message': _("Loading"),
+            'logger': PlanktonParser.user_logger.name,
+            'hx-swap': 'outerHTML',
             'alert_type': 'info',
             'hx-trigger': "load",
-            'hx-swap-oob': 'true',
             'hx-post': url,
-            'hx-ext': "ws",
-            'ws-connect': f"/ws/biochem/notifications/{component_id}/"
         }
-        load_card = core_forms.save_load_component(**attrs)
+        load_card = core_forms.websocket_post_request_alert(**attrs)
+        # load_card = core_forms.save_load_component(**attrs)
 
         return HttpResponse(load_card)
 
     soup = BeautifulSoup('', 'html.parser')
 
-    message_div = soup.new_tag('div')
-    message_div.attrs['class'] = "mt-2"
-    message_div.attrs['id'] = "div_id_plankton_message"
-    message_div.attrs['hx-swap-oob'] = "true"
-    soup.append(message_div)
+    # message_div = soup.new_tag('div')
+    # message_div.attrs['class'] = "mt-2"
+    # message_div.attrs['id'] = "div_id_plankton_message"
+    # message_div.attrs['hx-swap-oob'] = "true"
+    # soup.append(message_div)
 
-    form_div = soup.new_tag('div')
-    form_div.attrs['class'] = "row"
-    form_div.attrs['id'] = "div_id_plankton_form"
-    form_div.attrs['hx-swap-oob'] = "true"
-    soup.append(form_div)
+    # form_div = soup.new_tag('div')
+    # form_div.attrs['class'] = "row"
+    # form_div.attrs['id'] = "div_id_plankton_form"
+    # form_div.attrs['hx-swap-oob'] = "true"
+    # soup.append(form_div)
 
     attrs = {
-        'component_id': 'div_id_message_alert',
+        'component_id': 'div_id_plankton_message_alert',
         'message': _("Success"),
         'alert_type': 'success',
-        'hx-swap-oob': 'true',
     }
 
+    message_alert = None
     if 'plankton_file' not in request.FILES:
         attrs['message'] = 'No file chosen'
         attrs['alert_type'] = 'warning'
-        message_div.append(core_forms.blank_alert(**attrs))
+        soup.append(core_forms.blank_alert(**attrs))
         return HttpResponse(soup)
 
     file = request.FILES['plankton_file']
@@ -281,59 +283,60 @@ def import_plankton(request, mission_id):
                 # user knows what went wrong.
                 attrs['message'] = _("Completed with issues")
                 attrs['alert_type'] = 'warning'
-                alert = core_forms.blank_alert(**attrs)
+                message_alert = core_forms.blank_alert(**attrs)
                 ul = soup.new_tag('ul')
                 ul.attrs['class'] = 'vertical-scrollbar-sm'
                 for err in errs:
                     li = soup.new_tag('li')
                     li.string = err.message
                     ul.append(li)
-                alert.find('div').find('div').append(ul)
+                message_alert.find('div').find('div').append(ul)
             else:
-                alert = core_forms.blank_alert(**attrs)
+                message_alert = core_forms.blank_alert(**attrs)
+                html = render_to_string('core/partials/form_plankton_load.html', context={'mission': mission})
+                form_soup = BeautifulSoup(html, 'html.parser')
+
+                # upon success we clear the form elements
+                file_input = form_soup.find(id="id_input_sample_file")
+                file_input.attrs['hx-swap-oob'] = "true"
+                soup.append(file_input)
+
+                table = form_soup.find(id="div_id_plankton_form")
+                table.attrs['hx-swap-oob'] = "true"
+                soup.append(table)
+
         except KeyError as e:
             errs = mission.file_errors.filter(file_name__iexact=file.name)
             attrs['message'] = _("Could not load with issues")
             attrs['alert_type'] = 'danger'
-            alert = core_forms.blank_alert(**attrs)
+            message_alert = core_forms.blank_alert(**attrs)
             ul = soup.new_tag('ul')
             ul.attrs['class'] = 'vertical-scrollbar-sm'
             for err in errs:
                 li = soup.new_tag('li')
                 li.string = err.message
                 ul.append(li)
-            alert.find('div').find('div').append(ul)
+            message_alert.find('div').find('div').append(ul)
 
-        message_div.append(alert)
-        # clear the file input upon success
-        file_input = soup.new_tag('input')
-        file_input.attrs['id'] = "id_input_sample_file"
-        file_input.attrs['class'] = "form-control form-control-sm"
-        file_input.attrs['hx-swap-oob'] = "true"
-        file_input.attrs['type'] = "file"
-        file_input.attrs['name'] = "plankton_file"
-        file_input.attrs['accept'] = ".xls,.xlsx,.xlsm"
-        file_input.attrs['hx-trigger'] = "change"
-        file_input.attrs['hx-get'] = reverse_lazy('core:form_plankton_load_plankton', args=(mission_id,))
-        file_input.attrs['hx-swap'] = "none"
-
-        soup.append(file_input)
     except ValueError as e:
         logger.exception(e)
         attrs = {
-            'component_id': "div_id_plankton_table",
+            'component_id': "div_id_plankton_message_alert",
             'alert_type': "danger",
             'message': e.args[0]
         }
-        message_div.append(core_forms.blank_alert(**attrs))
+        message_alert = core_forms.blank_alert(**attrs)
     except Exception as e:
         logger.exception(e)
         attrs = {
-            'component_id': "div_id_plankton_table",
+            'component_id': "div_id_plankton_message_alert",
             'alert_type': "danger",
             'message': _("An unknown issue occurred (see ./logs/error.log).")
         }
-        message_div.append(core_forms.blank_alert(**attrs))
+        message_alert = core_forms.blank_alert(**attrs)
+
+    if message_alert:
+        soup.append(message_alert)
 
     response = HttpResponse(soup)
     response['HX-Trigger'] = 'update_samples'

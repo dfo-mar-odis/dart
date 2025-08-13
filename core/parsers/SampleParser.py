@@ -291,6 +291,11 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             value = row[value_field]
 
             if sample_id not in bottle_keys:
+                # if this sample ID is in the excluded samples range then skip it.
+                if mission.start_underway_sample and mission.end_underway_sample:
+                    if sample_id >= mission.start_underway_sample or sample_id <= mission.end_underway_sample:
+                        continue
+
                 message = f"Could not find bottle matching id {sample_id} in file {file_name} \n"
                 event = mission.events.filter(sample_id__lte=sample_id, end_sample_id__gte=sample_id)
                 if event:

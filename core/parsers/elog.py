@@ -437,7 +437,7 @@ def process_events(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [
             station = stations.get(name__iexact=buffer.pop(mapped_fields['station']))
 
             instrument_name = buffer.pop(mapped_fields['instrument'])
-            attachment = buffer[mapped_fields['attached']]
+            attachment = buffer[mapped_fields['attached']].replace('μm', 'um')
             instrument_tmp = get_instrument(instrument_name, attachment)
             instrument = instruments.get(type=instrument_tmp.type, name__iexact=instrument_tmp.name)
 
@@ -603,7 +603,7 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
                 continue
 
             # We're done with these objects so remove them from the buffer
-            attached_str = buffer.pop(mapped_fields['attached'])
+            attached_str = buffer.pop(mapped_fields['attached']).replace('μm', 'um')
 
             # if the time|position doesn't exist report the issue to the user, it may not have been set by mistake
             if re.search(r".*\|.*\|.*\|.*", buffer[mapped_fields['time_position']]) is None:

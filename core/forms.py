@@ -27,34 +27,81 @@ class NoWhiteSpaceCharField(forms.CharField):
 
 class CardForm(forms.Form):
 
+    class CardFormIdBuilder:
+        def get_card_id(self):
+            return f'div_id_card_{self.card_name}'
+
+        def get_card_header_id(self):
+            return f'div_id_card_header_{self.card_name}'
+
+        def get_card_title_id(self):
+            return f'div_id_card_title_{self.card_name}'
+
+        def get_alert_area_id(self):
+            return f"div_id_card_alert_{self.card_name}"
+
+        def get_card_body_id(self):
+            return f'div_id_card_body_{self.card_name}'
+
+        def __init__(self, card_name, *args, **kwargs):
+            self.card_name = card_name
+
+    id_builder = None
+
     card_title = None
     card_title_class = None
     card_header_class = None
     card_name = None
+    help_text = None
+
+    @staticmethod
+    def get_id_builder_class():
+        return CardForm.CardFormIdBuilder
+
+    def get_id_builder(self):
+        if self.id_builder is None:
+            self.id_builder = self.get_id_builder_class()(self.card_name)
+
+        return self.id_builder
 
     # the card name is frequently used in uniquely naming elements for a card
     def get_card_name(self):
         return self.card_name
 
+    def get_card_id(self):
+        return self.get_id_builder().get_card_id()
+
+    def get_card_header_id(self):
+        return self.get_id_builder().get_card_header_id()
+
     def get_card_title_id(self):
-        return f'div_id_card_title_{self.card_name}'
+        return self.get_id_builder().get_card_title_id()
+
+    def get_alert_area_id(self):
+        return self.get_id_builder().get_alert_area_id()
+
+    def get_card_body_id(self):
+        return self.get_id_builder().get_card_body_id()
 
     def get_card_title_class(self):
         return 'card-title' + (f" {self.card_title_class}" if self.card_title_class else "")
 
-    def get_card_title(self):
-        title = HTML(f'<h6>{self.card_title}</h6>') if self.card_title else None
-        return Div(title, css_class=self.get_card_title_class(), id=self.get_card_title_id())
+    def get_help_text(self):
+        return self.help_text
 
-    def get_alert_area_id(self):
-        return f"div_id_card_alert_{self.card_name}"
+    def get_card_title(self):
+        title_string = ""
+        if (help_text:=self.get_help_text()) is not None:
+            svg = BeautifulSoup(load_svg('question-circle'), 'html.parser').svg
+            title_string = f'<span title="{help_text}" class="me-2">{svg}</span>'
+
+        title_string += f'<span id="{self.get_card_title_id()}" class="h6">{self.card_title}</span>'
+        title = HTML(title_string) if self.card_title else None
+        return Div(title, css_class=self.get_card_title_class())
 
     def get_alert_area(self):
         msg_row = Row(id=self.get_alert_area_id())
         return msg_row
-
-    def get_card_header_id(self):
-        return f'div_id_card_header_{self.card_name}'
 
     def get_card_header_class(self):
         return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
@@ -68,14 +115,8 @@ class CardForm(forms.Form):
 
         return header
 
-    def get_card_body_id(self):
-        return f'div_id_card_body_{self.card_name}'
-
     def get_card_body(self) -> Div:
         return Div(css_class='card-body', id=self.get_card_body_id())
-
-    def get_card_id(self):
-        return f'div_id_card_{self.card_name}'
 
     def get_card_class(self):
         return f'card mb-2'
@@ -115,7 +156,19 @@ class CardForm(forms.Form):
 
 class CollapsableCardForm(CardForm):
 
+    class CollapsableCardIDBuilder(CardForm.CardFormIdBuilder):
+
+        def get_collapsable_card_body_id(self):
+            return f"div_id_card_collapse_{self.card_name}"
+
     collapsed = False
+
+    @staticmethod
+    def get_id_builder_class():
+        return CollapsableCardForm.CollapsableCardIDBuilder
+
+    def get_collapsable_card_body_id(self):
+        return self.get_id_builder().get_collapsable_card_body_id()
 
     def get_card_header(self):
 
@@ -125,7 +178,7 @@ class CollapsableCardForm(CardForm):
         button_attrs = {
             'id': button_id,
             'data_bs_toggle': "collapse",
-            'href': f"#div_id_card_collapse_{self.card_name}",
+            'href': f"#{self.get_id_builder().get_collapsable_card_body_id()}",
             'aria_expanded': 'false' if self.collapsed else 'true'
         }
         icon = load_svg('caret-down')
@@ -134,9 +187,6 @@ class CollapsableCardForm(CardForm):
         header.fields[0].fields.insert(0, button)
 
         return header
-
-    def get_collapsable_card_body_id(self):
-        return f"div_id_card_collapse_{self.card_name}"
 
     def get_collapsable_card_body(self):
         inner_body = self.get_card_body()

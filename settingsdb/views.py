@@ -74,6 +74,7 @@ class MissionDirForm(forms.Form):
         self.fields['directory'].choices = [(db.pk, db.database_location) for db in
                                             setting_models.LocalSetting.objects.using('default').all()]
         self.fields['directory'].choices.append((-1, '--- New ---'))
+        self.fields['directory'].help_text = _("The mission database directory is where existing databases are accessed or new ones are created.")
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
@@ -104,9 +105,10 @@ def get_mission_dictionary(db_dir):
         try:
             if models.Mission.objects.using(database).exists():
                 if not utils.is_database_synchronized(database):
-                    version = getattr(models.Mission.objects.using(database).first(), 'dart_version', None)
+                    mission = models.Mission.objects.using(database).only('name', 'dart_version').first()
+                    version = mission.dart_version
                     short_version = repo.git.rev_parse(version, short=8)
-                    missions[database] = {'name': database, 'requires_migration': 'true', 'version': short_version}
+                    missions[database] = {'database': database, 'name': mission.name, 'requires_migration': 'true', 'version': short_version}
                 else:
                     mission = models.Mission.objects.using(database).first()
                     missions[database] = mission
@@ -147,7 +149,11 @@ def init_connection(use_default=False):
 
 class MissionFilterView(GenericTemplateView):
     model = models.Mission
-    page_title = _("Mission")
+    page_title = _("Mission Filter")
+    help_text = _("The Mission Filter page allows new missions to be created or access to existing missions. "
+                  "Missions will be created or read from the selected 'Mission Databases Directory' and existing "
+                  "missions can be filtered based on their mission dates. When the mission list is filtered the "
+                  "'Download Report' options to view fix station reports will be only include the filtered missions")
     template_name = 'settingsdb/mission_filter.html'
 
     filterset_class = filters.MissionFilter
@@ -212,7 +218,8 @@ def filter_missions(after_date, before_date) -> list[dict]:
                 continue
 
         version = mission['version'] if type(mission) == dict else getattr(mission, 'dart_version', 'No version number')
-        missions.append({'database': database, 'mission': mission,
+        missions.append({'database': database,
+                         'mission': mission,
                          'version': version})
 
     return missions

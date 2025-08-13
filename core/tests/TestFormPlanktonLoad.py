@@ -122,13 +122,16 @@ class TestFormPlanktonLoad(DartTestCase):
         soup = BeautifulSoup(response.content, 'html.parser')
         message = soup.find(id="div_id_plankton_message")
         self.assertIsNotNone(message)
-        self.assertIn('hx-post', message.attrs)
-
-        self.assertEqual(message.attrs['hx-post'], url)
-        self.assertIn('hx-trigger', message.attrs)
-
-        self.assertEqual(message.attrs['hx-trigger'], 'load')
         self.assertIn('hx-swap-oob', message.attrs)
+
+        message_alert = soup.find(id="div_id_plankton_message_alert")
+        self.assertIsNotNone(message_alert)
+        self.assertIn('hx-post', message_alert.attrs)
+
+        self.assertEqual(message_alert.attrs['hx-post'], url)
+        self.assertIn('hx-trigger', message_alert.attrs)
+
+        self.assertEqual(message_alert.attrs['hx-trigger'], 'load')
 
     @tag('form_plankton_test_import_zoo_plankton_post')
     def test_import_zoo_plankton_post(self):
@@ -151,10 +154,7 @@ class TestFormPlanktonLoad(DartTestCase):
         self.assertTrue(plankton.exists())
 
         # the function should clear the div_id_plankton_message area
-        msg_area = soup.find(id="div_id_plankton_message")
-        self.assertIsNotNone(msg_area)
-
-        success_msg = msg_area.find(id="div_id_message_alert")
+        success_msg = soup.find(id="div_id_plankton_message_alert")
         self.assertIsNotNone(success_msg)
         # the css class will be applied to the first child of the alert
         self.assertIn('alert-success', success_msg.find(recursive=False).attrs['class'])
@@ -194,10 +194,7 @@ class TestFormPlanktonLoad(DartTestCase):
         self.assertTrue(plankton.exists())
 
         # the function should clear the div_id_plankton_message area
-        msg_area = soup.find(id="div_id_plankton_message")
-        self.assertIsNotNone(msg_area)
-
-        success_msg = msg_area.find(id="div_id_message_alert")
+        success_msg = soup.find(id="div_id_plankton_message_alert")
         self.assertIsNotNone(success_msg)
         # the css class will be applied to the first child of the alert
         self.assertIn('alert-success', success_msg.find(recursive=False).attrs['class'])

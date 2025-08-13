@@ -37,7 +37,8 @@ class MissionSettingsForm(forms.ModelForm):
     class Meta:
         model = models.Mission
         fields = ['name', 'geographic_region', 'mission_descriptor', 'data_center', 'lead_scientist',
-                  'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments']
+                  'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments',
+                  'start_underway_sample', 'end_underway_sample']
 
     @property
     def get_btn_add(self):
@@ -212,6 +213,10 @@ class MissionSettingsForm(forms.ModelForm):
                     ),
                     Row(Field('collector_comments')),
                     Row(Field('data_manager_comments')),
+                    Row(
+                        Column(Field('start_underway_sample')),
+                        Column(Field('end_underway_sample')),
+                    ),
                     css_class="card-body"
                 ),
                 css_class="card"
@@ -263,6 +268,22 @@ class MissionSettingsForm(forms.ModelForm):
             raise forms.ValidationError(_("Mission requires at least one geographic region"))
 
         return self.cleaned_data['geographic_region']
+
+    def clean(self):
+        cleaned_data = super().clean()
+        start_sample = cleaned_data.get('start_underway_sample')
+        end_sample = cleaned_data.get('end_underway_sample')
+
+        if bool(start_sample) != bool(end_sample):  # XOR logic: one is provided but not the other
+            raise forms.ValidationError(
+                _("Both 'Start Underway Sample' and 'End Underway Sample' must be provided, or neither.")
+            )
+        elif bool(start_sample) and bool(end_sample) and start_sample > end_sample:
+            raise forms.ValidationError(
+                _("The 'End Underway Sample' must be greater than or equal to the 'Start Underway Sample'.")
+            )
+
+        return cleaned_data
 
     def save(self, commit=True):
         mission_name = self.cleaned_data['name']

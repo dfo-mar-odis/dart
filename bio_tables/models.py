@@ -46,7 +46,7 @@ class BCDataRetrieval(models.Model):
     originally_entered_by = models.CharField(max_length=30, verbose_name=_("Original Creator"))
 
     def __str__(self):
-        return f'{self.parameter_name} ({self.unit_seq}): {self.parameter_description}'
+        return f'{self.parameter_description} - {self.parameter_name} ({self.unit_seq}) [{self.minimum_value} : {self.maximum_value}]'
 
 
 class BCAnalysis(models.Model):

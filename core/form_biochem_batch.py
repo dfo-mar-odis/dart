@@ -12,7 +12,6 @@ from crispy_forms.utils import render_crispy_form
 
 from django import forms
 from django.conf import settings
-from django.core.cache import caches
 from django.db import connections
 from django.http import HttpResponse
 from django.template.context_processors import csrf
@@ -22,7 +21,8 @@ from django.utils.translation import gettext as _
 
 from core import models as core_models
 from core import forms as core_forms
-from biochem import models as biochem_models, upload
+from core import form_biochem_database
+from biochem import models as biochem_models
 
 from config.utils import load_svg
 
@@ -294,16 +294,12 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         self.fields['selected_batch'].label = False
         self.fields['selected_batch'].choices = [(None, '--- NEW ---')]
 
-        database_id = caches['biochem_keys'].get('database_id', default=None)
-        password = caches['biochem_keys'].get('pwd', version=database_id, default=None)
-        if not database_id or not password:
-            return
-
-        try:
-            self.get_batch_choices()
-        except django.db.utils.DatabaseError as err:
-            if err.args[0].code != 942:
-                raise err
+        if form_biochem_database.is_connected():
+            try:
+                self.get_batch_choices()
+            except django.db.utils.DatabaseError as err:
+                if err.args[0].code != 942:
+                    raise err
 
 
 # this is a function that can be passed to the MergeTables object, merge tables will
@@ -599,7 +595,6 @@ def get_batch(soup, batch_form: BiochemBatchForm, bcd_model, stage1_valid_proc):
 
     crispy_form = render_crispy_form(batch_form)
     form_soup = BeautifulSoup(crispy_form, 'html.parser')
-    # batch_id = request.POST.get('selected_batch', None)
 
     soup.append(download_button := form_soup.find(id=batch_form.get_download_button_id()))
     soup.append(upload_button := form_soup.find(id=batch_form.get_upload_button_id()))
@@ -649,11 +644,6 @@ def get_batch(soup, batch_form: BiochemBatchForm, bcd_model, stage1_valid_proc):
                 else:
                     merge_button.attrs.pop('disabled')
                     checkin_button.attrs.pop('disabled')
-
-    # validate2_button.attrs['hx-get'] = reverse_lazy(validate2_url, args=(batch_id,))
-    # checkin_button.attrs['hx-get'] = reverse_lazy(checkin_url, args=(batch_id,))
-    # merge_button.attrs['hx-get'] = reverse_lazy(merge_url, args=(mission_id, batch_id,))
-    # delete_button.attrs['hx-get'] = reverse_lazy(delete_url, args=(mission_id, batch_id,))
 
     return soup
 

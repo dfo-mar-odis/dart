@@ -2,7 +2,7 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 from core import models, form_mission_gear_type
-from core.form_mission_gear_type import GearTypeFilterForm
+from core.form_mission_gear_type import GearTypeFilterForm, GearTypeSelectionForm
 from config.views import GenericDetailView
 
 
@@ -23,7 +23,8 @@ class GearTypeDetails(GenericDetailView):
         context['database'] = self.kwargs['database']
         context['mission'] = self.object
         context['instrument_type'] = models.InstrumentType(self.kwargs['instrument_type'])
-        context['gear_type_filter_form'] = GearTypeFilterForm(mission_id=self.object.pk, instrument_type=context['instrument_type'])
+        context['filter_form'] = GearTypeFilterForm(mission_id=self.object.pk, instrument_type=context['instrument_type'])
+        context['gear_type_form'] = GearTypeSelectionForm(mission_id=self.object.pk, instrument_type=context['instrument_type'], collapsed=False)
 
         return context
 
