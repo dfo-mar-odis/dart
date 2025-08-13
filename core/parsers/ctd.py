@@ -221,10 +221,6 @@ def update_bottle(bottle: core_models.Bottle, check_fields: dict[str, object]) -
 
 
 def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
-    database = event._state.db
-
-    skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
-
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     data_frame_avg = data_frame[data_frame['Statistic'] == 'avg']
     data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
