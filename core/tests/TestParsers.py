@@ -14,7 +14,7 @@ from config.tests.DartTestCase import DartTestCase
 from config import settings
 
 from core import models as core_models
-from core.parsers import ctd as ctd_parser
+from core.parsers.sensor import ctd as ctd_parser
 from core.parsers import SampleParser, PlanktonParser
 from core.tests import CoreFactoryFloor as core_factory
 

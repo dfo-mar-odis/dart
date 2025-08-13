@@ -19,7 +19,7 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 from core import models
-from core.parsers import ctd
+from core.parsers.sensor import ctd
 from core import forms as core_forms
 from core.forms import CollapsableCardForm
 from config.utils import load_svg
