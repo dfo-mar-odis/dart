@@ -20,14 +20,14 @@ from django.urls import path, reverse_lazy
 from django.utils.translation import gettext as _
 
 from PyQt6.QtWidgets import QFileDialog
-from PyQt6.QtGui import QIcon
 from render_block import render_block_to_string
 
 from core import forms as core_forms, models
 from core.parsers import FilterLogParser, elog, andes, event_csv
-from core.parsers.FixStationParser import FixStationParser
+from core.parsers.sensor.btl_ros import FixStationParser
 
 from config.utils import load_svg
+from core.parsers.sensor.qat import QATParser
 
 from settingsdb import models as settings_models
 
@@ -1179,7 +1179,7 @@ def load_bottle_file(request, event_id):
     # Create and configure the file dialog
     file_dialog = QFileDialog()
     file_dialog.setWindowTitle("Select a BTL File")
-    file_dialog.setNameFilter("BTL Files (*.btl)")
+    file_dialog.setNameFilter("BTL or QAT Files (*.btl *.qat)")
     file_dialog.setFileMode(QFileDialog.FileMode.ExistingFile)
     file_dialog.setDirectory(start_dir)
 
@@ -1188,29 +1188,16 @@ def load_bottle_file(request, event_id):
         return HttpResponse(soup)
 
     event = models.Event.objects.get(pk=event_id)
-
-    btl_file = file_dialog.selectedFiles()[0]
-    settings.dir = os.path.dirname(btl_file)
-    logger.info(f"Selected file: {btl_file}")
-
-    # Construct the expected .ros file path
-    ros_file = os.path.splitext(btl_file)[0] + ".ros"
-
-    # Check if the .ros file exists
-    if not os.path.exists(ros_file):
-        logger.warning(f"No matching .ros file found for: {btl_file}")
-        return HttpResponse(soup)
+    selected_file = file_dialog.selectedFiles()[0]
+    settings.dir = os.path.dirname(selected_file)
+    logger.info(f"Selected file: {selected_file}")
 
     try:
-        with open(btl_file, 'r', encoding='cp1252') as btl:
-            btl_input = io.StringIO(btl.read())
+        if selected_file.upper().endswith(".BTL"):
+            parse_btl(event, selected_file)
+        elif selected_file.upper().endswith(".QAT"):
+            parse_qat(event.mission, selected_file)
 
-        with open(ros_file, 'r', encoding='cp1252') as ros:
-            ros_input = io.StringIO(ros.read())
-
-        parser = FixStationParser(event=event, btl_filename=os.path.basename(btl_file),
-                                  btl_stream=btl_input, ros_stream=ros_input)
-        parser.parse()
         trigger = "event_selected"
 
         message = _("Success")
@@ -1221,16 +1208,21 @@ def load_bottle_file(request, event_id):
         }
 
         msg_area.append(core_forms.blank_alert(**attrs))
+
+    except FileNotFoundError as ex:
+        logger.warning(f"No matching .ros file found for: {selected_file}")
+        return HttpResponse(soup)
     except Exception as ex:
         logger.exception(ex)
-        message = _("There was an issue reading the file") + f" : '{os.path.basename(btl_file)}' - {str(ex)}"
+        message = _("There was an issue reading the file") + f" : '{os.path.basename(selected_file)}' - {str(ex)}"
         attrs = {
             'component_id': "div_id_card_message_area_event_details_alert",
             'message': message,
             'alert_type': 'danger'
         }
         msg_area.append(core_forms.blank_alert(**attrs))
-        err = models.FileError(mission=event.mission, file_name=os.path.basename(btl_file), line=-1, message=message,
+        err = models.FileError(mission=event.mission, file_name=os.path.basename(selected_file),
+                               line=-1, message=message,
                                type=models.ErrorType.event)
         err.save()
         trigger = "event_updated"
@@ -1238,6 +1230,34 @@ def load_bottle_file(request, event_id):
     response = HttpResponse(soup)
     response['Hx-Trigger'] = trigger
     return response
+
+
+def parse_qat(mission, qat_file):
+    file_name = os.path.basename(qat_file)
+    with open(qat_file, 'r') as file:
+        qat_input = io.StringIO(file.read())
+
+    qatparser = QATParser(mission, file_name, qat_input)
+    qatparser.parse()
+
+
+def parse_btl(event, btl_file):
+    # Construct the expected .ros file path
+    ros_file = os.path.splitext(btl_file)[0] + ".ros"
+
+    # Check if the .ros file exists
+    if not os.path.exists(ros_file):
+        raise FileNotFoundError(f"No matching .ros file found for: {btl_file}")
+
+    with open(btl_file, 'r', encoding='cp1252') as btl:
+        btl_input = io.StringIO(btl.read())
+
+    with open(ros_file, 'r', encoding='cp1252') as ros:
+        ros_input = io.StringIO(ros.read())
+
+    parser = FixStationParser(event=event, btl_filename=os.path.basename(btl_file),
+                              btl_stream=btl_input, ros_stream=ros_input)
+    parser.parse()
 
 
 def import_elog_events(request, mission_id, **kwargs):

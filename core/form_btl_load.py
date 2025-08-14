@@ -4,6 +4,8 @@ import time
 
 import concurrent.futures
 
+from io import StringIO
+
 from PyQt6.QtWidgets import QFileDialog
 from bs4 import BeautifulSoup
 
@@ -12,6 +14,7 @@ from crispy_forms.layout import Column, Row, Div, Field, HTML
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
+from django.db.models import Q
 from django.conf import settings
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -20,6 +23,7 @@ from django.utils.translation import gettext as _
 
 from core import models
 from core.parsers.sensor import ctd
+from core.parsers.sensor import qat
 from core import forms as core_forms
 from core.forms import CollapsableCardForm
 from config.utils import load_svg
@@ -158,7 +162,8 @@ class BottleLoadForm(CollapsableCardForm):
 
     def get_card_header(self):
         header = super().get_card_header()
-        if self.mission.file_errors.filter(file_name__icontains='BTL').exists():
+        errors = self.mission.file_errors.filter(Q(file_name__icontains='BTL') | Q(file_name__icontains='QAT'))
+        if errors.exists():
             header.css_class = ' '.join(header.css_class.split(' ') + ['text-bg-warning'])
 
         refresh_button = self.get_refresh_button()
@@ -194,7 +199,8 @@ class BottleLoadForm(CollapsableCardForm):
         body.fields.append(Field("files"))
         body.fields.append(Field('hide_loaded', type="hidden"))
 
-        if (errors := self.mission.file_errors.filter(file_name__icontains='BTL')).exists():
+        errors = self.mission.file_errors.filter(Q(file_name__icontains='BTL') | Q(file_name__icontains='QAT'))
+        if errors.exists():
             error_card = render_to_string('core/partials/card_bottle_file_errors.html',
                                           context={'mission': self.mission, 'errors': errors})
             body.fields.append(Row(
@@ -217,7 +223,7 @@ class BottleLoadForm(CollapsableCardForm):
 
         if mission.bottle_directory:
             try:
-                files = [f for f in os.listdir(mission.bottle_directory) if f.upper().endswith('.BTL')]
+                files = [f for f in os.listdir(mission.bottle_directory) if f.upper().endswith('.BTL') or f.upper().endswith('.QAT')]
                 if 'hide_loaded' in self.initial:
                     loaded_files = [f.upper() for f in models.Sample.objects.filter(
                         type__is_sensor=True,
@@ -257,13 +263,25 @@ def load_ctd_file(ctd_mission: models.Mission, ctd_file):
     # group_name = 'mission_events'
 
     ctd.logger_notifications.info(f"Loading file {ctd_file}")
-
     ctd_file_path = os.path.join(bottle_dir, ctd_file)
-    try:
-        ctd.read_btl(ctd_mission, ctd_file_path)
-    except Exception as ctd_ex:
-        logger.exception(ctd_ex)
-        status = "Fail"
+
+    if ctd_file.upper().endswith('.BTL'):
+        try:
+            ctd.read_btl(ctd_mission, ctd_file_path)
+        except Exception as ctd_ex:
+            logger.exception(ctd_ex)
+            status = "Fail"
+    elif ctd_file.upper().endswith('.QAT'):
+        try:
+            data = ""
+            with open(ctd_file_path, 'r') as f:
+                data = StringIO(f.read())
+
+            qatparser = qat.QATParser(ctd_mission, ctd_file, data)
+            qatparser.parse()
+        except Exception as ctd_ex:
+            logger.exception(ctd_ex)
+            status = "Fail"
 
     # update the user on our progress
     return status
@@ -286,13 +304,25 @@ def load_ctd_files(mission):
         # group_name = 'mission_events'
 
         ctd.logger_notifications.info(f"Loading file {ctd_file}")
-
         ctd_file_path = os.path.join(bottle_dir, ctd_file)
-        try:
-            ctd.read_btl(ctd_mission, ctd_file_path)
-        except Exception as ctd_ex:
-            logger.exception(ctd_ex)
-            status = "Fail"
+
+        if ctd_file.upper().endswith('.BTL'):
+            try:
+                ctd.read_btl(ctd_mission, ctd_file_path)
+            except Exception as ctd_ex:
+                logger.exception(ctd_ex)
+                status = "Fail"
+        elif ctd_file.upper().endswith('.QAT'):
+            try:
+                data = ""
+                with open(ctd_file_path, 'r') as f:
+                    data = StringIO(f.read())
+
+                qatparser = qat.QATParser(ctd_mission, ctd_file, data)
+                qatparser.parse()
+            except Exception as ctd_ex:
+                logger.exception(ctd_ex)
+                status = "Fail"
 
         completed.append(ctd_file)
 
@@ -450,7 +480,9 @@ def update_errors(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
     soup = BeautifulSoup('', 'html.parser')
 
-    if (errors := mission.file_errors.filter(file_name__icontains='BTL')).exists():
+    errors = (mission.file_errors.filter(file_name__icontains='BTL') |
+              mission.file_errors.filter(file_name__icontains='QAT'))
+    if errors.exists():
         error_card = render_to_string('core/partials/card_bottle_file_errors.html',
                                       context={'mission': mission, 'errors': errors})
         soup.append(BeautifulSoup(error_card, 'html.parser'))
