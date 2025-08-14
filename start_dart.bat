@@ -5,7 +5,13 @@ if not exist ".\logs\" (
   mkdir logs
 )
 
-set master_branch=master
+REM Check if a branch name is passed as an argument, otherwise default to master
+if "%~1"=="" (
+  set master_branch=master
+) else (
+  set master_branch=%~1
+)
+
 set /p dart_version=<current_version.txt
 
 echo ============================================ >> logs/start_dart.log
