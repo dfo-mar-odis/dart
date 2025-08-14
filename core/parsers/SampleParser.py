@@ -290,6 +290,10 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             sample_id = int(row[sample_id_field])
             value = row[value_field]
 
+            if str(value).upper() == 'NA':
+                # if the value is 'na' or 'NA' then this should be a null value.
+                value = None
+
             if sample_id not in bottle_keys:
                 # if this sample ID is in the excluded samples range then skip it.
                 if mission.start_underway_sample and mission.end_underway_sample:
