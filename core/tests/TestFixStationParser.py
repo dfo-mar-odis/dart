@@ -7,7 +7,7 @@ from django.test import tag
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from core.parsers.FixStationParser import FixStationParser
+from core.parsers.sensor.btl_ros import FixStationParser
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models
 

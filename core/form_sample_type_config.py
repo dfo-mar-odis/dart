@@ -258,7 +258,7 @@ class SampleTypeConfigForm(forms.ModelForm):
 def get_upload_button():
     soup = BeautifulSoup("", "html.parser")
     load_button = soup.new_tag("button", attrs={'id': 'button_id_load_samples', 'class': "btn btn-primary",
-                                                'name': 'upload_samples'})
+                                                'name': 'upload_samples', 'title': _("Load Selected Samples")})
     icon = BeautifulSoup(load_svg('check-square'), "html.parser").svg
     load_button.append(icon)
     load_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_load_samples")

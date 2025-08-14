@@ -384,14 +384,14 @@ def blank_alert(component_id, message, **kwargs):
     # Let's make some soup
     soup = BeautifulSoup('', "html.parser")
 
-    root_div = soup.new_tag("div")
+    root_div = soup.new_tag("div", attrs={'id': component_id})
     soup.append(root_div)
 
     # creates an alert dialog with an animated progress bar to let the user know we're saving or loading something
     # type should be a bootstrap css type, (danger, info, warning, success, etc.)
 
     # create an alert area saying we're loading
-    alert_div = soup.new_tag("div", attrs={'class': f"alert alert-{alert_type} mt-2"})
+    alert_div = soup.new_tag("div", attrs={'id': f'{component_id}_alert', 'class': f"alert alert-{alert_type} mt-2"})
     alert_msg = soup.new_tag("div", attrs={'id': f'{component_id}_message'})
     lines = message.split('\n')
     for line in lines:
@@ -406,32 +406,33 @@ def blank_alert(component_id, message, **kwargs):
     }
 
     root_div.append(alert_div)
+
+    for attr, val in kwargs.items():
+        root_div.attrs[attr] = val
+
     soup.append(root_div)
 
     return soup
 
 
-def save_load_component(component_id, message, **kwargs):
+def save_load_component(component_id, message, progress_bar=True, **kwargs):
 
     soup = blank_alert(component_id, message, **kwargs)
-    root_div = soup.find_next()
+    root_div = soup.find(id=component_id)
 
-    alert_div = root_div.find_next()
+    if progress_bar:
+        alert_div = root_div.find(id=f'{component_id}_alert')
+        # create a progress bar to give the user something to stare at while they wait.
+        progress_bar = soup.new_tag("div")
+        progress_bar.attrs = {
+            'class': "progress-bar progress-bar-striped progress-bar-animated",
+            'role': "progressbar",
+            'style': "width: 100%"
+        }
+        progress_bar_div = soup.new_tag("div", attrs={'class': "progress", 'id': 'progress_bar'})
+        progress_bar_div.append(progress_bar)
 
-    # create a progress bar to give the user something to stare at while they wait.
-    progress_bar = soup.new_tag("div")
-    progress_bar.attrs = {
-        'class': "progress-bar progress-bar-striped progress-bar-animated",
-        'role': "progressbar",
-        'style': "width: 100%"
-    }
-    progress_bar_div = soup.new_tag("div", attrs={'class': "progress", 'id': 'progress_bar'})
-    progress_bar_div.append(progress_bar)
-
-    alert_div.append(progress_bar_div)
-
-    for attr, val in kwargs.items():
-        root_div.attrs[attr] = val
+        alert_div.append(progress_bar_div)
 
     return soup
 

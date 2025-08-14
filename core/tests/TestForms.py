@@ -3,12 +3,12 @@ import os
 from bs4 import BeautifulSoup
 
 from django.test import tag, Client
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from core import forms as core_forms
 
-from core.parsers import ctd
+from core.parsers.sensor import ctd
 from config import settings
 from config.tests.DartTestCase import DartTestCase
 
@@ -68,9 +68,11 @@ class TestMissionSamplesForm(DartTestCase):
             'alert_area_id': "div_id_alert_bottle_load",
             'message': _("Loading Bottles"),
             'logger': ctd.logger_notifications.name,
-            'hx-post': reverse_lazy("core:form_btl_upload_bottles", args=(self.mission.pk,)),
-            'hx-trigger': 'load'
+            'hx-post': url,
+            'hx-trigger': 'load',
+            'hx-swap': "none"
         }
+
         alert = core_forms.websocket_post_request_alert(**attrs)
 
         sample_dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
