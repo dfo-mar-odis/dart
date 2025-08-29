@@ -481,7 +481,8 @@ class FixStationBulkParser:
         instrument_cache = {}
         station = None
 
-        existing_events = [(event.event_id, event.instrument.pk) for event in self.mission.events.all()]
+        # Fetch existing events as a list of (event_id, instrument.pk) tuples
+        existing_events = list(self.mission.events.values_list('event_id', 'instrument__pk'))
         bottle_count = len(self.file_list)
         for index, file in enumerate(self.file_list):
             logger_notifications.info(_("Updating events") + " : %d/%d", (index + 1), bottle_count)
@@ -522,7 +523,7 @@ class FixStationBulkParser:
 
                 instrument = instrument_cache[instrument_key]
 
-                if (event_id, instrument.pk) not in existing_events:
+                if (int(event_id), instrument.pk) not in existing_events:
                     # Get or create event
                     event = core_models.Event(
                         mission=self.mission,
