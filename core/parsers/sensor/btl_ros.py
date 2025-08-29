@@ -400,8 +400,14 @@ class FixStationParser:
             message = f"Invalid decimal degree Lat/Lon provided ({latitude[0].strip()}, {longitude[0].strip()})"
             raise ValueError(message) from e
 
+        for btl in self.event.bottles.all():
+            btl.latitude = lat
+            btl.longitude = lon
+            btl.save()
+
         bottom_bottle = self.event.bottles.order_by('pressure').first()
         surface_bottle = self.event.bottles.order_by('pressure').last()
+
         self._create_update_action(core_models.ActionType.bottom, bottom_bottle, sounding, lat, lon)
         self._create_update_action(core_models.ActionType.recovered, surface_bottle, sounding, lat, lon)
 
