@@ -3,15 +3,22 @@ import pytz
 import io
 import ctd
 import re
+import os
+import ctd
 
 import numpy as np
 import pandas as pd
 
+from typing import List, Any
+
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
+from xarray.ufuncs import bitwise_left_shift
 
 from config import utils
 from core import models as core_models
+from bio_tables import models as bio_models
+from core.form_btl_load import bottle_load_urls
 from settingsdb.models import FileConfiguration, GlobalSampleType
 
 import logging
@@ -23,21 +30,21 @@ logger_notifications = logging.getLogger('dart.user.fixstationparser')
 class FixStationParser:
     field_mappings = None
 
-    def _get_units(self, sensor_description: str) -> [str, str]:
+    def _get_units(self, sensor_description: str) -> tuple[str | Any, str]:
         """given a sensor description, find, remove and return the uom and remaining string"""
         uom_pattern = " \\[(.*?)\\]"
         uom = re.findall(uom_pattern, sensor_description)
         uom = uom[0] if uom else ""
         return uom, re.sub(uom_pattern, "", sensor_description)
 
-    def _get_priority(self, sensor_description: str) -> [int, str]:
+    def _get_priority(self, sensor_description: str) -> tuple[int, str]:
         """given a sensor description, with units removed, find, remove and return the priority and remaining string"""
         priority_pattern = r", (\d)"
         priority = re.findall(priority_pattern, sensor_description)
         priority = priority[0] if priority else 1
         return int(priority), re.sub(priority_pattern, "", sensor_description)
 
-    def _get_sensor_type(self, sensor_description: str) -> [str, str]:
+    def _get_sensor_type(self, sensor_description: str) -> tuple[str, str]:
         """given a sensor description with priority and units removed return the sensor type and remaining string"""
         remainder = sensor_description.split(", ")
         # if the sensor type wasn't in the remaining comma seperated list then it is the first value of the description
@@ -149,7 +156,7 @@ class FixStationParser:
         if len(update_bottles) > 0:
             core_models.Bottle.objects.bulk_update(update_bottles, update_fields)
 
-    def parse_sensor(self, sensor: str) -> [str, int, str, str]:
+    def parse_sensor(self, sensor: str) -> tuple[Any, Any, Any, Any]:
         """given a sensor description parse out the type, priority and units """
         units, sensor_a = self._get_units(sensor)
         priority, sensor_b = self._get_priority(sensor_a)
@@ -157,7 +164,7 @@ class FixStationParser:
 
         return sensor_type, priority, units, remainder
 
-    def parse_sensor_name(self, sensor: str) -> [str, int, str]:
+    def parse_sensor_name(self, sensor: str) -> list[str | int | None | Any]:
         # Given a sensor name, return the type of sensor, its priority and units where available
         # For common sensors the common format for the names is [sensor_type][priority][units]
         # Sbeox0ML/L -> Sbeox (Sea-bird oxygen), 0 (primary sensor), ML/L
@@ -231,7 +238,7 @@ class FixStationParser:
             if GlobalSampleType.objects.filter(short_name__iexact=sensor).exists():
                 continue
 
-            details = self.parse_sensor_name(sensor)
+            details: list = self.parse_sensor_name(sensor)
             long_name = details[2]  # basically all we have at the moment is the units of measure
             sensor_details = GlobalSampleType(short_name=details[0], long_name=long_name, is_sensor=True)
             sensor_details.priority = details[1]
@@ -248,7 +255,7 @@ class FixStationParser:
         self.process_ros_sensors(sensors=column_headers)
 
         # The ROS file gives us all kinds of information about special sensors that are commonly added and removed from
-        # the CTD, but it does not cover sensors that are normally on the CTD by default. i.e Sal00, Potemp090C,
+        # the CTD, but it does not cover sensors that are normally on the CTD by default. i.e. Sal00, Potemp090C,
         # Sigma-é00
         existing_sensors = [sensor.short_name.lower() for sensor in GlobalSampleType.objects.all()]
         columns = [column_header for column_header in column_headers if column_header.lower() not in existing_sensors]
@@ -266,10 +273,10 @@ class FixStationParser:
         # convert all column names to lowercase
         data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
-        new_samples: [core_models.Sample] = []
-        update_samples: [core_models.Sample] = []
-        new_discrete_samples: [core_models.DiscreteSampleValue] = []
-        update_discrete_samples: [core_models.DiscreteSampleValue] = []
+        new_samples: List[core_models.Sample] = []
+        update_samples: List[core_models.Sample] = []
+        new_discrete_samples: List[core_models.DiscreteSampleValue] = []
+        update_discrete_samples: List[core_models.DiscreteSampleValue] = []
 
         bottles = core_models.Bottle.objects.filter(event=self.event)
 
@@ -422,10 +429,170 @@ class FixStationParser:
         # now create bottom, recover actions, event.sample_id, event.end_sample_id and sounding if they don't exist
         self.process_actions(data)
 
+        # if the bottle with the highest pressure was the last bottle closed we're using bottles
+        # on a wire. If it was the first one closed we're using a CTD + Rosette
+        gear_type_code = 90000002  # Niskin bottle of unknown size
+        bottles = self.event.bottles.all()
+        if bottles.first().pressure > bottles.last().pressure:
+            gear_type_code = 90000215  # CTD + Niskin bottles on a wire, not rosette
+        else:
+            gear_type_code = 90000171  # CTD and rosette bottle sampler
+
+        gear_type = bio_models.BCGear.objects.get(gear_seq=gear_type_code)
+        for bottle in bottles:
+            bottle.gear_type = gear_type
+
+        core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
+
+
     def __init__(self, event: core_models.Event, btl_filename: str, btl_stream: io.StringIO, ros_stream: io.StringIO):
         self.event = event
         self.database = event._state.db
 
         self.btl_filename = btl_filename
-        self.btl_stream = btl_stream
-        self.ros_stream = ros_stream
+        self.btl_stream: io.StringIO = btl_stream
+        self.ros_stream: io.StringIO = ros_stream
+
+
+class FixStationBulkParser:
+
+    file_list = None
+    errors_to_create = []
+    mission = None
+
+    def create_events(self) -> dict:
+
+        label_event = 'STATION'  # this should be 'EVENT', but there's a problem with the btl files
+        label_serial_number = 'INSTRUMENT_SERIAL_NUMBER'
+        label_station = 'STATION'  # this currently holds the event number, but will be fixed
+
+        # Process all files
+        create_events = []
+        parsed_events = {}
+        errors_to_create = []
+
+        # Cache instruments to avoid repeated queries
+        instrument_cache = {}
+        station = None
+
+        existing_events = [(event.event_id, event.instrument) for event in self.mission.events.all()]
+        bottle_count = len(self.file_list)
+        for index, file in enumerate(self.file_list):
+            logger_notifications.info(_("Updating events") + " : %d/%d", (index + 1), bottle_count)
+            file_name = os.path.basename(file)
+
+            try:
+                # Construct the expected .ros file path
+                ros_file = os.path.splitext(file)[0] + ".ros"
+                if not os.path.exists(ros_file):
+                    raise FileNotFoundError(f"No matching .ros file found for: {file}")
+
+                data = ctd.read.from_btl(file)
+                header: str = data._metadata['header']
+                header_lines: str = re.findall(r'^\* \*\*.*', header, re.MULTILINE)
+                cleaned_lines: list[str] = [re.sub(r'^\* \*\*', '', line).split(":") for line in header_lines]
+                event_properties: dict = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines}
+
+                if station is None:
+                    # Get station once loop (since it's constant)
+                    station_name = event_properties.get(label_station)
+                    try:
+                        station = core_models.Station.objects.get(name__iexact='HL_0')
+                    except core_models.Station.DoesNotExist:
+                        station = core_models.Station.objects.create(name='HL_0')
+
+
+                event_id = event_properties.get(label_event)
+                parsed_events[event_id] = [file, ros_file]
+
+                serial_number = event_properties.get(label_serial_number, "CTD")
+                ctd_instrument = core_models.InstrumentType.ctd
+
+                # Get or create instrument (using cache)
+                instrument_key = (ctd_instrument, serial_number)
+                if instrument_key not in instrument_cache:
+                    instrument_cache[instrument_key] = core_models.Instrument.objects.get_or_create(
+                        type=ctd_instrument, name=serial_number)[0]
+
+                instrument = instrument_cache[instrument_key]
+
+                if (event_id, instrument) not in existing_events:
+                    # Get or create event
+                    event = core_models.Event(
+                        mission=self.mission,
+                        event_id=int(event_id),
+                        instrument=instrument,
+                        station=station
+                    )
+
+                    create_events.append(event)
+            except Exception as e:
+                message = _("Error parsing Header ") + f": {file}: {e}"
+                logger.error(message)
+                logger.exception(e)
+                self.errors_to_create.append(core_models.FileError(
+                    mission=self.mission,
+                    file_name=file_name,
+                    message=message,
+                    type=core_models.ErrorType.validation,
+                    code=100
+                ))
+
+        if create_events:
+            core_models.Event.objects.bulk_create(create_events)
+
+        return parsed_events
+
+    def process_bottles(self, parsed_events):
+        # `parsed_events` is expected to be a dictionary where:
+        # - The key is an event ID.
+        # - The value is a list of files, where:
+        #   - file[0] is the `btl_file`.
+        #   - file[1] is the associated `ros_file`.
+        bottle_count = len(parsed_events.keys())
+        for index, event_file in enumerate(parsed_events.items()):
+            logger_notifications.info(_("Parsing Bottle Data") + " : %d/%d", (index + 1), bottle_count)
+            event_id = event_file[0]
+            btl_file = event_file[1][0]
+            ros_file = event_file[1][1]
+            file_name = os.path.basename(btl_file)
+            try:
+                event = core_models.Event.objects.get(event_id=event_id)
+
+                with open(btl_file, 'r', encoding='cp1252') as btl:
+                    btl_input = io.StringIO(btl.read())
+
+                with open(ros_file, 'r', encoding='cp1252') as ros:
+                    ros_input = io.StringIO(ros.read())
+
+                parser = FixStationParser(event=event, btl_filename=os.path.basename(btl_file),
+                                          btl_stream=btl_input, ros_stream=ros_input)
+                parser.parse()
+            except Exception as e:
+                message = _("Error parsing body ") + f": {btl_file}: {e}"
+                logger.error(message)
+                logger.exception(e)
+                err = core_models.FileError(mission=self.mission,
+                                            file_name=file_name, message=message,
+                                            type=core_models.ErrorType.validation, code=101)
+                self.errors_to_create.append(err)
+
+
+    def parse(self):
+        self.errors_to_create = []
+        # Get all file names upfront for batch deletion of errors
+        file_names = [os.path.basename(file) for file in self.file_list]
+        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=100).delete()
+        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=101).delete()
+
+        parsed_events = self.create_events()
+        self.process_bottles(parsed_events)
+
+        # Bulk create errors
+        if self.errors_to_create:
+            core_models.FileError.objects.bulk_create(self.errors_to_create)
+
+
+    def __init__(self, mission: core_models.Mission, files: list):
+        self.file_list = files
+        self.mission = mission

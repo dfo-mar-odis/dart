@@ -254,7 +254,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
     create_discrete_values = []
 
-    errors: [core_models.FileError] = []
+    errors = []
 
     try:
         # convert column names to lower case because it's expected that the file_settings fields will be lowercase
@@ -286,8 +286,14 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         replicate_counter = {}
         rows = dataframe.shape[0]
         for index, row in dataframe.iterrows():
+            # use the file configurations 'skip' to find the header line.
+            # +1 for the header line
+            # +1 because index starts at zero
+            line = index + sample_config.skip + 2
             logger_notifications.info(f"{file_name} : " + _("Processing row") + " %d/%d", index, rows)
             sample_id = int(row[sample_id_field])
+            replicate = row[replicate_id_field]
+
             value = row[value_field]
 
             if str(value).upper() == 'NA':
@@ -300,19 +306,19 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                     if sample_id >= mission.start_underway_sample or sample_id <= mission.end_underway_sample:
                         continue
 
-                message = f"Could not find bottle matching id {sample_id} in file {file_name} \n"
+                message = _("Could not find bottle matching id") + f" {sample_id} " + _("replicate") + f" {replicate}\n"
                 event = mission.events.filter(sample_id__lte=sample_id, end_sample_id__gte=sample_id)
                 if event:
                     event = event.first()
-                    message += (_("Possible Event") + f" #{event.event_id} " + _("Bottle IDs") +
-                                f" {event.sample_id} - {event.end_sample_id}")
-                    message += _("\nEvent Comments : ")
+                    message += _("Possible Matching Event") + f" #{event.event_id} " + _("Bottle IDs")
+                    message += f" {event.sample_id} - {event.end_sample_id}\n"
+                    message += _("Event Comments : ")
                     for action in event.actions.all():
                         if action.comment:
                             message += f"\n{action.get_type_display()} : {action.comment}"
 
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
-                                              type=core_models.ErrorType.sample)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=line,
+                                              message=message, type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
                 continue
@@ -338,26 +344,16 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             if db_sample.bottle_id not in replicate_counter:
                 replicate_counter[db_sample.bottle_id] = []
 
-            replicate = row[replicate_id_field]
-
             # if replicates aren't allowed on this datatype then there should be an error here if the
             # replicate values is greater than 1
             if not sample_config.allow_replicate and replicate > 1:
-                message = _("File configuration doesn't allow for multiple replicates. Replicates found for sample ")
-                message += str(sample_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
+                message = _("File configuration doesn't allow for replicates. Replicates found for sample with ID")
+                message += " : " + str(sample_id)
+                error = core_models.FileError(mission=mission, file_name=file_name, line=line, message=message,
                                               type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
                 continue
-            elif replicate > 2:
-                # we want to alert the user if there's more than 2 replicates. It can happen, but it's not
-                # standard practice so people should be aware in case it is a mistake.
-                message = _("More than two replicates found for sample ") + str(sample_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
-                                              type=core_models.ErrorType.sample)
-                errors.append(error)
-                logger.warning(message)
 
             comment = None
             if comment_field and comment_field in row and not pd.isna(row[comment_field]):
@@ -373,7 +369,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
             if replicate in replicate_counter[db_sample.bottle_id]:
                 message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=sample_id, message=message,
+                error = core_models.FileError(mission=mission, file_name=file_name, line=line, message=message,
                                               type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)

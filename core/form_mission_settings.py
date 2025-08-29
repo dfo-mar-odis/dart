@@ -36,7 +36,7 @@ class MissionSettingsForm(forms.ModelForm):
 
     class Meta:
         model = models.Mission
-        fields = ['name', 'geographic_region', 'mission_descriptor', 'data_center', 'lead_scientist',
+        fields = ['name', 'description', 'geographic_region', 'mission_descriptor', 'data_center', 'lead_scientist',
                   'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments',
                   'start_underway_sample', 'end_underway_sample']
 
@@ -136,13 +136,13 @@ class MissionSettingsForm(forms.ModelForm):
         start_date_field = Field('start_date')
         end_date_field = Field('end_date')
         if self.instance.pk:
-            if models.Error.objects.filter(
+            if models.MissionError.objects.filter(
                     code=BIOCHEM_CODES.DESCRIPTOR_MISSING.value).exists():
                 descriptor_field.attrs['class'] = descriptor_field.attrs.get('class', "") + " bg-danger-subtle"
 
             date_issues = [BIOCHEM_CODES.DATE_MISSING.value, BIOCHEM_CODES.DATE_BAD_VALUES.value]
             # if there's an issue with the dates highlight the date fields
-            if models.Error.objects.filter(code__in=date_issues).exists():
+            if models.MissionError.objects.filter(code__in=date_issues).exists():
                 start_date_field.attrs['class'] = start_date_field.attrs.get('class', "") + " bg-danger-subtle"
                 end_date_field.attrs['class'] = end_date_field.attrs.get('class', "") + " bg-danger-subtle"
 
@@ -151,6 +151,9 @@ class MissionSettingsForm(forms.ModelForm):
         self.helper.layout = Layout(
             Row(
                 Column(name_column),
+            ),
+            Row(
+                Column(Field('description')),
             ),
             Row(
                 Column(

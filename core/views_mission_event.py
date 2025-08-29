@@ -40,7 +40,7 @@ class EventDetails(MissionMixin, GenericDetailView):
 
         context['mission_id'] = self.object.pk
 
-        context['reports'] = {key: reverse_lazy(reports[key], args=(database, self.object.pk,))
+        context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,))
                               for key in reports.keys()}
 
         return context
@@ -77,7 +77,7 @@ class ValidationEventCard(forms.CardForm):
 
     def get_card_body(self) -> Div:
         body = super().get_card_body()
-        validation_errors = models.ValidationError.objects.filter(event=self.event)
+        validation_errors = models.EventError.objects.filter(event=self.event)
 
         soup = BeautifulSoup("", "html.parser")
         soup.append(ul := soup.new_tag('ul', attrs={'class': "list-group"}))
@@ -137,7 +137,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
         spacer_col.fields.append(revalidate)
 
-        issue_count = models.ValidationError.objects.filter(event__mission=self.mission).count()
+        issue_count = models.EventError.objects.filter(event__mission=self.mission).count()
         counter_attrs = {
             'hx-get': reverse_lazy("core:mission_events_recount_event_errors", args=(self.mission.pk,)),
             'hx-trigger': 'recount_event_errors from:body',
@@ -156,7 +156,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        events_ids = models.ValidationError.objects.filter(
+        events_ids = models.EventError.objects.filter(
             event__mission=self.mission
         ).values_list('event', flat=True)
         events = models.Event.objects.filter(pk__in=events_ids)
@@ -320,7 +320,7 @@ def get_event_error_count(request, mission_id):
     # Create and return a bootstrap badge with the number of validation errors
     # present for the provided mission
     mission = models.Mission.objects.get(pk=mission_id)
-    issue_count = models.ValidationError.objects.filter(event__mission=mission).count()
+    issue_count = models.EventError.objects.filter(event__mission=mission).count()
 
     soup = BeautifulSoup('', 'html.parser')
     count_div = soup.new_tag('div', attrs={'id': 'div_id_event_error_count'})
@@ -406,7 +406,7 @@ def delete_log_file_error(request, error_id, uuid):
 
 
 def delete_event_errors(request, event_id):
-    models.ValidationError.objects.filter(event_id=event_id).delete()
+    models.EventError.objects.filter(event_id=event_id).delete()
 
     response = HttpResponse()
     response['HX-Trigger'] = 'recount_event_errors'
@@ -414,11 +414,11 @@ def delete_event_errors(request, event_id):
 
 
 def delete_event_error(request, error_id):
-    error = models.ValidationError.objects.get(id=error_id)
+    error = models.EventError.objects.get(id=error_id)
     event_id = error.event.pk
     error.delete()
 
-    if models.ValidationError.objects.filter(event_id=event_id).exists():
+    if models.EventError.objects.filter(event_id=event_id).exists():
         response = HttpResponse()
         response['HX-Trigger'] = 'recount_event_errors'
         return response

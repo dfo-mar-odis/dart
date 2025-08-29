@@ -1,3 +1,5 @@
+import os.path
+
 import numpy as np
 
 from datetime import datetime, timedelta
@@ -7,7 +9,8 @@ from django.db.models import Min, Avg
 from django.http import HttpResponse
 from django.urls import path
 
-from . import models as core_models
+from settingsdb.utils import connect_database
+from . import models as core_models, models
 
 
 def convert_timedelta_to_string(delta: timedelta) -> str:
@@ -30,7 +33,7 @@ def get_event_ids(event_query):
     return ' / '.join([f'{c:03d}' for c in event_query.values_list('event_id', flat=True)])
 
 
-def get_station_list(database):
+def get_station_list():
     stations = []
     station_list = []
     events = core_models.Event.objects.order_by('event_id')
@@ -94,9 +97,9 @@ def get_station_list(database):
     return station_list
 
 
-def station_report(request, database, mission_id):
+def station_report(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
-    station_list = get_station_list(database)
+    station_list = get_station_list()
 
     header = ['station', 'date (UTC)', 'latitude', 'longitude', 'depth', 'ctd', 'rosette', 'biol station', 'xbt', 'vpr',
               'plankton multinet', 'plankton 200', 'plankton 76', 'plankton live', 'mooring deployed',
@@ -123,7 +126,7 @@ def station_report(request, database, mission_id):
     return response
 
 
-def elog(request, database, mission_id):
+def elog(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     header = ['Mission', 'Event', 'Station', 'Instrument', 'AVG_SOUNDING', 'Min_Lat', 'Min_Lon', 'Max_Lat', 'Max_Lon',
@@ -193,25 +196,25 @@ def elog(request, database, mission_id):
     return response
 
 
-def error_report(request, database, mission_id):
+def error_report(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     header = ['MISSION', "FILE", "LINE/OBJECT", 'ERROR_TYPE', 'MESSAGE']
     data = ",".join(header) + '\n'
+
+    general_errs = mission.errors.all()
+    for error in general_errs:
+        row = [mission.name, "", "", error.get_type_display(), error.message]
+        data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
     file_errs = mission.file_errors.all()
     for error in file_errs:
         row = [mission.name, error.file_name, error.line, error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
-    validation_errs = core_models.ValidationError.objects.filter(event__mission=mission)
+    validation_errs = core_models.EventError.objects.filter(event__mission=mission)
     for error in validation_errs:
         row = [mission.name, "", f"Event: {error.event.event_id} - {error.event.station}", error.get_type_display(), error.message]
-        data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
-
-    general_errs = mission.errors.all()
-    for error in general_errs:
-        row = [mission.name, "", "", error.get_type_display(), error.message]
         data += ",".join([f"\"{str(val)}\"" for val in row]) + '\n'
 
     file_to_send = ContentFile(data)
@@ -223,7 +226,7 @@ def error_report(request, database, mission_id):
     return response
 
 
-def profile_summary(request, database, mission_id):
+def profile_summary(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     exclude = []
@@ -264,7 +267,7 @@ def profile_summary(request, database, mission_id):
     return response
 
 
-def std_sample_report(request, database, mission_id, **kwargs):
+def std_sample_report(request, mission_id, **kwargs):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     data = ",".join(kwargs['headers']) + '\n'
@@ -299,30 +302,30 @@ def std_sample_report(request, database, mission_id, **kwargs):
 
 # The problem with this report is it depends on there being a SampleType with a short name 'oxy'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
-def oxygen_report(request, database, mission_id):
+def oxygen_report(request, mission_id):
     sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
     samples = ['oxy']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S', 'Oxy_W_Rep1', 'Oxy_W_Rep2']
 
-    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Oxygen_Rpt',
+    return std_sample_report(request, mission_id=mission_id, report_name='Oxygen_Rpt',
                              headers=header, sensors=sensors, samples=samples)
 
 
 # The problem with this report is it depends on there being a SampleType with a short name 'sal'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
-def salt_report(request, database, mission_id):
+def salt_report(request, mission_id):
     sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
     samples = ['salts']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
               'Sal_CTD_P', 'Sal_CTD_S', 'Sal_Rep1', 'Sal_Rep2']
 
-    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Salinity_Summary', headers=header,
+    return std_sample_report(request, mission_id=mission_id, report_name='Salinity_Summary', headers=header,
                              sensors=sensors, samples=samples)
 
 
 # The problem with this report is it depends on there being a SampleType with a short name 'chl'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
-def chl_report(request, database, mission_id):
+def chl_report(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
     sensors = [s.name for s in mission.mission_sample_types.filter(long_name__icontains='fluorescence')]
 
@@ -331,17 +334,44 @@ def chl_report(request, database, mission_id):
     header += ['Chl_Rep1', 'Chl_Rep2']
     samples = ['chl']
 
-    return std_sample_report(request, database=database, mission_id=mission_id, report_name='Chl_Summary', headers=header,
+    return std_sample_report(request, mission_id=mission_id, report_name='Chl_Summary', headers=header,
                              sensors=sensors, samples=samples)
 
 
-url_prefix = "<str:database>/report"
+def status_report(mission: core_models.Mission, output='reports'):
+    file_name = mission.name.upper() + '_README.md'
+    file_path = os.path.join(output, file_name)
+
+    report = f'# Mission : {mission.name} - {datetime.strftime(mission.start_date, '%Y')} {mission.description}\n'
+    report += f'**Descriptor** : {mission.mission_descriptor}\n'
+    report += f'**Lead Scientist** : {mission.lead_scientist}\n'
+    report += f'**Start Date** : { mission.start_date }\n'
+    report += f'**End Date** : { mission.end_date }\n'
+    report += f'**Data Manager Comments** \n *{mission.data_manager_comments}*\n\n'
+
+    file_errs = mission.file_errors.all()
+    if file_errs.exists():
+        report += f'## File Issues\n'
+        for error in file_errs:
+            report += f'{error.file_name} line ({error.line}) : {error.message}\n'
+
+    with open(file_path, 'w') as f:
+        f.write(report)
+
+
 report_urls = [
-    path(f'{url_prefix}/elog/<int:mission_id>/', elog, name="hx_report_elog"),
-    path(f'{url_prefix}/error/<int:mission_id>/', error_report, name="hx_report_error"),
-    path(f'{url_prefix}/profile_sumamry/<int:mission_id>/', profile_summary, name="hx_report_profile"),
-    path(f'{url_prefix}/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
-    path(f'{url_prefix}/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
-    path(f'{url_prefix}/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),
-    path(f'{url_prefix}/station/<int:mission_id>/', station_report, name="hx_report_station"),
+    path(f'report/elog/<int:mission_id>/', elog, name="hx_report_elog"),
+    path(f'report/error/<int:mission_id>/', error_report, name="hx_report_error"),
+    path(f'report/profile_sumamry/<int:mission_id>/', profile_summary, name="hx_report_profile"),
+    path(f'report/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
+    path(f'report/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
+    path(f'report/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),
+    path(f'report/station/<int:mission_id>/', station_report, name="hx_report_station"),
 ]
+
+
+def generate_status_report(mission_name: str):
+    db_name = "DART_{}".format(mission_name.upper())
+    connect_database(db_name)
+    mission = models.Mission.objects.get(pk=1)
+    status_report(mission)
