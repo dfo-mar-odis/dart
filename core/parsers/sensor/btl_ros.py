@@ -1,7 +1,6 @@
 # This is for parsing bottle files specifically for fix stations
 import pytz
 import io
-import ctd
 import re
 import os
 import ctd
@@ -9,17 +8,16 @@ import ctd
 import numpy as np
 import pandas as pd
 
+from geopy.distance import geodesic
 from typing import List, Any
 
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
-from xarray.ufuncs import bitwise_left_shift
 
 from config import utils
 from core import models as core_models
 from bio_tables import models as bio_models
-from core.form_btl_load import bottle_load_urls
-from settingsdb.models import FileConfiguration, GlobalSampleType
+from settingsdb.models import FileConfiguration, GlobalSampleType, GlobalStation
 
 import logging
 
@@ -374,10 +372,17 @@ class FixStationParser:
     def process_actions(self, data: pd.DataFrame):
         header = data._metadata['header']
 
+        # We're in the process of updating the header for fixstation BTL files.
+        # station_label = self.get_mapping('station')
         sounding_label = self.get_mapping('sounding')
         lat_label = self.get_mapping('latitude')
         lon_label = self.get_mapping('longitude')
 
+        station_name = "HL_0"
+        station = GlobalStation.objects.filter(name__iexact=station_name)
+
+        # We're in the process of updating the header for fixstation BTL files.
+        # station = re.findall(rf"{station_label}:(.*?)\n", header")
         sounding = re.findall(rf"{sounding_label}:(.*?)\n", header)
         latitude = re.findall(rf"{lat_label}:(.*?)\n", header)
         longitude = re.findall(rf"{lon_label}:(.*?)\n", header)
@@ -413,6 +418,21 @@ class FixStationParser:
             message = f"Invalid decimal degree Lat/Lon provided ({latitude[0].strip()}, {longitude[0].strip()})"
             raise ValueError(message) from e
 
+        if station.exists():
+            station = station.first()
+            if station.latitude and station.longitude:
+                station_coords = (station.latitude, station.longitude)
+                new_coords = (lat, lon)
+                distance_km = geodesic(station_coords, new_coords).kilometers
+                if distance_km > 1:
+                    error_message = _("Coordinates are more than 1 km away from the nominal station") + f" : {station_coords}"
+                    core_models.EventError.objects.create(
+                        event=self.event,
+                        message=error_message,
+                        type=core_models.ErrorType.validation,
+                        code=102
+                    )
+
         for btl in self.event.bottles.all():
             btl.latitude = lat
             btl.longitude = lon
@@ -431,6 +451,7 @@ class FixStationParser:
 
     def parse(self):
         self.event.mission.file_errors.filter(file_name=self.btl_filename).delete()
+        self.event.validation_errors.all().delete()
 
         data: pd.DataFrame = ctd.read.from_btl(self.btl_stream)
 
@@ -520,7 +541,6 @@ class FixStationBulkParser:
                         station = core_models.Station.objects.get(name__iexact='HL_0')
                     except core_models.Station.DoesNotExist:
                         station = core_models.Station.objects.create(name='HL_0')
-
 
                 event_id = event_properties.get(label_event)
                 parsed_events[event_id] = [file, ros_file]
