@@ -350,6 +350,7 @@ class FixStationParser:
             logger.info("Updating sample values" + f" : {file_name}")
             core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
 
+    # Dart should assume we're working in the northwest hemisphere
     def _convert_to_decimal_deg(self, direction, hours, minutes=0):
         lat_lon = float(hours) + (float(minutes) / 60.0)
         if direction.upper() == 'S' or direction.upper() == 'W':
@@ -394,6 +395,18 @@ class FixStationParser:
             sounding = sounding[0].strip()
             lat_array = latitude[0].strip().split(" ")
             lon_array = longitude[0].strip().split(" ")
+
+        except Exception as e:
+            message = f"Invalid decimal degree Lat/Lon provided ({latitude[0].strip()}, {longitude[0].strip()})"
+            raise ValueError(message) from e
+
+        if len(lat_array) < 3 and (lat_array[0].upper() != 'N' or lat_array[0].upper() != 'S'):
+            raise ValueError(_("Badly formatted latitude, missing direction") + " : " + latitude[0])
+
+        if len(lon_array) < 3 and (lon_array[0].upper() != 'W' or lon_array[0].upper() != 'E'):
+            raise ValueError(_("Badly formatted longitude, missing direction") + " : " + longitude[0])
+
+        try:
             lat = self._convert_to_decimal_deg(*lat_array)
             lon = self._convert_to_decimal_deg(*lon_array)
         except Exception as e:
