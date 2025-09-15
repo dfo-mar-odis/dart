@@ -45,7 +45,7 @@ class SampleTypeDetails(GenericDetailView):
         context['biochem_form'] = BioChemDataType(mission_sample_type=self.object)
         context['filter_form'] = MissionSampleTypeFilter(mission_sample_type=self.object)
 
-        context['reports'] = {key: reverse_lazy(views.reports[key], args=(database, self.object.mission.pk,)) for key in
+        context['reports'] = {key: reverse_lazy(views.reports[key], args=(self.object.mission.pk,)) for key in
                               views.reports.keys()}
 
         return context

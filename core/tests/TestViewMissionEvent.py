@@ -37,7 +37,7 @@ class TestViewMissionEvent(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertIn('File Validation Card', response.content.decode())
 
-    @patch('core.views_mission_event.models.ValidationError.objects.filter')
+    @patch('core.views_mission_event.models.EventError.objects.filter')
     def test_get_event_error_count_gt_0(self, mock_filter):
         mock_request = HttpRequest()
         mock_filter.return_value.count.return_value = 5
@@ -51,7 +51,7 @@ class TestViewMissionEvent(TestCase):
         self.assertEqual(error_count_div.string, '5')
         self.assertIn('bg-danger', error_count_div.attrs['class'])
 
-    @patch('core.views_mission_event.models.ValidationError.objects.filter')
+    @patch('core.views_mission_event.models.EventError.objects.filter')
     def test_get_event_error_count_0(self, mock_filter):
         mock_request = HttpRequest()
         mock_filter.return_value.count.return_value = 0
@@ -142,7 +142,7 @@ class TestViewMissionEvent(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response['HX-Trigger'], 'recount_file_errors')
 
-    @patch('core.views_mission_event.models.ValidationError.objects.filter')
+    @patch('core.views_mission_event.models.EventError.objects.filter')
     def test_delete_event_errors(self, mock_filter):
         mock_request = HttpRequest()
         mock_filter.return_value.delete.return_value = None
@@ -197,7 +197,7 @@ class TestViewMissionEvent(TestCase):
         event_error = CoreFactory.ValidationError.create(event=event)
         mock_request = HttpRequest()
 
-        count = core_models.ValidationError.objects.count()
+        count = core_models.EventError.objects.count()
         self.assertEqual(count, 1)
 
         response = views_mission_event.delete_event_error(mock_request, event_error.pk)
@@ -212,7 +212,7 @@ class TestViewMissionEvent(TestCase):
         self.assertIsNotNone(div)
         self.assertEqual(div.attrs['hx-swap-oob'], 'delete')
 
-        count = core_models.ValidationError.objects.count()
+        count = core_models.EventError.objects.count()
         self.assertEqual(count, 0)
 
     def test_delete_event_error_more_errors(self):
@@ -220,7 +220,7 @@ class TestViewMissionEvent(TestCase):
         event_error = CoreFactory.ValidationError.create_batch(2, event=event)
         mock_request = HttpRequest()
 
-        count = core_models.ValidationError.objects.count()
+        count = core_models.EventError.objects.count()
         self.assertEqual(count, 2)
 
         response = views_mission_event.delete_event_error(mock_request, event_error[0].pk)
@@ -231,7 +231,7 @@ class TestViewMissionEvent(TestCase):
         # The response should be empty if there are still errors related to the same file name
         self.assertEqual(response.content, b'')
 
-        count = core_models.ValidationError.objects.count()
+        count = core_models.EventError.objects.count()
         self.assertEqual(count, 1)
 
 

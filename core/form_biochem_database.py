@@ -867,7 +867,7 @@ def get_biochem_errors(request, **kwargs):
 
 url_prefix = "<str:mission_id>"
 database_urls = [
-    path(f'{url_prefix}/sample/errors/biochem/', get_biochem_errors, name="form_biochem_errors"),
+    path(f'{url_prefix}/sample/errors/biochem/', get_biochem_errors, name="form_biochem_database_get_batch_errors"),
     path(f'{url_prefix}/database/details/', get_tns_details, name='form_biochem_database_get_database'),
     path(f'{url_prefix}/database/add/', add_database, name='form_biochem_database_add_database'),
     path(f'{url_prefix}/database/remove/', remove_database, name='form_biochem_database_remove_database'),

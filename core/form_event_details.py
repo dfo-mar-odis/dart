@@ -28,6 +28,7 @@ from core.parsers.sensor.btl_ros import FixStationParser
 
 from config.utils import load_svg
 from core.parsers.sensor.qat import QATParser
+from core.parsers.sensor import btl_ros
 
 from settingsdb import models as settings_models
 
@@ -1198,7 +1199,7 @@ def load_bottle_file(request, event_id):
         elif selected_file.upper().endswith(".QAT"):
             parse_qat(event.mission, selected_file)
 
-        trigger = "event_selected"
+        trigger = "event_updated"
 
         message = _("Success")
         attrs = {
@@ -1270,6 +1271,9 @@ def import_elog_events(request, mission_id, **kwargs):
         elif 'andes_event' in request.GET:
             logger = andes.logger_notifications.name
             message = _("Processing Andes Report")
+        elif 'btl_event' in request.GET:
+            logger = andes.logger_notifications.name
+            message = _("Processing BTL")
         else:
             logger = elog.logger_notifications.name
             message = _("Processing Elog")
@@ -1319,6 +1323,78 @@ def import_elog_events(request, mission_id, **kwargs):
     return response
 
 
+def import_btl_events(request, mission_id, **kwargs):
+    mission = models.Mission.objects.get(pk=mission_id)
+    soup = BeautifulSoup('', 'html.parser')
+
+    if request.method == 'GET':
+        attrs = {
+            'alert_area_id': "div_id_bottle_event_message",
+            # make sure not to use _ as gettext*_lazy*, only use _ as django.utils.translation.gettext
+            'message': _("Loading"),
+            'logger': btl_ros.logger_notifications.name,
+            'hx-post': request.path,
+            'hx-trigger': 'load',
+            'hx-target': "#div_id_bottle_event_message"
+        }
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
+
+    soup.append(msg_area := soup.new_tag("div", id="div_id_bottle_event_message"))
+
+    app = settings.app if hasattr(settings, 'app') else None
+    if not app:
+        return HttpResponse(soup)
+
+    start_dir = settings.dir if hasattr(settings, 'dir') else None
+
+    # Create and configure the file dialog
+    file_dialog = QFileDialog()
+    file_dialog.setWindowTitle("Select a BTL File")
+    file_dialog.setNameFilter("BTL (*.btl)")
+    file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+    file_dialog.setDirectory(start_dir)
+
+    # Open the dialog and get the selected file
+    if not file_dialog.exec():
+        return HttpResponse(soup)
+
+    selected_files = file_dialog.selectedFiles()
+    settings.dir = os.path.dirname(selected_files[0])
+    logger.info(f"Selected file directory: {settings.dir}")
+
+    try:
+        parser = btl_ros.FixStationBulkParser(mission, selected_files)
+        parser.parse()
+
+        trigger = "event_updated"
+
+        message = _("Success")
+        attrs = {
+            'component_id': "div_id_bottle_event_message",
+            'message': message,
+            'alert_type': 'success'
+        }
+
+        msg_area.append(core_forms.blank_alert(**attrs))
+
+    except Exception as ex:
+        logger.exception(ex)
+        message = _("There was an issue reading one or more of the files") + f" : '{settings.dir}' - {str(ex)}"
+        attrs = {
+            'component_id': "div_id_bottle_event_message",
+            'message': message,
+            'alert_type': 'danger'
+        }
+        msg_area.append(core_forms.blank_alert(**attrs))
+        err = models.MissionError(mission=mission, message=message, type=models.ErrorType.validation)
+        err.save()
+        trigger = "event_updated"
+
+    response = HttpResponse(soup)
+    response['Hx-Trigger'] = trigger
+    return response
+
+
 def list_events(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
@@ -1335,6 +1411,7 @@ event_detail_urls = [
     path(f'event/instrument/new/', update_instruments, name="form_event_update_instruments"),
 
     path(f'event/event/import/<int:mission_id>/', import_elog_events, name="form_event_import_events_elog"),
+    path(f'event/btl/import/<int:mission_id>/', import_btl_events, name="form_event_import_events_btl"),
     path(f'event/event/list/<int:mission_id>/', list_events, name="form_event_get_events"),
     path(f'event/new/<int:mission_id>/', add_event, name="form_event_add_event"),
     path(f'event/new/<int:mission_id>/<int:event>/', add_event, name="form_event_add_event"),

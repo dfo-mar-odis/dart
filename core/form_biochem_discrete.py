@@ -667,7 +667,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
 def sample_data_upload(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem).delete()
-    core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem).delete()
+    core_models.MissionError.objects.filter(mission=mission, type=core_models.ErrorType.biochem).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Sensor/Sample Datatypes"))
@@ -681,7 +681,7 @@ def sample_data_upload(mission: core_models.Mission, uploader: str, batch: bioch
     if errors:
         # send_user_notification_queue('biochem', _("Datatypes missing see errors"))
         user_logger.info(_("Datatypes missing see errors"))
-        core_models.Error.objects.bulk_create(errors)
+        core_models.MissionError.objects.bulk_create(errors)
 
     # create and upload the BCS data if it doesn't already exist
     upload_bcs_d_data(mission, uploader, batch)
@@ -942,7 +942,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_mod
 
         except Exception as ex:
             message = _("An error occured while writing BCD rows: ") + str(ex)
-            core_models.Error.objects.create(
+            core_models.MissionError.objects.create(
                 mission=mission, message=message, type=core_models.ErrorType.biochem,
                 code=BIOCHEM_CODES.FAILED_WRITING_DATA.value
             )

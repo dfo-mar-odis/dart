@@ -645,7 +645,7 @@ def add_tables_to_soup(soup, batch_id, swap_oob=True):
 def sample_data_upload( mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches):
     # clear previous errors if there were any from the last upload attempt
     mission.errors.filter(type=core_models.ErrorType.biochem_plankton).delete()
-    core_models.Error.objects.filter(mission=mission, type=core_models.ErrorType.biochem_plankton).delete()
+    core_models.MissionError.objects.filter(mission=mission, type=core_models.ErrorType.biochem_plankton).delete()
 
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Plankton Data"))
