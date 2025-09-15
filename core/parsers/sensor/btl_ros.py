@@ -502,9 +502,9 @@ class FixStationBulkParser:
 
     def create_events(self) -> dict:
 
-        label_event = 'STATION'  # this should be 'EVENT', but there's a problem with the btl files
+        label_event = 'EVENT_NUMBER'  # this should be 'EVENT', but there's a problem with the btl files
         label_serial_number = 'INSTRUMENT_SERIAL_NUMBER'
-        label_station = 'STATION'  # this currently holds the event number, but will be fixed
+        label_station = 'STATION_NAME'  # this currently holds the event number, but will be fixed
 
         # Process all files
         create_events = []
@@ -538,9 +538,9 @@ class FixStationBulkParser:
                     # Get station once loop (since it's constant)
                     station_name = event_properties.get(label_station)
                     try:
-                        station = core_models.Station.objects.get(name__iexact='HL_0')
+                        station = core_models.Station.objects.get(name__iexact=station_name)
                     except core_models.Station.DoesNotExist:
-                        station = core_models.Station.objects.create(name='HL_0')
+                        station = core_models.Station.objects.create(name=station_name)
 
                 event_id = event_properties.get(label_event)
                 parsed_events[event_id] = [file, ros_file]
