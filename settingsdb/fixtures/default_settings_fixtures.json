@@ -3504,8 +3504,8 @@
     "pk": 345,
     "fields": {
         "name": "Shediac Valley",
-        "latitude": 47.7833,
-        "longitude": -64.0333,
+        "latitude": 47.7867,
+        "longitude": -64.0373,
         "sounding": null,
         "fixstation": true
     }

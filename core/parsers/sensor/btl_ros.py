@@ -55,7 +55,8 @@ class FixStationParser:
         file_type = 'btl'
         fields = [
             # default parser mappings
-            ('event_id', "Station", _("Label describing what event number this bottle file should be mapped to.")),
+            ('event_id', "Event_Number", _("Label describing what event number this bottle file should be mapped to.")),
+            ('station', "Station_Name", _("Label describing what station this bottle file should be mapped to.")),
             ('sounding', "Sounding", _("Label describing the recorded sounding")),
             ('latitude', "Latitude", _("Label describing the recorded Latitude")),
             ('longitude', "Longitude", _("Label describing the recorded Longitude")),
@@ -377,8 +378,8 @@ class FixStationParser:
         sounding_label = self.get_mapping('sounding')
         lat_label = self.get_mapping('latitude')
         lon_label = self.get_mapping('longitude')
+        station_name = self.get_mapping('station')
 
-        station_name = "HL_0"
         station = GlobalStation.objects.filter(name__iexact=station_name)
 
         # We're in the process of updating the header for fixstation BTL files.
@@ -597,7 +598,7 @@ class FixStationBulkParser:
             ros_file = event_file[1][1]
             file_name = os.path.basename(btl_file)
             try:
-                event = core_models.Event.objects.get(event_id=event_id)
+                event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
 
                 with open(btl_file, 'r', encoding='cp1252') as btl:
                     btl_input = io.StringIO(btl.read())
