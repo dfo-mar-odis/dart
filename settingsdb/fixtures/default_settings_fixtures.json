@@ -2998,8 +2998,8 @@
     "pk": 299,
     "fields": {
         "name": "HL_02",
-        "latitude": 44.2675,
-        "longitude": -63.3175,
+        "latitude": 44.2667,
+        "longitude": -63.3167,
         "sounding": null,
         "fixstation": true
     }
@@ -3428,7 +3428,7 @@
     "fields": {
         "name": "P5",
         "latitude": 44.9307,
-        "longitude": -66.8500,
+        "longitude": -66.8495,
         "sounding": null,
         "fixstation": true
     }
