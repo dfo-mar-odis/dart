@@ -3,12 +3,12 @@ import os
 from bs4 import BeautifulSoup
 
 from django.test import tag, Client
-from django.urls import reverse, reverse_lazy
+from django.urls import reverse
 from django.utils.translation import gettext as _
 
 from core import forms as core_forms
 
-from core.parsers import ctd
+from core.parsers.sensor import ctd
 from config import settings
 from config.tests.DartTestCase import DartTestCase
 

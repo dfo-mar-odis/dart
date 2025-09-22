@@ -12,16 +12,24 @@
 {#                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' mission.pk %}"#}
 {#                           title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>#}
 
-                        <label for="csv_event_file_input_id" class="btn btn-primary btn-sm"
-                               title="{% trans "Upload events from csv files" %}">CSV {% custom_icon 'arrow-up-square' %}</label>
-                        <label for="elog_event_file_input_id" class="btn btn-primary btn-sm"
-                               title="{% trans "Upload events from elog files" %}">Elog {% custom_icon 'arrow-up-square' %}</label>
-                        <label for="andes_event_file_input_id" class="btn btn-primary btn-sm"
-                               title="{% trans "Upload events from andes report" %}">Andes {% custom_icon 'arrow-up-square' %}</label>
+                        <div class="dropdown">
+                            <button class="btn btn-primary btn-sm dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                            {% trans "Import" %} {% custom_icon 'arrow-up-square' %}
+                            </button>
+                            <ul class="dropdown-menu" aria-labelledby="importDropdown">
+                                <li><label for="andes_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from andes report" %}">Andes</label></li>
+                                <li><button hx-swap="none" hx-get="{% url 'core:form_event_import_events_btl' mission.pk %}" for="btl_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from fixstation BTL files" %}">BTL</button></li>
+                                <li><label for="csv_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from csv files" %}">CSV</label></li>
+                                <li><label for="elog_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from elog files" %}">Elog</label></li>
+                            </ul>
+                        </div>
                     </div>
                 </div>
                     {% block event_import_form %}
                 <div id="div_id_event_message_area" class="row">
+                    <div id="div_id_bottle_event_message">
+                        {# special case for bottle event loading #}
+                    </div>
                     <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
                           hx-encoding="multipart/form-data"
                           hx-get="{% url "core:form_event_import_events_elog" mission.pk %}"

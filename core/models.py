@@ -32,6 +32,10 @@ class Mission(models.Model):
     name = models.CharField(verbose_name=_("Mission Name"), max_length=50,
                             help_text=_("Originator’s mission number and/or common name(s) for the mission"))
 
+    description = models.CharField(verbose_name=_("Mission Description"), max_length=100,
+                                   blank=True, default="", null=False,
+                                   help_text=_("Example: \"Fall AZMP\", \"Groundfish\", \"AZOMP\"."
+                                               "Used as a subtitle in the loading status report"))
     # default to version 3.2.7
     dart_version = models.CharField(verbose_name=_("Dart Version"), max_length=50,
                                     default="b7f674184f401a6a0192ba5e91462fcd3d97ee04")
@@ -680,24 +684,27 @@ class AbstractError(models.Model):
     message = models.CharField(max_length=255, verbose_name=_("Message"))
     type = models.IntegerField(verbose_name=_("Error type"), default=0, choices=ErrorType.choices)
 
+    # User comments to describe what was done about the error
+    comment = models.TextField(verbose_name=_("Comment"), blank=True, null=True)
+
     # The error code can be used to be more specific than an error type
     code = models.IntegerField(verbose_name=_("Error code"), default=-1)
     # code spaces:
     # 1-99 is used by the Plankton Parser
+    # 100-99 is used by btl_ros for Parsing BTL files
     # 1000-1999 is used by core.form_mission_gear_type
     # 2000-2999 is used by core.form_biochem_pre_validation
     # 3000-3999 is used by biochem.upload
 
 
-# General errors we want to keep track of and notify the user about
-class Error(AbstractError):
+# General errors we want to keep track of and notify the user about. These usually take place at the mission level
+class MissionError(AbstractError):
     mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name='errors', verbose_name=_("Mission"))
 
 
 # Errors that take place when validating an object. This might be something like a missing attachment, date or sample ID
-class ValidationError(AbstractError):
-    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='validation_errors',
-                              verbose_name=_("Event"))
+class EventError(AbstractError):
+    event = models.ForeignKey(Event, on_delete=models.CASCADE, related_name='validation_errors', verbose_name=_("Event"))
 
     def __str__(self):
         return f"{self.get_type_display()} : {self.message}"

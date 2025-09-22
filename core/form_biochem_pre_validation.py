@@ -30,46 +30,46 @@ class BIOCHEM_CODES(Enum):
     DATA = 2001  # use for general data errors
     DATA_BAD_RANGE = 2002  # use for bad data outside of expected BCRetrivals min/max
 
-def _validation_mission_descriptor(mission: core_models.Mission) -> [core_models.Error]:
+def _validation_mission_descriptor(mission: core_models.Mission) -> [core_models.MissionError]:
     logger_notifications.info(_("Validating Mission descriptor"))
     descriptor_errors = []
 
     if not mission.mission_descriptor:
-        err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem,
-                                message=_("Mission descriptor doesn't exist"),
-                                code=BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
+        err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem,
+                                       message=_("Mission descriptor doesn't exist"),
+                                       code=BIOCHEM_CODES.DESCRIPTOR_MISSING.value)
         descriptor_errors.append(err)
 
     return descriptor_errors
 
 
-def _validate_mission_dates(mission: core_models.Mission) -> [core_models.Error]:
+def _validate_mission_dates(mission: core_models.Mission) -> [core_models.MissionError]:
     logger_notifications.info(_("Validating Mission Dates"))
 
     date_errors = []
     if not mission.start_date:
-        err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem, message=_("Missing start date"),
-                                code=BIOCHEM_CODES.DATE_MISSING.value)
+        err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem, message=_("Missing start date"),
+                                       code=BIOCHEM_CODES.DATE_MISSING.value)
         date_errors.append(err)
 
     if not mission.end_date:
-        err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem, message=_("Missing end date"),
-                                code=BIOCHEM_CODES.DATE_MISSING.value)
+        err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem, message=_("Missing end date"),
+                                       code=BIOCHEM_CODES.DATE_MISSING.value)
         date_errors.append(err)
 
     if mission.start_date and mission.end_date and mission.end_date < mission.start_date:
-        err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem,
-                                message=_("End date comes before Start date"),
-                                code=BIOCHEM_CODES.DATE_BAD_VALUES.value)
+        err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem,
+                                       message=_("End date comes before Start date"),
+                                       code=BIOCHEM_CODES.DATE_BAD_VALUES.value)
         date_errors.append(err)
 
     return date_errors
 
 
-def _validate_bottles(mission) -> [core_models.Error]:
+def _validate_bottles(mission) -> [core_models.MissionError]:
     logger_notifications.info(_("Validating Bottle Dates"))
 
-    errors: [core_models.Error] = []
+    errors: [core_models.MissionError] = []
     bottles = core_models.Bottle.objects.filter(event__mission=mission)
 
     bottle_count = len(bottles)
@@ -79,16 +79,16 @@ def _validate_bottles(mission) -> [core_models.Error]:
         if not bottle.latitude:
             # the biochem validation script only checks start dates, times, and positions
             if not bottle.event.start_location:
-                err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem,
-                                        code=BIOCHEM_CODES.POSITION_MISSING.value,
-                                        message=_("Event is missing a position. Event ID : ")+str(bottle.event.event_id)
-                                        )
+                err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem,
+                                               code=BIOCHEM_CODES.POSITION_MISSING.value,
+                                               message=_("Event is missing a position. Event ID : ")+str(bottle.event.event_id)
+                                               )
                 errors.append(err)
     return errors
 
-def _validate_sample_ranges(mission) -> [core_models.Error]:
+def _validate_sample_ranges(mission) -> [core_models.MissionError]:
     logger_notifications.info(_("Validating Data Ranges"))
-    errors: [core_models.Error] = []
+    errors: [core_models.MissionError] = []
 
     sample_types: QuerySet[core_models.MissionSampleType] = mission.mission_sample_types.filter(Q(uploads__status=core_models.BioChemUploadStatus.uploaded) | Q(uploads__status=core_models.BioChemUploadStatus.upload))
     for mst in sample_types:
@@ -99,15 +99,15 @@ def _validate_sample_ranges(mission) -> [core_models.Error]:
             message = "MST_ID [" + str(mst.pk) + "]"
             message += " : " + str(values.count()) + " " + _("Samples exist outside of the expected range")
             message += f" [{range.minimum_value}, {range.maximum_value}]"
-            err = core_models.Error(mission=mission, type=core_models.ErrorType.biochem,
-                                    code=BIOCHEM_CODES.DATA_BAD_RANGE.value,
-                                    message=message
-                                    )
+            err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem,
+                                           code=BIOCHEM_CODES.DATA_BAD_RANGE.value,
+                                           message=message
+                                           )
             errors.append(err)
 
     return errors
 
-def validate_mission(mission: core_models.Mission) -> [core_models.Error]:
+def validate_mission(mission: core_models.Mission) -> [core_models.MissionError]:
     errors = []
     errors += _validation_mission_descriptor(mission)
     errors += _validate_mission_dates(mission)
@@ -130,12 +130,12 @@ def run_biochem_validation(request, mission_id):
         return HttpResponse(forms.websocket_post_request_alert(**attrs))
 
     # 1. Delete old validation errors
-    core_models.Error.objects.filter(type=core_models.ErrorType.biochem).delete()
+    core_models.MissionError.objects.filter(type=core_models.ErrorType.biochem).delete()
 
     # 2. Re-run validation
     mission = core_models.Mission.objects.get(id=mission_id)
     errors = validate_mission(mission)
-    core_models.Error.objects.bulk_create(errors)
+    core_models.MissionError.objects.bulk_create(errors)
 
     response = HttpResponse()
     response['HX-Trigger'] = 'biochem_validation_update'
@@ -156,7 +156,7 @@ def get_validation_errors(request, mission_id):
     badge_error_count.attrs["id"] = "div_id_biochem_validation_count"
     badge_error_count.attrs['hx-swap-oob'] = "true"
 
-    errors = core_models.Error.objects.filter(type=core_models.ErrorType.biochem)
+    errors = core_models.MissionError.objects.filter(type=core_models.ErrorType.biochem)
     if not errors:
         badge_error_count.attrs['class'] = 'badge bg-success'
         badge_error_count.string = "0"
@@ -245,7 +245,7 @@ def get_validation_errors(request, mission_id):
 
 
 def flag_data(request, mission_id, error_id):
-    error = core_models.Error.objects.get(mission__id=mission_id, pk=error_id)
+    error = core_models.MissionError.objects.get(mission__id=mission_id, pk=error_id)
     match = re.search(r'MST_ID \[(\d+)\]', error.message)
     if match:
         mst_id = int(match.group(1))
@@ -268,7 +268,7 @@ def flag_data(request, mission_id, error_id):
     return response
 
 def remove_data(request, mission_id, error_id):
-    error = core_models.Error.objects.get(mission__id=mission_id, pk=error_id)
+    error = core_models.MissionError.objects.get(mission__id=mission_id, pk=error_id)
     match = re.search(r'MST_ID \[(\d+)\]', error.message)
     if match:
         mst_id = int(match.group(1))

@@ -14,7 +14,7 @@ from config.tests.DartTestCase import DartTestCase
 from config import settings
 
 from core import models as core_models
-from core.parsers import ctd as ctd_parser
+from core.parsers.sensor import ctd as ctd_parser
 from core.parsers import SampleParser, PlanktonParser
 from core.tests import CoreFactoryFloor as core_factory
 
@@ -250,7 +250,7 @@ class TestCTDParser(DartTestCase):
         event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
 
-        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
+        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
 
         self.assertEqual(len(errors), 0)
 
@@ -278,7 +278,7 @@ class TestCTDParser(DartTestCase):
         self.assertEqual(bottle.pressure, initial_pressure)
 
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
-        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
+        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
 
         self.assertEqual(len(errors), 0)
 
@@ -299,11 +299,11 @@ class TestCTDParser(DartTestCase):
         event = core_factory.CTDEventFactory(event_id=6, sample_id=495290, end_sample_id=495303)
 
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_006)
-        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
+        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
 
         self.assertEqual(len(errors), 11)
         for error in errors:
-            self.assertIsInstance(error, core_models.ValidationError)
+            self.assertIsInstance(error, core_models.EventError)
 
         # 14 bottles should have been created even though there are 24 bottles in the BTL file
         bottles = core_models.Bottle.objects.filter(event=event)
@@ -318,7 +318,7 @@ class TestCTDParser(DartTestCase):
 
         # There are only 19 bottles in ctd_data_frame_001
         ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
-        errors = core_models.ValidationError.objects.filter(type=core_models.ErrorType.bottle)
+        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
 
         self.assertEqual(len(errors), 1)
 

@@ -95,3 +95,6 @@ gitpython==3.1.43
 # Sometimes windows locks logfiles which will then start throwing errors when info.log and error.log
 # are being written to. This will help resolve the issue.
 concurrent_log_handler==0.9.25
+
+# used for computing geographic distance
+geopy==2.4.1

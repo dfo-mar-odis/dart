@@ -7,7 +7,7 @@ from django.test import tag
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from core.parsers.FixStationParser import FixStationParser
+from core.parsers.sensor.btl_ros import FixStationParser
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models
 
@@ -20,8 +20,8 @@ class TestFixStationParser(DartTestCase):
     def setUp(self):
         self.btn_filename = 'fixstation_hl_02.btl'
         self.ros_filename = 'fixstation_hl_02.ros'
-        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', self.btn_filename)
-        ros_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', self.ros_filename)
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', self.btn_filename)
+        ros_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', self.ros_filename)
 
         btl_sample_file = open(btl_path, mode='rb')
         ros_sample_file = open(ros_path, mode='rb')

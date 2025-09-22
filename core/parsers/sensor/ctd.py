@@ -221,10 +221,6 @@ def update_bottle(bottle: core_models.Bottle, check_fields: dict[str, object]) -
 
 
 def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
-    database = event._state.db
-
-    skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
-
     # we only want to use rows in the BTL file marked as 'avg' in the statistics column
     data_frame_avg = data_frame[data_frame['Statistic'] == 'avg']
     data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
@@ -252,14 +248,14 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
     b_create = []
     b_update = {"data": [], "fields": set()}
     bottle_data = data_frame_avg[dataframe_dict.values()]
-    errors: [core_models.ValidationError] = []
+    errors: [core_models.EventError] = []
 
     # clear out the bottle validation errors
     event.validation_errors.filter(type=core_models.ErrorType.bottle).delete()
     # end_sample_id-sample_id is inclusive so it's one less that the bottles in the file
     if (event.end_sample_id-event.sample_id) != bottle_data.count(axis=0)[dataframe_dict['bottle_number']] - 1:
         message = _("Mismatch bottle count for event")
-        validation_err = core_models.ValidationError(event=event, message=message, type=core_models.ErrorType.bottle)
+        validation_err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(validation_err)
 
     bottle_number = 0
@@ -313,7 +309,7 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         core_models.Bottle.objects.bulk_update(objs=b_update['data'], fields=b_update['fields'])
 
     if len(errors) > 0:
-        core_models.ValidationError.objects.bulk_create(errors)
+        core_models.EventError.objects.bulk_create(errors)
 
 
 def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_headers: list[str]):

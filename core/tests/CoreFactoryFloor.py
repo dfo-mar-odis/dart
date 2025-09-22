@@ -188,6 +188,6 @@ class FileErrorFactory(DjangoModelFactory):
 
 class ValidationError(DjangoModelFactory):
     class Meta:
-        model = models.ValidationError
+        model = models.EventError
 
     event = factory.SubFactory(EventFactory)

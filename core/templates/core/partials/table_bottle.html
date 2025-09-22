@@ -6,6 +6,7 @@
     <thead>
     <tr class="bg-light">
         <th>{% trans 'Bottle ID' %}</th>
+        <th>{% trans 'Closed' %}</th>
         <th>{% trans 'Pressure' %}</th>
         {% for sample_type in sample_types %}
         <th>{{ sample_type.name }}</th>
@@ -16,6 +17,7 @@
     {% for bottle, bottle_samples in bottle_list.items %}
         <tr id="bottle-{{ bottle.pk }}">
             <th>{{ bottle.bottle_id }}</th>
+            <th>{{ bottle.closed }}</th>
             <th>{{ bottle.pressure }}</th>
             {% for sample_type in sample_types %}
                 <td>
