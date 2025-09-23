@@ -21,6 +21,12 @@ logger = logging.getLogger('dart')
 logger_notifications = logging.getLogger('dart.user.elog')
 
 
+file_type = {
+    'name': "Elog",
+    'description': "Logfile created using Elog",
+    'extension': 'log'
+}
+
 def get_or_create_file_config() -> QuerySet[FileConfiguration]:
     file_type = 'elog'
     fields = [("event", "Event", _("Label identifying the elog event number")),

@@ -13,7 +13,7 @@ from biochem import models
 from config.views import GenericCreateView, GenericUpdateView, GenericDetailView
 
 from core import models
-from core.parsers import elog
+from core.parsers.event import elog
 
 import logging
 

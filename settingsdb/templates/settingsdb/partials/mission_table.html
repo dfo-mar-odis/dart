@@ -14,9 +14,10 @@
     <div id="div_id_mission_table_alert"></div>
 </form>
 {% endif %}
+<div class="vertical-scrollbar">
     {% block mission_table_block %}
 <table id="mission_table" class="table table-sm" >
-    <thead>
+    <thead class="sticky-top">
     <tr>
         <th class="col">Name</th>
         <th class="col">Start Date</th>
@@ -56,4 +57,5 @@
     </tbody>
 </table>
     {% endblock %}
+</div>
 </div>
