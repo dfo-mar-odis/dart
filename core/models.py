@@ -660,6 +660,24 @@ class PlanktonSample(models.Model):
         return None
 
 
+class FileType(models.Model):
+    name = models.CharField(max_length=30, verbose_name=_("File Type Name"),
+                            help_text=_("Human readable name of a file that people will refer to such as a "
+                                        "\"Bottle File\" or \"Andes Report\" or \"QAT File\""))
+    extension = models.CharField(max_length=10, verbose_name=_("File Extension"),
+                                 help_text=_("The extension used for this file, excluding the dot "
+                                             "\"BTL\", not \".BTL\""))
+    description = models.CharField(verbose_name=_("File Description"), max_length=100,
+                                   help_text=_("Short description of what this file type will contain."))
+
+
+class EventFile(models.Model):
+    file_type = models.ForeignKey(FileType, verbose_name=_("File Type"), related_name="files", on_delete=models.CASCADE)
+    event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="files", on_delete=models.CASCADE)
+    file_name = models.CharField(max_length=100, verbose_name=_("File Name"),
+                                 help_text=_("Just the name of the file, does not include the file path."))
+
+
 # These are some of the common errors that occur when processing data and allow us to sort various errors depending
 # on what problems we're using the errors to solve.
 class ErrorType(models.IntegerChoices):

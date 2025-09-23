@@ -10,7 +10,7 @@ from django.conf import settings
 from core import models as core_models
 from settingsdb import models as settings_models
 
-from core.parsers import elog, andes, event_csv
+from core.parsers.event import elog, andes, event_csv
 from core.tests import CoreFactoryFloor as core_factory
 from core.tests.TestParsers import logger
 from config.tests.DartTestCase import DartTestCase

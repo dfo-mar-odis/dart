@@ -23,7 +23,8 @@ from PyQt6.QtWidgets import QFileDialog
 from render_block import render_block_to_string
 
 from core import forms as core_forms, models
-from core.parsers import FilterLogParser, elog, andes, event_csv
+from core.parsers import FilterLogParser
+from core.parsers.event import elog, andes, event_csv
 from core.parsers.sensor.btl_ros import FixStationParser
 
 from config.utils import load_svg

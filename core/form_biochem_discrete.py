@@ -702,6 +702,11 @@ def upload_batch(request, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
+    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
+    if alert_soup:
+        div.append(alert_soup)
+        return HttpResponse(soup)
+
     # do we have an uploader?
     uploader = form_biochem_database.get_uploader()
 
@@ -711,15 +716,10 @@ def upload_batch(request, mission_id):
             div.append(alert_soup)
             return HttpResponse(soup)
 
-    alert_soup = form_biochem_database.confirm_descriptor(request, mission)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
-
-    try:
         uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
             request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
+    try:
         batch_id = form_biochem_batch.get_mission_batch_id()
         batch = biochem_models.Bcbatches.objects.using('biochem').get_or_create(name=mission.mission_descriptor,
                                                                                 username=uploader,
@@ -831,15 +831,18 @@ def download_batch(request, mission_id):
         div.append(alert_soup)
         return HttpResponse(soup)
 
-    alert_soup = form_biochem_database.confirm_uploader(request)
-    if alert_soup:
-        div.append(alert_soup)
-        return HttpResponse(soup)
+    uploader = form_biochem_database.get_uploader()
+
+    if not uploader:
+        alert_soup = form_biochem_database.confirm_uploader(request)
+        if alert_soup:
+            div.append(alert_soup)
+            return HttpResponse(soup)
+
+        uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
+            request.POST['uploader'] if 'uploader' in request.POST else "N/A"
 
     logger.info("Creating BCS/BCD files")
-    uploader = request.POST['uploader2'] if 'uploader2' in request.POST else \
-        request.POST['uploader'] if 'uploader' in request.POST else "N/A"
-
     logger.info(f"Using uploader: {uploader}")
 
     samples, bottles = get_discrete_data(mission, upload_all=True)

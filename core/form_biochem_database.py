@@ -485,6 +485,9 @@ def get_connected_database() -> settings_models.BcDatabaseConnection:
 
 
 def get_uploader():
+    if not is_connected():
+        return None
+
     connected_database = get_connected_database()
     if connected_database.uploader:
         return connected_database.uploader.upper()
