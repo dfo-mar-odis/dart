@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% load bootstrap5 %}
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
@@ -21,6 +20,7 @@
         <a href="{% url 'core:mission_plankton_plankton_details' database mission.pk %}" class="btn btn-primary"
            title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
     </li>
+
 {% endblock %}
 
 {% block container %}container-fluid{% endblock %}
@@ -63,4 +63,5 @@
             {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}
         </div>
     </div>
+
 {% endblock %}

@@ -234,16 +234,8 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         mission = event.mission
         institute: bio_tables.models.BCDataCenter = mission.data_center
 
-        try:
-            # for calculating volume, if not provided with a sample, we need either a wire out or a flow meter start
-            # and end. Both of these should be, at the very least, attached to the last action of an event.
-            recovery_action: core_models.Action = event.actions.get(type=core_models.ActionType.recovered)
-        except core_models.Action.DoesNotExist as e:
-            # if there's no recovery event then we won't be able to complete this row of data, it also means this
-            # event was aborted
-            message = _("Event was likely aborted and contains no recovered action")
-            message += " " + _("Event") + f" : {event.event_id:03d}"
-            logger.error(message)
+        if event.actions.filter(type=core_models.ActionType.aborted).exists():
+            # we don't load aborted events
             continue
 
         plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'

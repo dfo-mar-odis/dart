@@ -621,6 +621,10 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             continue
 
         try:
+            # Todo: We need to check that the event exists and that the bottle_id is in the event before we create
+            #       a new bottle. Otherwise we might be creating a bottle that shouldn't exist in this mission,
+            #       but for loading historical data, this is actually an advantage because they have to make up
+            #       bottle IDs for the historical data.
             bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
                                           gear_type=gear_type, mesh_size=mesh_size,
                                           start_pressure=pressure, end_pressure=end_pressure)
