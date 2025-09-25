@@ -7,10 +7,15 @@ import numpy as np
 from tkinter import filedialog
 
 import pandas as pd
+
+from PyQt6.QtWidgets import QFileDialog
+
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Field, Div, Row
 from crispy_forms.utils import render_crispy_form
+
+from django.conf import settings
 from django.db.models import QuerySet
 
 from django import forms
@@ -351,13 +356,15 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
                 thread = t
                 break
 
+        if thread:
+            while thread.is_alive():
+                time.sleep(2)
+
         attrs = {
             'component_id': base_notifications_id,
             'message': _("Success"),
             'alert_type': 'success'
         }
-        while thread.is_alive():
-            time.sleep(2)
 
         errors = core_models.FileError.objects.filter(mission=mission, type=core_models.ErrorType.validation, code=1000)
         if errors.exists():
@@ -380,7 +387,26 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
         response['HX-Trigger'] = 'reload_samples'
         return response
 
-    file_path = filedialog.askopenfilename(title="Select a file")
+    app = settings.app if hasattr(settings, 'app') else None
+    if not app:
+        return HttpResponse(soup)
+
+    start_dir = settings.dir if hasattr(settings, 'dir') else None
+
+    # Create and configure the file dialog
+    file_dialog = QFileDialog()
+    file_dialog.setWindowTitle("Select a BIONESS_volume File")
+    file_dialog.setNameFilter("xlsx (*.xlsx)")
+    file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+    file_dialog.setDirectory(start_dir)
+
+    # Open the dialog and get the selected file
+    if not file_dialog.exec():
+        return HttpResponse(soup)
+
+    file_path = file_dialog.selectedFiles()[0]
+    settings.dir = os.path.dirname(file_path)
+    logger.info(f"Selected file: {file_path}")
 
     if file_path:
         (t := threading.Thread(target=process_file, args=(mission, file_path,), daemon=True)).start()

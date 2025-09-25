@@ -306,7 +306,7 @@ def biochem_merge_procedure(request, mission_id, batch_id):
 
 
 def get_batch_info(request, mission_id, batch_id):
-    batch_from = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id)
+    batch_from = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id, swap_oob=True)
 
     soup = form_biochem_batch.get_batch_info(batch_from)
     add_tables_to_soup(soup, batch_id, False)
