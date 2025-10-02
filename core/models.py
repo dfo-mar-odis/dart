@@ -425,13 +425,15 @@ class Bottle(models.Model):
     volume = models.FloatField(verbose_name=_("Volume"), null=True, blank=True)
 
     # Phytoplankton is collected from multiple Niskin bottles for ONLY station HL_02. Previously, the AZMP template
-    # used the code 90000019, which is for a 10L Niskin bottle. Lindsay has asked me to use 90000002 for a Niskin
-    # bottle, size unknown, with an option for the user to set the "bottle" type in the future.
+    # used the code 90000019, which is for a 10L Niskin bottle.
+    #
+    # We've settled on using the default :
+    # 90000171 - CTD and rosette bottle sampler: CTD model, sensors & other details to be specified in comment section
     #
     # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
     # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
     gear_type = models.ForeignKey(bio_tables.models.BCGear, verbose_name="Gear Type", related_name="bottles",
-                                  on_delete=models.DO_NOTHING, default=90000002)
+                                  on_delete=models.DO_NOTHING, default=90000171)
 
     # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
     # The mesh can normally be used to determine the gear_type, but if the gear type is set to
