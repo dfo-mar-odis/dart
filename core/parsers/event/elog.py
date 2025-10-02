@@ -201,7 +201,6 @@ def parse(file_name: str, stream: io.StringIO) -> dict:
 # parse multiple files for a given mission by parsing them individually and compressing their buffer
 # dictionaries into one then run the algorithm to parse each section of the buffer dictionaries
 def parse_files(mission, files):
-    database = mission._state.db
     file_count = len(files)
     message_objects = {
         ParserType.FILE: dict(),
@@ -589,6 +588,14 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
     for mid, buffer in mid_dictionary_buffer.items():
         index = mid_list.index(mid) + 1
         logger_notifications.info(_("Processing Attachments/Actions for Elog Message") + f" : %d/%d", index, mid_count)
+
+        file_buffer: dict[list] = dictionary_buffer[ParserType.FILE]
+        file_name = None
+        for file in file_buffer.keys():
+            if mid in file_buffer[file]:
+                file_name = file
+                break
+
         try:
             field_errors = validate_buffer_fields(required_fields, mapped_fields, mid, buffer)
             if len(field_errors) > 0:
@@ -629,7 +636,7 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
                 # attachments so we don't end up with duplicate actions and attachments if the event is
                 # being reloaded
                 event.attachments.all().delete()
-                event.actions.all().delete()
+                event.actions.filter(file=file_name).delete()
 
                 attached = attached_str.split(" | ")
                 for a in attached:
@@ -665,12 +672,6 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
                 update_attributes(action, attrs, update_actions)
 
             else:
-                file_buffer: dict[list] = dictionary_buffer[ParserType.FILE]
-                file_name = None
-                for file in file_buffer.keys():
-                    if mid in file_buffer[file]:
-                        file_name = file
-                        break
                 action = core_models.Action(file=file_name, event=event, date_time=date_time, mid=mid,
                                             latitude=lat, longitude=lon, type=action_type)
 

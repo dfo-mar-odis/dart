@@ -6,13 +6,15 @@ from datetime import datetime
 
 from django.test import tag
 from django.conf import settings
+from django.core.files.uploadedfile import SimpleUploadedFile
 
 from core import models as core_models
-from settingsdb import models as settings_models
-
 from core.parsers.event import elog, andes, event_csv
 from core.tests import CoreFactoryFloor as core_factory
 from core.tests.TestParsers import logger
+
+from settingsdb import models as settings_models
+
 from config.tests.DartTestCase import DartTestCase
 
 
@@ -56,6 +58,39 @@ class TestElogParser(DartTestCase):
         self.assertElogField(queryset, "wire_out", "Wire out")
         self.assertElogField(queryset, "flow_start", "Flowmeter Start")
         self.assertElogField(queryset, "flow_end", "Flowmeter End")
+
+    @tag('parsers_elog_test_parser_event_between_files')
+    def test_parser_event_between_files(self):
+        # test that if an event is split between files, actions for the event
+        # from the first file aren't overridden by actions from the second
+        # file
+
+        # Create fake InMemoryFile objects
+        sample_file_1 = SimpleUploadedFile("251001a.log", open(r'core/tests/sample_data/251001a.log', mode='rb').read())
+        sample_file_2 = SimpleUploadedFile("251002a.log", open(r'core/tests/sample_data/251002a.log', mode='rb').read())
+
+        elog.parse_files(self.mission, [sample_file_1, sample_file_2])
+
+        event = self.mission.events.get(event_id=35)
+        self.assertIsNotNone(event)
+        self.assertEqual(len(event.actions.all()), 3)
+
+    @tag('parsers_elog_test_parser_event_between_files_separate_load')
+    def test_parser_event_between_files_separate_load(self):
+        # test that if an event is split between files, and the files are loaded separately,
+        # actions for the event from the first file aren't overridden by actions from the second
+        # file
+
+        # Create fake InMemoryFile objects
+        sample_file_1 = SimpleUploadedFile("251001a.log", open(r'core/tests/sample_data/251001a.log', mode='rb').read())
+        sample_file_2 = SimpleUploadedFile("251002a.log", open(r'core/tests/sample_data/251002a.log', mode='rb').read())
+
+        elog.parse_files(self.mission, [sample_file_1])
+        elog.parse_files(self.mission, [sample_file_2])
+
+        event = self.mission.events.get(event_id=35)
+        self.assertIsNotNone(event)
+        self.assertEqual(len(event.actions.all()), 3)
 
     @tag('parsers_elog_test_parse_elog')
     def test_parse_elog(self):
