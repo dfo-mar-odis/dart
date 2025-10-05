@@ -1,0 +1,32 @@
+{
+  "event_id": {
+    "_comment": "This is a number that represents which event a bottle file belongs to.",
+    "label": "Event_Number"
+  },
+  "station": {
+    "_comment": "The name of a station the bottle data was collected at.",
+    "label": "Station_Name"
+  },
+  "sounding": {
+    "_comment": "This is a numerical field that represents the depth of the sea floor for a station.",
+    "label": "Sounding"
+  },
+  "latitude": {
+    "_comment": "Can be in decimal degrees or decimal minutes. If in minutes, it should take the format 'N HH MM.SSSS'.",
+    "label": "Latitude"
+  },
+  "longitude": {
+    "_comment": "Can be in decimal degrees or decimal minutes. If in minutes, it should take the format 'W HH MM.SSSS'.",
+    "label": "Longitude"
+  },
+  "instrument_name": {
+    "_comment": "A serial number or common name for a CTD. If not provided in the file, the default name will just be 'CTD'.",
+    "label": "Instrument_serial_number",
+    "default": "CTD"
+  },
+  "comments": {
+    "_comment": "Additional comments or notes about the event.",
+    "label": "Event_Comments",
+    "default": ""
+  }
+}

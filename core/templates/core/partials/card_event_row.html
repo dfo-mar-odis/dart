@@ -18,7 +18,7 @@
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="importDropdown">
                                 <li><label for="andes_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from andes report" %}">Andes</label></li>
-                                <li><button hx-swap="none" hx-get="{% url 'core:form_event_import_events_btl' mission.pk %}" for="btl_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from fixstation BTL files" %}">BTL</button></li>
+                                <li><button hx-swap="none" hx-target="#div_id_notification_content" hx-get="{% url 'core:form_event_import_events_btl' mission.pk %}" for="btl_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from fixstation BTL files" %}">BTL</button></li>
                                 <li><label for="csv_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from csv files" %}">CSV</label></li>
                                 <li><label for="elog_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from elog files" %}">Elog</label></li>
                             </ul>
@@ -28,7 +28,7 @@
                     {% block event_import_form %}
                 <div id="div_id_event_message_area" class="row">
                     <div id="div_id_bottle_event_message">
-                        {# special case for bottle event loading #}
+{#                         special case for bottle event loading #}
                     </div>
                     <form name="elog_upload_file_form_id" id="elog_upload_file_form_id"
                           hx-encoding="multipart/form-data"
