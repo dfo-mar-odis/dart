@@ -18,7 +18,7 @@
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="importDropdown">
                                 <li><label for="andes_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from andes report" %}">Andes</label></li>
-                                <li><button hx-swap="none" hx-target="#div_id_notification_content" hx-get="{% url 'core:form_event_import_events_btl' mission.pk %}" for="btl_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from fixstation BTL files" %}">BTL</button></li>
+                                <li><button hx-swap="none" hx-get="{% url 'core:form_event_import_events_btl' mission.pk %}" for="btl_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from fixstation BTL files" %}">BTL</button></li>
                                 <li><label for="csv_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from csv files" %}">CSV</label></li>
                                 <li><label for="elog_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from elog files" %}">Elog</label></li>
                             </ul>
