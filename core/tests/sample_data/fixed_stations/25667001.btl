@@ -1,0 +1,374 @@
+* <SBEDataUploadFile>
+* <![CDATA[
+* ** Ship: Sigma_T
+* ** Cruise: BCD2025667
+* ** Event_Number: 001
+* ** Cast: 01
+* ** Latitude: N 44 41.6416
+* ** Longitude: W 063 38.4617
+* ** Sounding: 72.5
+* ** Event_Comments: MP (BIO). Magda, Rose, Jenni (DAL).
+* ** Instrument_Serial_Number: 1175
+* ** Station_Name: HL_0
+* ]]>
+*    <ApplicationData>
+*       <firmware>
+*          <SoftwareVersion>1.0.1</SoftwareVersion>
+*          <BuildDate>Nov 25 2015 10:26:47</BuildDate>
+*          </firmware>
+*       </ApplicationData>
+*    <InstrumentState>
+*       <StatusData DeviceType='SBE25plus' SerialNumber='0251175'>
+*          <DateTime>2025-01-08T12:52:27</DateTime>
+*          <EventSummary numEvents='130'/>
+*          <Power>
+*             <vBattery>17.4</vBattery>
+*             <vExternal>0.1</vExternal>
+*             <vLithium>7.3</vLithium>
+*             <vRTC>3.3</vRTC>
+*             <iExt>7.3</iExt>
+*             <iSys>51.3</iSys>
+*             <iCPU>14.2</iCPU>
+*             </Power>
+*          <MemorySummary>
+*             <Bytes>42532864</Bytes>
+*             <BytesFree>1860304896</BytesFree>
+*             <Samples>590734</Samples>
+*             <SamplesFree>25837568</SamplesFree>
+*             <Files>0</Files>
+*             <CastFiles>0</CastFiles>
+*             </MemorySummary>
+*          </StatusData>
+*       <HardwareData DeviceType='SBE25plus' SerialNumber='0251175'>
+*          <Manufacturer>Sea-Bird Electronics, Inc</Manufacturer>
+*          <FirmwareVersion>1.0.1</FirmwareVersion>
+*          <FirmwareDate>Nov 25 2015 10:26:47</FirmwareDate>
+*          <CommandSetVersion>1.0</CommandSetVersion>
+*          <PCBAssembly PCBSerialNum='207000' AssemblyNum='41842C'/>
+*          <PCBAssembly PCBSerialNum='207597' AssemblyNum='41843D'/>
+*          <MfgDate>2019-01-11T11:11:11</MfgDate>
+*          <InternalSensors>
+*             <Sensor id='Main Temperature'>
+*                <type>temperature-0</type>
+*                <SerialNum>03-6395</SerialNum>
+*                </Sensor>
+*             <Sensor id='Main Conductivity'>
+*                <type>conductivity-0</type>
+*                <SerialNum>04-4846</SerialNum>
+*                </Sensor>
+*             <Sensor id='Main Pressure'>
+*                <Type>strain-0</Type>
+*                <SerialNum>5013220</SerialNum>
+*                </Sensor>
+*             </InternalSensors>
+*          <ExternalSensors>
+*             <Sensor id='volt 0'>
+*                <Type>Oxygen</Type>
+*                <SerialNum>43-3260</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 1'>
+*                <Type>Fluorometer</Type>
+*                <SerialNum>FLRtd-4152</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 2'>
+*                <Type>PAR</Type>
+*                <SerialNum>QSP2300</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 3'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 4'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 5'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 6'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             <Sensor id='volt 7'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             <Sensor id='serial 1'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             <Sensor id='serial 2'>
+*                <Type>NONE</Type>
+*                <SerialNum>NONE</SerialNum>
+*                </Sensor>
+*             </ExternalSensors>
+*          </HardwareData>
+*       <ConfigurationData DeviceType='SBE25plus' SerialNumber='0251175'>
+*          <Serial>
+*             <SerialPort0>
+*                <baudconsole>57600</baudconsole>
+*                <echoconsole>1</echoconsole>
+*                </SerialPort0>
+*             <SerialPort1>
+*                <enableser1>0</enableser1>
+*                <nameser1>ser1</nameser1>
+*                <baudser1>9600</baudser1>
+*                <inlineser1>1</inlineser1>
+*                <promptser1>S></promptser1>
+*                <measstringser1>ts</measstringser1>
+*                <measintervalser1>0</measintervalser1>
+*                <startstringser1>start</startstringser1>
+*                <execcharser1>254</execcharser1>
+*                <termcharser1>254</termcharser1>
+*                <suppressser1>1</suppressser1>
+*                <timeoutser1>3</timeoutser1>
+*                <failoutser1>60</failoutser1>
+*                </SerialPort1>
+*             <SerialPort2>
+*                <enableser2>0</enableser2>
+*                <nameser2>ser2</nameser2>
+*                <baudser2>9600</baudser2>
+*                <inlineser2>1</inlineser2>
+*                <promptser2>S></promptser2>
+*                <measstringser2>ts</measstringser2>
+*                <measintervalser2>0</measintervalser2>
+*                <startstringser2>start</startstringser2>
+*                <execcharser2>254</execcharser2>
+*                <termcharser2>254</termcharser2>
+*                <suppressser2>1</suppressser2>
+*                <timeoutser2>3</timeoutser2>
+*                <failoutser2>60</failoutser2>
+*                </SerialPort2>
+*             </Serial>
+*          <Settings>
+*             <vauxdelay0>0</vauxdelay0>
+*             <vauxdelay1>0</vauxdelay1>
+*             <vauxdelay2>0</vauxdelay2>
+*             <vauxdelay3>0</vauxdelay3>
+*             <mincondfreq>3000</mincondfreq>
+*             <pumpdelay>60</pumpdelay>
+*             <executedtag>1</executedtag>
+*             </Settings>
+*          <RealTimeOutput>
+*             <outputformat>0</outputformat>
+*             <historicrate>1</historicrate>
+*             <vout0>0</vout0>
+*             <vout1>0</vout1>
+*             <vout2>0</vout2>
+*             <vout3>0</vout3>
+*             <vout4>0</vout4>
+*             <vout5>0</vout5>
+*             <vout6>0</vout6>
+*             <vout7>0</vout7>
+*             <outputrate>8</outputrate>
+*             </RealTimeOutput>
+*          </ConfigurationData>
+*       <CalibrationCoefficients DeviceType='SBE25plus' SerialNumber='0251175'>
+*          <Calibration format='STRAIN0' id='Main Pressure'>
+*             <SerialNum>5013220</SerialNum>
+*             <Pcaldate>2000-01-01</Pcaldate>
+*             <PA0>4.032810e-02</PA0>
+*             <PA1>1.336885e-04</PA1>
+*             <PA2>-3.442034e-12</PA2>
+*             <PTEMPA0>-6.530079e-01</PTEMPA0>
+*             <PTEMPA1>5.252739e+01</PTEMPA1>
+*             <PTEMPA2>-5.198816e-01</PTEMPA2>
+*             <PTCA0>5.251322e+05</PTCA0>
+*             <PTCA1>3.474745e+01</PTCA1>
+*             <PTCA2>-9.448004e-01</PTCA2>
+*             <PTCB0>2.499975e+01</PTCB0>
+*             <PTCB1>-6.500000e-04</PTCB1>
+*             <PTCB2>0.000000e+00</PTCB2>
+*             <Poffset>0.000000e+00</Poffset>
+*             <Pfullscale>0.000000e+00</Pfullscale>
+*             </Calibration>
+*          </CalibrationCoefficients>
+*       <EventCounter DeviceType='SBE25plus' SerialNumber='0251175'>
+*          <EventSummary numEvents='130'/>
+*          <Event type='Console Suppress' count='12'/>
+*          <Event type='Power On Reset' count='118'/>
+*          </EventCounter>
+*       </InstrumentState>
+*    <InstrumentRawData>
+*       <startTime>2025-01-08T12:52:30</startTime>
+*       <Data>
+# interval = seconds: 0.0625
+# start_time = Jan 08 2025 12:52:30 [Instrument's time stamp, header]
+# <Sensors count="11" >
+#   <sensor Channel="1" >
+#     <!-- Frequency 0, Temperature -->
+#     <TemperatureSensor SensorID="55" >
+#       <SerialNumber>1107</SerialNumber>
+#       <CalibrationDate>19-Dec-23</CalibrationDate>
+#       <UseG_J>1</UseG_J>
+#       <A>0.00000000e+000</A>
+#       <B>0.00000000e+000</B>
+#       <C>0.00000000e+000</C>
+#       <D>0.00000000e+000</D>
+#       <F0_Old>0.000</F0_Old>
+#       <G>4.33293026e-003</G>
+#       <H>6.38497439e-004</H>
+#       <I>2.19514663e-005</I>
+#       <J>2.06054286e-006</J>
+#       <F0>1000.000</F0>
+#       <Slope>1.00000000</Slope>
+#       <Offset>0.0000</Offset>
+#     </TemperatureSensor>
+#   </sensor>
+#   <sensor Channel="2" >
+#     <!-- Frequency 1, Conductivity -->
+#     <ConductivitySensor SensorID="3" >
+#       <SerialNumber>0649</SerialNumber>
+#       <CalibrationDate>20-Jan-24</CalibrationDate>
+#       <UseG_J>1</UseG_J>
+#       <!-- Cell const and series R are applicable only for wide range sensors. -->
+#       <SeriesR>0.0000</SeriesR>
+#       <CellConst>2000.0000</CellConst>
+#       <ConductivityType>0</ConductivityType>
+#       <Coefficients equation="0" >
+#         <A>0.00000000e+000</A>
+#         <B>0.00000000e+000</B>
+#         <C>0.00000000e+000</C>
+#         <D>0.00000000e+000</D>
+#         <M>0.0</M>
+#         <CPcor>-9.57000000e-008</CPcor>
+#       </Coefficients>
+#       <Coefficients equation="1" >
+#         <G>-4.01522903e+000</G>
+#         <H>4.33190380e-001</H>
+#         <I>3.47483162e-004</I>
+#         <J>2.24016708e-006</J>
+#         <CPcor>-9.57000000e-008</CPcor>
+#         <CTcor>3.2500e-006</CTcor>
+#         <!-- WBOTC not applicable unless ConductivityType = 1. -->
+#         <WBOTC>0.00000000e+000</WBOTC>
+#       </Coefficients>
+#       <Slope>1.00000000</Slope>
+#       <Offset>0.00000</Offset>
+#     </ConductivitySensor>
+#   </sensor>
+#   <sensor Channel="3" >
+#     <!-- Count, Pressure, Strain Gauge -->
+#     <PressureSensor SensorID="46" >
+#       <SerialNumber>1175</SerialNumber>
+#       <CalibrationDate>15-Feb-19</CalibrationDate>
+#       <PA0>-5.33184438e-001</PA0>
+#       <PA1>5.41856794e-004</PA1>
+#       <PA2>1.86531153e-013</PA2>
+#       <PTEMPA0>-9.06748398e+001</PTEMPA0>
+#       <PTEMPA1>4.04448778e+001</PTEMPA1>
+#       <PTEMPA2>1.88374136e+000</PTEMPA2>
+#       <PTCA0>8.42253024e+006</PTCA0>
+#       <PTCA1>-1.71237478e+002</PTCA1>
+#       <PTCA2>5.53308041e+000</PTCA2>
+#       <PTCB0>1.06509212e+002</PTCB0>
+#       <PTCB1>-9.69182344e-003</PTCB1>
+#       <PTCB2>0.00000000e+000</PTCB2>
+#       <Offset>0.000000</Offset>
+#     </PressureSensor>
+#   </sensor>
+#   <sensor Channel="4" >
+#     <!-- A/D voltage 0, Oxygen, SBE 43 -->
+#     <OxygenSensor SensorID="38" >
+#       <SerialNumber>1569</SerialNumber>
+#       <CalibrationDate>07-Aug-24</CalibrationDate>
+#       <Use2007Equation>1</Use2007Equation>
+#       <CalibrationCoefficients equation="0" >
+#         <!-- Coefficients for Owens-Millard equation. -->
+#         <Boc>0.0000</Boc>
+#         <Soc>0.0000e+000</Soc>
+#         <offset>0.0000</offset>
+#         <Pcor>0.00e+000</Pcor>
+#         <Tcor>0.0000</Tcor>
+#         <Tau>0.0</Tau>
+#       </CalibrationCoefficients>
+#       <CalibrationCoefficients equation="1" >
+#         <!-- Coefficients for Sea-Bird equation - SBE calibration in 2007 and later. -->
+#         <Soc>5.6238e-001</Soc>
+#         <offset>-0.5269</offset>
+#         <A>-4.1623e-003</A>
+#         <B> 1.7104e-004</B>
+#         <C>-2.9723e-006</C>
+#         <D0> 2.5826e+000</D0>
+#         <D1> 1.92634e-004</D1>
+#         <D2>-4.64803e-002</D2>
+#         <E> 3.6000e-002</E>
+#         <Tau20> 1.0500</Tau20>
+#         <H1>-3.3000e-002</H1>
+#         <H2> 5.0000e+003</H2>
+#         <H3> 1.4500e+003</H3>
+#       </CalibrationCoefficients>
+#     </OxygenSensor>
+#   </sensor>
+#   <sensor Channel="5" >
+#     <!-- A/D voltage 1, Fluorometer, WET Labs ECO-AFL/FL -->
+#     <FluoroWetlabECO_AFL_FL_Sensor SensorID="20" >
+#       <SerialNumber>4152</SerialNumber>
+#       <CalibrationDate>10/26/15</CalibrationDate>
+#       <ScaleFactor>9.90000000e+000</ScaleFactor>
+#       <!-- Dark output -->
+#       <Vblank>0.0200</Vblank>
+#     </FluoroWetlabECO_AFL_FL_Sensor>
+#   </sensor>
+#   <sensor Channel="6" >
+#     <!-- A/D voltage 2, User Polynomial -->
+#     <UserPolynomialSensor SensorID="61" >
+#       <SerialNumber>23</SerialNumber>
+#       <CalibrationDate>Aug 2022</CalibrationDate>
+#       <SensorName>Turbidity, Ares [NTU] </SensorName>
+#       <A0>-18.14000000</A0>
+#       <A1>41.60900000</A1>
+#       <A2>0.00000000</A2>
+#       <A3>0.00000000</A3>
+#     </UserPolynomialSensor>
+#   </sensor>
+#   <sensor Channel="7" >
+#     <!-- A/D voltage 3, Free -->
+#   </sensor>
+#   <sensor Channel="8" >
+#     <!-- A/D voltage 4, pH -->
+#     <pH_Sensor SensorID="43" >
+#       <SerialNumber>1274</SerialNumber>
+#       <CalibrationDate>01-Jul-24</CalibrationDate>
+#       <Slope>4.6112</Slope>
+#       <Offset>2.5287</Offset>
+#     </pH_Sensor>
+#   </sensor>
+#   <sensor Channel="9" >
+#     <!-- A/D voltage 5, Free -->
+#   </sensor>
+#   <sensor Channel="10" >
+#     <!-- A/D voltage 6, PAR/Irradiance, Biospherical/Licor -->
+#     <PAR_BiosphericalLicorChelseaSensor SensorID="42" >
+#       <SerialNumber>70805</SerialNumber>
+#       <CalibrationDate>12/02/21</CalibrationDate>
+#       <M>1.00000000</M>
+#       <B>0.00000000</B>
+#       <CalibrationConstant>14771000000.00000000</CalibrationConstant>
+#       <Multiplier>1.00000000</Multiplier>
+#       <Offset>-0.06884758</Offset>
+#     </PAR_BiosphericalLicorChelseaSensor>
+#   </sensor>
+#   <sensor Channel="11" >
+#     <!-- A/D voltage 7, Free -->
+#   </sensor>
+# </Sensors>
+# datcnv_date = Sep 12 2025 10:39:26, 7.26.7.129
+# datcnv_in = C:\AZMP\7_Data_Management\1_ODIS_Data_Submissions\2025\BCD2025667\BBMP_REPROCESSING_2025\2025\CTDDATA\25667001.xml C:\AZMP\7_Data_Management\1_ODIS_Data_Submissions\2025\BCD2025667\BBMP_REPROCESSING_2025\2025\1175_15Jan2025.xmlcon
+# datcnv_ox_hysteresis_correction = yes
+# datcnv_bottle_scan_range_source = BL file
+# datcnv_scans_per_bottle = 33
+# bottlesum_date = Sep 12 2025 10:42:15, 7.26.7.129
+# bottlesum_in = C:\AZMP\7_Data_Management\1_ODIS_Data_Submissions\2025\BCD2025667\BBMP_REPROCESSING_2025\2025\CTDDATA\25667001.ros C:\AZMP\7_Data_Management\1_ODIS_Data_Submissions\2025\BCD2025667\BBMP_REPROCESSING_2025\2025\1175_15Jan2025.xmlcon C:\AZMP\7_Data_Management\1_ODIS_Data_Submissions\2025\BCD2025667\BBMP_REPROCESSING_2025\2025\CTDDATA\25667001.BL
+# bottlesum_ox_tau_correction = yes
+    Bottle     Bottle        Date Sbeox0ML/L      Sal00 Potemp090C  Sigma-é00       Scan      TimeS       PrdM      T090C      C0S/m    Sbeox0V  FlECO-AFL   aresTurb         Ph        Par
+  Position       S/N         Time                                                                                                                                                          
+      4        500853 Jan 08 2025     6.4288    29.4955     3.6073    23.4446       5281    330.000      1.914     3.6075   2.758275     2.0527     1.5802  7.6613106      6.769 1.9724e+01 (avg)
+                         12:57:58                                                     10      0.604      0.277     0.0008   0.000077     0.0003     0.0343  0.2063987      0.000 1.5145e+00 (sdev)
+      3        500852 Jan 08 2025     6.4218    29.5257     3.6788    23.4625       5400    337.438      5.464     3.6791   2.766507     2.0530     1.5426  7.6537109      6.768 8.0506e+00 (avg)
+                         12:58:06                                                     10      0.604      0.311     0.0106   0.001059     0.0002     0.0815  0.1051589      0.001 6.1311e-01 (sdev)
+      2        500851 Jan 08 2025     6.3178    29.8956     3.8362    23.7428       5561    347.500     10.531     3.8368   2.810454     2.0445     1.3073  7.6261018      6.766 3.1128e+00 (avg)
+                         12:58:16                                                     10      0.604      0.318     0.0116   0.002352     0.0019     0.0215  0.2650321      0.000 1.8082e-01 (sdev)
+      1        500850 Jan 08 2025     2.1741    31.4852     5.8503    24.7940       7020    438.688     61.033     5.8550   3.114225     1.1021     0.2985  7.6254284      6.776 8.6603e-05 (avg)
+                         12:59:47                                                     10      0.604      0.356     0.0027   0.000124     0.0071     0.0047  0.1213979      0.001 7.0712e-06 (sdev)

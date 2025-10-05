@@ -1,11 +1,15 @@
 import os
 
+import numpy as np
 import pandas as pd
 import math
 
 
 # compute the distance between two points on earth
 def distance(point1: [float, float], point2: [float, float]) -> float:
+
+    if point1 == [None, None] or point2 == [None, None]:
+        return np.nan
 
     lat1 = float(point1[0]) * math.pi / 180
     lat2 = float(point2[0]) * math.pi / 180

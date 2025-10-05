@@ -7,7 +7,8 @@ from django.test import tag
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from core.parsers.sensor.btl_ros import FixStationParser
+from core.parsers.sensor.btl_ros import FixStationParser, validate_file
+
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models
 
@@ -18,8 +19,8 @@ from config.tests.DartTestCase import DartTestCase
 class TestFixStationParser(DartTestCase):
 
     def setUp(self):
-        self.btn_filename = 'fixstation_hl_02.btl'
-        self.ros_filename = 'fixstation_hl_02.ros'
+        self.btn_filename = '25667001.btl'
+        self.ros_filename = '25667001.ros'
         btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', self.btn_filename)
         ros_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', self.ros_filename)
 
@@ -28,8 +29,8 @@ class TestFixStationParser(DartTestCase):
         self.btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
         self.ros_data = io.StringIO(ros_sample_file.read().decode("cp1252"))
 
-        self.station = core_factory.StationFactory(name='HL_02')
-        self.event = core_factory.CTDEventFactoryBlank(station=self.station, sample_id=None, end_sample_id=None)
+        self.station = core_factory.StationFactory(name='HL_0')
+        self.event = core_factory.CTDEventFactoryBlank(event_id=1, station=self.station, sample_id=None, end_sample_id=None)
 
     @tag('parsers_fixstation_test_parse')
     def test_parse(self):
@@ -53,23 +54,23 @@ class TestFixStationParser(DartTestCase):
         parser = FixStationParser(self.event, self.btn_filename, self.btl_data, self.ros_data)
         parser.parse()
 
-        self.assertEqual(10, self.event.bottles.count())
+        self.assertEqual(4, self.event.bottles.count())
 
     @tag('parsers_fixstation_test_bottle_update')
     def test_bottle_update(self):
         # If a bottle already exists then it's closed time and pressure should be updated based on the bottle file
         # **For the current event**
-        core_factory.BottleFactory(event=self.event, bottle_id=496479, closed=datetime.datetime.now(pytz.UTC),
+        core_factory.BottleFactory(event=self.event, bottle_id=500853, closed=datetime.datetime.now(pytz.UTC),
                                    pressure=140)
 
         parser = FixStationParser(self.event, self.btn_filename, self.btl_data, self.ros_data)
         parser.parse()
 
-        dt = datetime.datetime.strptime("2024-01-24 14:16:45 +0000", '%Y-%m-%d %H:%M:%S %z')
+        dt = datetime.datetime.strptime("2025-01-08 12:57:58 +0000", '%Y-%m-%d %H:%M:%S %z')
 
-        bottle = self.event.bottles.get(bottle_id=496479)
+        bottle = self.event.bottles.get(bottle_id=500853)
         self.assertEqual(dt, bottle.closed)
-        self.assertEqual(2.873, float(bottle.pressure))
+        self.assertEqual(1.914, float(bottle.pressure))
 
     def test_bottom_action(self):
         # a bottom action should be created for when the bottom bottle is closed
@@ -94,3 +95,75 @@ class TestFixStationParser(DartTestCase):
 
         self.assertIsNotNone(self.event.sample_id)
         self.assertIsNotNone(self.event.end_sample_id)
+
+    @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_event_id')
+    def test_validate_file_missing_event_id(self):
+        btl_file_name = "25667001_missing_event_id.btl"
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', btl_file_name)
+        btl_sample_file = open(btl_path, mode='rb')
+        btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
+
+        with self.assertRaises(ValueError) as context:
+            validate_file(btl_data)
+
+        self.assertEqual(str(context.exception), "Event ID is missing")
+
+    @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_station_name')
+    def test_validate_file_missing_station_name(self):
+        btl_file_name = "25667001_missing_station_name.btl"
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', btl_file_name)
+        btl_sample_file = open(btl_path, mode='rb')
+        btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
+
+        with self.assertRaises(ValueError) as context:
+            validate_file(btl_data)
+
+        self.assertEqual(str(context.exception), "Station Name is missing")
+
+    @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_station_name')
+    def test_validate_file_missing_station_name(self):
+        btl_file_name = "25667001_missing_station_name.btl"
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', btl_file_name)
+        btl_sample_file = open(btl_path, mode='rb')
+        btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
+
+        with self.assertRaises(ValueError) as context:
+            validate_file(btl_data)
+
+        self.assertEqual(str(context.exception), "Station Name is missing")
+
+    @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_sounding')
+    def test_validate_file_missing_sounding(self):
+        btl_file_name = "25667001_missing_sounding.btl"
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', btl_file_name)
+        btl_sample_file = open(btl_path, mode='rb')
+        btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
+
+        with self.assertRaises(ValueError) as context:
+            validate_file(btl_data)
+
+        self.assertEqual(str(context.exception), "Sounding is missing from the header. Cannot create event")
+
+    @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_latitude')
+    def test_validate_file_missing_latitude(self):
+        btl_file_name = "25667001_missing_latitude.btl"
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', btl_file_name)
+        btl_sample_file = open(btl_path, mode='rb')
+        btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
+
+        with self.assertRaises(ValueError) as context:
+            validate_file(btl_data)
+
+        self.assertEqual(str(context.exception), "Latitude is missing from the header. Cannot create event")
+
+    @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_longitude')
+    def test_validate_file_missing_longitude(self):
+        btl_file_name = "25667001_missing_longitude.btl"
+        btl_path = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data', 'fixed_stations', btl_file_name)
+        btl_sample_file = open(btl_path, mode='rb')
+        btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
+
+        with self.assertRaises(ValueError) as context:
+            validate_file(btl_data)
+
+        self.assertEqual(str(context.exception), "Longitude is missing from the header. Cannot create event")

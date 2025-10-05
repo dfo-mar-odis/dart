@@ -255,7 +255,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         buttons = Column(css_class="col-auto align-self-end")
         header.fields[0].fields.append(buttons)
 
-        issue_count = self.mission.file_errors.filter(type=models.ErrorType.event).count()
+        issue_count = self.mission.file_errors.filter().count()
         counter_attrs = {
             'hx-get': reverse_lazy("core:mission_events_recount_file_errors", args=(self.mission.pk,)),
             'hx-trigger': 'recount_file_errors from:body',
@@ -272,8 +272,7 @@ class ValidateFileCard(forms.CollapsableCardForm):
         body = super().get_card_body()
         body.css_class += " vertical-scrollbar"
 
-        files = self.mission.file_errors.filter(type=models.ErrorType.event).values_list('file_name',
-                                                                                         flat=True).distinct()
+        files = self.mission.file_errors.filter().values_list('file_name', flat=True).distinct()
         for index, file in enumerate(files):
             event_card = ValidationFileCard(self.mission, file, index)
             # div = Div(event_card.helper.layout, css_class="mb-2")
