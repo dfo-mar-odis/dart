@@ -110,6 +110,40 @@
 </script>
 {% block body_js %}{% endblock %}
 
+<div class="modal fade" id="div_id_notification_modal" tabindex="-1" aria-labelled="notification_modal" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="h5_id_notification_modal_title">{% trans "Operation in Progress" %}</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div id="div_id_notification_content">
+
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Close" %}</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Function to show the progress modal
+  function showProgressModal() {
+    const progressModal = new bootstrap.Modal(document.getElementById('div_id_notification_modal'));
+    progressModal.show();
+  }
+
+  // HTMX events for the modal
+  document.body.addEventListener('htmx:afterSwap', function(evt) {
+    if (evt.detail.target.id === 'div_id_notification_content') {
+      // If we're updating the progress content, ensure modal is visible
+      showProgressModal();
+    }
+  });
+</script>
 </body>
 {% block post_content %}
     <div class="container-fluid">

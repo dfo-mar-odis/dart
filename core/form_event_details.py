@@ -1369,12 +1369,20 @@ def import_btl_events(request, mission_id, **kwargs):
 
         trigger = "event_updated"
 
-        message = _("Success")
-        attrs = {
-            'component_id': "div_id_bottle_event_message",
-            'message': message,
-            'alert_type': 'success'
-        }
+        if len(parser.errors_to_create) > 0:
+            message = _("Issues detected, see file errors")
+            attrs = {
+                'component_id': "div_id_bottle_event_message",
+                'message': message,
+                'alert_type': 'warning'
+            }
+        else:
+            message = _("Success")
+            attrs = {
+                'component_id': "div_id_bottle_event_message",
+                'message': message,
+                'alert_type': 'success'
+            }
 
         msg_area.append(core_forms.blank_alert(**attrs))
 
