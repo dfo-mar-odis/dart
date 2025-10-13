@@ -1,0 +1,35 @@
+{# ################################################################################################ #}
+{# This template represents the ELog configuration page where settings related #}
+{# to mapping an elog value to a DART required value can be updated #}
+{# ################################################################################################ #}
+
+{% extends 'base.html' %}
+{% load i18n %}
+{% load bootstrap_icons %}
+
+{% block nav_button_block %}
+{% endblock %}
+
+{% block content %}
+    <div class="row">
+        <div class="col-3">
+    <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:form_biochem_get_database_connection_form" %}">
+        {# The Biochem database form will be swapped in here after the page loads #}
+        {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
+        {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}
+        <div class="htmx-indicator d-flex justify-content-center my-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+    <div id="div_id_biochem_mission_summary" hx-trigger="htmx:afterOnLoad from:#div_id_biochem_card_wrapper, biochem_db_connect" hx-get="{% url "core:form_biochem_mission_summary"%}" >
+        {# Loads the biochem mission summary table #}
+        <div class="htmx-indicator d-flex justify-content-center my-3">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}

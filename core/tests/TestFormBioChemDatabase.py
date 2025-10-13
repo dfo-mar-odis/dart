@@ -28,7 +28,7 @@ class TestFormBioChemDatabase(DartTestCase):
 
     @tag('form_biochem_database_test_initial_form')
     def test_initial_form(self):
-        form = form_biochem_database.BiochemUploadForm(self.mission.pk,)
+        form = form_biochem_database.BiochemConnectionForm()
 
         html = render_crispy_form(form)
 
@@ -37,7 +37,7 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertIsNotNone(soup)
 
         tns_field = soup.find(id=form.get_tns_name_field_id())
-        tns_url = reverse(self.update_tns_details_url, args=(self.mission.pk,))
+        tns_url = reverse(self.update_tns_details_url)
         self.assertIsNotNone(tns_field)
 
         self.assertIn('name', tns_field.attrs)
@@ -58,7 +58,7 @@ class TestFormBioChemDatabase(DartTestCase):
         self.assertEqual('database_selection_changed from:body', input_row.attrs['hx-trigger'])
 
         selected_db = soup.find(id="control_id_database_select_biochem_db_details")
-        selection_change_url = reverse(self.update_db_selection_url, args=(self.mission.pk,))
+        selection_change_url = reverse(self.update_db_selection_url)
 
         self.assertIsNotNone(selected_db)
         self.assertIn('hx-get', selected_db.attrs)
@@ -76,7 +76,7 @@ class TestFormBioChemDatabase(DartTestCase):
         # from the django.conf.settings.TNS_NAME array
         ttran = settings.TNS_NAMES.get('TTRAN')
 
-        url = reverse(self.update_tns_details_url, args=(self.mission.pk,))
+        url = reverse(self.update_tns_details_url)
         response = self.client.get(url, {'name': 'TTRAN'})
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -99,7 +99,7 @@ class TestFormBioChemDatabase(DartTestCase):
             'port': '1521',
             'engine': '1'
         }
-        url = reverse(self.add_database_url, args=(self.mission.pk,))
+        url = reverse(self.add_database_url)
 
         response = self.client.post(url, details)
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -125,12 +125,8 @@ class TestFormBioChemDatabase(DartTestCase):
             'host': 'VSNSBIOD78.ENT.DFO-MPO.CA',
             'port': '1521',
             'engine': '1',
-            'bc_discrete_data_edits': "BCDISCRETEDATAEDITS",
-            'bc_discrete_station_edits': "BCDISCRETESTATNEDITS",
-            'bc_plankton_data_edits': "BCPLANKTONDATAEDITS",
-            'bc_plankton_station_edits': "BCPLANKTONSTATNEDITS",
         }
-        url = reverse(self.add_database_url, args=(self.mission.pk,))
+        url = reverse(self.add_database_url)
 
         response = self.client.post(url, details)
         # the response should have a database_selection_changed Hx-Trigger in the headers to notify the
@@ -158,7 +154,7 @@ class TestFormBioChemDatabase(DartTestCase):
     def test_remove_database_post(self):
         # provided a selected_database, the remove datbase url should delete the database from the users
         # global database
-        url = reverse(self.remove_database_url, args=(self.mission.pk,))
+        url = reverse(self.remove_database_url)
         database = settingsdb.models.BcDatabaseConnection(account_name='upsonp', uploader='Upsonp', name='TTRAN',
                                                           host='database.url.com', port='1521',
                                                           engine=settingsdb.models.EngineType.oracle)
@@ -183,7 +179,7 @@ class TestFormBioChemDatabase(DartTestCase):
     def test_db_selection_changed_get(self):
         # calling the db selection changed with GET variables should return the #div_id_biochem_db_details_input
         # portion of the database form with the selected database values populating the form
-        url = reverse(self.update_db_selection_url, args=(self.mission.pk,))
+        url = reverse(self.update_db_selection_url)
         database = settingsdb.models.BcDatabaseConnection(account_name='upsonp', uploader='Upsonp', name='TTRAN',
                                                           host='database.url.com', port='1521',
                                                           engine=settingsdb.models.EngineType.oracle)
@@ -201,7 +197,7 @@ class TestFormBioChemDatabase(DartTestCase):
         # calling the validate connection as a get request the updated connection button which will have
         # an hx-post and hx-trigger='load'
 
-        url = reverse(self.validate_connection_url, args=(self.mission.pk,))
+        url = reverse(self.validate_connection_url)
         # if not connected to a database, the 'connect' button will be displayed
         # if connected the 'disconnect' button will be displayed
         response = self.client.get(url, {'connect': "true"})

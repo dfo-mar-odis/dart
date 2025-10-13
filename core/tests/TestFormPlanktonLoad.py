@@ -37,7 +37,7 @@ class TestFormPlanktonLoad(DartTestCase):
     def test_form_entry_point(self):
         # Provided a database and mission id calling the entry point url should return the
         # views_mission_plankton.PlanktonDetails() page
-        url = reverse(self.entry_point_url, args=('default', self.mission.pk,))
+        url = reverse(self.entry_point_url, args=['default', self.mission.pk])
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, "html.parser")
@@ -82,7 +82,7 @@ class TestFormPlanktonLoad(DartTestCase):
     def test_file_chooser_get(self):
         # using a get request on the file_chooser url when the user selects a file should send back
         # a save/load dialog that will call hx-post=[file_chooser url] on hx-trigger='load'
-        url = reverse(self.load_plankton_url, args=(self.mission.pk,))
+        url = reverse(self.load_plankton_url, args=[self.mission.pk])
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -102,7 +102,7 @@ class TestFormPlanktonLoad(DartTestCase):
         file_name = "sample_zoo.xlsx"
         file_location = os.path.join(settings.BASE_DIR, 'core', 'tests', 'sample_data')
         file = os.path.join(file_location, file_name)
-        url = reverse(self.load_plankton_url, args=(self.mission.pk,))
+        url = reverse(self.load_plankton_url, args=[self.mission.pk])
 
         with open(file, 'rb') as fp:
             response = self.client.post(url, {'plankton_file': fp})
@@ -116,7 +116,7 @@ class TestFormPlanktonLoad(DartTestCase):
     def test_import_plankton_get(self):
         # calling the import plankton url should return a save/load dialog to be swapped in at
         # the div_id_plankton_message element that will have hx-post=url and hx-trigger='load' attributes
-        url = reverse(self.import_plankton_url, args=(self.mission.pk,))
+        url = reverse(self.import_plankton_url, args=[self.mission.pk])
         response = self.client.get(url)
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -144,7 +144,7 @@ class TestFormPlanktonLoad(DartTestCase):
         core_factory.NetEventFactory(mission=self.mission, event_id=2)
         core_factory.NetEventFactory(mission=self.mission, event_id=88)
 
-        url = reverse(self.import_plankton_url, args=(self.mission.pk,))
+        url = reverse(self.import_plankton_url, args=[self.mission.pk])
         with open(file, 'rb') as fp:
             response = self.client.post(url, {'plankton_file': fp, 'tab': 0, 'header': 0})
 

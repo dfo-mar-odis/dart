@@ -78,7 +78,7 @@ class TestDiscreteBatchForm(BatchTestDatabase):
     def setUp(self):
         self.form = form_biochem_discrete.BiochemDiscreteBatchForm
         sample_database = settings_factory.BcDatabaseConnection()
-        bio_model = upload.get_model(sample_database.bc_discrete_station_edits, bio_models.BcsP)
+        bio_model = upload.get_model("BCDISCRETESTATNEDITS", bio_models.BcsD)
         super().setup(sample_database, bio_model)
 
     @tag('discrete_test_form_components')
@@ -213,7 +213,7 @@ class TestPlanktonBatchForm(BatchTestDatabase):
     def setUp(self):
         self.form = form_biochem_plankton.BiochemPlanktonBatchForm
         sample_database = settings_factory.BcDatabaseConnection()
-        bio_model = upload.get_model(sample_database.bc_plankton_station_edits, bio_models.BcsP)
+        bio_model = upload.get_model("BCPLANKTONSTATNEDITS", bio_models.BcsP)
         super().setup(sample_database, bio_model)
 
     # this is here for a quick "CRTL" click to jump to the URLs in the form module

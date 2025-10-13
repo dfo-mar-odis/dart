@@ -4,6 +4,7 @@ from . import views, views_mission_sample, views_sample_type, views_mission_plan
 from . import views_mission_sample_type, views_mission_event, form_biochem_discrete, form_biochem_plankton
 from . import form_biochem_database, form_biochem_pre_validation, form_btl_load, form_sample_type_config
 from . import form_mission_sample_type, form_plankton_load, form_mission_settings, views_mission_gear_type
+from . import views_biochem
 from . import reports
 
 app_name = 'core'
@@ -20,6 +21,7 @@ urlpatterns = [
     path(f'elog/update/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
 ]
 
+urlpatterns.extend(views_biochem.urlpatterns)
 urlpatterns.extend(views_mission_event.mission_event_urls)
 urlpatterns.extend(views_sample_type.sample_type_urls)
 urlpatterns.extend(views_mission_sample.url_patterns)
