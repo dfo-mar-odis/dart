@@ -9,6 +9,7 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
+from django.utils.html import escape
 
 from config.utils import load_svg
 
@@ -23,6 +24,48 @@ class NoWhiteSpaceCharField(forms.CharField):
         super().validate(value)
         if re.search(r"\s", value):
             raise ValidationError("Field may not contain whitespaces")
+
+
+class AlertArea(Div):
+    def __init__(self, *args, id=None, css_class=None, **kwargs):
+        alert_id = f"{id}_alert" if id else None
+        self._message_id = f"{alert_id}_message" if alert_id else None
+
+        # initial empty message node
+        msg_node = Div(HTML(''), id=self._message_id) if self._message_id else Div(HTML(''))
+        self.css_class = self.css_class or "bg-primary-subtle visibility-hidden"
+
+        super().__init__(msg_node, *args, id=id, **kwargs)
+
+        # keep references to manipulate later
+        self._alert_div = self.fields[0]
+        self._progress_node = None
+
+    def set_status(self, status: str) -> "AlertArea":
+        """
+        Set bootstrap alert status (e.g. 'danger', 'success') and return self for chaining.
+        """
+        existing = (self._alert_div.css_class or "").strip()
+        # remove any previous 'alert-...' tokens then add the new one
+        parts = [p for p in existing.split() if not p.startswith("bg-")]
+        parts.extend([f"bg-{status}-subtle"])
+        self._alert_div.css_class = " ".join(parts)
+        return self
+
+    def set_message(self, message: str) -> "AlertArea":
+        """
+        Set the message text (supports newlines -> <br/>) and return self for chaining.
+        """
+        safe_html = escape(message).replace("\n", "<br/>")
+        msg_node = Div(HTML(safe_html), id=self._message_id) if self._message_id else Div(HTML(safe_html))
+
+        # preserve progress node if present
+        new_fields = [msg_node]
+        if self._progress_node:
+            new_fields.append(self._progress_node)
+
+        self._alert_div.fields = new_fields
+        return self
 
 
 class CardForm(forms.Form):
@@ -99,8 +142,8 @@ class CardForm(forms.Form):
         title = HTML(title_string) if self.card_title else None
         return Div(title, css_class=self.get_card_title_class())
 
-    def get_alert_area(self):
-        msg_row = Row(id=self.get_alert_area_id())
+    def get_alert_area(self) -> AlertArea:
+        msg_row = AlertArea(id=self.get_alert_area_id())
         return msg_row
 
     def get_card_header_class(self):
@@ -116,7 +159,8 @@ class CardForm(forms.Form):
         return header
 
     def get_card_body(self) -> Div:
-        return Div(css_class='card-body', id=self.get_card_body_id())
+        body = Div(css_class='card-body', id=self.get_card_body_id())
+        return body
 
     def get_card_class(self):
         return f'card mb-2'
@@ -128,6 +172,7 @@ class CardForm(forms.Form):
             card = Div(css_class=self.get_card_class(), id=self.get_card_id(), **attrs)
 
         card.fields.append(self.get_card_header())
+        card.fields.append(self.get_alert_area())
         card.fields.append(self.get_card_body())
         return card
 
@@ -197,6 +242,7 @@ class CollapsableCardForm(CardForm):
     def get_card(self):
         card = Div(
             self.get_card_header(),
+            self.get_alert_area(),
             self.get_collapsable_card_body(),
             css_class='card mb-2',
             id=self.get_card_id()

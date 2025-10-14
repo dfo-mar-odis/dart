@@ -8,6 +8,9 @@
     <li class="nav-item me-2">
         <a class="btn btn-primary" href="{% url 'core:sample_type_details' %}" title="{% trans "Edit Global Sample Types" %}">{% custom_icon 'speedometer2' %}</a>
     </li>
+    <li class="nav-item me-2">
+        <a class="btn btn-primary" href="{% url 'core:biochem_details' %}" title="{% trans "Biochem" %}">{% custom_icon 'database' %}</a>
+    </li>
 {% endblock %}
 
 {% block report_help_text %}{% trans 'Access fix station reports for missions visible in the mission list' %}{% endblock %}

@@ -13,6 +13,18 @@ from core import form_biochem_database
 from core.tests import CoreFactoryFloor as core_factory
 
 
+
+@tag('forms', 'form_biochem_mission_summary')
+class TestFomrBioChemMissionSummary(DartTestCase):
+    def setUp(self):
+        pass
+
+    def test_get_summary_card_no_connection(self):
+        # test that without a DB connection the Alert card will tell the user
+        # they have to login to a database
+        pass
+
+
 @tag('forms', 'form_biochem_database')
 class TestFormBioChemDatabase(DartTestCase):
 

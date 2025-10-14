@@ -11,8 +11,6 @@
 {% endblock %}
 
 {% block content %}
-    <div class="row">
-        <div class="col-3">
     <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:form_biochem_get_database_connection_form" %}">
         {# The Biochem database form will be swapped in here after the page loads #}
         {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
