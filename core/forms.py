@@ -3,7 +3,7 @@ import re
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Hidden, Row, Column, Field, Div, HTML
+from crispy_forms.layout import Layout, LayoutObject, Hidden, Row, Column, Field, Div, HTML, flatatt
 
 from django import forms
 from django.core.exceptions import ValidationError
@@ -27,44 +27,99 @@ class NoWhiteSpaceCharField(forms.CharField):
 
 
 class AlertArea(Div):
-    def __init__(self, *args, id=None, css_class=None, **kwargs):
-        alert_id = f"{id}_alert" if id else None
-        self._message_id = f"{alert_id}_message" if alert_id else None
+    """
+    A crispy_forms Div subclass for rendering Bootstrap alert areas with dynamic content and HTMX attributes.
+    Usage: alert = AlertArea(id='my_alert').set_status('success').set_message('Operation successful')
+    """
 
-        # initial empty message node
-        msg_node = Div(HTML(''), id=self._message_id) if self._message_id else Div(HTML(''))
-        self.css_class = self.css_class or "bg-primary-subtle visibility-hidden"
+    def __init__(self, *args, css_id=None, css_class=None, **kwargs):
+        """
+        Initialize the AlertArea with an optional ID and CSS class.
 
-        super().__init__(msg_node, *args, id=id, **kwargs)
+        Args:
+            id (str, optional): Base ID for the alert and message elements.
+            css_class (str, optional): Additional CSS classes for the alert.
+            *args: Additional positional arguments for the parent Div.
+            **kwargs: Additional keyword arguments for the parent Div.
+        """
+        css_class = css_class or 'visibility-hidden'
+        super().__init__(*args, css_id=css_id, css_class=css_class, **kwargs)
 
-        # keep references to manipulate later
-        self._alert_div = self.fields[0]
-        self._progress_node = None
+    def get_attributes(self):
+        """
+        Parse flat_attrs string into a dictionary, splitting on spaces but ignoring those inside quotes.
+
+        Returns:
+            dict: Dictionary of attribute key-value pairs.
+        """
+        # Split on spaces not inside quotes (handles both " and ')
+        parts = re.split(r'\s+(?=(?:[^\'"]*[\'"][^\'"]*[\'"])*[^\'"]*$)', self.flat_attrs.strip())
+        attrs = {v[0]: re.sub(r'["\']', '', v[1]) for v in [p.split('=', 1) for p in parts if '=' in p]}
+        return attrs
+
+    def get_attribute(self, key, default=None) -> str|None:
+        """
+        Retrieve a specific attribute value from the parsed attributes dictionary.
+
+        Args:
+            key (str): The attribute key to retrieve.
+            default (str, optional): Default value if key is not found.
+
+        Returns:
+            str or None: The attribute value or default.
+        """
+        return self.get_attributes().get(key, default)
+
+    def set_attribute(self, key, value) -> "AlertArea":
+        """
+        Set or update an attribute in flat_attrs and return self for chaining.
+
+        Args:
+            key (str): The attribute key.
+            value (str): The attribute value.
+
+        Returns:
+            AlertArea: Self for method chaining.
+        """
+        attrs = self.get_attributes()
+        attrs[key] = value
+        self.flat_attrs = flatatt(attrs)
+        return self
+
+    def append_attribute(self, key, value) -> "AlertArea":
+        """
+        Append a value to an existing attribute (comma-separated) or set it if not present.
+
+        Args:
+            key (str): The attribute key.
+            value (str): The value to append.
+
+        Returns:
+            AlertArea: Self for method chaining.
+        """
+        attrs = self.get_attributes()
+        if key in attrs:
+            attrs[key] = ", ".join([value, attrs[key].split(', ')])
+        else:
+            attrs[key] = value
+        self.flat_attrs = flatatt(attrs)
+        return self
 
     def set_status(self, status: str) -> "AlertArea":
         """
         Set bootstrap alert status (e.g. 'danger', 'success') and return self for chaining.
+
+        Args:
+            status (str): The Bootstrap status (e.g., 'danger', 'success').
+
+        Returns:
+            AlertArea: Self for method chaining.
         """
-        existing = (self._alert_div.css_class or "").strip()
-        # remove any previous 'alert-...' tokens then add the new one
+        existing = (self.css_class or "").strip()
+        # Remove any previous 'bg-...' tokens then add the new one
         parts = [p for p in existing.split() if not p.startswith("bg-")]
         parts.extend([f"bg-{status}-subtle"])
-        self._alert_div.css_class = " ".join(parts)
-        return self
-
-    def set_message(self, message: str) -> "AlertArea":
-        """
-        Set the message text (supports newlines -> <br/>) and return self for chaining.
-        """
-        safe_html = escape(message).replace("\n", "<br/>")
-        msg_node = Div(HTML(safe_html), id=self._message_id) if self._message_id else Div(HTML(safe_html))
-
-        # preserve progress node if present
-        new_fields = [msg_node]
-        if self._progress_node:
-            new_fields.append(self._progress_node)
-
-        self._alert_div.fields = new_fields
+        self.css_class = " ".join(parts)
         return self
 
 
@@ -89,6 +144,7 @@ class CardForm(forms.Form):
         def __init__(self, card_name, *args, **kwargs):
             self.card_name = card_name
 
+    alert_area_class = AlertArea
     id_builder = None
 
     card_title = None
@@ -96,6 +152,8 @@ class CardForm(forms.Form):
     card_header_class = None
     card_name = None
     help_text = None
+
+    alert_area = None
 
     @staticmethod
     def get_id_builder_class():
@@ -143,8 +201,11 @@ class CardForm(forms.Form):
         return Div(title, css_class=self.get_card_title_class())
 
     def get_alert_area(self) -> AlertArea:
-        msg_row = AlertArea(id=self.get_alert_area_id())
-        return msg_row
+        if self.alert_area:
+            return self.alert_area
+
+        self.alert_area = self.alert_area_class(css_id=self.get_alert_area_id())
+        return self.alert_area
 
     def get_card_header_class(self):
         return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
@@ -437,7 +498,7 @@ def blank_alert(component_id, message, **kwargs):
     # type should be a bootstrap css type, (danger, info, warning, success, etc.)
 
     # create an alert area saying we're loading
-    alert_div = soup.new_tag("div", attrs={'id': f'{component_id}_alert', 'class': f"alert alert-{alert_type} mt-2"})
+    alert_div = soup.new_tag("div", attrs={'id': f'{component_id}_alert', 'class': f"alert alert-{alert_type}"})
     alert_msg = soup.new_tag("div", attrs={'id': f'{component_id}_message'})
     lines = message.split('\n')
     for line in lines:
