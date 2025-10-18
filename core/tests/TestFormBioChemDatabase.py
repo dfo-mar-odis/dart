@@ -2,6 +2,8 @@ from bs4 import BeautifulSoup
 
 from crispy_forms.utils import render_crispy_form
 
+from unittest.mock import patch
+
 from django.test import tag, Client
 from django.conf import settings
 from django.urls import reverse
@@ -9,20 +11,114 @@ from django.urls import reverse
 import settingsdb.models
 from config.tests.DartTestCase import DartTestCase
 
-from core import form_biochem_database
+from core import form_biochem_database, form_biochem_mission_summary
+from core.form_biochem_mission_summary import BiochemMissionSummaryForm, BiochemMissionFilterForm
 from core.tests import CoreFactoryFloor as core_factory
 
 
 
 @tag('forms', 'form_biochem_mission_summary')
-class TestFomrBioChemMissionSummary(DartTestCase):
+class TestFormBioChemMissionSummary(DartTestCase):
+    id_builder: BiochemMissionSummaryForm.BiochemMissionSummaryIdBuilder = None
+
     def setUp(self):
-        pass
+        self.id_builder = BiochemMissionSummaryForm.get_id_builder_class()(form_biochem_mission_summary.card_name)
 
     def test_get_summary_card_no_connection(self):
         # test that without a DB connection the Alert card will tell the user
         # they have to login to a database
-        pass
+        client = Client()
+
+        url = reverse('core:form_biochem_connected_message')
+        response = client.get(url)
+        self.assertEqual(response.status_code, 200)
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        alert = soup.find(id=self.id_builder.get_connection_message_id())
+        self.assertIsNotNone(alert, "No alert element found in response")
+
+        text = alert.get_text(separator=' ', strip=True)
+        self.assertIn('No Connected Database', text)
+
+    def test_get_summary_card_connected(self):
+            # test that with a DB connection the Alert card contains no text
+            with patch('core.form_biochem_database.is_connected', return_value=True):
+                client = Client()
+                url = reverse('core:form_biochem_connected_message')
+                response = client.get(url)
+                self.assertEqual(response.status_code, 200)
+
+                soup = BeautifulSoup(response.content, 'html.parser')
+                alert = soup.find(id=self.id_builder.get_connection_message_id())
+                self.assertIsNotNone(alert, "No alert element found in response")
+
+                text = alert.get_text(separator=' ', strip=True)
+                self.assertEqual('', text)
+
+    def test_get_summary_card_message_has_listener(self):
+        # The summary card alert, connected or not, should have a listener that will listen for the
+        # biochem_db_connect trigger from the form_biochem_database.validate_connection() function
+        # When the trigger is detected the get_summary card should target the summary card body
+        # test that with a DB connection the Alert card contains no text
+        with patch('core.form_biochem_database.is_connected', return_value=True):
+            client = Client()
+            url = reverse('core:form_biochem_connected_message')
+            response = client.get(url)
+            self.assertEqual(response.status_code, 200)
+
+            soup = BeautifulSoup(response.content, 'html.parser')
+            alert = soup.find(id=self.id_builder.get_connection_message_id())
+            self.assertIsNotNone(alert, "No alert element found in response")
+
+            self.assertIn('hx-get', alert.attrs)
+            self.assertIn('hx-trigger', alert.attrs)
+            self.assertEqual(alert.attrs['hx-get'], url)
+            self.assertEqual(alert.attrs['hx-trigger'], 'biochem_db_connect from:body')
+
+
+@tag('forms', 'form_biochem_mission_filter')
+class TestFormBiochemMissionFilter(DartTestCase):
+
+    list_missions = 'core:form_biochem_list_missions'
+
+    def setUp(self):
+        self.form = BiochemMissionFilterForm()
+
+    def test_initiate_form_with_trigger(self):
+        # when the form is first created it can be posted by firing a HX-Trigger = 'reload_db_table'
+        soup = BeautifulSoup(render_crispy_form(self.form), 'html.parser')
+
+        trigger = soup.find(id="input_hidden_id_loading")
+        self.assertIn('hx-trigger', trigger.attrs)
+        self.assertEqual(trigger.attrs['hx-trigger'], 'reload_db_table from:body')
+
+        self.assertIn('name', trigger.attrs)
+        self.assertEqual(trigger.attrs['name'], 'loading')
+
+        self.assertIn('value', trigger.attrs)
+        self.assertEqual(trigger.attrs['value'], 'false')
+
+    def test_list_mission_loading_oob_swap(self):
+        # when loading==false is passed to the list_missions_function it should send back
+        # an out-of-band swap for the trigger with laoding==true
+        client = Client()
+        data = {
+            'loading': 'false'
+        }
+        response = client.get(reverse(self.list_missions), data)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        trigger = soup.find(id="input_hidden_id_loading")
+        self.assertIsNotNone(trigger, "No alert element found in response")
+
+        self.assertIn('hx-swap-oob', trigger.attrs)
+        self.assertEqual(trigger.attrs['hx-swap-oob'], 'true')
+
+        self.assertIn('name', trigger.attrs)
+        self.assertEqual(trigger.attrs['name'], 'loading')
+
+        self.assertIn('value', trigger.attrs)
+        self.assertEqual(trigger.attrs['value'], 'true')
 
 
 @tag('forms', 'form_biochem_database')
@@ -32,7 +128,7 @@ class TestFormBioChemDatabase(DartTestCase):
     add_database_url = "core:form_biochem_database_add_database"
     remove_database_url = "core:form_biochem_database_remove_database"
     update_db_selection_url = "core:form_biochem_database_update_db_selection"
-    validate_connection_url = "core:form_biochem_database_validate_connection"
+    validate_connection_url = "core:form_biochem_database_toggle_connection"
 
     def setUp(self):
         self.client = Client()
@@ -217,8 +313,8 @@ class TestFormBioChemDatabase(DartTestCase):
         soup = BeautifulSoup(response.content, 'html.parser')
         btn = soup.find(id="btn_id_connect_biochem_db_details")
         self.assertIsNotNone(btn)
-        self.assertIn('hx-swap-oob', btn.attrs)
-        self.assertEqual('true', btn.attrs['hx-swap-oob'])
+        self.assertIn('hx-swap', btn.attrs)
+        self.assertEqual('outerHTML', btn.attrs['hx-swap'])
 
         self.assertIn('hx-post', btn.attrs)
         self.assertEqual(url, btn.attrs['hx-post'])

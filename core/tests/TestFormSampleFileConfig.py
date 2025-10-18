@@ -93,7 +93,7 @@ class TestSampleFileConfiguration(DartTestCase):
         msg_div = samples_list.findChild('div')
 
         self.assertIsNotNone(msg_div)
-        self.assertEqual(msg_div.attrs['class'], ['alert', 'alert-info', 'mt-2'])
+        self.assertEqual(msg_div.attrs['class'], ['alert', 'alert-info'])
         self.assertEqual(msg_div.string, "No File Configurations Found")
 
         # the check-square upload button should be on the page, but disabled

@@ -21,7 +21,7 @@
             </div>
         </div>
     </div>
-    <div id="div_id_biochem_mission_summary" hx-trigger="htmx:afterOnLoad from:#div_id_biochem_card_wrapper, biochem_db_connect" hx-get="{% url "core:form_biochem_mission_summary"%}" >
+    <div id="div_id_biochem_mission_summary" hx-trigger="htmx:afterOnLoad from:#div_id_biochem_card_wrapper" hx-get="{% url "core:form_biochem_get_mission_selection_card"%}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
         {# Loads the biochem mission summary table #}
         <div class="htmx-indicator d-flex justify-content-center my-3">
             <div class="spinner-border text-primary" role="status">

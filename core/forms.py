@@ -552,7 +552,7 @@ def save_load_component(component_id, message, progress_bar=True, **kwargs):
 #     'hx-post': url,
 #     'hx-trigger': 'load'
 # }
-def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
+def websocket_post_request_alert(alert_area_id, logger, message, swap_oob=True, **kwargs):
     """
     Generates a Bootstrap alert HTML component with a progress bar and websocket live status updates.
 
@@ -560,6 +560,7 @@ def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
         alert_area_id (str): The HTML element ID where the alert will be rendered.
         logger (str): Logger or identifier for the websocket notification channel.
         message (str): The initial message to display in the alert.
+        swap_oob (bool): indicate if this should be an out-of-band swap into an existing element
         **kwargs: Additional HTML attributes for the alert component.
 
     Returns:
@@ -573,7 +574,11 @@ def websocket_post_request_alert(alert_area_id, logger, message, **kwargs):
     """
     component_id = f"{alert_area_id}_alert"
     soup = BeautifulSoup("", 'html.parser')
-    soup.append(div := soup.new_tag('div', id=alert_area_id, attrs={"hx-swap-oob": 'true'}))
+    attrs = {}
+    if swap_oob:
+        attrs['hx-swap-oob'] = 'true'
+
+    soup.append(div := soup.new_tag('div', id=alert_area_id, attrs=attrs))
 
     ext_args = {
         'hx-ext': 'ws',
