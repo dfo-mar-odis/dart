@@ -58,7 +58,7 @@ def get_station_list():
 
             instrument_events = stn_events.exclude(actions__type=core_models.ActionType.aborted)
 
-            live_tow = False
+            live_tow = None
             mooring_deployed = None
             mooring_recovered = None
             argo_done = None
