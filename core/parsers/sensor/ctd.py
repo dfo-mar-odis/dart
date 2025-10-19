@@ -286,13 +286,13 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         valid = validation.validate_bottle_sample_range(event=event, bottle_id=bottle_id)
         errors += valid
 
-        if core_models.Bottle.objects.filter(event=event, bottle_number=bottle_number).exists():
+        if event.bottles.filter(bottle_id=bottle_id).exists():
             # If a bottle already exists for this event then we'll update its fields rather than
             # creating a whole new bottle. Reason being there may be samples attached to bottles that are
             # being reloaded from a calibrated bottle file post mission.
-            b = core_models.Bottle.objects.get(event=event, bottle_number=bottle_number)
+            b = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
 
-            check_fields = {'bottle_id': bottle_id, 'date_time': date, 'pressure': pressure,
+            check_fields = {'bottle_number': bottle_number, 'date_time': date, 'pressure': pressure,
                             'latitude': latitude, 'longitude': longitude}
             updated_fields = update_bottle(b, check_fields)
             if len(updated_fields) > 0:
