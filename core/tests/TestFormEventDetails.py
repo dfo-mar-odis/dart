@@ -143,6 +143,10 @@ class TestMissionEventForm(DartTestCase):
         # provided an existing event and args the add action url should add an action to the event
         # and return an empty action form with a table containing the new action as defined in the
         # 'core/partials/event_edit_form.html' and 'core/partials/table_action.html' templates
+        #
+        # if you're getting an error such as 'BS_ICONS_CUSTOM_PATH does not exist' or something to that
+        # affect, you'll need to run 'python manage.py collectstatic. The BS_ICONS_CUSTOM_PATH points to the
+        # staticfiles directory, which won't exist if collect static hasn't been run
 
         event = core_factory.CTDEventFactoryBlank()
         action_vars = core_factory.ActionFactory.build()

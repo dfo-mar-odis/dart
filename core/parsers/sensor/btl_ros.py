@@ -6,7 +6,6 @@ import os
 import ctd
 import json
 
-import numpy as np
 import pandas as pd
 
 from geopy.distance import geodesic
@@ -42,7 +41,8 @@ def validate_file(btl_stream, file_properties: dict = None):
     if not file_properties:
         data: pd.DataFrame = ctd.read.from_btl(btl_stream)
 
-        header = data._metadata['header']
+        metadata: dict = data.__getattr__('_metadata')
+        header = metadata['header']
 
         header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
         cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
@@ -99,6 +99,8 @@ class FixStationParser:
     field_mappings: dict = None
     file_properties: dict = None
 
+    mission_sample_types: dict = None
+
     def _get_units(self, sensor_description: str) -> tuple[str | Any, str]:
         """given a sensor description, find, remove and return the uom and remaining string"""
         uom_pattern = " \\[(.*?)\\]"
@@ -106,14 +108,16 @@ class FixStationParser:
         uom = uom[0] if uom else ""
         return uom, re.sub(uom_pattern, "", sensor_description)
 
-    def _get_priority(self, sensor_description: str) -> tuple[int, str]:
+    @staticmethod
+    def _get_priority(sensor_description: str) -> tuple[int, str]:
         """given a sensor description, with units removed, find, remove and return the priority and remaining string"""
         priority_pattern = r", (\d)"
         priority = re.findall(priority_pattern, sensor_description)
         priority = priority[0] if priority else 1
         return int(priority), re.sub(priority_pattern, "", sensor_description)
 
-    def _get_sensor_type(self, sensor_description: str) -> tuple[str, str]:
+    @staticmethod
+    def _get_sensor_type(sensor_description: str) -> tuple[str, str]:
         """given a sensor description with priority and units removed return the sensor type and remaining string"""
         remainder = sensor_description.split(", ")
         # if the sensor type wasn't in the remaining comma seperated list then it is the first value of the description
@@ -153,13 +157,12 @@ class FixStationParser:
         create_bottles = []
         update_bottles = []
         update_fields = set()
-        bottles_added = 0
         for row, bottle in data_frame_avg.iterrows():
             update_bottle_fields = set('')
             if 'bottle_id' in dataframe_dict:
                 bottle_id: int = bottle[dataframe_dict['bottle_id']]
             elif self.event.sample_id:
-                bottle_id: int = self.event.sample_id + bottles_added
+                bottle_id: int = self.event.sample_id + (row-1)
             else:
                 raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
 
@@ -169,25 +172,39 @@ class FixStationParser:
                     raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")
 
             closed = pytz.utc.localize(bottle['date'])
-            pressure = bottle[dataframe_dict['pressure']]
+            pressure = bottle.get(dataframe_dict['pressure'], None)
+            latitude = None
+            longitude = None
+            if 'latitude' in dataframe_dict:
+                latitude = bottle.get(dataframe_dict['latitude'], None)
+            if 'longitude' in dataframe_dict:
+                longitude = bottle.get(dataframe_dict['longitude'], None)
 
             if bottle_id in existing_bottles.keys():
-                bottle = existing_bottles[bottle_id]
-                update_bottle_fields.add(utils.updated_value(bottle, 'closed', closed))
-                update_bottle_fields.add(utils.updated_value(bottle, 'pressure', pressure))
+                existing_bottle = existing_bottles[bottle_id]
+                update_bottle_fields.add(utils.updated_value(existing_bottle, 'closed', closed))
+                update_bottle_fields.add(utils.updated_value(existing_bottle, 'pressure', pressure))
+                if latitude:
+                    update_bottle_fields.add(utils.updated_value(existing_bottle, 'latitude', latitude))
+                if longitude:
+                    update_bottle_fields.add(utils.updated_value(existing_bottle, 'longitude', longitude))
+
                 if '' in update_bottle_fields:
                     update_bottle_fields.remove('')
 
                 if len(update_bottle_fields) > 0:
-                    update_bottles.append(bottle)
+                    update_bottles.append(existing_bottle)
                     update_fields.update(update_bottle_fields)
-                    bottles_added += 1
             else:
-                bottle = core_models.Bottle(event=self.event, bottle_id=bottle_id)
-                bottle.closed = closed
-                bottle.pressure = pressure
-                create_bottles.append(bottle)
-                bottles_added += 1
+                new_bottle = core_models.Bottle(event=self.event, bottle_id=bottle_id)
+                new_bottle.number = row
+                new_bottle.closed = closed
+                new_bottle.pressure = pressure
+                if latitude:
+                    new_bottle.latitude = latitude
+                if longitude:
+                    new_bottle.longitude = longitude
+                create_bottles.append(new_bottle)
 
         if len(create_bottles) > 0:
             core_models.Bottle.objects.bulk_create(create_bottles)
@@ -203,7 +220,8 @@ class FixStationParser:
 
         return sensor_type, priority, units, remainder
 
-    def parse_sensor_name(self, sensor: str) -> list[str | int | None | Any]:
+    @staticmethod
+    def parse_sensor_name(sensor: str) -> list[str | int | None | Any]:
         # Given a sensor name, return the type of sensor, its priority and units where available
         # For common sensors the common format for the names is [sensor_type][priority][units]
         # Sbeox0ML/L -> Sbeox (Sea-bird oxygen), 0 (primary sensor), ML/L
@@ -301,8 +319,6 @@ class FixStationParser:
         self.process_common_sensors(sensors=columns)
 
     def process_data(self, file_name: str, data_frame: pd.DataFrame, column_headers: list[str]):
-        mission = self.event.mission
-
         # we only want to use rows in the BTL file marked as 'avg' in the statistics column
         skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
 
@@ -317,24 +333,28 @@ class FixStationParser:
         new_discrete_samples: List[core_models.DiscreteSampleValue] = []
         update_discrete_samples: List[core_models.DiscreteSampleValue] = []
 
-        bottles = core_models.Bottle.objects.filter(event=self.event)
+        bottles = self.event.bottles.all()
 
         # make global sample types local to this mission to be attached to samples when they're created
-        logger.info("Creating local sample types")
-        for name in column_headers:
-            if not mission.mission_sample_types.filter(name__iexact=name).exists():
+        missing_sample_types = [name for name in column_headers if name.lower() not in self.mission_sample_types.keys()]
+        if len(missing_sample_types) > 0:
+            logger.info("Creating local sample types")
+            new_sample_types = []
+            for name in missing_sample_types:
                 global_sampletype = GlobalSampleType.objects.get(short_name__iexact=name)
-                new_sampletype = core_models.MissionSampleType(mission=mission, is_sensor=True,
-                                                               name=global_sampletype.short_name,
-                                                               long_name=global_sampletype.long_name,
-                                                               datatype=global_sampletype.datatype,
-                                                               priority=global_sampletype.priority)
-                new_sampletype.save()
+                new_sampletype = core_models.MissionSampleType(
+                    mission=self.mission, is_sensor=True, name=global_sampletype.short_name,
+                    long_name=global_sampletype.long_name, datatype=global_sampletype.datatype,
+                    priority=global_sampletype.priority)
+                new_sample_types.append(new_sampletype)
 
-        sample_types = {
-            sample_type.name.lower(): sample_type for sample_type in mission.mission_sample_types.all()
-        }
+            if len(new_sample_types) > 0:
+                core_models.MissionSampleType.objects.bulk_create(new_sample_types)
+                self.mission_sample_types = {
+                    sample_type.name.lower(): sample_type for sample_type in self.mission.mission_sample_types.all()
+                }
 
+        sample_types = self.mission_sample_types
         bottles_added = 0
         for row, data in data_frame_avg.iterrows():
             # if the Bottle S/N column is present then use that values as the bottle ID
@@ -357,8 +377,7 @@ class FixStationParser:
             for column in column_headers:
                 sample_type = sample_types[column.lower()]
 
-                if (sample := core_models.Sample.objects.filter(bottle=bottle,
-                                                                                     type=sample_type)).exists():
+                if (sample := core_models.Sample.objects.filter(bottle=bottle, type=sample_type)).exists():
                     sample = sample.first()
                     if utils.updated_value(sample, 'file', file_name):
                         update_samples.append(sample)
@@ -452,8 +471,8 @@ class FixStationParser:
         station = GlobalStation.objects.filter(name__iexact=station_name)
 
         sounding = self.file_properties.get(sounding_label, sounding_default)
-        latitude = self.file_properties.get(lat_label, sounding_default)
-        longitude = self.file_properties.get(lon_label, sounding_default)
+        latitude = self.file_properties.get(lat_label, lat_default)
+        longitude = self.file_properties.get(lon_label, lon_default)
 
         # First determine if this is a fixed station BTL file or an AZMP bottle file
         # Fixed station files have latitude and longitude in the header
@@ -514,12 +533,12 @@ class FixStationParser:
            # For AZMP files, just use the sounding value without lat/lon processing
            sounding = sounding[0].strip() if sounding else None
 
-        # For all file types, process bottles and actions
-        bottom_bottle = self.event.bottles.order_by('pressure').first()
-        surface_bottle = self.event.bottles.order_by('pressure').last()
-
         # Create or update actions with appropriate coordinate values
         if is_fixed_station:
+            # For all file types, process bottles and actions
+            bottom_bottle = self.event.bottles.order_by('pressure').first()
+            surface_bottle = self.event.bottles.order_by('pressure').last()
+
             self._create_update_action(core_models.ActionType.bottom, bottom_bottle, sounding, lat, lon)
             self._create_update_action(core_models.ActionType.recovered, surface_bottle, sounding, lat, lon)
 
@@ -529,7 +548,7 @@ class FixStationParser:
             self.event.save()
 
     def parse(self):
-        self.event.mission.file_errors.filter(file_name=self.btl_filename).delete()
+        self.mission.file_errors.filter(file_name=self.btl_filename).delete()
         self.event.validation_errors.all().delete()
 
         data: pd.DataFrame = ctd.read.from_btl(self.btl_stream)
@@ -557,8 +576,8 @@ class FixStationParser:
         # if the bottle with the highest pressure was the last bottle closed we're using bottles
         # on a wire. If it was the first one closed we're using a CTD + Rosette
         gear_type_code = 90000002  # Niskin bottle of unknown size
-        bottles = self.event.bottles.all()
-        if bottles.first().pressure > bottles.last().pressure:
+        bottles = self.event.bottles.order_by('closed')
+        if bottles.first().pressure < bottles.last().pressure:
             gear_type_code = 90000215  # CTD + Niskin bottles on a wire, not rosette
         else:
             gear_type_code = 90000171  # CTD and rosette bottle sampler
@@ -571,6 +590,10 @@ class FixStationParser:
 
     def __init__(self, event: core_models.Event, btl_filename: str, btl_stream: io.StringIO, ros_stream: io.StringIO):
         self.event = event
+        self.mission = self.event.mission
+        self.mission_sample_types = {
+            sample_type.name.lower(): sample_type for sample_type in self.mission.mission_sample_types.all()
+        }
         self.database = event._state.db
 
         self.btl_filename = btl_filename
