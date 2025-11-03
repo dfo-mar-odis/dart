@@ -711,7 +711,7 @@ class AbstractError(models.Model):
     code = models.IntegerField(verbose_name=_("Error code"), default=-1)
     # code spaces:
     # 1-99 is used by the Plankton Parser
-    # 100-99 is used by btl_ros for Parsing BTL files
+    # 100-199 is used by btl_ros for Parsing BTL files
     # 1000-1999 is used by core.form_mission_gear_type
     # 2000-2999 is used by core.form_biochem_pre_validation
     # 3000-3999 is used by biochem.upload
