@@ -46,7 +46,7 @@ def validate_file(btl_stream, file_properties: dict = None):
 
         header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
         cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
-        file_properties = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines}
+        file_properties = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
 
     # required values. Event_id to get an event, station to confirm this BTL file is for the correct station
     event_label = btl_mapping['event_id'].get('label', 'Event_Number')
@@ -538,7 +538,7 @@ class FixStationParser:
 
         header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
         cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
-        self.file_properties = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines}
+        self.file_properties = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
 
         # These are columns we either have no use for or we will specifically call and use later
         # The Bottle column is the rosette number of the bottle
@@ -627,7 +627,7 @@ class FixStationBulkParser:
                 header: str = data._metadata['header']
                 header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
                 cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
-                event_properties: dict = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines}
+                event_properties: dict = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
 
                 if station is None:
                     # Get station once loop (since it's constant)
