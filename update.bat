@@ -32,6 +32,7 @@ if not defined dart_version (
 if (%dart_version%==%update_version%) goto start_server
 
 echo "Updating Python Libraries, this may take several minutes"
+python -m pip install matplotlib --only-binary :all:
 python -m pip install -r .\requirements.txt
 
 :start_server
