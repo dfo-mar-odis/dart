@@ -482,7 +482,7 @@ class Bottle(models.Model):
         return [90000010, None]
 
     def __str__(self):
-        return f"{self.bottle_id}:{self.bottle_number}:{self.pressure}:[{self.latitude}, {self.longitude}]"
+        return f"{int(self.bottle_id)}:{int(self.bottle_number)}:{self.pressure}:[{self.latitude}, {self.longitude}]"
 
     class Meta:
         unique_together = ['event', 'bottle_number']
@@ -711,7 +711,7 @@ class AbstractError(models.Model):
     code = models.IntegerField(verbose_name=_("Error code"), default=-1)
     # code spaces:
     # 1-99 is used by the Plankton Parser
-    # 100-99 is used by btl_ros for Parsing BTL files
+    # 100-199 is used by btl_ros for Parsing BTL files
     # 1000-1999 is used by core.form_mission_gear_type
     # 2000-2999 is used by core.form_biochem_pre_validation
     # 3000-3999 is used by biochem.upload
