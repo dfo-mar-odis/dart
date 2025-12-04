@@ -1,21 +1,74 @@
 import os
 import re
 
+from pathlib import Path
 
-# uses the os.getenv('PATH') to locate the oralce home directory to find the tnsnames.ora file
-def get_oracle_path():
-    path = os.getenv('PATH')
-    paths = path.split(os.pathsep)
+def _tns_dir_if_exists(p: Path) -> Path | None:
+    # check common locations relative to a candidate dir
+    candidates = [
+        p / "network" / "admin" / "tnsnames.ora",
+        p / "tnsnames.ora",
+    ]
+    for c in candidates:
+        if c.exists():
+            return c.parent
+    return None
 
-    ora_path = None
-    regexp = re.compile(r'(.*?\\oracle\\.*?_x64)', re.IGNORECASE)
-    for path in paths:
-        if regexp.search(path.lower()):
-            ora_path = regexp.search(path).group(1)
-            break
+# we're going to check the most common places you could easily find the tnsnames.ora
+# file on a DFO windows image
+def get_oracle_path() -> str | None:
+    # 1) check TNS_ADMIN first (most explicit)
+    tns_admin = os.getenv("TNS_ADMIN")
+    if tns_admin:
+        tns_dir = _tns_dir_if_exists(Path(tns_admin))
+        if tns_dir:
+            return str(tns_dir)
 
-    return ora_path
+    # 2) check ORACLE_HOME next
+    oracle_home = os.getenv("ORACLE_HOME")
+    if oracle_home:
+        tns_dir = _tns_dir_if_exists(Path(oracle_home))
+        if tns_dir:
+            return str(tns_dir)
 
+    # 3) scan PATH entries for likely oracle/instantclient directories
+    path_env = os.getenv("PATH")
+    if not path_env:
+        return None
+
+    # regexes tuned for common windows layouts (case-insensitive)
+    patterns = [
+        re.compile(r".*\\oracle\\[^\\]*_x64\\cli", re.IGNORECASE),
+        re.compile(r".*\\instantclient[^\\]*", re.IGNORECASE),
+        re.compile(r".*\\oracle\\client", re.IGNORECASE),
+    ]
+
+    for entry in path_env.split(os.pathsep):
+        if not entry:
+            continue
+        entry = entry.strip('"')  # remove any surrounding quotes
+        path_obj = Path(entry)
+        # quick check: if PATH entry exists and contains tnsnames.ora
+        tns_dir = _tns_dir_if_exists(path_obj)
+        if tns_dir:
+            return str(tns_dir)
+
+        # try to match known patterns and validate the matched portion
+        for rx in patterns:
+            m = rx.search(entry)
+            if not m:
+                continue
+            candidate = Path(m.group(0))
+            if candidate.exists():
+                tns_dir = _tns_dir_if_exists(candidate)
+                if tns_dir:
+                    return str(tns_dir)
+                # also check candidate.parent (sometimes PATH points inside cli)
+                parent_tns = _tns_dir_if_exists(candidate.parent)
+                if parent_tns:
+                    return str(parent_tns)
+
+    return None
 
 # if a tnsnames.ora file can be found this will return a dictionary of TNS names, with a dictionary of the host
 # and the port to connect to that database.
