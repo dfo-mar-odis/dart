@@ -79,8 +79,22 @@ def validate_file(btl_stream, file_properties: dict = None):
     try:
         event = core_models.Event.objects.get(event_id=event_id)
     except core_models.Event.DoesNotExist:
-        message = _("Event matching file doesn't exist, you may have to load events from Elog, ANDES or CSV first")
-        raise ValueError(message)
+        # If no event exists for this file, then we have to check if the file has the headers required to
+        # create the event. If it doesn't then this is not a fixed station BTL file and events will have
+        # to be loaded first. We've already checked for the event ID and the Station name
+        if (file_properties.get(station_label.upper(), sounding)) is None:
+            message = _("File is missing a sounding header, you may have to load events from Elog, ANDES or CSV first")
+            raise ValueError(message)
+
+        if (file_properties.get(station_label.upper(), latitude)) is None:
+            message = _("File is missing a latitude header, you may have to load events from Elog, ANDES or CSV first")
+            raise ValueError(message)
+
+        if (file_properties.get(station_label.upper(), longitude)) is None:
+            message = _("File is missing a longitude header, you may have to load events from Elog, ANDES or CSV first")
+            raise ValueError(message)
+
+        return
 
     # if the event doesn't have actions, then these fields will be required
     has_actions = event.actions.all().exists()
