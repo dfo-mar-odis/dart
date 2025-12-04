@@ -81,7 +81,7 @@ def get_tns_file() -> dict:
     if (ora_path := get_oracle_path()) is None:
         return {}
 
-    tns_ora_file = os.path.join(ora_path, 'cli', 'network', 'admin', 'tnsnames.ora')
+    tns_ora_file = os.path.join(ora_path, 'tnsnames.ora')
 
     # likely on a windows machine this file will be in the ANSI encoding
     file = open(tns_ora_file, 'r', encoding='ansi')
