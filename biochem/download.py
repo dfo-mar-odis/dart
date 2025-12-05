@@ -169,15 +169,16 @@ class DatabaseDownloader:
         core_models.MissionSampleType.objects.bulk_create(create_data_types)
 
     def copy_discrete_sample_values(self, values: QuerySet[biochem_models.Bcdiscretedtails]):
-        bottles = {b.bottle_id: b for b in core_models.Bottle.objects.all()}
+        bottles = dict(core_models.Bottle.objects.values_list('bottle_id', 'id'))
+        data_types = dict(core_models.MissionSampleType.objects.values_list('datatype_id', "id"))
 
-        data_types = {m.datatype.data_type_seq: m for m in core_models.MissionSampleType.objects.all()}
+        existing_samples = dict()
 
         create_samples = []
         create_discrete_values = []
         total_rows = len(values)
-        values_list = list(values)
-        for row, value in enumerate(values_list):
+
+        for row, value in enumerate(values.iterator(chunk_size=500)):
             if (row % 10) == 0:
                 user_logger.info(_("Loading Discrete Values") + ": %d/%d", (row+1), total_rows)
 
@@ -189,36 +190,40 @@ class DatabaseDownloader:
             if bottle_id not in bottles:
                 raise ValueError(f"Bottle hasn't been created for {bottle_id}")
 
-            bottle = bottles[bottle_id]
-            data_type = data_types[value.data_type.data_type_seq]
+            if value.data_type.data_type_seq not in data_types:
+                raise ValueError(f"Data type {value.data_type.data_type_seq} not found")
 
-            sample = core_models.Sample(bottle=bottle, type=data_type)
+            bottle_pk = bottles[bottle_id]
+            datatype_pk = data_types[value.data_type.data_type_seq]
+            sample = core_models.Sample(bottle_id=bottle_pk, type_id=datatype_pk)
             create_samples.append(sample)
 
             if value.averaged_data.upper() == 'N':
-                discrete_value = core_models.DiscreteSampleValue()
-                discrete_value.sample = sample
-                discrete_value.value = value.data_value
-                discrete_value.flag = value.data_qc_code if value.data_qc_code != '' else None
-                discrete_value.limit = value.detection_limit if value.detection_limit else None
+                discrete_value = core_models.DiscreteSampleValue(
+                    sample=sample,
+                    value = value.data_value,
+                    flag = value.data_qc_code or None,
+                    limit = value.detection_limit or None,
+                )
 
                 create_discrete_values.append(discrete_value)
             elif (replicates:=value.discrete_replicates.all()).exists():
                 for replicate_number, replicate in enumerate(replicates):
-                    discrete_value = core_models.DiscreteSampleValue()
-                    discrete_value.sample = sample
-                    discrete_value.replicate = (replicate_number + 1)
-                    discrete_value.value = value.data_value
-                    discrete_value.flag = value.data_qc_code if value.data_qc_code != '' else None
-                    discrete_value.limit = value.detection_limit if value.detection_limit else None
+                    discrete_value = core_models.DiscreteSampleValue(
+                        sample=sample,
+                        replicate = (replicate_number + 1),
+                        value = replicate.data_value,
+                        flag = replicate.data_qc_code or None,
+                        limit = replicate.detection_limit or None,
+                    )
 
                     create_discrete_values.append(discrete_value)
 
-            if len(create_discrete_values) > 500:
+            if len(create_discrete_values) > 1000:
                 core_models.Sample.objects.bulk_create(create_samples)
                 core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values)
-                create_samples = []
-                create_discrete_values = []
+                create_samples.clear()
+                create_discrete_values.clear()
 
         core_models.Sample.objects.bulk_create(create_samples)
         core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values)
@@ -227,16 +232,14 @@ class DatabaseDownloader:
         has_discrete = len(self.bio_mission.events.filter(discrete_headers__isnull=False).distinct()) > 1
         has_plankton = len(self.bio_mission.events.filter(planktonheaders__isnull=False).distinct()) > 1
 
-        events = list(self.bio_mission.events.all())
-        stations = {
-            station.name: station for station in core_models.Station.objects.all()
-        }
+        events: QuerySet = self.bio_mission.events.all()
+        stations = dict(core_models.Station.objects.values_list("name", "id"))
 
         create_events = []
         create_actions = []
         create_bottles = []
         total_rows = len(events)
-        for row, event in enumerate(events):
+        for row, event in enumerate(events.iterator(chunk_size=500)):
             if (row % 10) == 0:
                 user_logger.info(_("Loading Events") + ": %d/%d", (row+1), total_rows)
 
@@ -262,7 +265,7 @@ class DatabaseDownloader:
 
             core_event = core_models.Event()
             core_event.mission = self.core_mission
-            core_event.station = station
+            core_event.station_id = station
             core_event.instrument = instrument
             core_event.event_id = event.collector_event_id
             core_event.sample_id = start_sample
@@ -302,7 +305,9 @@ class DatabaseDownloader:
 
         user_logger.info(_("Complete"))
 
-def test():
+def test(mission_seq):
+
+    utils.close_connections()
 
     import environ
     import os
@@ -318,7 +323,7 @@ def test():
     # downloader = DatabaseDownloader(20000000010872)
 
     # BiochemP test
-    downloader = DatabaseDownloader(20000000012946)
+    downloader = DatabaseDownloader(mission_seq)
     location = utils.get_db_location(downloader.db_name)
     if os.path.exists(location):
         os.remove(location)

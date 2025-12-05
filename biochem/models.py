@@ -279,7 +279,10 @@ class BcdD(models.Model):
 
 
 class BcdDReportModel(BcdD):
-    pass
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISCRETEDATAEDITS'
 
 
 class BcsD(models.Model):
@@ -363,7 +366,7 @@ class BcsD(models.Model):
 class BcsDReportModel(BcsD):
     class Meta:
         managed = False
-
+        db_table = 'BCDISCRETESTATNEDITS'
 
 class BcdP(models.Model):
     plank_data_num = models.AutoField(primary_key=True)
@@ -423,7 +426,10 @@ class BcdP(models.Model):
 
 
 class BcdPReportModel(BcdP):
-    pass
+
+    class Meta:
+        managed = False
+        db_table = 'BCPLANKTONDATAEDITS'
 
 
 class BcsP(models.Model):
@@ -511,10 +517,10 @@ class BcsP(models.Model):
         managed = False
         abstract = True
 
-
 class BcsPReportModel(BcsP):
     class Meta:
         managed = False
+        db_table = 'BCPLANKTONSTATNEDITS'
 
 
 # For demonstration purposes

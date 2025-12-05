@@ -104,6 +104,7 @@ class BiochemConsumer(CoreConsumer, logging.Handler):
 
 class LoggerConsumer(WebsocketConsumer, logging.Handler):
 
+    active_connections = set()
     GROUP_NAME = "logger"
 
     def connect(self):
@@ -115,6 +116,7 @@ class LoggerConsumer(WebsocketConsumer, logging.Handler):
         self.accept()
         logger_to_listen_to = self.scope['url_route']['kwargs']['logger']
         logging.getLogger(f'{logger_to_listen_to}').addHandler(self)
+        self.active_connections.add(self)
 
     def disconnect(self, code):
         logger_to_listen_to = self.scope['url_route']['kwargs']['logger']
@@ -122,6 +124,11 @@ class LoggerConsumer(WebsocketConsumer, logging.Handler):
         async_to_sync(self.channel_layer.group_discard)(
             self.GROUP_NAME, self.channel_name
         )
+        self.active_connections.remove(self)
+
+    @classmethod
+    def is_socket_open(cls, logger_name, component_id):
+        return any(conn for conn in cls.active_connections if conn.scope['path'] == f'/ws/notifications/{logger_name}/{component_id}/')
 
     def process_render_queue(self, component_id, event) -> None:
         soup = BeautifulSoup(f'<div id="{component_id}">{event["message"]}</div>', 'html.parser')

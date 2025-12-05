@@ -471,7 +471,6 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     if len(errors) > 0:
         core_models.MissionError.objects.bulk_create(errors)
 
-    user_logger.info(_("Indexing Primary Keys"))
     compress_keys(bcd_objects_to_create, bcd_d_model, 'dis_data_num')
 
     return bcd_objects_to_create
@@ -592,8 +591,6 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
         bcd_objects_to_create.append(bcd_row)
 
-
-    user_logger.info(_("Indexing Primary Keys"))
     compress_keys(bcd_objects_to_create, bcd_p_model, 'plank_data_num')
 
     return bcd_objects_to_create
@@ -602,6 +599,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
     if len(bcd_objects_to_create) <= 0:
         return
+    user_logger.info(_("Indexing Primary Keys") + " :  %d/%d", 0, len(bcd_objects_to_create))
 
     data_num_seq = []
     if bcd_model:
@@ -619,7 +617,10 @@ def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
         sort_seq = sorted(set(range(start, end)).difference(data_num_seq))
 
     data_num = 0
+    total_count = len(bcd_objects_to_create)
     for index, obj in enumerate(bcd_objects_to_create):
+        user_logger.info(_("Indexing Primary Keys") + " : %d/%d", (index + 1), total_count)
+
         if index < len(sort_seq):
             # the index number is a count of which object in the bcd_objects_to_create array we're on.
             # If the index is less than the length of our available keys array, get the next available

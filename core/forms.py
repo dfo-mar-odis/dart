@@ -1,5 +1,7 @@
 import re
 
+import time
+
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
@@ -9,7 +11,6 @@ from django import forms
 from django.core.exceptions import ValidationError
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
-from django.utils.html import escape
 
 from config.utils import load_svg
 
@@ -17,6 +18,7 @@ from . import models
 
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
+from .consumer import LoggerConsumer
 
 
 class NoWhiteSpaceCharField(forms.CharField):
@@ -123,6 +125,71 @@ class AlertArea(Div):
         return self
 
 
+class StatusAlert(BeautifulSoup):
+    component_id = None
+    alert_container = None
+
+    def set_type(self, alert_type):
+        self.alert_container.attrs["class"] = f"alert alert-{alert_type}"
+
+    def set_socket(self, socket_name):
+        self.alert_container.attrs["hx-ext"] = "ws"
+        self.alert_container.attrs["ws-connect"] = f'/ws/notifications/{socket_name}/{self.component_id}/'
+
+    def get_message_container(self):
+        return self.alert_message
+
+    def set_message(self, message):
+        self.alert_message.string = message
+
+    def include_close_button(self):
+        self.message_row.append(col:=self.new_tag("div", attrs={"class": "col-auto"}))
+        col.append(remove_btn:=self.new_tag("button", attrs={"class": "btn btn-sm btn-secondary", "type": "button"}))
+        remove_btn.attrs['onclick'] = f"document.getElementById(`{self.component_id}_container`).remove();"
+        icon = BeautifulSoup(load_svg('x-square'), 'html.parser').svg
+        remove_btn.append(icon)
+
+    def include_progress_bar(self):
+        # create a progress bar to give the user something to stare at while they wait.
+        progress_bar = self.new_tag("div")
+        progress_bar.attrs = {
+            'class': "progress-bar progress-bar-striped progress-bar-animated",
+            'role': "progressbar",
+            'style': "width: 100%"
+        }
+        progress_bar_div = self.new_tag("div", attrs={'class': "progress", 'id': 'progress_bar'})
+        progress_bar_div.append(progress_bar)
+
+        self.alert_container.append(progress_bar_div)
+
+    def is_socket_connected(self, socket_name):
+        is_open = False
+        for count in range(5):
+            if is_open := LoggerConsumer.is_socket_open(socket_name, self.component_id):
+                break
+            time.sleep(0.5)
+
+        return is_open
+
+    def __init__(self, component_id, message="connecting...", alert_type="info"):
+        super().__init__("", "html.parser")
+
+        self.component_id = component_id
+
+        self.alert_container = self.new_tag("div", attrs={"id": f"{component_id}_container"})
+        self.message_row = self.new_tag("div", attrs={"class": "row"})
+
+        self.alert_message = self.new_tag("div", attrs={"id": component_id})
+
+        self.alert_container.append(self.message_row)
+        self.message_row.append(col:=self.new_tag("div", attrs={"class": "col"}))
+        col.append(self.alert_message)
+
+        self.append(self.alert_container)
+        self.set_message(message)
+        self.set_type(alert_type)
+
+
 class CardForm(forms.Form):
 
     class CardFormIdBuilder:
@@ -210,8 +277,11 @@ class CardForm(forms.Form):
     def get_card_header_class(self):
         return "card-header" + (f" {self.card_header_class}" if self.card_header_class else "")
 
-    def get_card_header(self) -> Div:
-        header_row = Row()
+    def get_card_header(self, header_attributes=None) -> Div:
+        if header_attributes is None:
+            header_attributes = {}
+
+        header_row = Row(**header_attributes)
 
         header = Div(header_row, id=self.get_card_header_id(), css_class=self.get_card_header_class())
         title_column = Div(self.get_card_title(), css_class="col-auto align-self-end")
@@ -276,9 +346,9 @@ class CollapsableCardForm(CardForm):
     def get_collapsable_card_body_id(self):
         return self.get_id_builder().get_collapsable_card_body_id()
 
-    def get_card_header(self):
+    def get_card_header(self, header_attributes: dict = None) -> Div:
 
-        header = super().get_card_header()
+        header = super().get_card_header(header_attributes)
 
         button_id = f'button_id_collapse_{self.card_name}'
         button_attrs = {
