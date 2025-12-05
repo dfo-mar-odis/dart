@@ -97,7 +97,7 @@ class SampleTypeConfig(models.Model):
                                      help_text=_("Lowercase name of the column containing comments, if it exists"))
 
     allow_blank = models.BooleanField(verbose_name=_("Allow Blank Samples?"), default=True,
-                                      help_text=_("Should values be kept if the sample column is blank?"))
+                                      help_text=_("If the sample id column for the row is empty, should the value be considered a replicate?"))
 
     allow_replicate = models.BooleanField(verbose_name=_("Allow Replicate Samples?"), default=True,
                                           help_text=_("Can this sample have replicate sample values?"))

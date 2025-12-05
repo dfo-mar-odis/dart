@@ -287,8 +287,7 @@ class BiochemConnectionForm(core_forms.CollapsableCardForm, forms.ModelForm):
         self.fields['db_password'].label = False
 
         databases = settings_models.BcDatabaseConnection.objects.all()
-        self.fields['selected_database'].choices = [(db.id, db) for db in databases]
-        self.fields['selected_database'].choices.insert(0, (None, '--- New ---'))
+        self.fields['selected_database'].choices = [(None, '--- New ---')] + [(db.id, db) for db in databases]
 
         if 'selected_database' in self.initial:
             database_id = int(self.initial['selected_database'])

@@ -4,7 +4,6 @@ import logging
 
 from django.db.models import QuerySet
 
-import django.db.utils
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.layout import Column, Field, Row
@@ -13,6 +12,7 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.conf import settings
 from django.db import connections
+from django.db.utils import DatabaseError, OperationalError
 from django.http import HttpResponse
 from django.template.context_processors import csrf
 from django.urls import reverse_lazy
@@ -297,7 +297,7 @@ class BiochemBatchForm(core_forms.CollapsableCardForm):
         if form_biochem_database.is_connected():
             try:
                 self.get_batch_choices()
-            except django.db.utils.DatabaseError as err:
+            except DatabaseError as err:
                 if err.args[0].code != 942:
                     raise err
 
@@ -412,6 +412,12 @@ def biochem_checkin_procedure(request, batch_id, checkin_proc):
         attrs['alert_type'] = 'danger'
         attrs['message'] = _("Checkin Procedure failed") + " : " + str(ex)
         div_alert_area.append(core_forms.blank_alert(**attrs))
+    except DatabaseError as ex:
+        # if there's a failure we don't want to refresh anything so the user has a chance to see the
+        # failure message.
+        attrs['alert_type'] = 'danger'
+        attrs['message'] = _("Checkin Procedure failed") + " : " + str(ex)
+        div_alert_area.append(core_forms.blank_alert(**attrs))
 
     response = HttpResponse(soup)
     if attrs['alert_type'] == 'success':
@@ -485,7 +491,7 @@ def get_mission_batch_id():
         # if we're not connected, note it. The user may not be logged in or might be creating csv versions
         # of the tables which will either be 1 or the batch_seq stored in the mission table
         logger.exception(ex)
-    except django.db.utils.OperationalError as ex:
+    except OperationalError as ex:
         # if the bcbatches table doesn't exist, note it and return 1 to the user.
         logger.exception(ex)
 
@@ -495,7 +501,7 @@ def get_mission_batch_id():
 def delete_batch(batch_id, label, bcd_model, bcs_model):
     unlock = False
     bcmission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_id=batch_id)
-    if bcmission_edits.exists() and hasattr(bcmission_edits.first(), 'mission'):
+    if bcmission_edits.exists() and bcmission_edits.first().mission:
         bc_mission = bcmission_edits.first().mission
         unlock = bc_mission.locked_missions if hasattr(bc_mission, 'locked_missions') else None
 

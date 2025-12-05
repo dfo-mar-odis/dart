@@ -173,8 +173,14 @@ def get_file_error_card(request, mission_id):
             div = soup.new_tag('div', attrs={'class': 'col'})
             msgs = error.message.split("\n")
             for msg in msgs:
+                if msg.strip() == "":
+                    continue
+
                 div.append(msg_div := soup.new_tag('div'))
-                msg_div.string = msg
+                if error.line:
+                    msg_div.string = _("Line") + f" {error.line} : {msg}"
+                else:
+                    msg_div.string = msg
 
             url = reverse_lazy('core:mission_samples_delete_file_error', args=(error.pk,))
             btn_attrs = {
