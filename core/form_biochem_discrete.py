@@ -161,9 +161,13 @@ def checkout_existing_mission(mission: biochem_models.Bcmissionedits) -> biochem
             # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
             #       In this case I only retrieve the first mission that matches the mission.mission_descriptor,
             #       but I don't think this is the right thing to do, I'll need to ask.
+            # Todo:
+            #       years later and I still really don't have an answer to this. It really only happens for legacy
+            #       missions uploaded by a specific person. Most of the time missions have one discreate entry
+            #       and one plankton entry, and that's it.
             # check it out to the edit tables.
             with connections['biochem'].cursor() as cur:
-                user_logger.info(f"Archiving existing mission with matching descriptor {mission_seq}")
+                user_logger.info(f"Downloading existing mission to edit tables with matching descriptor {mission_seq}")
                 return_value = cur.callproc("Download_Discrete_Mission", [mission_seq, return_status])
 
             if return_value[1] is None:
@@ -194,14 +198,44 @@ def checkin_batch_proc(batch_id: int):
 
     validation2_proc(batch_id)
 
-    # check in new mission
-    with connections['biochem'].cursor() as cur:
-        user_logger.info(f"Uploading new mission with batch id {batch_id}")
-        return_value = cur.callproc("ARCHIVE_BATCH.ARCHIVE_DISCRETE_BATCH", [batch_id, return_status])
+    # if the **batch_mission_edit** mission has a mission_seq it needs to be archived using the
+    # REARCHIVE_DISCRETE_MISSION function. Otherwise the cursor will return without errors, but won't actually have
+    # done anything ( -_-), seriously...
+    if batch_mission_edit.mission_id is not None:
+        with connections['biochem'].cursor() as cur:
+            user_logger.info(f"Uploading new mission with batch id {batch_id}")
+            return_value = cur.callproc("ARCHIVE_BATCH.REARCHIVE_DISCRETE_MISSION", [batch_id, return_status])
+            cur.execute('commit')
+    else:
+        # check in new mission
+        with connections['biochem'].cursor() as cur:
+            user_logger.info(f"Uploading new mission with batch id {batch_id}")
+            return_value = cur.callproc("ARCHIVE_BATCH.ARCHIVE_DISCRETE_BATCH", [batch_id, return_status])
+            cur.execute('commit')
 
     # if the checkin fails release the old mission and delete it from the edit tables
     # if successful delete the new mission from the edit tables, but keep the old one.
-    if return_value[1] is not None:
+    try:
+        if return_value[1] is not None:
+            raise ValueError(return_value[1])
+
+        # confirm the replacement mission was uploaded, this will throw a DoesNotExist exception if the mission doesn't
+        # exist in Biochem
+        if batch_mission_edit.mission_id is not None:
+            uploaded_mission = biochem_models.Bcmissions.objects.using('biochem').get(
+                mission_seq=batch_mission_edit.mission_id)
+        elif bc_mission:
+            uploaded_mission = biochem_models.Bcmissions.objects.using('biochem').exclude(
+                mission_seq=bc_mission.mission_seq).get(descriptor=batch_mission_edit.descriptor,
+                                                        created_date=batch_mission_edit.created_date)
+
+        # if the mission exists in the lock tables and there was no problem archiving it,
+        # then remove it from the locked table
+        if bc_mission and bc_mission.locked_missions:
+            bc_mission.delete()
+
+        delete_discrete_proc(batch_id)
+    except biochem_models.Bcmissions.DoesNotExist as ex:
         user_logger.error(f"Issues with archiving mission: {return_value[1]}")
 
         if bc_mission and bc_mission.locked_missions:
@@ -210,14 +244,7 @@ def checkin_batch_proc(batch_id: int):
             delete_discrete_proc(old_batch_id)
             bc_mission.locked_missions.delete()
 
-        raise ValueError(return_value[1])
-
-    # if the mission exists in the lock tables and there was no problem archiving it,
-    # then remove it from the locked table
-    if bc_mission and bc_mission.locked_missions:
-        bc_mission.delete()
-
-    delete_discrete_proc(batch_id)
+        raise DatabaseError("Could not check in new mission")
 
 
 # return the batch id of the mission_edits the selected batch was merged into if the merge was completed successfully,
@@ -767,7 +794,7 @@ def upload_batch(request, mission_id):
 
 
 def get_discrete_data(mission: core_models.Mission, upload_all=False) -> (
-QuerySet[core_models.DiscreteSampleValue], QuerySet[core_models.Bottle]):
+        QuerySet[core_models.DiscreteSampleValue], QuerySet[core_models.Bottle]):
     if upload_all:
         data_types = core_models.BioChemUpload.objects.filter(
             type__mission=mission).values_list('type', flat=True).distinct()
