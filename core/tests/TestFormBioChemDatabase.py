@@ -100,7 +100,7 @@ class TestFormBiochemMissionFilter(DartTestCase):
 
     def test_list_mission_loading_oob_swap(self):
         # when loading==false is passed to the list_missions_function it should send back
-        # an out-of-band swap for the trigger with laoding==true
+        # an out-of-band swap for the trigger with loading==true
         client = Client()
         data = {
             'loading': 'false'

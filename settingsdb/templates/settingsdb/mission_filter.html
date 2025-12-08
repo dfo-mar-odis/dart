@@ -8,9 +8,12 @@
     <li class="nav-item me-2">
         <a class="btn btn-primary" href="{% url 'core:sample_type_details' %}" title="{% trans "Edit Global Sample Types" %}">{% custom_icon 'speedometer2' %}</a>
     </li>
-    <li class="nav-item me-2">
-        <a class="btn btn-primary" href="{% url 'core:biochem_details' %}" title="{% trans "Biochem" %}">{% custom_icon 'database' %}</a>
-    </li>
+{#  This feature is not ready for prime-time. It allows the user to access a Database page that will allow them to download #}
+{#      legacy missions locally so they can be worked with. #}
+
+{#    <li class="nav-item me-2">#}
+{#        <a class="btn btn-primary" href="{% url 'core:biochem_details' %}" title="{% trans "Biochem" %}">{% custom_icon 'database' %}</a>#}
+{#    </li>#}
 {% endblock %}
 
 {% block report_help_text %}{% trans 'Access fix station reports for missions visible in the mission list' %}{% endblock %}

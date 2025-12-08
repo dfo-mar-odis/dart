@@ -126,8 +126,8 @@ def get_mission_filter_spinner(on=False, oob_swap=False):
     return soup.find(id=get_mission_filter_spinner_id())
 
 
-# This form is for after a user has connected to a Biochem database. It will query the database for a "BcBatches" tabel
-# and if found will give the user the ablity to select and remove batches as well as view errors associated with a batch
+# This form is for after a user has connected to a Biochem database. It will query the database for a "BcBatches" table
+# and if found will give the user the ability to select and remove batches as well as view errors associated with a batch
 class BiochemMissionSummaryForm(core_forms.CardForm):
     class BiochemMissionSummaryIdBuilder(core_forms.CardForm.CardFormIdBuilder):
 
@@ -227,7 +227,7 @@ def list_missions(request):
         "missions": None
     }
     missions = None
-    page = int(page) if page else 1
+    page = int(page) if page and page!='false' else 1
     if form_biochem_database.is_connected():
         query_set = biochem_models.Bcmissions.objects.using('biochem').order_by('-start_date')
         if 'mission_name' in request.GET:
@@ -295,7 +295,8 @@ def download_mission(request, mission_seq):
 
     error = None
     try:
-        download.download(mission_seq)
+        downloader = download.DatabaseDownloader(mission_seq)
+        downloader.download()
     except biochem_models.Bcmissions.DoesNotExist:
         error = _("Could not find mission with requested ID") + f": {mission_seq}"
     except Exception as e:
