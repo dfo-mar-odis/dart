@@ -477,7 +477,32 @@ def _uploader_form(trigger, mission_id, uploader=None) -> HttpResponse | None:
     return None
 
 
-def deal_with_batch(request, trigger, mission_id, logger_name, batch_func=None) -> Tuple[bool, HttpResponse]:
+def deal_with_batch(request, trigger, mission_id, logger_name, batch_func=None) -> Tuple[int, HttpResponse]:
+    """
+    Handles batch-related operations for a given mission.
+
+    This function performs the following steps:
+        1. Retrieves the mission object based on the provided `mission_id`.
+        2. Ensures the mission descriptor is set. If not, returns a form to set it.
+        3. Checks if an uploader name is available from an existing DB connection.
+            If not, retrieves it from the session or prompts the user to set it.
+        4. Initializes a status alert for the operation.
+        5. Executes the provided `batch_func` to perform the batch operation (e.g., upload, download).
+        6. Handles exceptions and updates the status alert accordingly.
+
+    Args:
+        request: The HTTP request object.
+        trigger (str): The name of the event that triggered the operation.
+        mission_id (int): The ID of the mission associated with the batch.
+        logger_name (str): The name of the logger to use for logging messages.
+        batch_func (callable, optional): A function to execute the batch operation. Defaults to None.
+
+    Returns:
+        Tuple[int, HttpResponse]:
+            - `None` if the operation fails or is incomplete.
+            - The `batch_id` of the uploaded mission if the operation is successful.
+            - An `HttpResponse` object containing the status alert or form.
+    """
     mission = core_models.Mission.objects.get(pk=mission_id)
     success = False
 
@@ -496,7 +521,7 @@ def deal_with_batch(request, trigger, mission_id, logger_name, batch_func=None) 
         if uploader is None:
             return success, _uploader_form(trigger, mission.pk)
 
-    msg_alert = core_forms.StatusAlert(BIOCHEM_BATCH_STATUS_ALERT, "Downloading...")
+    msg_alert = core_forms.StatusAlert(BIOCHEM_BATCH_STATUS_ALERT, "Initializing...")
     if not msg_alert.is_socket_connected(logger_name):
         msg_alert.set_socket(logger_name)
         msg_alert.include_progress_bar()
@@ -509,10 +534,11 @@ def deal_with_batch(request, trigger, mission_id, logger_name, batch_func=None) 
         if not batch_func:
             raise NotImplementedError("Batch function is not implemented.")
 
-        batch_func(mission, uploader)
+        batch_id = batch_func(mission, uploader)
 
         msg_alert.set_message("Success")
         msg_alert.set_type("success")
+        success = batch_id
     except IOError as ex:
         # the file was locked
         msg_alert.set_message(_("The requested file may be open and must be closed before updating."))
@@ -540,6 +566,10 @@ def upload_batch(request, mission_id, logger_name, upload_batch_func=None):
     trigger = "upload_mission_bcs_bcd"
     response_obj = deal_with_batch(request, trigger, mission_id, logger_name, batch_func=upload_batch_func)
     if response_obj[0]:
+        # if response_obj[0] is not none, then I expect it to be the batch_id, which we'll add to the session
+        # so when the form is reloaded it can be the selected batch. Then the function that reloads the
+        # card header should clear the session variable.
+        request.session['batch_id'] = response_obj[0]
         response_obj[1]['HX-Trigger-After-Settle'] = "reload_batch"
         return response_obj[1]
     else:
@@ -567,7 +597,15 @@ def delete_batch(mission_id, batch_id, label, bcd_model, bcs_model):
 
 
 def get_batch_list(request, mission_id, form_class: Type[BiochemDBBatchForm]) -> HttpResponse:
-    form = form_class(mission_id=mission_id, initial=request.GET)
+    if batch_id := request.session.get('batch_id', None):
+        # If the batch_id is set in the session variable use it as the initial selection, then
+        # clear the session variable after it's been used.
+        form = form_class(mission_id=mission_id, initial={'batch_selection': batch_id})
+        del request.session['batch_id']
+        request.session.modified = True
+    else:
+        form = form_class(mission_id=mission_id, initial=request.GET)
+
     html = render_crispy_form(form)
     soup = BeautifulSoup(html, 'html.parser')
 
@@ -575,7 +613,9 @@ def get_batch_list(request, mission_id, form_class: Type[BiochemDBBatchForm]) ->
 
 
 def get_update_controls(request, mission_id, form_class: Type[BiochemDBBatchForm]) -> HttpResponse:
+
     form = form_class(mission_id=mission_id, initial=request.GET)
+
     html = render_crispy_form(form)
     soup = BeautifulSoup(html, 'html.parser')
 

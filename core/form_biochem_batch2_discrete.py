@@ -146,7 +146,7 @@ def get_discrete_data(mission: core_models.Mission, upload_all=False) -> (QueryS
     return samples, bottles
 
 
-def download_batch_func(mission: core_models.Mission, uploader: str) -> None:
+def download_batch_func(mission: core_models.Mission, uploader: str) -> int | None:
     bcs_file_name = f'{mission.name}_BCS_D.csv'
     bcd_file_name = f'{mission.name}_BCD_D.csv'
 
@@ -177,6 +177,9 @@ def download_batch_func(mission: core_models.Mission, uploader: str) -> None:
     # if we're on windows then let's pop the directory where we saved the reports open. Just to annoy the user.
     if os.name == 'nt':
         subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
+
+    # No batch ID is created when downloading a mission's BCS/BCD tables
+    return 0
 
 
 def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
@@ -274,6 +277,8 @@ def upload_batch_func(mission: core_models.Mission, uploader: str, batch: bioche
     # create and upload the BCS data if it doesn't already exist
     upload_bcs_d_data(mission, uploader, batch)
     upload_bcd_d_data(mission, uploader, batch)
+
+    return batch_id
 
 
 def stage1_validation_func(mission_id, batch_id) -> None:
