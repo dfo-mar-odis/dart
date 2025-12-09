@@ -79,20 +79,59 @@ class BiochemDiscreteBatchForm(form_biochem_batch2.BiochemDBBatchForm):
 
         return reverse_lazy("core:form_biochem_discrete_stage2_validation", args=[self.mission_id, batch_id])
 
+    def get_checkin_url(self) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy("core:form_biochem_discrete_checkin", args=[self.mission_id, batch_id])
+
+
     def is_batch_stage2_validated(self) -> bool | None:
         batch_id = self.get_batch_id()
         if batch_id is None:
             return None
 
         mission: core_models.Mission = core_models.Mission.objects.get(pk=self.mission_id)
-        mission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch__pk=batch_id,
-                                                                                      descriptor=mission.mission_descriptor)
+        mission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(
+            batch__pk=batch_id, descriptor=mission.mission_descriptor)
+
         if not mission_edits.exists():
+            # if there's no process flag this is a new mission.
             return None
+
+        if mission_edits.filter(process_flag='ERR').exists():
+            # if there are any ERR flags there are errors in this mission and it's not valid
+            return False
+
+        event_edits = biochem_models.Bceventedits.objects.using('biochem').filter(
+            batch__pk=batch_id, process_flag='ERR')
+        if event_edits.exists():
+            # if there are any ERR flags there are errors in this mission and it's not valid
+            return False
+
+        hdr_edits = biochem_models.Bcdiscretehedredits.objects.using('biochem').filter(
+            batch__pk=batch_id, process_flag='ERR')
+        if hdr_edits.exists():
+            # if there are any ERR flags there are errors in this mission and it's not valid
+            return False
+
+        detail_edits = biochem_models.Bcdiscretedtailedits.objects.using('biochem').filter(
+            batch__pk=batch_id, process_flag='ERR')
+        if detail_edits.exists():
+            # if there are any ERR flags there are errors in this mission and it's not valid
+            return False
+
+        replicate_edits = biochem_models.Bcdisreplicatedits.objects.using('biochem').filter(
+            batch__pk=batch_id, process_flag='ERR')
+        if replicate_edits.exists():
+            # if there are any ERR flags there are errors in this mission and it's not valid
+            return False
 
         mission_edit = mission_edits.first()
 
         if mission_edit.process_flag == "ENR":
+            # ENR means this is a new record and hasn't been validated yet.
             return None
 
         return mission_edit.process_flag == "ECN" or mission_edit.process_flag == "EAR"
@@ -320,12 +359,77 @@ def stage2_validation_func(mission_id, batch_id) -> None:
         cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_DISREPLIC_ERRORS", str, [batch_id, user])
 
 
-def delete_batch(mission_id, batch_id) -> None:
+def delete_batch(mission_id: int, batch_id: int) -> None:
     label = "DISCRETE"
     bcd_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
     bcs_model = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
 
     form_biochem_batch2.delete_batch(mission_id, batch_id, label, bcd_model, bcs_model)
+
+
+def checkin_batch(mission_id, batch_id) -> None:
+    return_status = ''
+    return_value = ''
+
+    # check for existing mission matching this batch and check it out to the user edit tables if it exists
+    # This is to create a backup which the user can then recover from if something goes wrong.
+    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    batch_mission_edit = batch.mission_edits.first()
+
+    header_model = biochem_models.Bcdiscretehedrs
+    oracle_proc = "Download_Discrete_Mission"
+
+    bc_mission: biochem_models.Bcmissions = form_biochem_batch2.checkout_existing_mission(
+        mission=batch_mission_edit,
+        label="DISCRETE",
+        header_model=header_model,
+        oracle_proc=oracle_proc
+    )
+
+    # if the **batch_mission_edit** mission has a mission_seq it needs to be archived using the
+    # REARCHIVE_DISCRETE_MISSION function. Otherwise, the cursor will return without errors, but won't actually have
+    # done anything ( -_-), seriously...
+    # if batch_mission_edit.mission_id is not None:
+    #     stage2_validation_func(batch_mission_edit.mission_id, batch_id)
+
+    # check in new mission
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"Uploading new mission with batch id {batch_id}")
+        return_value = cur.callproc("ARCHIVE_BATCH.ARCHIVE_DISCRETE_BATCH", [batch_id, return_status])
+        cur.execute('commit')
+
+    # if the checkin fails release the old mission and delete it from the edit tables
+    # if successful delete the new mission from the edit tables, but keep the old one.
+    try:
+        if return_value[1] is not None:
+            raise ValueError(return_value[1])
+
+        # confirm the replacement mission was uploaded, this will throw a DoesNotExist exception if the mission doesn't
+        # exist in Biochem
+        if batch_mission_edit.mission_id is not None:
+            uploaded_mission = biochem_models.Bcmissions.objects.using('biochem').get(
+                mission_seq=batch_mission_edit.mission_id)
+        elif bc_mission:
+            uploaded_mission = biochem_models.Bcmissions.objects.using('biochem').exclude(
+                mission_seq=bc_mission.mission_seq).get(descriptor=batch_mission_edit.descriptor,
+                                                        created_date=batch_mission_edit.created_date)
+
+        # if the mission exists in the lock tables and there was no problem archiving it,
+        # then remove it from the locked table
+        if bc_mission and bc_mission.locked_missions:
+            bc_mission.delete()
+
+        delete_batch(mission_id, batch_id)
+    except biochem_models.Bcmissions.DoesNotExist as ex:
+        user_logger.error(f"Issues with archiving mission: {return_value[1]}")
+
+        if bc_mission and bc_mission.locked_missions:
+            old_batch_id = biochem_models.Bcmissionedits.objects.using('biochem').filter(
+                mission_edt_seq=bc_mission.mission_seq).first().batch.batch_seq
+            delete_batch(mission_id, old_batch_id)
+            bc_mission.locked_missions.delete()
+
+        raise DatabaseError("Could not check in new mission")
 
 
 prefix = 'biochem/discrete/batch'
@@ -346,15 +450,19 @@ url_patterns = [
          kwargs={"form_class": BiochemDiscreteBatchForm},
          name="form_biochem_discrete_select_batch"),
 
-    path(f'<int:mission_id>/{prefix}/validate/stage1/<int:batch_id>', form_biochem_batch2.stage_1_validation,
+    path(f'<int:mission_id>/{prefix}/validate/stage1/<int:batch_id>/', form_biochem_batch2.stage_1_validation,
          kwargs={'logger_name': user_logger.name, 'batch_func': stage1_validation_func},
          name="form_biochem_discrete_stage1_validation"),
 
-    path(f'<int:mission_id>/{prefix}/validate/stage2/<int:batch_id>', form_biochem_batch2.stage_2_validation,
+    path(f'<int:mission_id>/{prefix}/validate/stage2/<int:batch_id>/', form_biochem_batch2.stage_2_validation,
          kwargs={'logger_name': user_logger.name, 'batch_func': stage2_validation_func},
          name="form_biochem_discrete_stage2_validation"),
 
     path(f'<int:mission_id>/{prefix}/delete_selected_batch/<int:batch_id>/', form_biochem_batch2.delete_selected_batch,
          kwargs={'logger_name': user_logger.name, 'batch_func': delete_batch},
          name="form_biochem_discrete_delete_batch"),
+
+    path(f'<int:mission_id>/{prefix}/checkin_selected_batch/<int:batch_id>/', form_biochem_batch2.checkin_batch,
+         kwargs={'logger_name': user_logger.name, 'batch_func': checkin_batch},
+         name="form_biochem_discrete_checkin"),
 ]

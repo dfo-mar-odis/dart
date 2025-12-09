@@ -188,12 +188,18 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
         bcs_row.dis_headr_etime = datetime.strftime(bottle.closed, "%H%M")
 
         if bottle.latitude:
-            bcs_row.dis_headr_slat = bottle.latitude  # Maybe required to use
-            bcs_row.dis_headr_elat = bottle.latitude  # Event lat/lon
+            bcs_row.dis_headr_slat = bottle.latitude
+            bcs_row.dis_headr_elat = bottle.latitude
+        else:
+            bcs_row.dis_headr_slat = event.start_location[0]
+            bcs_row.dis_headr_elat = event.end_location[0]
 
         if bottle.longitude:
-            bcs_row.dis_headr_slon = bottle.longitude  # Maybe required to use
-            bcs_row.dis_headr_elon = bottle.longitude  # Event lat/lon
+            bcs_row.dis_headr_slon = bottle.longitude
+            bcs_row.dis_headr_elon = bottle.longitude
+        else:
+            bcs_row.dis_headr_slon = event.start_location[1]
+            bcs_row.dis_headr_elon = event.end_location[1]
 
         bcs_row.dis_headr_start_depth = bottle.pressure
         bcs_row.dis_headr_end_depth = bottle.pressure

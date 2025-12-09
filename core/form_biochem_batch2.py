@@ -1,7 +1,8 @@
 import csv
 import os
 
-from typing import Tuple, Type
+from datetime import datetime
+from typing import Tuple, Type, Callable
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -191,11 +192,15 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return div_btn
 
+    def get_checkin_url(self) -> str | None:
+        raise NotImplementedError
+
     def get_checkin_button(self, disabled=True):
-        url = "/test/"
+        url = self.get_checkin_url()
         attrs = {
             'title': _("Check-in Mission to Archive"),
-            'hx-target': f'#{BIOCHEM_BATCH_CONTROL_ROW_ID}',
+            'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
+            'hx-trigger': 'click, checkin_selected_batch from:body',
             'hx-post': url
         }
 
@@ -596,6 +601,55 @@ def delete_batch(mission_id, batch_id, label, bcd_model, bcs_model):
         unlock.delete()
 
 
+def checkout_existing_mission(mission: biochem_models.Bcmissionedits, label, header_model, oracle_proc) -> biochem_models.Bcmissions | None:
+    return_status = ''
+    return_value = ''
+    data_pointer_code = "DH" if label == 'DISCRETE' else "PL"
+
+    # if the mission doesn't have discrete headers, then it doesn't belong here in form_biochem_discrete
+    headers = header_model.objects.using('biochem').filter(event__mission__descriptor__iexact=mission.descriptor)
+
+    if headers.exists():
+        bc_mission = headers.first().event.mission
+        mission_seq = bc_mission.mission_seq
+
+        # Check if the mission with the mission_seq is already checked out to the users edit tables
+        user_missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(mission=bc_mission)
+        if not user_missions.exists():
+            # If not checked out, check if the mission with mission_seq is in the BCLockedMissions table
+            # If in the locked missions table and not in the users table we shouldn't be deleting or overriding
+            if hasattr(bc_mission, 'locked_missions'):
+                msg = f"'{bc_mission.locked_missions.downloaded_by}' " + _("already has this mission checked out. "
+                                                                           "Mission needs to be released from BCLockedMissions before it can be modified.")
+                raise PermissionError(msg)
+
+            # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
+            #       In this case I only retrieve the first mission that matches the mission.mission_descriptor,
+            #       but I don't think this is the right thing to do, I'll need to ask.
+            # Todo:
+            #       years later and I still really don't have an answer to this. It really only happens for legacy
+            #       missions uploaded by a specific person. Most of the time missions have one discreate entry
+            #       and one plankton entry, and that's it.
+            # check it out to the edit tables.
+            with connections['biochem'].cursor() as cur:
+                user_logger.info(f"Downloading existing mission to edit tables with matching descriptor {mission_seq}")
+                return_value = cur.callproc(oracle_proc, [mission_seq, return_status])
+
+            if return_value[1] is None:
+                biochem_models.Bclockedmissions.objects.using('biochem').create(
+                    mission=bc_mission,
+                    mission_name=bc_mission.name,
+                    descriptor=bc_mission.descriptor,
+                    data_pointer_code=data_pointer_code,  # reference to BCDataPointers table - "DH" for discrete, "PL" for plankton
+                    downloaded_by=form_biochem_database.get_uploader(),
+                    downloaded_date=datetime.now()).save(using='biochem')
+                return bc_mission
+        else:
+            return user_missions.first().mission
+
+    return None
+
+
 def get_batch_list(request, mission_id, form_class: Type[BiochemDBBatchForm]) -> HttpResponse:
     if batch_id := request.session.get('batch_id', None):
         # If the batch_id is set in the session variable use it as the initial selection, then
@@ -715,6 +769,42 @@ def delete_selected_batch(request, mission_id, batch_id, logger_name, batch_func
 
     except ValidationError as ex:
         msg_alert.set_message(f"Failed to delete batch: {str(ex)}")
+        msg_alert.set_type("danger")
+
+        logger.exception(ex)
+
+    except Exception as ex:
+        msg_alert.set_message(f"Failed: {str(ex)}")
+        msg_alert.set_type("danger")
+
+        logger.exception(ex)
+
+    response = HttpResponse(msg_alert)
+    response['HX-Trigger-After-Settle'] = "reload_batch"
+    return response
+
+
+def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, batch_func: Callable) -> HttpResponse:
+    msg_alert = core_forms.StatusAlert(BIOCHEM_BATCH_STATUS_ALERT, "Preparing to checkin...")
+    if not msg_alert.is_socket_connected(logger_name):
+        msg_alert.set_socket(logger_name)
+        msg_alert.include_progress_bar()
+        response = HttpResponse(msg_alert)
+        response['HX-Trigger-After-Settle'] = "checkin_selected_batch"
+        return response
+
+    msg_alert.include_close_button()
+    try:
+        if not batch_func:
+            raise NotImplementedError("Batch function is not implemented.")
+
+        batch_func(mission_id, batch_id)
+
+        msg_alert.set_message("Success")
+        msg_alert.set_type("success")
+
+    except ValidationError as ex:
+        msg_alert.set_message(f"Failed to check-in batch: {str(ex)}")
         msg_alert.set_type("danger")
 
         logger.exception(ex)
