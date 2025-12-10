@@ -764,12 +764,25 @@ class Bcactivityedits(models.Model):
         unique_together = (('activity_edt_seq', 'event_edit'),)
 
 
+class Bcerrorcodes(models.Model):
+    error_code = models.IntegerField(primary_key=True)
+    description = models.CharField(max_length=80)
+    long_desc = models.CharField(max_length=300)
+    last_update_by = models.CharField(max_length=30)
+    last_update_date = models.DateField()
+
+    class Meta:
+        managed = False
+        db_table = 'BCERRORCODES'
+
+
 class Bcerrors(models.Model):
     error_num_seq = models.IntegerField(primary_key=True)
     edit_table_name = models.CharField(max_length=30)
     record_num_seq = models.BigIntegerField()
     column_name = models.CharField(max_length=30)
-    error_code = models.IntegerField()
+    error_code = models.ForeignKey(Bcerrorcodes, related_name='errors', db_column='error_code',
+                                   on_delete=models.PROTECT)
     last_updated_by = models.CharField(max_length=30)
     last_update_date = models.DateField()
     batch = models.ForeignKey(Bcbatches, related_name='errors', db_column='batch_seq',
@@ -793,18 +806,6 @@ class Bcstatndataerrors(models.Model):
     class Meta:
         managed = False
         db_table = 'BCSTATNDATAERRORS'
-
-
-class Bcerrorcodes(models.Model):
-    error_code = models.IntegerField(primary_key=True)
-    description = models.CharField(max_length=80)
-    long_desc = models.CharField(max_length=300)
-    last_update_by = models.CharField(max_length=30)
-    last_update_date = models.DateField()
-
-    class Meta:
-        managed = False
-        db_table = 'BCERRORCODES'
 
 
 class Bcdiscretehedrs(models.Model):

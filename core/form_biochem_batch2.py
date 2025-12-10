@@ -3,7 +3,6 @@ import os
 import subprocess
 
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import Tuple, Type, Callable
 
@@ -14,21 +13,24 @@ from crispy_forms.layout import Column, Row, Layout, Field, Div
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
+from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import OperationalError, connections, models, DatabaseError
 
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
 from django.utils.connection import ConnectionDoesNotExist
 from django.utils.translation import gettext as _
+from pandas.io.sql import table_exists
 
 from config.utils import load_svg
 from core import forms as core_forms
 from core import models as core_models
 from core import form_biochem_database
 
-from biochem import models as biochem_models, upload
+from biochem import models as biochem_models
 
 import logging
 logger = logging.getLogger("dart")
@@ -61,8 +63,59 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
     bcd_report_model = None
     bcs_report_model = None
 
-    def get_download_url(self, alias: str) -> str:
+    def get_batch_id(self) -> None | int:
+        batch_id = self.initial.get("batch_selection", "")
+        return int(batch_id) if batch_id else None
+
+    def get_download_url(self, alias: str = None) -> str:
         return reverse_lazy(alias, args=[self.mission_id])
+
+    def get_upload_url(self, alias: str = None) -> str:
+        return reverse_lazy(alias, args=[self.mission_id])
+
+    # return None if conditions for validation aren't met, return the URL otherwise
+    def get_stage1_validate_url(self, alias: str = None) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
+
+    # return None if conditions for validation aren't met, return the URL otherwise
+    def get_stage2_validate_url(self, alias: str = None) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
+
+    # return None if conditions for delete aren't met, return the URL otherwise
+    def get_delete_batch_url(self, alias: str = None) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
+
+    def get_checkin_url(self, alias: str = None) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
+
+    def get_batch_update_url(self, alias: str = None) -> str:
+        return reverse_lazy(alias, args=[self.mission_id])
+
+    def get_header_update_url(self, alias: str = None):
+        return reverse_lazy(alias, args=[self.mission_id])
+
+    def get_batch_error_url(self, alias: str = 'core:form_biochem_batch_batch_errors') -> str:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            batch_id = 0
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_download_button(self):
         attrs = {
@@ -81,9 +134,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return btn
 
-    def get_upload_url(self, alias: str) -> str:
-        return reverse_lazy(alias, args=[self.mission_id])
-
     def get_upload_button(self):
         attrs = {
             'title': _("Upload BCS/BCD tables"),
@@ -100,10 +150,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         btn = StrictButton(icon, **attrs, css_id="btn_id_batch_upload", css_class="btn btn-primary btn-sm")
 
         return btn
-
-    def get_batch_id(self) -> None | int:
-        batch_id = self.initial.get("batch_selection", "")
-        return int(batch_id) if batch_id else None
 
     # if validation hasn't been run return None.
     # if validation has been run and is invalid return False
@@ -124,14 +170,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         mission_edit = mission_edits.first()
 
         return mission_edit.process_flag in ["ENR", "ECN", "EAR"]
-
-    # return None if conditions for validation aren't met, return the URL otherwise
-    def get_stage1_validate_url(self, alias: str) -> str | None:
-        batch_id = self.get_batch_id()
-        if batch_id is None:
-            return None
-
-        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_stage1_validate_button(self, validated: None | bool = None):
         url = self.get_stage1_validate_url()
@@ -181,14 +219,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return result
 
-    # return None if conditions for validation aren't met, return the URL otherwise
-    def get_stage2_validate_url(self, alias: str) -> str | None:
-        batch_id = self.get_batch_id()
-        if batch_id is None:
-            return None
-
-        return reverse_lazy(alias, args=[self.mission_id, batch_id])
-
     # disabled if stage 1 validation hasn't been run or is invalid
     def get_stage2_validate_button(self, disabled: bool | None = None, validated: None | bool = None):
         url = self.get_stage2_validate_url()
@@ -209,14 +239,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         btn = StrictButton(icon, **attrs, css_id="btn_id_batch_stage2_validate", css_class=css_class)
 
         return btn
-
-    # return None if conditions for delete aren't met, return the URL otherwise
-    def get_delete_batch_url(self, alias: str) -> str | None:
-        batch_id = self.get_batch_id()
-        if batch_id is None:
-            return None
-
-        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_delete_batch_button(self):
         # The delete button has a hidden element on it so when you click the button you get the confirmation message
@@ -246,13 +268,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         )
 
         return div_btn
-
-    def get_checkin_url(self, alias: str) -> str | None:
-        batch_id = self.get_batch_id()
-        if batch_id is None:
-            return None
-
-        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_checkin_button(self, disabled=True):
         url = self.get_checkin_url()
@@ -294,15 +309,13 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return row
 
-    def get_batch_update_url(self, alias: str) -> str:
-        return reverse_lazy(alias, args=[self.mission_id])
-
     def get_batch_selection(self):
 
         url = self.get_batch_update_url()
         batch_select_attributes = {
             'id': BIOCHEM_BATCH_SELECTION_ID,
-            'hx-target': f'#{BIOCHEM_BATCH_CONTROL_ROW_ID}',
+            'hx-target': f'#{self.get_id_builder().get_card_header_id()}',
+            'hx-swap': 'outerHTML',
             # biochem_db_connect is fired by the form_biochem_database module when connecting or disconnecting from a DB
             'hx-trigger': "change, batch_updated from:body",
             'hx-get': url
@@ -310,9 +323,6 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return Field('batch_selection', css_class="form-select form-select-sm",
                      template=self.field_template, wrapper_class="col-auto", **batch_select_attributes)
-
-    def get_header_update_url(self, alias: str):
-        return reverse_lazy(alias, args=[self.mission_id])
 
     def get_card_header(self, header_attributes: dict = None) -> Div:
         if header_attributes is None:
@@ -340,6 +350,14 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         header.fields[0].append(button_col)
 
         return header
+
+    def get_card_body(self) -> Div:
+        attrs = {
+            'hx-get': self.get_batch_error_url(),
+            'hx-trigger': 'load, batch_updated from:body',
+        }
+        body = Div(css_class='card-body vertical-scrollbar', id=self.get_card_body_id(), **attrs)
+        return body
 
     def get_batch_date(self, batch: biochem_models.Bcbatches) -> str:
         if batch.mission_edits.exists():
@@ -791,12 +809,20 @@ def get_batch_list(request, mission_id, form_class: Type[BiochemDBBatchForm]) ->
 
 def get_update_controls(request, mission_id, form_class: Type[BiochemDBBatchForm]) -> HttpResponse:
 
-    form = form_class(mission_id=mission_id, initial=request.GET)
+    soup = BeautifulSoup('', 'html.parser')
+
+    form: BiochemDBBatchForm = form_class(mission_id=mission_id, initial=request.GET)
 
     html = render_crispy_form(form)
-    soup = BeautifulSoup(html, 'html.parser')
+    form_soup = BeautifulSoup(html, 'html.parser')
 
-    return HttpResponse(soup.find(id=BIOCHEM_BATCH_CONTROL_ROW_ID))
+    form_body = form_soup.find(id=form.get_collapsable_card_body_id())
+    form_body.attrs['hx-swap-oob'] = 'true'
+
+    soup.append(form_soup.find(id=form.get_id_builder().get_card_header_id()))
+    soup.append(form_body)
+
+    return HttpResponse(soup)
 
 
 def stage_1_validation(request, mission_id, batch_id, logger_name, batch_func=None) -> HttpResponse:
@@ -1003,8 +1029,83 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
     return response
 
 
+def get_batch_summary_soup(soup, mission_id, batch_id):
+    context = {}
+
+    errors = biochem_models.Bcerrors.objects.using('biochem').filter(batch_id=batch_id)
+    context['errors'] = errors
+
+    table_names = errors.values_list('edit_table_name', flat=True).distinct()
+    table_models = {}
+    for model in apps.get_models():
+        if model._meta.db_table in table_names:
+            table_models[model._meta.db_table] = model
+
+    def process_attrs(error_set, table_columns):
+        attrs = []
+        for column in table_columns:
+            if isinstance(column, models.ForeignKey):
+                if column.related_model == biochem_models.Bcdatatypes:
+                    attrs.append({
+                        "value": getattr(error_set, column.name + '_id'),
+                        "info": getattr(error_set, column.name).method
+                    })  # Get the datatype name for Bcdatatypes foreign key
+                else:
+                    attrs.append({"value": getattr(error_set, column.name + '_id')})  # Get the primary key for other foreign keys  # Get the primary key for foreign keys
+            else:
+                attrs.append({"value": getattr(error_set, column.name)})  # Get the value for non-foreign key fields
+
+        return attrs
+
+    for model_name in table_names:
+        table_model = table_models[model_name]
+        row_errors  = errors.filter(edit_table_name=model_name).order_by('record_num_seq').values_list('record_num_seq', flat=True).distinct()
+
+        context['table_name'] = table_model._meta.db_table
+        context['table_columns'] = [field for field in table_model._meta.get_fields()]
+        context['error_rows'] = [process_attrs(elm, context['table_columns']) for elm in table_model.objects.using('biochem').filter(pk__in=row_errors)]
+
+        table_html = render_to_string('core/partials/table_dynamic.html', context)
+        soup_table = BeautifulSoup(table_html, "html.parser")
+        soup.append(soup_table)
+
+    return soup
+
+
+def get_batch_summary(request, mission_id, batch_id):
+    if batch_id <= 0:
+        return HttpResponse()
+
+    soup = BeautifulSoup("", 'html.parser')
+    get_batch_summary_soup(soup, mission_id, batch_id)
+
+    return HttpResponse(soup)
+
+
+def get_batch_errors(request, mission_id, batch_id):
+    context = {}
+
+    if batch_id <= 0:
+        return HttpResponse()
+
+    soup = BeautifulSoup("", 'html.parser')
+
+    errors = biochem_models.Bcerrors.objects.using('biochem').filter(batch_id=batch_id).order_by('record_num_seq')
+    context['errors'] = errors
+
+    # for errors, the edit_table_name tells us what table has problems and record_num_seq will tells us the
+    # primary key of the row with issues.
+
+    table_html = render_to_string('core/partials/table_biochem_batch_errors.html', context)
+    soup.append(BeautifulSoup(table_html, 'html.parser'))
+    get_batch_summary_soup(soup, mission_id, batch_id)
+
+    return HttpResponse(soup)
+
+
 prefix = 'biochem/batch'
 url_patterns = [
     path(f'<int:mission_id>/{prefix}/set_descriptor/', set_descriptor, name="form_biochem_batch_mission_descriptor"),
     path(f'<int:mission_id>/{prefix}/set_uploader/', set_uploader, name="form_biochem_batch_uploader"),
+    path(f'<int:mission_id>/{prefix}/batch_errors/<int:batch_id>/', get_batch_errors, name="form_biochem_batch_batch_errors"),
 ]

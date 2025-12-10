@@ -23,8 +23,8 @@ user_logger = logging.getLogger('dart.user')
 class BiochemDiscreteBatchForm(form_biochem_batch2.BiochemDBBatchForm):
 
     datatype = 'DISCRETE'
-    bcd_report_model = biochem_models.BcdDReportModel
-    bcs_report_model = biochem_models.BcsDReportModel
+    bcd_report_model = biochem_models.BcdD
+    bcs_report_model = biochem_models.BcsD
 
     def get_download_url(self, alias: str = "core:form_biochem_discrete_download_batch"):
         return super().get_download_url(alias)
@@ -111,7 +111,7 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: bioche
         raise DatabaseError(f"No Database Connection")
 
     # 1) get bottles from BCS_D table
-    bcs_d = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+    bcs_d = biochem_models.BcsD
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
     samples, bottles = get_discrete_data(mission)
@@ -132,7 +132,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_mod
 
     # 1) get the biochem BCD_D model
     table_name = form_biochem_database.get_bcd_d_table()
-    bcd_d = upload.get_model(table_name, biochem_models.BcdD)
+    bcd_d = biochem_models.BcdD
 
     # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
     exists = upload.check_and_create_model('biochem', bcd_d)
@@ -236,8 +236,8 @@ def stage2_validation_func(mission_id, batch_id) -> None:
 
 def delete_batch(mission_id: int, batch_id: int) -> None:
     label = "DISCRETE"
-    bcd_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
-    bcs_model = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+    bcd_model = biochem_models.BcdD
+    bcs_model = biochem_models.BcsD
 
     form_biochem_batch2.delete_batch(mission_id, batch_id, label, bcd_model, bcs_model)
 

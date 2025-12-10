@@ -21,8 +21,8 @@ user_logger = logging.getLogger('dart.user')
 class BiochemPlanktonBatchForm(form_biochem_batch2.BiochemDBBatchForm):
 
     datatype = 'PLANKTON'
-    bcd_report_model = biochem_models.BcdPReportModel
-    bcs_report_model = biochem_models.BcsPReportModel
+    bcd_report_model = biochem_models.BcdP
+    bcs_report_model = biochem_models.BcsP
 
     def get_download_url(self, alias: str = "core:form_biochem_plankton_download_batch"):
         return super().get_download_url(alias)
@@ -100,7 +100,7 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bioche
 
     # 1) get bottles from BCS_P table
     table_name = form_biochem_database.get_bcs_p_table()
-    bcs_p = upload.get_model(table_name, biochem_models.BcsP)
+    bcs_p = biochem_models.BcsP
     exists = upload.check_and_create_model('biochem', bcs_p)
     if not exists:
         raise DatabaseError(f"A database error occurred while uploading BCD P data. "
@@ -125,7 +125,7 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: bioche
 
     # 1) get Biochem BCD_P model
     table_name = form_biochem_database.get_bcd_p_table()
-    bcd_p = upload.get_model(table_name, biochem_models.BcdP)
+    bcd_p = biochem_models.BcdP
 
     # 2) if the BCD_P model doesn't exist, create it
     exists = upload.check_and_create_model('biochem', bcd_p)
@@ -207,8 +207,8 @@ def stage2_validation_func(mission_id, batch_id) -> None:
 
 def delete_batch(mission_id: int, batch_id: int) -> None:
     label = "PLANKTON"
-    bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
-    bcs_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
+    bcd_model = biochem_models.BcdP
+    bcs_model = biochem_models.BcsP
 
     form_biochem_batch2.delete_batch(mission_id, batch_id, label, bcd_model, bcs_model)
 
