@@ -641,7 +641,7 @@ def connect(database_id=None, password=None) -> None | str:
     connection_success = False
 
     # we don't care about the table name in this case, we're just checking the connection
-    bcs_d = upload.get_model('connection_test', bio_models.BcsD)
+    bcs_d = bio_models.BcsD
     try:
         # either we'll get a 942 error indicating the connection worked by the table doesn't exist
         # or the connection worked and the table does exist. Any other reason the connection failed.

@@ -269,7 +269,7 @@ class BcdD(models.Model):
 
     class Meta:
         managed = False
-        abstract = True
+        db_table = 'BCDISCRETEDATAEDITS'
         ordering = ['dis_sample_key_value', 'dis_data_num']
 
     def __str__(self):
@@ -279,10 +279,7 @@ class BcdD(models.Model):
 
 
 class BcdDReportModel(BcdD):
-
-    class Meta:
-        managed = False
-        db_table = 'BCDISCRETEDATAEDITS'
+    pass
 
 
 class BcsD(models.Model):
@@ -360,13 +357,12 @@ class BcsD(models.Model):
 
     class Meta:
         managed = False
-        abstract = True
+        db_table = 'BCDISCRETESTATNEDITS'
 
 
 class BcsDReportModel(BcsD):
-    class Meta:
-        managed = False
-        db_table = 'BCDISCRETESTATNEDITS'
+    pass
+
 
 class BcdP(models.Model):
     plank_data_num = models.AutoField(primary_key=True)
@@ -422,14 +418,11 @@ class BcdP(models.Model):
 
     class Meta:
         managed = False
-        abstract = True
+        db_table = 'BCPLANKTONDATAEDITS'
 
 
 class BcdPReportModel(BcdP):
-
-    class Meta:
-        managed = False
-        db_table = 'BCPLANKTONDATAEDITS'
+    pass
 
 
 class BcsP(models.Model):
@@ -515,12 +508,11 @@ class BcsP(models.Model):
 
     class Meta:
         managed = False
-        abstract = True
+        db_table = 'BCPLANKTONSTATNEDITS'
+
 
 class BcsPReportModel(BcsP):
-    class Meta:
-        managed = False
-        db_table = 'BCPLANKTONSTATNEDITS'
+    pass
 
 
 # For demonstration purposes

@@ -61,7 +61,7 @@ class TestGetBCSPRows(AbstractTestDatabase):
         sample_database = settings_factory.BcDatabaseConnection()
         caches['biochem_keys'].set('database_id', sample_database.pk, 3600)
 
-        self.bio_model = upload.get_model("BCPLANKTONSTATNEDITS", BcsP)
+        self.bio_model = BcsP
         upload.create_model(biochem_db, self.bio_model)
 
     def tearDown(self):
@@ -215,7 +215,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
         form_biochem_discrete.upload_bcd_d_data(self.mission, "Upsonp")
 
-        self.model = upload.get_model("BCDISCRETEDATAEDITS", bio_models.BcdD)
+        self.model = bio_models.BcdD
         # oxygen samples should have been added to the biochem db
         self.assertTrue(self.model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
 
@@ -252,7 +252,7 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
         batch_factory = biochem_factory.BcBatchesFactory
         batch_factory._meta.database = 'biochem'
 
-        self.model = upload.get_model("BCDISCRETEDATAEDITS", bio_models.BcdD)
+        self.model = bio_models.BcdD
         upload.create_model(biochem_db, self.model)
         bcd_factory._meta.model = self.model
 

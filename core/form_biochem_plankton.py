@@ -71,7 +71,7 @@ class BiochemPlanktonBatchForm(form_biochem_batch.BiochemBatchForm):
 
     def get_batch_choices(self):
         mission = core_models.Mission.objects.get(pk=self.mission_id)
-        table_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
+        table_model = biochem_models.BcsP
 
         batch_ids = table_model.objects.using('biochem').all().values_list('batch', flat=True).distinct()
 
@@ -103,8 +103,8 @@ def refresh_batches_form(request, mission_id, batch_id):
 
 
 def delete_plankton_proc(batch_id):
-    bcd_p = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
-    bcs_p = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
+    bcd_p = qiochem_models.BcdP
+    bcs_p = biochem_models.BcsP
 
     form_biochem_batch.delete_batch(batch_id, 'PLANKTON', bcd_p, bcs_p)
 
@@ -361,7 +361,7 @@ def get_batch(request, mission_id):
     batch_id = request.POST.get('selected_batch', None)
     batch_form = BiochemPlanktonBatchForm(mission_id=mission_id, batch_id=batch_id, swap_oob=True)
 
-    bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
+    bcd_model = biochem_models.BcdP
 
     soup = form_biochem_batch.get_batch(soup, batch_form, bcd_model, stage1_valid_proc)
     add_tables_to_soup(soup, batch_form.batch_id)
@@ -513,7 +513,7 @@ def get_bcs_table(batch_id, page=0, swap_oob=True):
         return soup
     table = soup.find('tbody')
 
-    table_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
+    table_model = biochem_models.BcsP
 
     rows = table_model.objects.using('biochem').filter(
         batch=batch_id
@@ -558,7 +558,7 @@ def get_bcd_table(batch_id, page=0, swap_oob=True):
         return soup
     table = soup.find('tbody')
 
-    table_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
+    table_model = biochem_models.BcdP
 
     rows = table_model.objects.using('biochem').filter(
         batch=batch_id
@@ -831,7 +831,7 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bioche
 
     # 1) get bottles from BCS_P table
     table_name = form_biochem_database.get_bcs_p_table()
-    bcs_p = upload.get_model(table_name, biochem_models.BcsP)
+    bcs_p = biochem_models.BcsP
     exists = upload.check_and_create_model('biochem', bcs_p)
     if not exists:
         raise DatabaseError(f"A database error occurred while uploading BCD P data. "
@@ -856,7 +856,7 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: bioche
 
     # 1) get Biochem BCD_P model
     table_name = form_biochem_database.get_bcd_p_table()
-    bcd_p = upload.get_model(table_name, biochem_models.BcdP)
+    bcd_p = biochem_models.BcdP
 
     # 2) if the BCD_P model doesn't exist, create it
     exists = upload.check_and_create_model('biochem', bcd_p)

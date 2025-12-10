@@ -72,7 +72,7 @@ class BiochemDiscreteBatchForm(form_biochem_batch.BiochemBatchForm):
 
     def get_batch_choices(self):
         mission = core_models.Mission.objects.get(pk=self.mission_id)
-        # table_model = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+        # table_model = biochem_models.BcsD
 
         # batch_ids = table_model.objects.using('biochem').all().values_list('batch', flat=True).distinct()
 
@@ -102,8 +102,8 @@ def refresh_batches_form(request, mission_id, batch_id):
 
 
 def delete_discrete_proc(batch_id):
-    bcd_d = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
-    bcs_d = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+    bcd_d = biochem_models.BcdD
+    bcs_d = biochem_models.BcsD
 
     form_biochem_batch.delete_batch(batch_id, 'DISCRETE', bcd_d, bcs_d)
 
@@ -375,7 +375,7 @@ def get_batch(request, mission_id):
     batch_id = request.POST.get('selected_batch', None)
     batch_form = BiochemDiscreteBatchForm(mission_id=mission_id, batch_id=batch_id, swap_oob=True)
 
-    bcd_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
+    bcd_model = biochem_models.BcdD
 
     soup = form_biochem_batch.get_batch(soup, batch_form, bcd_model, stage1_valid_proc)
     add_tables_to_soup(soup, batch_form.batch_id)
@@ -556,7 +556,7 @@ def get_bcs_table(batch_id, page=0, swap_oob=True):
         return soup
     table = soup.find('tbody')
 
-    table_model = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+    table_model = biochem_models.BcsD
 
     rows = table_model.objects.using('biochem').filter(
         batch__batch_seq=batch_id
@@ -598,7 +598,7 @@ def get_bcd_table(batch_id, page=0, swap_oob=True):
         return soup
     table = soup.find('tbody')
 
-    table_model = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
+    table_model = biochem_models.BcdD
 
     rows = table_model.objects.using('biochem').filter(
         batch__batch_seq=batch_id
@@ -769,7 +769,7 @@ def upload_batch(request, mission_id):
         soup.append(select)
 
         if bc_statn_data_errors:
-            bcd_rows = upload.get_model(form_biochem_database.get_bcd_d_table(), biochem_models.BcdD)
+            bcd_rows = biochem_models.BcdD
             attrs['alert_type'] = 'warning'
             attrs['message'] = _("Errors Present in Biochem Validation for batch") + f" : {batch_id}"
             for error in bc_statn_data_errors:
@@ -911,7 +911,7 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: bioche
         raise DatabaseError(f"No Database Connection")
 
     # 1) get bottles from BCS_D table
-    bcs_d = upload.get_model(form_biochem_database.get_bcs_d_table(), biochem_models.BcsD)
+    bcs_d = biochem_models.BcsD
     exists = upload.check_and_create_model('biochem', bcs_d)
 
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
@@ -933,7 +933,7 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_mod
 
     # 1) get the biochem BCD_D model
     table_name = form_biochem_database.get_bcd_d_table()
-    bcd_d = upload.get_model(table_name, biochem_models.BcdD)
+    bcd_d = biochem_models.BcdD
 
     # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
     exists = upload.check_and_create_model('biochem', bcd_d)
