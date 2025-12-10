@@ -6,7 +6,7 @@ from . import form_biochem_database, form_biochem_pre_validation, form_btl_load,
 from . import form_mission_sample_type, form_plankton_load, form_mission_settings, views_mission_gear_type
 
 # TODO: this will eventually be removed and we'll pull the urls from the extending classes
-from . import form_biochem_batch2, form_biochem_batch2_discrete
+from . import form_biochem_batch2, form_biochem_batch2_discrete, form_biochem_batch2_plankton
 
 from . import views_biochem
 from . import reports
@@ -42,6 +42,7 @@ urlpatterns.extend(form_mission_settings.mission_urls)
 urlpatterns.extend(reports.report_urls)
 
 # urlpatterns.extend(form_biochem_discrete.url_patterns)
-urlpatterns.extend(form_biochem_plankton.urls)
+# urlpatterns.extend(form_biochem_plankton.urls)
 urlpatterns.extend(form_biochem_batch2.url_patterns)
 urlpatterns.extend(form_biochem_batch2_discrete.url_patterns)
+urlpatterns.extend(form_biochem_batch2_plankton.url_patterns)

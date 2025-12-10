@@ -1,7 +1,10 @@
 import csv
 import os
+import subprocess
 
 from datetime import datetime
+from enum import Enum
+from pathlib import Path
 from typing import Tuple, Type, Callable
 
 from bs4 import BeautifulSoup
@@ -13,7 +16,7 @@ from crispy_forms.utils import render_crispy_form
 from django import forms
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import OperationalError, connections
+from django.db import OperationalError, connections, models, DatabaseError
 
 from django.http import HttpResponse
 from django.urls import path, reverse_lazy
@@ -25,7 +28,7 @@ from core import forms as core_forms
 from core import models as core_models
 from core import form_biochem_database
 
-from biochem import models as biochem_models
+from biochem import models as biochem_models, upload
 
 import logging
 logger = logging.getLogger("dart")
@@ -54,8 +57,12 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         required=False,
     )
 
-    def get_download_url(self):
-        raise NotImplementedError("The button url has not been implemented")
+    datatype = None
+    bcd_report_model = None
+    bcs_report_model = None
+
+    def get_download_url(self, alias: str) -> str:
+        return reverse_lazy(alias, args=[self.mission_id])
 
     def get_download_button(self):
         attrs = {
@@ -74,8 +81,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return btn
 
-    def get_upload_url(self):
-        raise NotImplementedError("The upload button url has not been implemented")
+    def get_upload_url(self, alias: str) -> str:
+        return reverse_lazy(alias, args=[self.mission_id])
 
     def get_upload_button(self):
         attrs = {
@@ -102,11 +109,29 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
     # if validation has been run and is invalid return False
     # if validation has been run and is valid return True
     def is_batch_stage1_validated(self) -> bool | None:
-        raise NotImplementedError
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        mission: core_models.Mission = core_models.Mission.objects.get(pk=self.mission_id)
+        mission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(
+            batch__pk=batch_id, descriptor=mission.mission_descriptor
+        )
+
+        if not mission_edits.exists():
+            return None
+
+        mission_edit = mission_edits.first()
+
+        return mission_edit.process_flag in ["ENR", "ECN", "EAR"]
 
     # return None if conditions for validation aren't met, return the URL otherwise
-    def get_stage1_validate_url(self) -> str | None:
-        raise NotImplementedError
+    def get_stage1_validate_url(self, alias: str) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_stage1_validate_button(self, validated: None | bool = None):
         url = self.get_stage1_validate_url()
@@ -132,11 +157,37 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
     # if validation has been run and is invalid return False
     # if validation has been run and is valid return True
     def is_batch_stage2_validated(self) -> bool | None:
-        raise NotImplementedError
+        # There is actually an oracle procedure for checking if a batch is valid
+        # ARCHIVE_BATCH.VALID_BATCH
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        result = ''
+
+        missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_id=batch_id)
+        if not missions.exists():
+            return None
+
+        mission = missions.first()
+        # EAR means it was a mission that was previosuly archived
+        # ENR means it's a new missio that hasn't been validated yet
+        if mission.process_flag is None or mission.process_flag == 'EAR'  or mission.process_flag == 'ENR':
+            return None
+
+        with connections['biochem'].cursor() as cur:
+            user_logger.info(f"validating batch")
+            result = cur.callfunc("ARCHIVE_BATCH.VALID_BATCH", bool, [batch_id, self.datatype])
+
+        return result
 
     # return None if conditions for validation aren't met, return the URL otherwise
-    def get_stage2_validate_url(self) -> str | None:
-        raise NotImplementedError
+    def get_stage2_validate_url(self, alias: str) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     # disabled if stage 1 validation hasn't been run or is invalid
     def get_stage2_validate_button(self, disabled: bool | None = None, validated: None | bool = None):
@@ -160,8 +211,12 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         return btn
 
     # return None if conditions for delete aren't met, return the URL otherwise
-    def get_delete_batch_url(self) -> str | None:
-        raise NotImplementedError
+    def get_delete_batch_url(self, alias: str) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_delete_batch_button(self):
         # The delete button has a hidden element on it so when you click the button you get the confirmation message
@@ -192,8 +247,12 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return div_btn
 
-    def get_checkin_url(self) -> str | None:
-        raise NotImplementedError
+    def get_checkin_url(self, alias: str) -> str | None:
+        batch_id = self.get_batch_id()
+        if batch_id is None:
+            return None
+
+        return reverse_lazy(alias, args=[self.mission_id, batch_id])
 
     def get_checkin_button(self, disabled=True):
         url = self.get_checkin_url()
@@ -235,8 +294,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return row
 
-    def get_batch_update_url(self) -> str:
-        raise NotImplementedError
+    def get_batch_update_url(self, alias: str) -> str:
+        return reverse_lazy(alias, args=[self.mission_id])
 
     def get_batch_selection(self):
 
@@ -252,8 +311,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         return Field('batch_selection', css_class="form-select form-select-sm",
                      template=self.field_template, wrapper_class="col-auto", **batch_select_attributes)
 
-    def get_header_update_url(self):
-        raise NotImplementedError("The url to update the cards header has not been implemented")
+    def get_header_update_url(self, alias: str):
+        return reverse_lazy(alias, args=[self.mission_id])
 
     def get_card_header(self, header_attributes: dict = None) -> Div:
         if header_attributes is None:
@@ -281,6 +340,15 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         header.fields[0].append(button_col)
 
         return header
+
+    def get_batch_date(self, batch: biochem_models.Bcbatches) -> str:
+        if batch.mission_edits.exists():
+            return batch.mission_edits.first().created_date.strftime('%Y-%m-%d')
+
+        if (bcs := self.bcs_report_model.objects.using('biochem').filter(batch=batch)).exists():
+            return bcs.first().created_date.strftime('%Y-%m-%d')
+
+        return "None"
 
     # Implementing classes should return a list of (key, value) pairs where the key is the batch_seq id
     # and the value is a string to be placed in the drop down selectiong
@@ -388,7 +456,7 @@ def get_mission_batch_id():
     return 1
 
 
-def write_bcs_file(rows, bcs_file, report_model):
+def write_bcs_file(rows, bcs_file, report_model: Type[models.Model]):
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
 
@@ -404,7 +472,7 @@ def write_bcs_file(rows, bcs_file, report_model):
             writer.writerow(row)
 
 
-def write_bcd_file(rows, bcd_file, report_model):
+def write_bcd_file(rows, bcd_file, report_model: Type[models.Model]):
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
 
@@ -419,6 +487,44 @@ def write_bcd_file(rows, bcd_file, report_model):
             row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcd_row, header, '') for
                    header in bcd_headers]
             writer.writerow(row)
+
+
+def download_batch_func(mission: core_models.Mission, uploader: str, get_data_func: Callable, file_postfix: str,
+                        bcs_model, bcs_upload, bcd_model, bcd_upload) -> int | None:
+
+    bcs_file_name = f'{mission.name}_BCS_{file_postfix}.csv'
+    bcd_file_name = f'{mission.name}_BCD_{file_postfix}.csv'
+
+    report_path = os.path.join(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file = os.path.join(report_path, bcs_file_name)
+    bcd_file = os.path.join(report_path, bcd_file_name)
+
+    # check if the files are locked and fail early if they are
+    if is_locked(bcs_file):
+        raise IOError(f"Requested file is locked {bcs_file}")
+
+    # check if the files are locked and fail early if they are
+    if is_locked(bcd_file):
+        raise IOError(f"Requested file is locked {bcs_file}")
+
+    user_logger.info(f"Creating BCS/BCD files. Using uploader: {uploader}")
+
+    samples, bottles = get_data_func(mission, upload_all=True)
+
+    sample_rows = bcs_upload(uploader=uploader, bottles=bottles)
+    write_bcs_file(sample_rows, bcs_file, bcs_model)
+
+    bottle_rows = bcd_upload(uploader=uploader, samples=samples)
+    write_bcd_file(bottle_rows, bcd_file, bcd_model)
+
+    # if we're on windows then let's pop the directory where we saved the reports open. Just to annoy the user.
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
+
+    # No batch ID is created when downloading a mission's BCS/BCD tables
+    return 0
 
 
 def set_descriptor(request, mission_id):
@@ -539,7 +645,15 @@ def deal_with_batch(request, trigger, mission_id, logger_name, batch_func=None) 
         if not batch_func:
             raise NotImplementedError("Batch function is not implemented.")
 
-        batch_id = batch_func(mission, uploader)
+        # are we connected?
+        if not form_biochem_database.is_connected():
+            raise DatabaseError(f"No Database Connection")
+
+        batch_id = get_mission_batch_id()
+        batch = biochem_models.Bcbatches.objects.using('biochem').get_or_create(
+            name=mission.mission_descriptor, username=uploader, batch_seq=batch_id)[0]
+
+        batch_func(mission, uploader, batch)
 
         msg_alert.set_message("Success")
         msg_alert.set_type("success")
@@ -584,16 +698,25 @@ def upload_batch(request, mission_id, logger_name, upload_batch_func=None):
 def delete_batch(mission_id, batch_id, label, bcd_model, bcs_model):
     unlock = False
     bcmission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_id=batch_id)
-    if bcmission_edits.exists() and hasattr(bcmission_edits.first(), 'mission'):
-        bc_mission = bcmission_edits.first().mission
-        unlock = bc_mission.locked_missions if hasattr(bc_mission, 'locked_missions') else None
+    if bcmission_edits.exists():
+        try:
+            bc_mission = bcmission_edits.first().mission
+            unlock = bc_mission.locked_missions if hasattr(bc_mission, 'locked_missions') else None
+        except biochem_models.Bcmissions.DoesNotExist:
+            # There are no existing missions checked out so no locks to release after
+            unlock = None
 
     response = None
     with connections['biochem'].cursor() as cur:
         user_logger.info(f"Deleteing Batch {batch_id}")
-        response = cur.callproc("DELETES_PKG.DELETE_ARCHIVE_DELETES", [batch_id])
-        response = cur.callproc("DELETES_PKG.DELETE_EDITS_DELETES", [batch_id])
-        response = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
+        func_area_par = "DH" if label.upper()=="DISCRETE" else "PL"
+        try:
+            response = cur.callproc("ARCHIVE_BATCH.DISABLE_EDITS_BDR_TRIGGERS", [func_area_par])
+            response = cur.callproc("DELETES_PKG.DELETE_ARCHIVE_DELETES", [batch_id])
+            response = cur.callproc("DELETES_PKG.DELETE_EDITS_DELETES", [batch_id])
+            response = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
+        finally:
+            response = cur.callproc("ARCHIVE_BATCH.ENABLE_EDITS_BDR_TRIGGERS", [func_area_par])
 
     bcd_model.objects.using('biochem').filter(batch=batch_id).delete()
     bcs_model.objects.using('biochem').filter(batch=batch_id).delete()
@@ -782,6 +905,66 @@ def delete_selected_batch(request, mission_id, batch_id, logger_name, batch_func
     response = HttpResponse(msg_alert)
     response['HX-Trigger-After-Settle'] = "reload_batch"
     return response
+
+
+def checkin_mission(mission_id: int, batch_id: int, label: str, header_model,
+                    oracle_checkout_proc: str, oracle_archive_proc: str, delete_batch_func: Callable):
+    return_status = ''
+    return_value = ''
+
+    # check for existing mission matching this batch and check it out to the user edit tables if it exists
+    # This is to create a backup which the user can then recover from if something goes wrong.
+    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    batch_mission_edit = batch.mission_edits.first()
+
+    bc_mission: biochem_models.Bcmissions = checkout_existing_mission(
+        mission=batch_mission_edit,
+        label=label,
+        header_model=header_model,
+        oracle_proc=oracle_checkout_proc
+    )
+
+    # if the **batch_mission_edit** mission has a mission_seq it needs to be archived using the
+    # REARCHIVE_DISCRETE_MISSION function. Otherwise, the cursor will return without errors, but won't actually have
+    # done anything ( -_-), seriously...
+    # if batch_mission_edit.mission_id is not None:
+    #     stage2_validation_func(batch_mission_edit.mission_id, batch_id)
+
+    # check in new mission
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"Uploading new mission with batch id {batch_id}")
+        return_value = cur.callproc(oracle_archive_proc, [batch_id, return_status])
+
+    # if the checkin fails release the old mission and delete it from the edit tables
+    # if successful delete the new mission from the edit tables, but keep the old one.
+    try:
+        if return_value[1] is not None:
+            raise ValueError(return_value[1])
+
+        # confirm the replacement mission was uploaded, this will throw a DoesNotExist exception if the mission doesn't
+        # exist in Biochem
+        if batch_mission_edit.mission_id is not None:
+            biochem_models.Bcmissions.objects.using('biochem').get(mission_seq=batch_mission_edit.mission_id)
+        elif bc_mission:
+            biochem_models.Bcmissions.objects.using('biochem').exclude(mission_seq=bc_mission.mission_seq).get(
+                descriptor=batch_mission_edit.descriptor, created_date=batch_mission_edit.created_date)
+
+        # if the mission exists in the lock tables and there was no problem archiving it,
+        # then remove it from the locked table
+        if bc_mission and bc_mission.locked_missions:
+            bc_mission.delete()
+
+        delete_batch_func(mission_id, batch_id)
+    except biochem_models.Bcmissions.DoesNotExist as ex:
+        user_logger.error(f"Issues with archiving mission: {return_value[1]}")
+
+        if bc_mission and bc_mission.locked_missions:
+            old_batch_id = biochem_models.Bcmissionedits.objects.using('biochem').filter(
+                mission_edt_seq=bc_mission.mission_seq).first().batch.batch_seq
+            delete_batch_func(mission_id, old_batch_id)
+            bc_mission.locked_missions.delete()
+
+        raise DatabaseError("Could not check in new mission")
 
 
 def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, batch_func: Callable) -> HttpResponse:

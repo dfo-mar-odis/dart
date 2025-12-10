@@ -1,43 +1,52 @@
-import os
-import subprocess
-import time
-from pathlib import Path
 from typing import Tuple
 
-from bs4 import BeautifulSoup
-from crispy_forms.utils import render_crispy_form
-from django.conf import settings
-from django.db import DatabaseError
-from django.db.models import QuerySet
-from django.http import HttpResponse
-from django.urls import path, reverse_lazy
+from django.db import DatabaseError, connections
+from django.urls import path
 from django.utils.translation import gettext_lazy as _
 
 from biochem import upload
 from biochem import models as biochem_models
+from biochem.models import BcdPReportModel, BcsPReportModel
 
-from core import forms as core_forms, form_biochem_database
+from core import form_biochem_database
 from core import models as core_models
 
 from core import form_biochem_batch2
 
 import logging
 
-from core.form_biochem_plankton import BiochemPlanktonBatchForm
-
 user_logger = logging.getLogger('dart.user')
 
 
-class BiochemDiscreteBatchForm(form_biochem_batch2.BiochemDBBatchForm):
+class BiochemPlanktonBatchForm(form_biochem_batch2.BiochemDBBatchForm):
 
-    def get_download_url(self):
-        return reverse_lazy("core:form_biochem_plankton_download_batch", args=[self.mission_id])
+    datatype = 'PLANKTON'
+    bcd_report_model = biochem_models.BcdPReportModel
+    bcs_report_model = biochem_models.BcsPReportModel
 
-    def get_upload_url(self):
-        return reverse_lazy("core:form_biochem_plankton_upload_batch", args=[self.mission_id])
+    def get_download_url(self, alias: str = "core:form_biochem_plankton_download_batch"):
+        return super().get_download_url(alias)
 
-    def get_header_update_url(self):
-        return reverse_lazy("core:form_biochem_plankton_select_batch", args=[self.mission_id])
+    def get_upload_url(self, alias: str = "core:form_biochem_plankton_upload_batch"):
+        return super().get_upload_url(alias)
+
+    def get_header_update_url(self, alias: str = "core:form_biochem_plankton_update_header"):
+        return super().get_header_update_url(alias)
+
+    def get_batch_update_url(self, alias: str = "core:form_biochem_plankton_select_batch"):
+        return super().get_batch_update_url(alias)
+
+    def get_delete_batch_url(self, alias: str = "core:form_biochem_plankton_delete_batch") -> str | None:
+        return super().get_delete_batch_url(alias)
+
+    def get_stage1_validate_url(self, alias: str="core:form_biochem_plankton_stage1_validation") -> str | None:
+        return super().get_stage1_validate_url(alias)
+
+    def get_stage2_validate_url(self, alias: str = "core:form_biochem_plankton_stage2_validation") -> str | None:
+        return super().get_stage2_validate_url(alias)
+
+    def get_checkin_url(self, alias: str = "core:form_biochem_plankton_checkin") -> str | None:
+        return super().get_checkin_url(alias)
 
     def get_batch_choices(self) -> list[Tuple[int, str]]:
 
@@ -47,21 +56,14 @@ class BiochemDiscreteBatchForm(form_biochem_batch2.BiochemDBBatchForm):
         if form_biochem_database.is_connected():
             try:
                 # get batches that exist in the "edit" tables
-                edit_batches = biochem_models.Bcbatches.objects.using('biochem').filter(
+                batches = biochem_models.Bcbatches.objects.using('biochem').filter(
                     name=mission.mission_descriptor,
-                    activity_edits__data_pointer_code__iexact='PL'
                     # batch_seq__in=batch_ids
                 ).distinct().order_by('-batch_seq')
 
-                choices = [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in edit_batches]
+                choices = [(db.batch_seq, f"{db.batch_seq}: {db.name} (Created: {self.get_batch_date(db)})") for db in
+                           batches if db.plankton_station_edits.count() > 0 or db.plankton_header_edits.count() > 0]
 
-                # get batches that exist in the BCS/BCD tables, excluding batches in the edit tables because we've already
-                # retrieved those batches
-                batches = biochem_models.Bcbatches.objects.using('biochem').filter(
-                    plankton_station_edits__mission_descriptor__iexact=mission.mission_descriptor
-                ).exclude(pk__in=edit_batches).distinct().order_by('-batch_seq')
-
-                choices += [(db.batch_seq, f"{db.batch_seq}: {db.name}") for db in batches]
             except DatabaseError as err:
                 # 942 is "table or view does not exist". If connected this shouldn't happen, but if it does
                 # we'll return an empty choice list.
@@ -71,88 +73,188 @@ class BiochemDiscreteBatchForm(form_biochem_batch2.BiochemDBBatchForm):
         return choices
 
 
-def get_plankton_data(mission: core_models.Mission, upload_all=False) -> (QuerySet, QuerySet):
-    if upload_all:
-        data_types = core_models.BioChemUpload.objects.filter(
-            type__mission=mission).values_list('type', flat=True).distinct()
-    else:
-        data_types = core_models.BioChemUpload.objects.filter(
-            type__mission=mission
-        ).exclude(
-            status=core_models.BioChemUploadStatus.delete
-        ).values_list('type', flat=True).distinct()
-
-    samples = core_models.DiscreteSampleValue.objects.filter(sample__bottle__event__mission=mission,
-                                                             sample__type_id__in=data_types)
-    bottle_ids = samples.values_list('sample__bottle_id').distinct()
+def get_plankton_data(mission: core_models.Mission, upload_all=False):
+    # the upload_all variable is more for discrete data since the user can pick and choose
+    # what discrete data to upload. For plankton it's all or none.
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    bottle_ids = samples.values_list('bottle_id').distinct()
     bottles = core_models.Bottle.objects.filter(pk__in=bottle_ids)
 
     return samples, bottles
 
 
-def download_batch_func(mission: core_models.Mission, uploader: str) -> None:
-    bcs_file_name = f'{mission.name}_BCS_P.csv'
-    bcd_file_name = f'{mission.name}_BCD_P.csv'
-
-    report_path = os.path.join(settings.BASE_DIR, "reports")
-    Path(report_path).mkdir(parents=True, exist_ok=True)
-
-    bcs_file = os.path.join(report_path, bcs_file_name)
-    bcd_file = os.path.join(report_path, bcd_file_name)
-
-    # check if the files are locked and fail early if they are
-    if form_biochem_batch2.is_locked(bcs_file):
-        raise IOError(f"Requested file is locked {bcs_file}")
-
-    # check if the files are locked and fail early if they are
-    if form_biochem_batch2.is_locked(bcd_file):
-        raise IOError(f"Requested file is locked {bcs_file}")
-
-    user_logger.info(f"Creating BCS/BCD files. Using uploader: {uploader}")
-
-    samples, bottles = get_plankton_data(mission, upload_all=True)
-
-    sample_rows = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
-    form_biochem_batch2.write_bcs_file(sample_rows, bcs_file, biochem_models.BcsPReportModel)
-
-    bottle_rows = upload.get_bcd_p_rows(uploader=uploader, samples=samples)
-    form_biochem_batch2.write_bcd_file(bottle_rows, bcd_file, biochem_models.BcdPReportModel)
-
-    # if we're on windows then let's pop the directory where we saved the reports open. Just to annoy the user.
-    if os.name == 'nt':
-        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
+def download_batch_func(mission: core_models.Mission, uploader: str) -> int | None:
+    bcs = BcsPReportModel
+    bcs_upload = upload.get_bcs_p_rows
+    bcd = BcdPReportModel
+    bcd_upload = upload.get_bcd_p_rows
+    return form_biochem_batch2.download_batch_func(
+        mission, uploader, get_data_func=get_plankton_data, file_postfix='P',
+        bcd_model=bcd, bcd_upload=bcd_upload, bcs_model=bcs, bcs_upload=bcs_upload
+    )
 
 
-def download_batch(request, mission_id):
-    return form_biochem_batch2.download_batch(request, mission_id, user_logger.name, download_batch_func)
+def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+    if not form_biochem_database.is_connected():
+        raise DatabaseError(f"No Database Connection")
+
+    # 1) get bottles from BCS_P table
+    table_name = form_biochem_database.get_bcs_p_table()
+    bcs_p = upload.get_model(table_name, biochem_models.BcsP)
+    exists = upload.check_and_create_model('biochem', bcs_p)
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
+                            f"Could not connect to table {table_name}")
+
+    # 2) get all the bottles to be uploaded
+    samples, bottles = get_plankton_data(mission)
+    if bottles.exists():
+        # 4) upload only bottles that are new or were modified since the last biochem upload
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCS rows"))
+        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_p_model=bcs_p)
+
+        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCS Plankton rows"))
+        upload.upload_db_rows(bcs_p, bcs_create)
 
 
-def upload_batch(request, mission_id):
-    raise NotImplementedError
+def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+    if not form_biochem_database.is_connected():
+        raise DatabaseError(f"No Database Connection")
+
+    # 1) get Biochem BCD_P model
+    table_name = form_biochem_database.get_bcd_p_table()
+    bcd_p = upload.get_model(table_name, biochem_models.BcdP)
+
+    # 2) if the BCD_P model doesn't exist, create it
+    exists = upload.check_and_create_model('biochem', bcd_p)
+    if not exists:
+        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
+                            f"Could not connect to table {table_name}")
+
+    user_logger.info(_("Compiling BCD rows for : ") + mission.name)
+
+    # 4) if the bcs_p table exist, create with all the bottles. linked to plankton samples
+    samples = core_models.PlanktonSample.objects.filter(bottle__event__mission=mission)
+    if samples.exists():
+        # 5) upload only bottles that are new or were modified since the last biochem upload
+        # send_user_notification_queue('biochem', _("Compiling BCS rows"))
+        user_logger.info(_("Compiling BCD Plankton rows"))
+        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples, batch=batch,
+                                           bcd_p_model=bcd_p)
+
+        # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
+        user_logger.info(_("Creating/updating BCD Plankton rows"))
+        upload.upload_db_rows(bcd_p, bcd_create)
 
 
-def update_batch_list(request, mission_id):
-    # when updating the batch list, we'll return the whole header for the batch card because depending on what's
-    # selected there might be different buttons or different button status shown.
-    #
-    # this function will be called when the selection changes, the biochem_db_connect trigger is fired, or
-    # when the reload_batch trigger is fired
+def upload_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches) -> int | None:
+    # clear previous errors if there were any from the last upload attempt
+    mission.errors.filter(type=core_models.ErrorType.biochem_plankton).delete()
+    core_models.MissionError.objects.filter(mission=mission, type=core_models.ErrorType.biochem_plankton).delete()
 
-    form = BiochemPlanktonBatchForm(request, mission_id=mission_id)
-    html = render_crispy_form(form)
-    soup = BeautifulSoup(html, 'html.parser')
+    # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
+    user_logger.info(_("Validating Plankton Data"))
 
-    return HttpResponse(soup.find(id=form.get_id_builder().get_card_header_id()))
+    # create and upload the BCS data if it doesn't already exist
+    upload_bcs_p_data(mission, uploader, batch)
+    upload_bcd_p_data(mission, uploader, batch)
 
 
-def select_batch(request, mission_id):
-    return form_biochem_batch2.get_batch_list(request, mission_id, BiochemDiscreteBatchForm)
+def stage1_validation_func(mission_id, batch_id) -> None:
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"validating station data")
+        stn_pass_var = cur.callfunc("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_STATION", str, [batch_id])
+
+        user_logger.info(f"validating plankton data")
+        data_pass_var = cur.callfunc("VALIDATE_PLANKTON_STATN_DATA.VALIDATE_PLANKTON_DATA", str, [batch_id])
+
+        if stn_pass_var == 'T' and data_pass_var == 'T':
+            user_logger.info(f"Moving BCS/BCD data to workbench")
+            cur.callfunc("POPULATE_PLANKTON_EDITS_PKG.POPULATE_PLANKTON_EDITS", str, [batch_id])
+        else:
+            user_logger.info(f"Errors in BCS/BCD data. Stand by for a damage report.")
+
+        cur.execute('commit')
+        cur.close()
+
+
+def stage2_validation_func(mission_id, batch_id) -> None:
+    user = form_biochem_database.get_uploader()
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"validating mission data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_MISSION_ERRORS", str, [batch_id, user])
+
+        user_logger.info(f"validating event data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_EVENT_ERRORS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton header data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_HEDR_ERRORS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton general data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_GENERL_ERRS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton details data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_DTAIL_ERRS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton details data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_FREQ_ERRS", str, [batch_id, user])
+
+        user_logger.info(f"validating plankton replicate data")
+        cur.callfunc("BATCH_VALIDATION_PKG.CHECK_BATCH_PLANK_INDIV_ERRS", str, [batch_id, user])
+
+
+def delete_batch(mission_id: int, batch_id: int) -> None:
+    label = "PLANKTON"
+    bcd_model = upload.get_model(form_biochem_database.get_bcd_p_table(), biochem_models.BcdP)
+    bcs_model = upload.get_model(form_biochem_database.get_bcs_p_table(), biochem_models.BcsP)
+
+    form_biochem_batch2.delete_batch(mission_id, batch_id, label, bcd_model, bcs_model)
+
+
+def checkin_batch(mission_id, batch_id) -> None:
+
+    header_model = biochem_models.Bcplanktnhedrs
+    label = "PLANKTON"
+    oracle_checkout_proc = "Download_Plankton_Mission"
+    oracle_archive_proc = "ARCHIVE_BATCH.ARCHIVE_PLANKTON_BATCH"
+
+    form_biochem_batch2.checkin_mission(mission_id, batch_id, label, header_model,
+                                        oracle_checkout_proc, oracle_archive_proc, delete_batch)
 
 
 prefix = 'biochem/plankton/batch'
 url_patterns = [
-    path(f'<int:mission_id>/{prefix}/download/', download_batch, name="form_biochem_plankton_download_batch"),
-    path(f'<int:mission_id>/{prefix}/upload/', upload_batch, name="form_biochem_plankton_upload_batch"),
+    path(f'<int:mission_id>/{prefix}/download/', form_biochem_batch2.download_batch,
+         kwargs={'logger_name': user_logger.name, 'download_batch_func': download_batch_func},
+         name="form_biochem_plankton_download_batch"),
 
-    path(f'<int:mission_id>/{prefix}/select_batch/', select_batch, name="form_biochem_plankton_select_batch"),
+    path(f'<int:mission_id>/{prefix}/upload/', form_biochem_batch2.upload_batch,
+         kwargs={'logger_name': user_logger.name, 'upload_batch_func': upload_batch_func},
+         name="form_biochem_plankton_upload_batch"),
+
+    path(f'<int:mission_id>/{prefix}/update_batch_list/', form_biochem_batch2.get_batch_list,
+         kwargs={"form_class": BiochemPlanktonBatchForm},
+         name="form_biochem_plankton_update_header"),
+
+    path(f'<int:mission_id>/{prefix}/set_selected_batch/', form_biochem_batch2.get_update_controls,
+         kwargs={"form_class": BiochemPlanktonBatchForm},
+         name="form_biochem_plankton_select_batch"),
+
+    path(f'<int:mission_id>/{prefix}/validate/stage1/<int:batch_id>/', form_biochem_batch2.stage_1_validation,
+         kwargs={'logger_name': user_logger.name, 'batch_func': stage1_validation_func},
+         name="form_biochem_plankton_stage1_validation"),
+
+    path(f'<int:mission_id>/{prefix}/validate/stage2/<int:batch_id>/', form_biochem_batch2.stage_2_validation,
+         kwargs={'logger_name': user_logger.name, 'batch_func': stage2_validation_func},
+         name="form_biochem_plankton_stage2_validation"),
+
+    path(f'<int:mission_id>/{prefix}/delete_selected_batch/<int:batch_id>/', form_biochem_batch2.delete_selected_batch,
+         kwargs={'logger_name': user_logger.name, 'batch_func': delete_batch},
+         name="form_biochem_plankton_delete_batch"),
+
+    path(f'<int:mission_id>/{prefix}/checkin_selected_batch/<int:batch_id>/', form_biochem_batch2.checkin_batch,
+         kwargs={'logger_name': user_logger.name, 'batch_func': checkin_batch},
+         name="form_biochem_plankton_checkin"),
 ]

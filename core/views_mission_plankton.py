@@ -1,23 +1,13 @@
-import csv
-import os
-from pathlib import Path
 import logging
 
 from bs4 import BeautifulSoup
-from django.conf import settings
 
 from django.http import HttpResponse
 from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 from core.views import MissionMixin
-from core import models, forms, form_biochem_database, form_biochem_plankton
-from core.form_biochem_batch import get_mission_batch_id
-
-from biochem import models as biochem_models
-from biochem import upload
-
-from config.utils import load_svg
+from core import models, forms, form_biochem_plankton, form_biochem_batch2_plankton
 
 from config.views import GenericDetailView
 
@@ -37,6 +27,9 @@ class PlanktonDetails(MissionMixin, GenericDetailView):
         context = super().get_context_data(**kwargs)
         context['mission'] = self.object
         context['database'] = self.kwargs['database']
+
+        context['biochem_batch_form'] = form_biochem_batch2_plankton.BiochemPlanktonBatchForm(mission_id=self.object.pk)
+
         return context
 
     def get_page_title(self):
