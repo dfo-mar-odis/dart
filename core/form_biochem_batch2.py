@@ -44,6 +44,7 @@ card_context = {
 BIOCHEM_BATCH_STATUS_ALERT = "div_id_data_alert_message"
 BIOCHEM_BATCH_SELECTION_ID = "div_id_input_batch_selection"
 BIOCHEM_BATCH_CONTROL_ROW_ID = "div_id_row_batch_control"
+BIOCHEM_INDICATOR_ROW_ID = "div_id_indicator_dbbatch_form"
 
 class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
@@ -121,7 +122,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         attrs = {
             'title': _("Download BCS/BCD tables"),
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
-            'hx-trigger': 'click, download_mission_bcs_bcd from:body'
+            'hx-trigger': 'click, download_mission_bcs_bcd from:body',
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         if self.mission_id:
@@ -138,7 +140,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         attrs = {
             'title': _("Upload BCS/BCD tables"),
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
-            'hx-trigger': 'click, upload_mission_bcs_bcd from:body'
+            'hx-trigger': 'click, upload_mission_bcs_bcd from:body',
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         if self.mission_id:
@@ -183,7 +186,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
             'title': _("Run Stage 1 - Validation on Metadata"),
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
             'hx-trigger': 'click, run_stage1_validation from:body',
-            'hx-post': url
+            'hx-post': url,
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         icon = load_svg('1-square')
@@ -232,7 +236,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
             'title': _("Run Stage 2 - Validation on Metadata"),
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
             'hx-trigger': 'click, run_stage2_validation from:body',
-            'hx-post': url
+            'hx-post': url,
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         css_class = "btn btn-sm "
@@ -254,14 +259,16 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
             'title': _("Delete the selected batch"),
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
             'hx-confirm': _('Are you sure?'),
-            'hx-post': url
+            'hx-post': url,
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         hidden_btn_attrs = {
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
             'hx-trigger': 'delete_selected_batch from:body',
             'hx-post': url,
-            'type': 'hidden'
+            'type': 'hidden',
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         icon = load_svg('dash-square')
@@ -281,7 +288,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
             'title': _("Check-in Mission to Archive"),
             'hx-target': f'#{self.get_id_builder().get_alert_area_id()}',
             'hx-trigger': 'click, checkin_selected_batch from:body',
-            'hx-post': url
+            'hx-post': url,
+            'hx-indicator': f'#{BIOCHEM_INDICATOR_ROW_ID}'
         }
 
         if disabled is None or disabled:
@@ -292,12 +300,28 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         return btn
 
+    # the row indicator can be used to show a spinner when loading is taking place
+    @staticmethod
+    def get_row_indicator():
+        indicator_span = Div(
+            css_id=BIOCHEM_INDICATOR_ROW_ID,
+            css_class='col-auto align-self-center htmx-indicator',
+        )
+        indicator_span.append(Div(
+            css_class='spinner-border text-primary',
+            style='width: 20px; height: 20px;'
+        ))
+
+        return indicator_span
+
     def get_button_row(self):
 
         # depending on the selected batch and validation status of the batch we'll want to send back different buttons
 
         button_column = Column(css_class="col-auto")
         row = Row(button_column, css_id=BIOCHEM_BATCH_CONTROL_ROW_ID)
+        row.insert(0, self.get_row_indicator())
+
         if self.get_batch_id() is None:
             button_column.append(self.get_download_button())
             button_column.append(self.get_upload_button())
@@ -322,6 +346,7 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
             'id': BIOCHEM_BATCH_SELECTION_ID,
             'hx-target': f'#{self.get_id_builder().get_card_id()}',
             'hx-swap': 'outerHTML',
+            'hx-indicator': f"#{BIOCHEM_INDICATOR_ROW_ID}",
             # biochem_db_connect is fired by the form_biochem_database module when connecting or disconnecting from a DB
             'hx-trigger': "change, batch_updated from:body",
             'hx-get': url
@@ -360,7 +385,7 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
     def get_card_body(self) -> Div:
         attrs = {
             'hx-get': self.get_batch_error_url(),
-            'hx-trigger': 'load, batch_updated from:body',
+            'hx-trigger': 'load, reload_batch from:body, batch_updated from:body',
         }
         body = Div(css_class='card-body vertical-scrollbar', id=self.get_card_body_id(), **attrs)
         return body
@@ -492,7 +517,7 @@ def write_bcs_file(rows, bcs_file, report_model: Type[models.Model]):
         writer.writerow(bcs_headers)
 
         for idx, bcs_row in enumerate(rows):
-            row = [getattr(bcs_row, header, '') for header in bcs_headers]
+            row = [getattr(bcs_row, header, '') if header != 'batch' else bcs_row.batch_id for header in bcs_headers]
             writer.writerow(row)
 
 
@@ -508,7 +533,8 @@ def write_bcd_file(rows, bcd_file, report_model: Type[models.Model]):
         writer.writerow(bcd_headers)
 
         for idx, bcd_row in enumerate(rows):
-            row = [str(idx + 1) if header == 'dis_data_num' else getattr(bcd_row, header, '') for
+            row = [str(idx + 1) if header == 'dis_data_num' else
+                   getattr(bcd_row, header, '') if header != 'batch' else bcd_row.batch_id for
                    header in bcd_headers]
             writer.writerow(row)
 
@@ -535,7 +561,7 @@ def download_batch_func(mission: core_models.Mission, uploader: str, get_data_fu
 
     user_logger.info(f"Creating BCS/BCD files. Using uploader: {uploader}")
 
-    samples, bottles = get_data_func(mission, upload_all=True)
+    samples, bottles = get_data_func(mission)
 
     sample_rows = bcs_upload(uploader=uploader, bottles=bottles)
     write_bcs_file(sample_rows, bcs_file, bcs_model)
@@ -1042,7 +1068,7 @@ def process_attrs(error_set, table_columns):
     return attrs
 
 
-def get_table_errors(soup, table_names: list[str], get_row_errors: Callable):
+def get_table_errors(soup, batch_id, table_names: list[str], get_row_errors: Callable):
     context = {}
 
     table_models = {}
@@ -1057,7 +1083,7 @@ def get_table_errors(soup, table_names: list[str], get_row_errors: Callable):
         context['table_name'] = table_model._meta.db_table
         context['table_columns'] = [field for field in table_model._meta.get_fields()]
         context['error_rows'] = [process_attrs(elm, context['table_columns']) for elm in
-                                 table_model.objects.using('biochem').filter(pk__in=row_errors)]
+                                 table_model.objects.using('biochem').filter(batch_id=batch_id, pk__in=row_errors)]
 
         table_html = render_to_string('core/partials/table_dynamic.html', context)
         soup_table = BeautifulSoup(table_html, "html.parser")
@@ -1074,7 +1100,7 @@ def get_batch_summary_soup(soup, mission_id, batch_id):
             filtered_errors = errors.filter(statn_data_table_name=model_name).order_by('record_sequence_value')
             return filtered_errors.values_list('record_sequence_value', flat=True).distinct()
 
-        return get_table_errors(soup, table_names, get_stn_row_errors)
+        return get_table_errors(soup, batch_id, table_names, get_stn_row_errors)
     elif (errors := batch.errors.all()).exists():
         table_names = [name for name in errors.values_list('edit_table_name', flat=True).distinct()]
 
@@ -1082,7 +1108,7 @@ def get_batch_summary_soup(soup, mission_id, batch_id):
             filtered_errors = errors.filter(edit_table_name=model_name).order_by('record_num_seq')
             return filtered_errors.values_list('record_num_seq', flat=True).distinct()
 
-        return get_table_errors(soup, table_names, get_edit_row_errors)
+        return get_table_errors(soup, batch_id, table_names, get_edit_row_errors)
 
     return soup
 
@@ -1105,12 +1131,13 @@ def get_batch_errors(request, mission_id, batch_id):
 
     soup = BeautifulSoup("", 'html.parser')
 
-    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    try:
+        batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    except biochem_models.Bcbatches.DoesNotExist:
+        return HttpResponse()
+
     if (errors:=batch.errors.order_by('record_num_seq')).exists():
         context['errors'] = errors
-
-        # for errors, the edit_table_name tells us what table has problems and record_num_seq will tells us the
-        # primary key of the row with issues.
 
         table_html = render_to_string('core/partials/table_biochem_batch_errors.html', context)
         soup.append(BeautifulSoup(table_html, 'html.parser'))
@@ -1120,16 +1147,15 @@ def get_batch_errors(request, mission_id, batch_id):
     elif (errors:=batch.station_data_errors.order_by('record_sequence_value')):
         context['errors'] = errors
 
-        # for errors, the edit_table_name tells us what table has problems and record_num_seq will tells us the
-        # primary key of the row with issues.
-
         table_html = render_to_string('core/partials/table_biochem_bcs_bcd_errors.html', context)
         soup.append(BeautifulSoup(table_html, 'html.parser'))
         get_batch_summary_soup(soup, mission_id, batch_id)
 
         return HttpResponse(soup)
 
-    return HttpResponse()
+    alert = core_forms.StatusAlert(component_id="div_id_biochem_batch_validation_alert", alert_type='success', message=_('No validation issues identified.'))
+    alert.include_close_button()
+    return HttpResponse(alert)
 
 prefix = 'biochem/batch'
 url_patterns = [

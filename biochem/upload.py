@@ -127,11 +127,11 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
-        bcs_row = models.BcsD(dis_headr_collector_sample_id=bottle.bottle_id)
+        bcs_row = models.BcsD(dis_sample_key_value=dis_sample_key_value, dis_headr_collector_sample_id=bottle.bottle_id)
 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
-        bcs_row.dis_sample_key_value = dis_sample_key_value
+
         bcs_row.created_by = uploader
 
         bcs_row.mission_descriptor = mission.mission_descriptor
@@ -205,7 +205,10 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.process_flag = 'NR'
         bcs_row.data_center_code = primary_data_center.data_center_code
 
-        bcs_row.batch = batch
+        if batch:
+            bcs_row.batch = batch
+        else:
+            bcs_row.batch_id = 0
 
         bcs_objects_to_create.append(bcs_row)
 
@@ -318,8 +321,10 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.process_flag = 'NR'
         bcs_row.data_center_code = institute.data_center_code
 
-        bcs_row.batch = batch
-        # bcs_row.batch_seq = batch
+        if batch:
+            bcs_row.batch = batch
+        else:
+            bcs_row.batch_id = 0
 
         try:
             sounding_action = event.sounding_action
@@ -454,7 +459,10 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         bcd_row.created_date = datetime.now().strftime("%Y-%m-%d")
         bcd_row.dis_sample_key_value = dis_sample_key_value
 
-        bcd_row.batch = batch
+        if batch:
+            bcd_row.batch = batch
+        else:
+            bcd_row.batch_id = 0
         # bcd_row.batch = batch.pk
 
         bcd_objects_to_create.append(bcd_row)
@@ -558,8 +566,10 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        bcd_row.batch = batch
-        # bcd_row.batch = batch
+        if batch:
+            bcd_row.batch = batch
+        else:
+            bcd_row.batch_id = 0
 
         # mission descriptor
         # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code

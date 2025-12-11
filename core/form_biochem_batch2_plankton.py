@@ -86,7 +86,7 @@ def get_plankton_data(mission: core_models.Mission, upload_all=False):
     return samples, bottles
 
 
-def download_batch_func(mission: core_models.Mission, uploader: str) -> int | None:
+def download_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches) -> int | None:
     bcs = BcsP
     bcs_upload = upload.get_bcs_p_rows
     bcd = BcdP
