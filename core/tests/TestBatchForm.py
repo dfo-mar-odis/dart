@@ -12,20 +12,20 @@ from django.test import tag, RequestFactory
 from django.urls import reverse_lazy
 from django.contrib.sessions.middleware import SessionMiddleware
 
-from core import models as core_models, form_biochem_batch2_plankton
+from core import models as core_models, form_biochem_batch_plankton
 from core.tests import CoreFactoryFloor
 from core.tests.TestBioChemUpload import AbstractTestDatabase
 
 from biochem import models as bio_models, upload
 
-from core import form_biochem_batch2, form_biochem_batch2_discrete
+from core import form_biochem_batch, form_biochem_batch_discrete
 
 import logging
 
 logger = logging.getLogger('dart.test')
 test_logger = logging.getLogger('dart.test.batchform')
 
-class MockBiochemBatchForm(form_biochem_batch2.BiochemDBBatchForm):
+class MockBiochemBatchForm(form_biochem_batch.BiochemDBBatchForm):
     def get_header_update_url(self):
         return "test/"
 
@@ -85,13 +85,13 @@ class TestDiscreteBatchForm2(DartTestCase):
 
     def test__descriptor_form_has_descriptor(self):
         # if a descriptor is provided this function should return none
-        response = form_biochem_batch2._descriptor_form("test", self.mission.id, "14DES25001")
+        response = form_biochem_batch._descriptor_form("test", self.mission.id, "14DES25001")
         self.assertIsNone(response, f"A descriptor was provided, we expect the function to return None")
 
     def test__descriptor_form_no_descriptor(self):
         # if no descriptor is provided this function should return a form to set the descriptor
         expected_trigger = "test"
-        response = form_biochem_batch2._descriptor_form(expected_trigger, self.mission.id, None)
+        response = form_biochem_batch._descriptor_form(expected_trigger, self.mission.id, None)
         self.assertIsNotNone(response.content, "A descriptor was not provided, we expect the function to return a MissionDescriptorForm as HTML")
 
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -108,7 +108,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         url = reverse_lazy("core:form_biochem_batch_mission_descriptor", args=[self.mission.pk])
         factory = RequestFactory()
         request = factory.post(url, data={})
-        response = form_biochem_batch2.set_descriptor(request, mission_id=self.mission.pk)
+        response = form_biochem_batch.set_descriptor(request, mission_id=self.mission.pk)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -133,7 +133,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         # I just want to make sure
         self.assertIsNone(self.mission.mission_descriptor)
 
-        response = form_biochem_batch2.set_descriptor(request, mission_id=self.mission.pk)
+        response = form_biochem_batch.set_descriptor(request, mission_id=self.mission.pk)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -147,13 +147,13 @@ class TestDiscreteBatchForm2(DartTestCase):
 
     def test__uploader_form(self):
         # if an uploader is provided this function should return none
-        response = form_biochem_batch2._descriptor_form("test", self.mission.id, "upsonp")
+        response = form_biochem_batch._descriptor_form("test", self.mission.id, "upsonp")
         self.assertIsNone(response, f"An uploader was provided, we expect the function to return None")
 
     def test__uploader_form_no_uploader(self):
         # if no uploader is provided this function should return a form to set the uploader
         expected_trigger = "test"
-        response = form_biochem_batch2._uploader_form(expected_trigger, self.mission.id, None)
+        response = form_biochem_batch._uploader_form(expected_trigger, self.mission.id, None)
         self.assertIsNotNone(response.content,
                              "An uploader was not provided, we expect the function to return a MissionDescriptorForm as HTML")
 
@@ -171,7 +171,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         url = reverse_lazy("core:form_biochem_batch_uploader", args=[self.mission.pk])
         factory = RequestFactory()
         request = factory.post(url, data={})
-        response = form_biochem_batch2.set_uploader(request, mission_id=self.mission.pk)
+        response = form_biochem_batch.set_uploader(request, mission_id=self.mission.pk)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -197,7 +197,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
         request.session.save()
 
-        response = form_biochem_batch2.set_uploader(request, mission_id=self.mission.pk)
+        response = form_biochem_batch.set_uploader(request, mission_id=self.mission.pk)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -222,7 +222,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         request = factory.post("/test/", data={})
 
         # Call the function
-        response = form_biochem_batch2.download_batch(request, mission_id, logger_name=test_logger)
+        response = form_biochem_batch.download_batch(request, mission_id, logger_name=test_logger)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -244,7 +244,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         request = factory.get("/test/")
 
         # Call the function
-        response = form_biochem_batch2.download_batch(request, mission_id, logger_name=test_logger)
+        response = form_biochem_batch.download_batch(request, mission_id, logger_name=test_logger)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -253,7 +253,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(soup.find("form"))
 
     @tag("batch_form_2_test_download_batch_all_good")
-    @patch('core.form_biochem_batch2.core_forms.StatusAlert')
+    @patch('core.form_biochem_batch.core_forms.StatusAlert')
     def test_download_batch_all_good(self, mock_status_alert):
         # if a mission descriptor and uploader are provided, the download batch function should next call the provided
         # download_batch_func that an extending module will provide
@@ -281,7 +281,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         mock_msg_alert_instance = mock_status_alert.return_value
         mock_msg_alert_instance.is_socket_connected.return_value = True
 
-        response = form_biochem_batch2.download_batch(request, mission_id, logger_name=test_logger, download_batch_func=mock_download_func)
+        response = form_biochem_batch.download_batch(request, mission_id, logger_name=test_logger, download_batch_func=mock_download_func)
 
         # Verify that the mock function was called
         mock_download_func.assert_called_once_with(mission, expected_uploader)
@@ -301,7 +301,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         request = factory.post("/test/", data={})
 
         # Call the function
-        response = form_biochem_batch2.upload_batch(request, mission_id, logger_name=test_logger)
+        response = form_biochem_batch.upload_batch(request, mission_id, logger_name=test_logger)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -323,7 +323,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         request = factory.get("/test/")
 
         # Call the function
-        response = form_biochem_batch2.upload_batch(request, mission_id, logger_name=test_logger)
+        response = form_biochem_batch.upload_batch(request, mission_id, logger_name=test_logger)
 
         # Check the response
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -348,7 +348,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
 
         # test for if the selection is "new"
-        response = form_biochem_batch2.get_batch_list(request, self.mission.pk, MockBiochemBatchForm)
+        response = form_biochem_batch.get_batch_list(request, self.mission.pk, MockBiochemBatchForm)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         selection = soup.find(id="div_id_input_batch_selection")
@@ -358,7 +358,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(option)
         self.assertEqual("--- NEW ---", option.string)
 
-        buttons = soup.find(id=form_biochem_batch2.BIOCHEM_BATCH_CONTROL_ROW_ID)
+        buttons = soup.find(id=form_biochem_batch.BIOCHEM_BATCH_CONTROL_ROW_ID)
         self.assertIsNotNone(buttons)
 
         # Only the download and upload buttons should be present.
@@ -385,7 +385,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
 
         # test for if the selection is "Test 1"
-        response = form_biochem_batch2.get_batch_list(request, self.mission.pk, MockTest)
+        response = form_biochem_batch.get_batch_list(request, self.mission.pk, MockTest)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         selection = soup.find(id="div_id_input_batch_selection")
@@ -398,7 +398,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         # we should see buttons Delete, stage 1 validate, stage 2 validate
         # stage 1 should be a btn-secondary, stage 2 validate should be disabled
 
-        buttons = soup.find(id=form_biochem_batch2.BIOCHEM_BATCH_CONTROL_ROW_ID)
+        buttons = soup.find(id=form_biochem_batch.BIOCHEM_BATCH_CONTROL_ROW_ID)
         self.assertIsNotNone(buttons)
 
         btn1 = buttons.find(id="btn_id_batch_delete")
@@ -432,7 +432,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
 
         # test for if the selection is "Test 1"
-        response = form_biochem_batch2.get_batch_list(request, self.mission.pk, MockTest)
+        response = form_biochem_batch.get_batch_list(request, self.mission.pk, MockTest)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         selection = soup.find(id="div_id_input_batch_selection")
@@ -442,7 +442,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(option)
         self.assertEqual("Test 1", option.string)
 
-        buttons = soup.find(id=form_biochem_batch2.BIOCHEM_BATCH_CONTROL_ROW_ID)
+        buttons = soup.find(id=form_biochem_batch.BIOCHEM_BATCH_CONTROL_ROW_ID)
         self.assertIsNotNone(buttons)
 
         btn1 = buttons.find(id="btn_id_batch_delete")
@@ -477,7 +477,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
 
         # test for if the selection is "Test 1"
-        response = form_biochem_batch2.get_batch_list(request, self.mission.pk, MockTest)
+        response = form_biochem_batch.get_batch_list(request, self.mission.pk, MockTest)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         selection = soup.find(id="div_id_input_batch_selection")
@@ -487,7 +487,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(option)
         self.assertEqual("Test 1", option.string)
 
-        buttons = soup.find(id=form_biochem_batch2.BIOCHEM_BATCH_CONTROL_ROW_ID)
+        buttons = soup.find(id=form_biochem_batch.BIOCHEM_BATCH_CONTROL_ROW_ID)
         self.assertIsNotNone(buttons)
 
         btn1 = buttons.find(id="btn_id_batch_delete")
@@ -526,7 +526,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
 
         # test for if the selection is "Test 1"
-        response = form_biochem_batch2.get_batch_list(request, self.mission.pk, MockTest)
+        response = form_biochem_batch.get_batch_list(request, self.mission.pk, MockTest)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         selection = soup.find(id="div_id_input_batch_selection")
@@ -536,7 +536,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(option)
         self.assertEqual("Test 1", option.string)
 
-        buttons = soup.find(id=form_biochem_batch2.BIOCHEM_BATCH_CONTROL_ROW_ID)
+        buttons = soup.find(id=form_biochem_batch.BIOCHEM_BATCH_CONTROL_ROW_ID)
         self.assertIsNotNone(buttons)
 
         btn1 = buttons.find(id="btn_id_batch_delete")
@@ -577,7 +577,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         middleware.process_request(request)
 
         # test for if the selection is "Test 1"
-        response = form_biochem_batch2.get_batch_list(request, self.mission.pk, MockTest)
+        response = form_biochem_batch.get_batch_list(request, self.mission.pk, MockTest)
         soup = BeautifulSoup(response.content, 'html.parser')
 
         selection = soup.find(id="div_id_input_batch_selection")
@@ -587,7 +587,7 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(option)
         self.assertEqual("Test 1", option.string)
 
-        buttons = soup.find(id=form_biochem_batch2.BIOCHEM_BATCH_CONTROL_ROW_ID)
+        buttons = soup.find(id=form_biochem_batch.BIOCHEM_BATCH_CONTROL_ROW_ID)
         self.assertIsNotNone(buttons)
 
         btn1 = buttons.find(id="btn_id_batch_delete")
@@ -614,11 +614,11 @@ class TestBatchFormDiscrete(DartTestCase):
     def setUp(self):
         self.mission: core_models.Mission = MissionFactory(mission_descriptor='11DE25003')
 
-    @patch('core.form_biochem_batch2.is_locked', return_value=True)
+    @patch('core.form_biochem_batch.is_locked', return_value=True)
     def test_download_batch_func_lock_exception(self, mock_is_locked):
         # Test that an IOError is raised when the file is locked
         with self.assertRaises(IOError, msg="Expected IOError when file is locked"):
-            form_biochem_batch2_discrete.download_batch_func(self.mission, 'upsonp')
+            form_biochem_batch_discrete.download_batch_func(self.mission, 'upsonp')
 
 
 @tag("batch_form_2", "batch_form_2_plankton")
@@ -627,8 +627,8 @@ class TestBatchFormPlankton(DartTestCase):
     def setUp(self):
         self.mission: core_models.Mission = MissionFactory(mission_descriptor='11DE25003')
 
-    @patch('core.form_biochem_batch2.is_locked', return_value=True)
+    @patch('core.form_biochem_batch.is_locked', return_value=True)
     def test_download_batch_func_lock_exception(self, mock_is_locked):
         # Test that an IOError is raised when the file is locked
         with self.assertRaises(IOError, msg="Expected IOError when file is locked"):
-            form_biochem_batch2_plankton.download_batch_func(self.mission, 'upsonp')
+            form_biochem_batch_plankton.download_batch_func(self.mission, 'upsonp')

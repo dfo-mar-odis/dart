@@ -11,14 +11,14 @@ from biochem.models import BcdP, BcsP
 from core import form_biochem_database
 from core import models as core_models
 
-from core import form_biochem_batch2
+from core import form_biochem_batch
 
 import logging
 
 user_logger = logging.getLogger('dart.user')
 
 
-class BiochemPlanktonBatchForm(form_biochem_batch2.BiochemDBBatchForm):
+class BiochemPlanktonBatchForm(form_biochem_batch.BiochemDBBatchForm):
 
     datatype = 'PLANKTON'
     bcd_report_model = biochem_models.BcdP
@@ -86,12 +86,12 @@ def get_plankton_data(mission: core_models.Mission, upload_all=False):
     return samples, bottles
 
 
-def download_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches) -> int | None:
+def download_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None) -> int | None:
     bcs = BcsP
     bcs_upload = upload.get_bcs_p_rows
     bcd = BcdP
     bcd_upload = upload.get_bcd_p_rows
-    return form_biochem_batch2.download_batch_func(
+    return form_biochem_batch.download_batch_func(
         mission, uploader, get_data_func=get_plankton_data, file_postfix='P',
         bcd_model=bcd, bcd_upload=bcd_upload, bcs_model=bcs, bcs_upload=bcs_upload
     )
@@ -193,7 +193,7 @@ def stage2_validation_func(mission_id, batch_id) -> None:
 
 def delete_batch(mission_id: int, batch_id: int) -> None:
     label = "PLANKTON"
-    form_biochem_batch2.delete_batch(mission_id, batch_id, label)
+    form_biochem_batch.delete_batch(mission_id, batch_id, label)
 
 
 def checkin_batch(mission_id, batch_id) -> None:
@@ -203,41 +203,41 @@ def checkin_batch(mission_id, batch_id) -> None:
     oracle_checkout_proc = "Download_Plankton_Mission"
     oracle_archive_proc = "ARCHIVE_BATCH.ARCHIVE_PLANKTON_BATCH"
 
-    form_biochem_batch2.checkin_mission(mission_id, batch_id, label, header_model,
+    form_biochem_batch.checkin_mission(mission_id, batch_id, label, header_model,
                                         oracle_checkout_proc, oracle_archive_proc, delete_batch)
 
 
 prefix = 'biochem/plankton/batch'
 url_patterns = [
-    path(f'<int:mission_id>/{prefix}/download/', form_biochem_batch2.download_batch,
+    path(f'<int:mission_id>/{prefix}/download/', form_biochem_batch.download_batch,
          kwargs={'logger_name': user_logger.name, 'download_batch_func': download_batch_func},
          name="form_biochem_plankton_download_batch"),
 
-    path(f'<int:mission_id>/{prefix}/upload/', form_biochem_batch2.upload_batch,
+    path(f'<int:mission_id>/{prefix}/upload/', form_biochem_batch.upload_batch,
          kwargs={'logger_name': user_logger.name, 'upload_batch_func': upload_batch_func},
          name="form_biochem_plankton_upload_batch"),
 
-    path(f'<int:mission_id>/{prefix}/update_batch_list/', form_biochem_batch2.get_batch_list,
+    path(f'<int:mission_id>/{prefix}/update_batch_list/', form_biochem_batch.get_batch_list,
          kwargs={"form_class": BiochemPlanktonBatchForm},
          name="form_biochem_plankton_update_header"),
 
-    path(f'<int:mission_id>/{prefix}/set_selected_batch/', form_biochem_batch2.get_update_controls,
+    path(f'<int:mission_id>/{prefix}/set_selected_batch/', form_biochem_batch.get_update_controls,
          kwargs={"form_class": BiochemPlanktonBatchForm},
          name="form_biochem_plankton_select_batch"),
 
-    path(f'<int:mission_id>/{prefix}/validate/stage1/<int:batch_id>/', form_biochem_batch2.stage_1_validation,
+    path(f'<int:mission_id>/{prefix}/validate/stage1/<int:batch_id>/', form_biochem_batch.stage_1_validation,
          kwargs={'logger_name': user_logger.name, 'batch_func': stage1_validation_func},
          name="form_biochem_plankton_stage1_validation"),
 
-    path(f'<int:mission_id>/{prefix}/validate/stage2/<int:batch_id>/', form_biochem_batch2.stage_2_validation,
+    path(f'<int:mission_id>/{prefix}/validate/stage2/<int:batch_id>/', form_biochem_batch.stage_2_validation,
          kwargs={'logger_name': user_logger.name, 'batch_func': stage2_validation_func},
          name="form_biochem_plankton_stage2_validation"),
 
-    path(f'<int:mission_id>/{prefix}/delete_selected_batch/<int:batch_id>/', form_biochem_batch2.delete_selected_batch,
+    path(f'<int:mission_id>/{prefix}/delete_selected_batch/<int:batch_id>/', form_biochem_batch.delete_selected_batch,
          kwargs={'logger_name': user_logger.name, 'batch_func': delete_batch},
          name="form_biochem_plankton_delete_batch"),
 
-    path(f'<int:mission_id>/{prefix}/checkin_selected_batch/<int:batch_id>/', form_biochem_batch2.checkin_batch,
+    path(f'<int:mission_id>/{prefix}/checkin_selected_batch/<int:batch_id>/', form_biochem_batch.checkin_batch,
          kwargs={'logger_name': user_logger.name, 'batch_func': checkin_batch},
          name="form_biochem_plankton_checkin"),
 ]

@@ -7,7 +7,7 @@ from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
 
 from core.views import MissionMixin
-from core import models, forms, form_biochem_plankton, form_biochem_batch2_plankton
+from core import models, forms, form_biochem_batch_plankton
 
 from config.views import GenericDetailView
 
@@ -28,7 +28,7 @@ class PlanktonDetails(MissionMixin, GenericDetailView):
         context['mission'] = self.object
         context['database'] = self.kwargs['database']
 
-        context['biochem_batch_form'] = form_biochem_batch2_plankton.BiochemPlanktonBatchForm(mission_id=self.object.pk)
+        context['biochem_batch_form'] = form_biochem_batch_plankton.BiochemPlanktonBatchForm(mission_id=self.object.pk)
 
         return context
 
@@ -74,40 +74,8 @@ def clear_plankton(request, mission_id):
     return response
 
 
-def biochem_batches_card(request, mission_id):
-
-    # The first time we get into this function will be a GET request from the mission_samples.html template asking
-    # to put the UI component on the web page.
-
-    # The second time will be whenever a database is connected to or disconnected from which will be a POST
-    # request that should update the Batch selection drop down and then fire a trigger to clear the tables
-
-    soup = BeautifulSoup('', 'html.parser')
-    form_soup = form_biochem_plankton.get_batches_form(request, mission_id)
-
-    if request.method == "POST":
-        batch_div = form_soup.find('div', {"id": "div_id_selected_batch"})
-        batch_div.attrs['hx-swap-oob'] = 'true'
-        soup.append(batch_div)
-        response = HttpResponse(soup)
-        response['HX-Trigger'] = 'clear_batch'
-        return response
-
-    soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_batches_card_wrapper"))
-    biochem_card_wrapper.attrs['class'] = "mb-2"
-    biochem_card_wrapper.attrs['hx-trigger'] = 'biochem_db_connect from:body'
-    biochem_card_wrapper.attrs['hx-post'] = request.path
-    # the method to update the upload/download buttons on the biochem form will be hx-swap-oob
-    biochem_card_wrapper.attrs['hx-swap'] = 'none'
-
-    biochem_card_wrapper.append(form_soup)
-    return HttpResponse(soup)
-
-
 # ###### Plankton loading ###### #
 plankton_urls = [
     path(f'<str:database>/plankton/<int:pk>/', PlanktonDetails.as_view(), name="mission_plankton_plankton_details"),
-
-    path(f'plankton/plankton/batch/<int:mission_id>/', biochem_batches_card, name="mission_plankton_biochem_plankton_card"),
     path(f'plankton/clear/<int:mission_id>/', clear_plankton, name="mission_plankton_clear"),
 ]

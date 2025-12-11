@@ -9,7 +9,6 @@ from biochem.models import BcsP
 from config.tests.DartTestCase import DartTestCase
 
 from core import models as core_models
-from core import form_biochem_discrete
 from core.tests import CoreFactoryFloor as core_factory
 
 from biochem import upload
@@ -189,45 +188,6 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
     def tearDown(self):
         utilities.delete_model_table([bio_models.BcdD], 'biochem')
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
-
-    @tag("test_data_marked_for_upload")
-    def test_data_marked_for_upload(self):
-        # provided a mission with data marked for Biochem upload the data should be pushed to the BioChem tables
-        core_factory.BottleFactory.start_bottle_seq = 400000
-        bottles = core_factory.BottleFactory.create_batch(10, event=core_factory.CTDEventFactory(mission=self.mission))
-
-        oxygen_datatype = bio_tables_models.BCDataType.objects.get(data_type_seq=oxy_seq)
-        oxy_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=oxygen_datatype)
-
-        salt_datatype = bio_tables_models.BCDataType.objects.get(data_type_seq=salt_seq)
-        sal_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=salt_datatype)
-
-        for bottle in bottles:
-            oxy_sample = core_factory.SampleFactory(bottle=bottle, type=oxy_sample_type)
-            core_factory.DiscreteValueFactory(sample=oxy_sample, value=3.9)
-
-            oxy_sample = core_factory.SampleFactory(bottle=bottle, type=sal_sample_type)
-            core_factory.DiscreteValueFactory(sample=oxy_sample, value=3.9)
-
-        core_models.BioChemUpload.objects.using(default_db).create(
-            status=core_models.BioChemUploadStatus.upload,
-            type=oxy_sample_type
-        )
-
-        form_biochem_discrete.upload_bcd_d_data(self.mission, "Upsonp")
-
-        self.model = bio_models.BcdD
-        # oxygen samples should have been added to the biochem db
-        self.assertTrue(self.model.objects.using(biochem_db).filter(dis_detail_data_type_seq=oxy_seq))
-
-        # salt samples should not have been added to the biochem db
-        self.assertFalse(self.model.objects.using(biochem_db).filter(dis_detail_data_type_seq=salt_seq))
-
-        # When uploaded the BioChemUpload entry should be marked as 'uploaded' and the uploaded date
-        # should be set
-        oxy_upload = core_models.BioChemUpload.objects.using(default_db).get(type=oxy_sample_type)
-        self.assertEqual(core_models.BioChemUploadStatus.uploaded, oxy_upload.status)
-        self.assertTrue(oxy_upload.upload_date < oxy_upload.modified_date)
 
 
 @tag('biochem', 'fake_biochem_delete_update')
