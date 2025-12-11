@@ -1,5 +1,4 @@
 import math
-import numpy as np
 
 from enum import Enum
 from typing import Type
@@ -104,15 +103,14 @@ def db_write_by_chunk(model, chunk_size, data):
         model.objects.using('biochem').bulk_create(batch)
 
 
-def upload_db_rows(model, rows_to_create: []):
+def upload_db_rows(model, rows_to_create: list):
     chunk_size = 100
     if len(rows_to_create) > 0:
         db_write_by_chunk(model, chunk_size, rows_to_create)
 
 
 # returns the rows to create, rows to update and fields to update
-def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: models.Bcbatches = None,
-                   bcs_d_model: Type[models.BcsD] = None) -> [models.BcsD]:
+def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: models.Bcbatches = None) -> list[models.BcsD]:
     user_logger.info("Creating/updating BCS table")
     bcs_objects_to_create = []
 
@@ -129,14 +127,11 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
-        if bcs_d_model:
-            bcs_row = bcs_d_model._meta.model(dis_headr_collector_sample_id=bottle.bottle_id)
-        else:
-            bcs_row = models.BcsDReportModel(dis_headr_collector_sample_id=bottle.bottle_id)
+        bcs_row = models.BcsD(dis_sample_key_value=dis_sample_key_value, dis_headr_collector_sample_id=bottle.bottle_id)
 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
-        bcs_row.dis_sample_key_value = dis_sample_key_value
+
         bcs_row.created_by = uploader
 
         bcs_row.mission_descriptor = mission.mission_descriptor
@@ -188,12 +183,18 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
         bcs_row.dis_headr_etime = datetime.strftime(bottle.closed, "%H%M")
 
         if bottle.latitude:
-            bcs_row.dis_headr_slat = bottle.latitude  # Maybe required to use
-            bcs_row.dis_headr_elat = bottle.latitude  # Event lat/lon
+            bcs_row.dis_headr_slat = bottle.latitude
+            bcs_row.dis_headr_elat = bottle.latitude
+        else:
+            bcs_row.dis_headr_slat = event.start_location[0]
+            bcs_row.dis_headr_elat = event.end_location[0]
 
         if bottle.longitude:
-            bcs_row.dis_headr_slon = bottle.longitude  # Maybe required to use
-            bcs_row.dis_headr_elon = bottle.longitude  # Event lat/lon
+            bcs_row.dis_headr_slon = bottle.longitude
+            bcs_row.dis_headr_elon = bottle.longitude
+        else:
+            bcs_row.dis_headr_slon = event.start_location[1]
+            bcs_row.dis_headr_elon = event.end_location[1]
 
         bcs_row.dis_headr_start_depth = bottle.pressure
         bcs_row.dis_headr_end_depth = bottle.pressure
@@ -204,7 +205,10 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
         bcs_row.process_flag = 'NR'
         bcs_row.data_center_code = primary_data_center.data_center_code
 
-        bcs_row.batch = batch
+        if batch:
+            bcs_row.batch = batch
+        else:
+            bcs_row.batch_id = 0
 
         bcs_objects_to_create.append(bcs_row)
 
@@ -214,8 +218,7 @@ def get_bcs_d_rows(uploader: str, bottles: list[core_models.Bottle], batch: mode
     return bcs_objects_to_create
 
 
-def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: models.Bcbatches = None,
-                   bcs_p_model: Type[models.BcsP] = None) -> [models.BcsP]:
+def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: models.Bcbatches = None) -> list[models.BcsP]:
 
     bcs_objects_to_create = []
 
@@ -243,10 +246,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
 
-        if bcs_p_model:
-            bcs_row = bcs_p_model._meta.model(plank_sample_key_value=plankton_key)
-        else:
-            bcs_row = models.BcsPReportModel(plank_sample_key_value=plankton_key)
+        bcs_row = models.BcsP(plank_sample_key_value=plankton_key)
 
         # updated_fields.add(updated_value(bcs_row, 'dis_headr_collector_sample_id', bottle.bottle_id))
         bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
@@ -321,8 +321,10 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.process_flag = 'NR'
         bcs_row.data_center_code = institute.data_center_code
 
-        bcs_row.batch = batch
-        # bcs_row.batch_seq = batch
+        if batch:
+            bcs_row.batch = batch
+        else:
+            bcs_row.batch_id = 0
 
         try:
             sounding_action = event.sounding_action
@@ -367,16 +369,10 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
     return bcs_objects_to_create
 
 
-def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch: models.Bcbatches = None,
-                   bcd_d_model: Type[models.BcdD] = None) -> [models.BcdD]:
+def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch: models.Bcbatches = None) -> list[models.BcdD]:
 
     bcd_objects_to_create = []
     errors = []
-
-    # if these rows are being generated for a report we don't have the bcd_d_model, which is what
-    # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
-    # place of the BcdD model
-    bcd_model = models.BcdDReportModel
 
     user_logger.info("Compiling BCD Discrete samples")
 
@@ -400,7 +396,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         # If the sample doesn't have a dis_data_num or it doesn't match an existing sample create a new row
         collector_id = f'{bottle.bottle_id}'
 
-        bcd_row = bcd_model(dis_detail_collector_samp_id=collector_id)
+        bcd_row = models.BcdD(dis_detail_collector_samp_id=collector_id)
 
         # if not existing_sample:
         #     updated_fields.add(updated_value(bcd_row, 'dis_data_num', dis_data_num))
@@ -463,7 +459,10 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         bcd_row.created_date = datetime.now().strftime("%Y-%m-%d")
         bcd_row.dis_sample_key_value = dis_sample_key_value
 
-        bcd_row.batch = batch
+        if batch:
+            bcd_row.batch = batch
+        else:
+            bcd_row.batch_id = 0
         # bcd_row.batch = batch.pk
 
         bcd_objects_to_create.append(bcd_row)
@@ -471,22 +470,15 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     if len(errors) > 0:
         core_models.MissionError.objects.bulk_create(errors)
 
-    user_logger.info(_("Indexing Primary Keys"))
-    compress_keys(bcd_objects_to_create, bcd_d_model, 'dis_data_num')
+    compress_keys(bcd_objects_to_create, models.BcdD, 'dis_data_num')
 
     return bcd_objects_to_create
 
 
 def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
-                   batch: models.Bcbatches = None,
-                   bcd_p_model: Type[models.BcdP] = None) -> [models.BcdP]:
+                   batch: models.Bcbatches = None) -> list[models.BcdP]:
 
     bcd_objects_to_create = []
-
-    # if these rows are being generated for a report we don't have the bcd_d_model, which is what
-    # links Django to the oracle database so we create a 'fake' BCD row using the BcdDReportModel in
-    # place of the BcdD model
-    bcd_model = models.BcdPReportModel
 
     user_logger.info("Compiling BCD Plankton samples")
 
@@ -501,7 +493,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
         plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
 
-        bcd_row = bcd_model(plank_sample_key_value=plankton_key)
+        bcd_row = models.BcdP(plank_sample_key_value=plankton_key)
 
         # ########### Stuff that we get from the event object #################################################### #
         # PLANK_DATA_NUM - is the autogenerated primary key
@@ -574,8 +566,10 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         # ########### Stuff that we get from the Mission object #################################################### #
         mission = event.mission
 
-        bcd_row.batch = batch
-        # bcd_row.batch = batch
+        if batch:
+            bcd_row.batch = batch
+        else:
+            bcd_row.batch_id = 0
 
         # mission descriptor
         # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code
@@ -592,9 +586,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
         bcd_objects_to_create.append(bcd_row)
 
-
-    user_logger.info(_("Indexing Primary Keys"))
-    compress_keys(bcd_objects_to_create, bcd_p_model, 'plank_data_num')
+    compress_keys(bcd_objects_to_create, models.BcdP, 'plank_data_num')
 
     return bcd_objects_to_create
 
@@ -602,6 +594,9 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
     if len(bcd_objects_to_create) <= 0:
         return
+
+    if len(bcd_objects_to_create) % 200 == 1:
+        user_logger.info(_("Indexing Primary Keys") + " :  %d/%d", 0, len(bcd_objects_to_create))
 
     data_num_seq = []
     if bcd_model:
@@ -619,7 +614,11 @@ def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
         sort_seq = sorted(set(range(start, end)).difference(data_num_seq))
 
     data_num = 0
+    total_count = len(bcd_objects_to_create)
     for index, obj in enumerate(bcd_objects_to_create):
+        if index % 200 == 1:
+            user_logger.info(_("Indexing Primary Keys") + " : %d/%d", (index + 1), total_count)
+
         if index < len(sort_seq):
             # the index number is a count of which object in the bcd_objects_to_create array we're on.
             # If the index is less than the length of our available keys array, get the next available

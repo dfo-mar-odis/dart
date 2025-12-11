@@ -52,8 +52,7 @@ def load_biochem_fixtures(database):
         logger.exception(ex)
 
 
-def add_database(database):
-
+def get_db_location(database):
     locations = models.LocalSetting.objects.filter(connected=True)
     if locations.exists():
         location = locations.first()
@@ -64,10 +63,15 @@ def add_database(database):
     if not os.path.exists(location.database_location):
         os.makedirs(location.database_location)
 
+    return os.path.join(location.database_location, f'{database}.sqlite3')
+
+
+def add_database(database):
+
     databases = settings.DATABASES
     mission_database = 'mission_db'
     databases[mission_database] = databases['default'].copy()
-    databases[mission_database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
+    databases[mission_database]['NAME'] = get_db_location(database)
 
     call_command('migrate', database=mission_database, app_label="core")
     call_command('migrate', database=mission_database, app_label="bio_tables")
@@ -107,11 +111,22 @@ def migrate(database):
     connect_database(database)
     if not is_database_synchronized('mission_db'):
         call_command('migrate', 'core', database='mission_db')
-        repo = Repo(settings.BASE_DIR)
-
         mission = core_models.Mission.objects.first()
-        mission.dart_version = repo.head.commit.hexsha
+        mission.dart_version = get_dart_git_version()
         mission.save()
+
+
+def get_dart_git_version():
+    repo = Repo(settings.BASE_DIR)
+    return  repo.head.commit.hexsha
+
+
+def close_connections():
+    """
+    Close all open database connections in Django.
+    """
+    for conn in connections.all():
+        conn.close()
 
 
 def test_migration():

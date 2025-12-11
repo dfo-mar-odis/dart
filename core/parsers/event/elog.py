@@ -664,7 +664,8 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
                     'longitude': lon,
                     'comment': comment,
                     'data_collector': data_collector,
-                    'sounding': sounding
+                    'sounding': sounding,
+                    'file': file_name,
                 }
                 if action_type == core_models.ActionType.other:
                     attrs['action_type_other'] = action_type_text

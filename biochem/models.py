@@ -262,13 +262,13 @@ class BcdD(models.Model):
     # the application. Pl/SQL code is run on the table and this flag is set to 'DVE' depending on
     # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch = models.ForeignKey(Bcbatches, related_name='discrete_data_edits', db_column='batch_seq', blank=True, null=True,
-                              on_delete=models.CASCADE) #
+    batch = models.ForeignKey(Bcbatches, related_name='discrete_data_edits', db_column='batch_seq', blank=True,
+                              null=True, on_delete=models.CASCADE)
     dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
         managed = False
-        abstract = True
+        db_table = 'BCDISCRETEDATAEDITS'
         ordering = ['dis_sample_key_value', 'dis_data_num']
 
     def __str__(self):
@@ -277,14 +277,11 @@ class BcdD(models.Model):
         return bcd_str
 
 
-class BcdDReportModel(BcdD):
-    pass
-
-
 class BcsD(models.Model):
-    dis_headr_collector_sample_id = models.CharField(primary_key=True, max_length=50)
 
-    dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
+    dis_sample_key_value = models.CharField(primary_key=True, max_length=50)
+    dis_headr_collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
     event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
     event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
@@ -350,17 +347,15 @@ class BcsD(models.Model):
     # the application. Pl/SQL code is run on the table and this flag is set to 'SVE' depending on
     # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch = models.ForeignKey(Bcbatches, related_name='discrete_station_edits', db_column='batch_seq', blank=True, null=True,
-                              on_delete=models.CASCADE) #
+    batch = models.ForeignKey(Bcbatches, related_name='discrete_station_edits', db_column='batch_seq', blank=True,
+                              null=True, on_delete=models.CASCADE)
 
     class Meta:
         managed = False
-        abstract = True
+        db_table = 'BCDISCRETESTATNEDITS'
 
-
-class BcsDReportModel(BcsD):
-    class Meta:
-        managed = False
+    def __str__(self):
+        return f"{self.mission_name} - {self.mission_descriptor} - {self.event_collector_stn_name} - {self.event_collector_event_id}"
 
 
 class BcdP(models.Model):
@@ -409,18 +404,15 @@ class BcdP(models.Model):
     created_date = models.DateField()
     data_center_code = models.IntegerField(blank=True, null=True)
     process_flag = models.CharField(max_length=3, blank=True, null=True)
-    batch = models.ForeignKey(Bcbatches, related_name='plankton_data_edits', db_column='batch_seq', blank=True, null=True,
-                              on_delete=models.CASCADE) #
+    batch = models.ForeignKey(Bcbatches, related_name='plankton_data_edits', db_column='batch_seq', blank=True,
+                              null=True,
+                              on_delete=models.CASCADE)  #
     pl_gen_modifier = models.CharField(max_length=50, blank=True, null=True)
     pl_gen_unit = models.IntegerField(blank=True, null=True)
 
     class Meta:
         managed = False
-        abstract = True
-
-
-class BcdPReportModel(BcdP):
-    pass
+        db_table = 'BCPLANKTONDATAEDITS'
 
 
 class BcsP(models.Model):
@@ -500,17 +492,13 @@ class BcsP(models.Model):
     created_date = models.DateField()  # done
     data_center_code = models.IntegerField(blank=True, null=True)  # done
     process_flag = models.CharField(max_length=3, blank=True, null=True)  # done
-    batch = models.ForeignKey(Bcbatches, related_name='plankton_station_edits', db_column='batch_seq', blank=True, null=True,
-                              on_delete=models.CASCADE) #
+    batch = models.ForeignKey(Bcbatches, related_name='plankton_station_edits', db_column='batch_seq', blank=True,
+                              null=True,
+                              on_delete=models.CASCADE)  #
 
     class Meta:
         managed = False
-        abstract = True
-
-
-class BcsPReportModel(BcsP):
-    class Meta:
-        managed = False
+        db_table = 'BCPLANKTONSTATNEDITS'
 
 
 # For demonstration purposes
@@ -565,6 +553,23 @@ class Bcmissions(models.Model):
     prod_created_by = models.CharField(max_length=10, blank=True, null=True)
     created_date = models.DateField(blank=True, null=True)
     created_by = models.CharField(max_length=30, blank=True, null=True)
+
+    @property
+    def mission_type(self):
+        mission_type = None
+        has_dis_headers = self.events.filter(discrete_headers__isnull=False)
+        has_plk_headers = self.events.filter(planktonheaders__isnull=False)
+
+        if has_dis_headers and has_plk_headers:
+            mission_type = "Both"
+        elif has_dis_headers:
+            mission_type = "Discrete"
+        elif has_plk_headers:
+            mission_type = "Plankton"
+        else:
+            mission_type = "None"
+
+        return mission_type
 
     class Meta:
         managed = False
@@ -645,31 +650,31 @@ class Bceventedits(models.Model):
     mission = models.ForeignKey(Bcmissions, related_name='event_edits', db_column='mission_seq',
                                 blank=True, null=True, on_delete=models.DO_NOTHING)
 
-    sdate = models.DateField(blank=True, null=True) #
-    edate = models.DateField(blank=True, null=True) #
-    stime = models.IntegerField(blank=True, null=True) #
-    etime = models.IntegerField(blank=True, null=True) #
-    min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True) #
-    max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True) #
-    min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True) #
-    max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True) #
+    sdate = models.DateField(blank=True, null=True)  #
+    edate = models.DateField(blank=True, null=True)  #
+    stime = models.IntegerField(blank=True, null=True)  #
+    etime = models.IntegerField(blank=True, null=True)  #
+    min_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  #
+    max_lat = models.DecimalField(max_digits=8, decimal_places=5, blank=True, null=True)  #
+    min_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  #
+    max_lon = models.DecimalField(max_digits=9, decimal_places=5, blank=True, null=True)  #
     collector_station_name = models.CharField(max_length=50, blank=True, null=True)  #
     collector_event_id = models.CharField(max_length=50, blank=True, null=True)
-    utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True) #
-    collector_comment = models.CharField(max_length=2000, blank=True, null=True) #
-    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True) #
-    more_comment = models.CharField(max_length=1, blank=True, null=True) #
-    prod_created_date = models.DateField(blank=True, null=True) #
-    created_by = models.CharField(max_length=30, blank=True, null=True) #
-    created_date = models.DateField(blank=True, null=True) #
-    last_update_by = models.CharField(max_length=30, blank=True, null=True) #
-    last_update_date = models.DateField(blank=True, null=True) #
-    process_flag = models.CharField(max_length=3) #
+    utc_offset = models.DecimalField(max_digits=4, decimal_places=1, blank=True, null=True)  #
+    collector_comment = models.CharField(max_length=2000, blank=True, null=True)  #
+    data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)  #
+    more_comment = models.CharField(max_length=1, blank=True, null=True)  #
+    prod_created_date = models.DateField(blank=True, null=True)  #
+    created_by = models.CharField(max_length=30, blank=True, null=True)  #
+    created_date = models.DateField(blank=True, null=True)  #
+    last_update_by = models.CharField(max_length=30, blank=True, null=True)  #
+    last_update_date = models.DateField(blank=True, null=True)  #
+    process_flag = models.CharField(max_length=3)  #
     batch = models.ForeignKey(Bcbatches, related_name='event_edits', db_column='batch_seq', blank=True, null=True,
-                              on_delete=models.CASCADE) #
+                              on_delete=models.CASCADE)  #
     mission_edit = models.ForeignKey(Bcmissionedits, related_name='event_edits',
                                      db_column='mission_edt_seq',
-                                     on_delete=models.CASCADE) #
+                                     on_delete=models.CASCADE)  #
 
     class Meta:
         managed = False
@@ -745,12 +750,25 @@ class Bcactivityedits(models.Model):
         unique_together = (('activity_edt_seq', 'event_edit'),)
 
 
+class Bcerrorcodes(models.Model):
+    error_code = models.IntegerField(primary_key=True)
+    description = models.CharField(max_length=80)
+    long_desc = models.CharField(max_length=300)
+    last_update_by = models.CharField(max_length=30)
+    last_update_date = models.DateField()
+
+    class Meta:
+        managed = False
+        db_table = 'BCERRORCODES'
+
+
 class Bcerrors(models.Model):
     error_num_seq = models.IntegerField(primary_key=True)
     edit_table_name = models.CharField(max_length=30)
     record_num_seq = models.BigIntegerField()
     column_name = models.CharField(max_length=30)
-    error_code = models.IntegerField()
+    error_code = models.ForeignKey(Bcerrorcodes, related_name='errors', db_column='error_code',
+                                   on_delete=models.PROTECT)
     last_updated_by = models.CharField(max_length=30)
     last_update_date = models.DateField()
     batch = models.ForeignKey(Bcbatches, related_name='errors', db_column='batch_seq',
@@ -765,7 +783,8 @@ class Bcstatndataerrors(models.Model):
     statn_data_table_name = models.CharField(max_length=30)
     record_sequence_value = models.CharField(max_length=50, primary_key=True)
     column_name = models.CharField(max_length=30)
-    error_code = models.IntegerField()
+    error_code = models.ForeignKey(Bcerrorcodes, related_name='station_errors', db_column='error_code',
+                                   on_delete=models.PROTECT)
     statn_data_created_date = models.DateField()
     collector_sample_id = models.CharField(max_length=50)
     batch = models.ForeignKey(Bcbatches, related_name='station_data_errors', db_column='batch_seq',
@@ -774,18 +793,6 @@ class Bcstatndataerrors(models.Model):
     class Meta:
         managed = False
         db_table = 'BCSTATNDATAERRORS'
-
-
-class Bcerrorcodes(models.Model):
-    error_code = models.IntegerField(primary_key=True)
-    description = models.CharField(max_length=80)
-    long_desc = models.CharField(max_length=300)
-    last_update_by = models.CharField(max_length=30)
-    last_update_date = models.DateField()
-
-    class Meta:
-        managed = False
-        db_table = 'BCERRORCODES'
 
 
 class Bcdiscretehedrs(models.Model):
@@ -911,8 +918,8 @@ class Bcdiscretedtails(models.Model):
 class Bcdiscretedtailedits(models.Model):
     dis_detail_edt_seq = models.BigIntegerField(primary_key=True)
     discrete_detail = models.ForeignKey(Bcdiscretedtails, related_name='discrete_detail_edits',
-                                            db_column='discrete_detail_seq', blank=True, null=True,
-                                            on_delete=models.DO_NOTHING)
+                                        db_column='discrete_detail_seq', blank=True, null=True,
+                                        on_delete=models.DO_NOTHING)
 
     data_center = models.ForeignKey(Bcdatacenters, related_name='discrete_detail_edits', db_column='data_center_code',
                                     blank=True, null=True, on_delete=models.DO_NOTHING)
@@ -989,6 +996,29 @@ class Bcdiscretereplicteditsdel(models.Model):
     class Meta:
         managed = False
         db_table = 'BCDISCRETEREPLICTEDITSDEL'
+
+
+class Bcdiscretereplicates(models.Model):
+    discrete_replicate_seq = models.BigIntegerField(primary_key=True)
+    data_center = models.ForeignKey(Bcdatacenters, related_name='discrete_replicates', db_column='data_center_code',
+                                    on_delete=models.DO_NOTHING)
+    data_type_seq = models.ForeignKey(Bcdatatypes, related_name='discrete_replicates', db_column='data_type_seq',
+                                      on_delete=models.DO_NOTHING)
+    discrete_detail = models.ForeignKey(Bcdiscretedtails, related_name='discrete_replicates',
+                                            db_column='discrete_detail_seq', on_delete=models.CASCADE)
+    data_value = models.DecimalField(max_digits=10, decimal_places=5)
+    data_qc_code = models.CharField(max_length=2)
+    detection_limit = models.DecimalField(max_digits=11, decimal_places=5, blank=True, null=True)
+    detail_collector = models.CharField(max_length=50, blank=True, null=True)
+    collector_sample_id = models.CharField(max_length=50)
+    prod_created_date = models.DateField()
+    prod_created_by = models.CharField(max_length=10, blank=True, null=True)
+    created_date = models.DateField(blank=True, null=True)
+    created_by = models.CharField(max_length=30, blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = 'BCDISCRETEREPLICATES'
 
 
 class Bccommenteditsdel(models.Model):
@@ -1256,9 +1286,9 @@ class Bceditsaudittrails(models.Model):
 class Bcplanktnhedrs(models.Model):
     plankton_seq = models.BigIntegerField(primary_key=True)
     data_center = models.ForeignKey(Bcdatacenters, related_name='planktonheaders', db_column='DATA_CENTER_CODE',
-                                         on_delete=models.DO_NOTHING)
+                                    on_delete=models.DO_NOTHING)
     event = models.ForeignKey(Bcevents, related_name='planktonheaders', db_column='EVENT_SEQ',
-                                  on_delete=models.DO_NOTHING)
+                              on_delete=models.DO_NOTHING)
     activity_seq = models.IntegerField()
     gear_seq = models.IntegerField()
     start_date = models.DateField()
@@ -1277,7 +1307,7 @@ class Bcplanktnhedrs(models.Model):
     sounding = models.IntegerField()
     volume = models.DecimalField(max_digits=7, decimal_places=3, blank=True, null=True)
     volume_method = models.ForeignKey(Bcvolumemethods, related_name='planktonheaders',
-                                          db_column='volume_method_seq', on_delete=models.DO_NOTHING)
+                                      db_column='volume_method_seq', on_delete=models.DO_NOTHING)
     large_plankton_removed = models.CharField(max_length=1, blank=True, null=True)
     mesh_size = models.IntegerField(blank=True, null=True)
     collection_method = models.ForeignKey(Bccollectionmethods, related_name='planktonheaders',
@@ -1287,9 +1317,9 @@ class Bcplanktnhedrs(models.Model):
     procedure = models.ForeignKey(Bcprocedures, related_name='planktonheaders', db_column='procedure_seq',
                                   on_delete=models.DO_NOTHING)
     preservation = models.ForeignKey(Bcpreservations, related_name='planktonheaders', db_column='preservation_seq',
-                                  on_delete=models.DO_NOTHING)
+                                     on_delete=models.DO_NOTHING)
     storage = models.ForeignKey(Bcstorages, related_name='planktonheaders', db_column='storage_seq',
-                                  on_delete=models.DO_NOTHING)
+                                on_delete=models.DO_NOTHING)
     collector = models.CharField(max_length=50, blank=True, null=True)
     collector_comment = models.CharField(max_length=2000, blank=True, null=True)
     meters_sqd_flag = models.CharField(max_length=1, blank=True, null=True)
@@ -1308,7 +1338,7 @@ class Bcplanktnhedrs(models.Model):
 
 class Bclockedmissions(models.Model):
     mission = models.OneToOneField(Bcmissions, related_name='locked_missions', db_column='mission_seq',
-                                primary_key=True, on_delete=models.CASCADE)
+                                   primary_key=True, on_delete=models.CASCADE)
     mission_name = models.CharField(max_length=50, blank=True, null=True)
     descriptor = models.CharField(max_length=50, blank=True, null=True)
     data_pointer_code = models.CharField(max_length=2, blank=True, null=True)  # DH for discrete, PL for Plankton

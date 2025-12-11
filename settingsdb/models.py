@@ -121,15 +121,6 @@ class BcDatabaseConnection(models.Model):
     uploader = models.CharField(verbose_name=_("Uploader Name"), max_length=20, blank=True, null=True,
                                 help_text=_("If not Account Name"))
 
-    bc_discrete_data_edits = models.CharField(verbose_name=_("BCD Discrete Table Name"), max_length=60,
-                                              default='BCDISCRETEDATAEDITS', help_text=_("BCD Data Table Name"))
-    bc_discrete_station_edits = models.CharField(verbose_name=_("BCS Discrete Table Name"), max_length=60,
-                                                 default='BCDISCRETESTATNEDITS', help_text=_("BCS Data Table Name"))
-    bc_plankton_data_edits = models.CharField(verbose_name=_("BCD Plankton Table Name"), max_length=60,
-                                              default='BCPLANKTONDATAEDITS', help_text=_("BCD Plankton Table Name"))
-    bc_plankton_station_edits = models.CharField(verbose_name=_("BCS Plankton Table Name"), max_length=60,
-                                                 default='BCPLANKTONSTATNEDITS', help_text=_("BCS Plankton Table Name"))
-
     def __str__(self):
         return f'{self.account_name} - {self.name}'
 

@@ -9,6 +9,7 @@ from django.urls import reverse_lazy, reverse, path
 from django.utils.translation import gettext as _
 
 from core import models, forms, validation, form_event_details
+from core.forms import CollapsableCardForm
 from core.views import MissionMixin, reports
 from config.utils import load_svg
 from config.views import GenericDetailView
@@ -147,8 +148,6 @@ class ValidateEventsCard(forms.CollapsableCardForm):
         issue_count_col = Div(HTML(issue_count), css_id="div_id_event_error_count", css_class=issue_class,
                               **counter_attrs)
         buttons.fields.append(issue_count_col)
-
-        header.fields.append(super().get_alert_area())
 
         return header
     
@@ -361,7 +360,7 @@ def revalidate_events(request, mission_id):
     if request.method == "GET":
 
         attrs = {
-            'alert_area_id': "div_id_card_alert_event_validation",
+            'alert_area_id': ValidateEventsCard.get_id_builder_class()("event_validation").get_alert_area_id(),
             'logger': validation.logger_notifications.name,
             'message': _("Revalidating"),
             'hx-swap': 'none',
