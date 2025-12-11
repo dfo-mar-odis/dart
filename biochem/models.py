@@ -278,9 +278,10 @@ class BcdD(models.Model):
 
 
 class BcsD(models.Model):
-    dis_headr_collector_sample_id = models.CharField(primary_key=True, max_length=50)
 
-    dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
+    dis_sample_key_value = models.CharField(primary_key=True, max_length=50)
+    dis_headr_collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
+
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
     event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
     event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
@@ -782,7 +783,8 @@ class Bcstatndataerrors(models.Model):
     statn_data_table_name = models.CharField(max_length=30)
     record_sequence_value = models.CharField(max_length=50, primary_key=True)
     column_name = models.CharField(max_length=30)
-    error_code = models.IntegerField()
+    error_code = models.ForeignKey(Bcerrorcodes, related_name='station_errors', db_column='error_code',
+                                   on_delete=models.PROTECT)
     statn_data_created_date = models.DateField()
     collector_sample_id = models.CharField(max_length=50)
     batch = models.ForeignKey(Bcbatches, related_name='station_data_errors', db_column='batch_seq',

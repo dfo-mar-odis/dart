@@ -166,8 +166,8 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
 
         if not mission_edits.exists():
             if bcs_model and bcd_model:
-                bad_bcd_rows = bcs_model.objects.using('biochem').filter(batch_id=batch_id, process_flag='SVE').exists()
-                bad_bcs_rows = bcd_model.objects.using('biochem').filter(batch_id=batch_id, process_flag='SVE').exists()
+                bad_bcs_rows = bcs_model.objects.using('biochem').filter(batch_id=batch_id, process_flag='SVE').exists()
+                bad_bcd_rows = bcd_model.objects.using('biochem').filter(batch_id=batch_id, process_flag='DVE').exists()
                 # if rows for either of these exist, we aren't validated
                 if bad_bcs_rows or bad_bcd_rows:
                     return False
@@ -1024,45 +1024,65 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
     return response
 
 
-def get_batch_summary_soup(soup, mission_id, batch_id):
+def process_attrs(error_set, table_columns):
+    attrs = []
+    for column in table_columns:
+        if isinstance(column, models.ForeignKey):
+            if column.related_model == biochem_models.Bcdatatypes:
+                attrs.append({
+                    "value": getattr(error_set, column.name + '_id'),
+                    "info": getattr(error_set, column.name).method
+                })  # Get the datatype name for Bcdatatypes foreign key
+            else:
+                attrs.append({"value": getattr(error_set,
+                                               column.name + '_id')})  # Get the primary key for other foreign keys  # Get the primary key for foreign keys
+        else:
+            attrs.append({"value": getattr(error_set, column.name)})  # Get the value for non-foreign key fields
+
+    return attrs
+
+
+def get_table_errors(soup, table_names: list[str], get_row_errors: Callable):
     context = {}
 
-    errors = biochem_models.Bcerrors.objects.using('biochem').filter(batch_id=batch_id)
-    context['errors'] = errors
-
-    table_names = errors.values_list('edit_table_name', flat=True).distinct()
     table_models = {}
     for model in apps.get_models():
         if model._meta.db_table in table_names:
             table_models[model._meta.db_table] = model
 
-    def process_attrs(error_set, table_columns):
-        attrs = []
-        for column in table_columns:
-            if isinstance(column, models.ForeignKey):
-                if column.related_model == biochem_models.Bcdatatypes:
-                    attrs.append({
-                        "value": getattr(error_set, column.name + '_id'),
-                        "info": getattr(error_set, column.name).method
-                    })  # Get the datatype name for Bcdatatypes foreign key
-                else:
-                    attrs.append({"value": getattr(error_set, column.name + '_id')})  # Get the primary key for other foreign keys  # Get the primary key for foreign keys
-            else:
-                attrs.append({"value": getattr(error_set, column.name)})  # Get the value for non-foreign key fields
-
-        return attrs
-
     for model_name in table_names:
         table_model = table_models[model_name]
-        row_errors  = errors.filter(edit_table_name=model_name).order_by('record_num_seq').values_list('record_num_seq', flat=True).distinct()
+        row_errors = get_row_errors(model_name)
 
         context['table_name'] = table_model._meta.db_table
         context['table_columns'] = [field for field in table_model._meta.get_fields()]
-        context['error_rows'] = [process_attrs(elm, context['table_columns']) for elm in table_model.objects.using('biochem').filter(pk__in=row_errors)]
+        context['error_rows'] = [process_attrs(elm, context['table_columns']) for elm in
+                                 table_model.objects.using('biochem').filter(pk__in=row_errors)]
 
         table_html = render_to_string('core/partials/table_dynamic.html', context)
         soup_table = BeautifulSoup(table_html, "html.parser")
         soup.append(soup_table)
+
+
+def get_batch_summary_soup(soup, mission_id, batch_id):
+    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+
+    if (errors := batch.station_data_errors.all()).exists():
+        table_names = [name for name in errors.values_list('statn_data_table_name', flat=True).distinct()]
+
+        def get_stn_row_errors(model_name):
+            filtered_errors = errors.filter(statn_data_table_name=model_name).order_by('record_sequence_value')
+            return filtered_errors.values_list('record_sequence_value', flat=True).distinct()
+
+        return get_table_errors(soup, table_names, get_stn_row_errors)
+    elif (errors := batch.errors.all()).exists():
+        table_names = [name for name in errors.values_list('edit_table_name', flat=True).distinct()]
+
+        def get_edit_row_errors(model_name):
+            filtered_errors = errors.filter(edit_table_name=model_name).order_by('record_num_seq')
+            return filtered_errors.values_list('record_num_seq', flat=True).distinct()
+
+        return get_table_errors(soup, table_names, get_edit_row_errors)
 
     return soup
 
@@ -1085,18 +1105,31 @@ def get_batch_errors(request, mission_id, batch_id):
 
     soup = BeautifulSoup("", 'html.parser')
 
-    errors = biochem_models.Bcerrors.objects.using('biochem').filter(batch_id=batch_id).order_by('record_num_seq')
-    context['errors'] = errors
+    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
+    if (errors:=batch.errors.order_by('record_num_seq')).exists():
+        context['errors'] = errors
 
-    # for errors, the edit_table_name tells us what table has problems and record_num_seq will tells us the
-    # primary key of the row with issues.
+        # for errors, the edit_table_name tells us what table has problems and record_num_seq will tells us the
+        # primary key of the row with issues.
 
-    table_html = render_to_string('core/partials/table_biochem_batch_errors.html', context)
-    soup.append(BeautifulSoup(table_html, 'html.parser'))
-    get_batch_summary_soup(soup, mission_id, batch_id)
+        table_html = render_to_string('core/partials/table_biochem_batch_errors.html', context)
+        soup.append(BeautifulSoup(table_html, 'html.parser'))
+        get_batch_summary_soup(soup, mission_id, batch_id)
 
-    return HttpResponse(soup)
+        return HttpResponse(soup)
+    elif (errors:=batch.station_data_errors.order_by('record_sequence_value')):
+        context['errors'] = errors
 
+        # for errors, the edit_table_name tells us what table has problems and record_num_seq will tells us the
+        # primary key of the row with issues.
+
+        table_html = render_to_string('core/partials/table_biochem_bcs_bcd_errors.html', context)
+        soup.append(BeautifulSoup(table_html, 'html.parser'))
+        get_batch_summary_soup(soup, mission_id, batch_id)
+
+        return HttpResponse(soup)
+
+    return HttpResponse()
 
 prefix = 'biochem/batch'
 url_patterns = [

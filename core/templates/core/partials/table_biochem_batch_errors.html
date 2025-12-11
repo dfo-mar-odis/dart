@@ -4,25 +4,25 @@
 <table class="table table-striped table-sm">
     <thead id="thead_id_bbe" class="sticky-top">
         <tr>
-            <th>ERROR_NUM_SEQ</th>
-            <th>EDIT_TABLE_NAME</th>
-            <th>RECORD_NUM_SEQ</th>
-            <th>COLUMN_NAME</th>
-            <th>ERROR_CODE</th>
-            <th>LAST_UPDATED_BY</th>
-            <th>LAST_UPDATE_DATE</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">ERROR_NUM_SEQ</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">EDIT_TABLE_NAME</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">RECORD_NUM_SEQ</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">COLUMN_NAME</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">ERROR_CODE</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">LAST_UPDATED_BY</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">LAST_UPDATE_DATE</th>
         </tr>
     </thead>
     <tbody id="tbody_id_bbe">
         {% for error in errors %}
             <tr>
-                <td>{{ error.pk }}</td>
-                <td>{{ error.edit_table_name }}</td>
-                <td>{{ error.record_num_seq }}</td>
-                <td>{{ error.column_name }}</td>
-                <td><i title="{{ error.error_code.long_desc }}">{% custom_icon 'question-circle' %}</i> {{ error.error_code.description }}</td>
-                <td>{{ error.last_updated_by }}</td>
-                <td>{{ error.last_update_date }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.pk }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.edit_table_name }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.record_num_seq }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.column_name }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;"><i title="{{ error.error_code.long_desc }}">{% custom_icon 'question-circle' %}</i> {{ error.error_code.description }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.last_updated_by }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.last_update_date }}</td>
             </tr>
         {% endfor %}
     </tbody>
