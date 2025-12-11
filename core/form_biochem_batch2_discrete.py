@@ -9,7 +9,7 @@ from django.utils.translation import gettext_lazy as _
 
 from biochem import upload
 from biochem import models as biochem_models
-from biochem.models import BcsDReportModel, BcdDReportModel
+from biochem.models import BcsD, BcdD
 
 from core import models as core_models
 
@@ -50,8 +50,8 @@ class BiochemDiscreteBatchForm(form_biochem_batch2.BiochemDBBatchForm):
     def get_checkin_url(self, alias: str = "core:form_biochem_discrete_checkin") -> str | None:
         return super().get_checkin_url(alias)
 
-    def is_batch_stage2_validated(self) -> bool | None:
-        return super().is_batch_stage2_validated()
+    def is_batch_stage1_validated(self, bcs_model = biochem_models.BcsD, bcd_model = biochem_models.BcdD) -> bool | None:
+        return super().is_batch_stage1_validated(bcs_model, bcd_model)
 
     def get_batch_choices(self) -> list[Tuple[int, str]]:
         choices = []
@@ -96,9 +96,9 @@ def get_discrete_data(mission: core_models.Mission, upload_all=False):
 
 
 def download_batch_func(mission: core_models.Mission, uploader: str) -> int | None:
-    bcs = BcsDReportModel
+    bcs = BcsD
     bcs_upload = upload.get_bcs_d_rows
-    bcd = BcdDReportModel
+    bcd = BcdD
     bcd_upload = upload.get_bcd_d_rows
     return form_biochem_batch2.download_batch_func(
         mission, uploader, get_data_func=get_discrete_data, file_postfix='D',
@@ -110,35 +110,23 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: bioche
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
-    # 1) get bottles from BCS_D table
-    bcs_d = biochem_models.BcsD
-
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
     samples, bottles = get_discrete_data(mission)
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_d_model=bcs_d)
+        create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Discrete rows"))
-        upload.upload_db_rows(bcs_d, create)
+        upload.upload_db_rows(biochem_models.BcsD, create)
+        # biochem_models.BcsD.objects.using('biochem').bulk_create(create)
 
 
 def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_models.Bcbatches = None):
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
-
-    # 1) get the biochem BCD_D model
-    table_name = form_biochem_database.get_bcd_d_table()
-    bcd_d = biochem_models.BcdD
-
-    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
-    exists = upload.check_and_create_model('biochem', bcd_d)
-    if not exists:
-        raise DatabaseError(f"A database error occurred while uploading BCD D data. "
-                            f"Could not connect to table {table_name}")
 
     user_logger.info(_("Compiling BCD rows for : ") + mission.name)
 
@@ -149,12 +137,13 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_mod
     if samples.exists():
         message = _("Compiling BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
-        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples, batch=batch, bcd_d_model=bcd_d)
+        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples, batch=batch)
 
         message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
 
-        upload.upload_db_rows(bcd_d, create)
+        upload.upload_db_rows(biochem_models.BcdD, create)
+        # bcd_d.objects.using("biochem").bulk_create(create)
 
         # after uploading the samples we want to update the status of the samples in this mission so we
         # know what has been uploaded and what hasn't.
@@ -236,10 +225,7 @@ def stage2_validation_func(mission_id, batch_id) -> None:
 
 def delete_batch(mission_id: int, batch_id: int) -> None:
     label = "DISCRETE"
-    bcd_model = biochem_models.BcdD
-    bcs_model = biochem_models.BcsD
-
-    form_biochem_batch2.delete_batch(mission_id, batch_id, label, bcd_model, bcs_model)
+    form_biochem_batch2.delete_batch(mission_id, batch_id, label)
 
 
 def checkin_batch(mission_id, batch_id) -> None:

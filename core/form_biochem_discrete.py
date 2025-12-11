@@ -876,10 +876,10 @@ def download_batch(request, mission_id):
 
     try:
         sample_rows = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
-        form_biochem_batch.write_bcs_file(sample_rows, bcs_file, biochem_models.BcsDReportModel)
+        form_biochem_batch.write_bcs_file(sample_rows, bcs_file, biochem_models.BcsD)
 
         bottle_rows = upload.get_bcd_d_rows(uploader=uploader, samples=samples)
-        form_biochem_batch.write_bcd_file(bottle_rows, bcd_file, biochem_models.BcdDReportModel)
+        form_biochem_batch.write_bcd_file(bottle_rows, bcd_file, biochem_models.BcdD)
     except PermissionError as e:
         attrs = {
             'component_id': 'div_id_upload_biochem',
@@ -910,10 +910,6 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: bioche
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
-    # 1) get bottles from BCS_D table
-    bcs_d = biochem_models.BcsD
-    exists = upload.check_and_create_model('biochem', bcs_d)
-
     # 2) if the BCS_D table doesn't exist, create with all the bottles. We're only uploading CTD bottles
     samples, bottles = get_discrete_data(mission)
     if bottles.exists():
@@ -924,22 +920,13 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: bioche
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Discrete rows"))
-        upload.upload_db_rows(bcs_d, create)
+        upload.upload_db_rows(biochem_models.BcsD, create)
+        # biochem_models.BcsD.objects.using('biochem').bulk_create(create)
 
 
 def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_models.Bcbatches = None):
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
-
-    # 1) get the biochem BCD_D model
-    table_name = form_biochem_database.get_bcd_d_table()
-    bcd_d = biochem_models.BcdD
-
-    # 2) if the BCD_D model doesn't exist create it and add all samples specified by sample_id
-    exists = upload.check_and_create_model('biochem', bcd_d)
-    if not exists:
-        raise DatabaseError(f"A database error occurred while uploading BCD D data. "
-                            f"Could not connect to table {table_name}")
 
     user_logger.info(_("Compiling BCD rows for : ") + mission.name)
 
@@ -951,12 +938,13 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_mod
         # 4) upload only samples that are new or were modified since the last biochem upload
         message = _("Compiling BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
-        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples, batch=batch, bcd_d_model=bcd_d)
+        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples, batch=batch)
 
         message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
         try:
-            upload.upload_db_rows(bcd_d, create)
+            upload.upload_db_rows(biochem_models.BcdD, create)
+            # biochem_models.BcdD.objects.using('biochem').bulk_create(create)
 
             # after uploading the samples we want to update the status of the samples in this mission so we
             # know what has been uploaded and what hasn't.

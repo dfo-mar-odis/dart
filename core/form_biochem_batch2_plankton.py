@@ -6,7 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from biochem import upload
 from biochem import models as biochem_models
-from biochem.models import BcdPReportModel, BcsPReportModel
+from biochem.models import BcdP, BcsP
 
 from core import form_biochem_database
 from core import models as core_models
@@ -48,6 +48,9 @@ class BiochemPlanktonBatchForm(form_biochem_batch2.BiochemDBBatchForm):
     def get_checkin_url(self, alias: str = "core:form_biochem_plankton_checkin") -> str | None:
         return super().get_checkin_url(alias)
 
+    def is_batch_stage1_validated(self, bcs_model = biochem_models.BcsP, bcd_model = biochem_models.BcdP) -> bool | None:
+        return super().is_batch_stage1_validated(bcs_model, bcd_model)
+
     def get_batch_choices(self) -> list[Tuple[int, str]]:
 
         choices = []
@@ -84,9 +87,9 @@ def get_plankton_data(mission: core_models.Mission, upload_all=False):
 
 
 def download_batch_func(mission: core_models.Mission, uploader: str) -> int | None:
-    bcs = BcsPReportModel
+    bcs = BcsP
     bcs_upload = upload.get_bcs_p_rows
-    bcd = BcdPReportModel
+    bcd = BcdP
     bcd_upload = upload.get_bcd_p_rows
     return form_biochem_batch2.download_batch_func(
         mission, uploader, get_data_func=get_plankton_data, file_postfix='P',
@@ -98,40 +101,23 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bioche
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
-    # 1) get bottles from BCS_P table
-    table_name = form_biochem_database.get_bcs_p_table()
-    bcs_p = biochem_models.BcsP
-    exists = upload.check_and_create_model('biochem', bcs_p)
-    if not exists:
-        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
-                            f"Could not connect to table {table_name}")
-
     # 2) get all the bottles to be uploaded
     samples, bottles = get_plankton_data(mission)
     if bottles.exists():
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch, bcs_p_model=bcs_p)
+        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Plankton rows"))
-        upload.upload_db_rows(bcs_p, bcs_create)
+        upload.upload_db_rows(biochem_models.BcsP, bcs_create)
+        # biochem_models.BcsP.objects.bulk_create(bcs_create)
 
 
 def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
-
-    # 1) get Biochem BCD_P model
-    table_name = form_biochem_database.get_bcd_p_table()
-    bcd_p = biochem_models.BcdP
-
-    # 2) if the BCD_P model doesn't exist, create it
-    exists = upload.check_and_create_model('biochem', bcd_p)
-    if not exists:
-        raise DatabaseError(f"A database error occurred while uploading BCD P data. "
-                            f"Could not connect to table {table_name}")
 
     user_logger.info(_("Compiling BCD rows for : ") + mission.name)
 
@@ -141,12 +127,12 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: bioche
         # 5) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCD Plankton rows"))
-        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples, batch=batch,
-                                           bcd_p_model=bcd_p)
+        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples, batch=batch)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCD Plankton rows"))
-        upload.upload_db_rows(bcd_p, bcd_create)
+        upload.upload_db_rows(biochem_models.BcdP, bcd_create)
+        # biochem_models.BcdP.objects.using('biochem').bulk_create(bcd_create)
 
 
 def upload_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches) -> int | None:
@@ -207,10 +193,7 @@ def stage2_validation_func(mission_id, batch_id) -> None:
 
 def delete_batch(mission_id: int, batch_id: int) -> None:
     label = "PLANKTON"
-    bcd_model = biochem_models.BcdP
-    bcs_model = biochem_models.BcsP
-
-    form_biochem_batch2.delete_batch(mission_id, batch_id, label, bcd_model, bcs_model)
+    form_biochem_batch2.delete_batch(mission_id, batch_id, label)
 
 
 def checkin_batch(mission_id, batch_id) -> None:

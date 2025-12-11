@@ -158,7 +158,7 @@ class BcdDFactory(DjangoModelFactory):
     '''
 
     class Meta:
-        model = models.BcdDReportModel
+        model = models.BcdD
         database = 'biochem'
 
 

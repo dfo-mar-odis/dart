@@ -154,7 +154,7 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
     # if validation hasn't been run return None.
     # if validation has been run and is invalid return False
     # if validation has been run and is valid return True
-    def is_batch_stage1_validated(self) -> bool | None:
+    def is_batch_stage1_validated(self, bcs_model = None, bcd_model = None) -> bool | None:
         batch_id = self.get_batch_id()
         if batch_id is None:
             return None
@@ -165,6 +165,12 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         )
 
         if not mission_edits.exists():
+            if bcs_model and bcd_model:
+                bad_bcd_rows = bcs_model.objects.using('biochem').filter(batch_id=batch_id, process_flag='SVE').exists()
+                bad_bcs_rows = bcd_model.objects.using('biochem').filter(batch_id=batch_id, process_flag='SVE').exists()
+                # if rows for either of these exist, we aren't validated
+                if bad_bcs_rows or bad_bcd_rows:
+                    return False
             return None
 
         mission_edit = mission_edits.first()
@@ -314,7 +320,7 @@ class BiochemDBBatchForm(core_forms.CollapsableCardForm):
         url = self.get_batch_update_url()
         batch_select_attributes = {
             'id': BIOCHEM_BATCH_SELECTION_ID,
-            'hx-target': f'#{self.get_id_builder().get_card_header_id()}',
+            'hx-target': f'#{self.get_id_builder().get_card_id()}',
             'hx-swap': 'outerHTML',
             # biochem_db_connect is fired by the form_biochem_database module when connecting or disconnecting from a DB
             'hx-trigger': "change, batch_updated from:body",
@@ -713,7 +719,7 @@ def upload_batch(request, mission_id, logger_name, upload_batch_func=None):
         return response_obj[1]
 
 
-def delete_batch(mission_id, batch_id, label, bcd_model, bcs_model):
+def delete_batch(mission_id, batch_id, label):
     unlock = False
     bcmission_edits = biochem_models.Bcmissionedits.objects.using('biochem').filter(batch_id=batch_id)
     if bcmission_edits.exists():
@@ -732,12 +738,11 @@ def delete_batch(mission_id, batch_id, label, bcd_model, bcs_model):
             response = cur.callproc("ARCHIVE_BATCH.DISABLE_EDITS_BDR_TRIGGERS", [func_area_par])
             response = cur.callproc("DELETES_PKG.DELETE_ARCHIVE_DELETES", [batch_id])
             response = cur.callproc("DELETES_PKG.DELETE_EDITS_DELETES", [batch_id])
-            response = cur.callproc("ARCHIVE_BATCH.DELETE_BATCH", [batch_id, label])
+            response = cur.callproc("DELETES_PKG.DELETE_EDITS_DELETES", [batch_id])
+            biochem_models.Bcbatches.objects.using('biochem').filter(batch_seq=batch_id).delete()
         finally:
             response = cur.callproc("ARCHIVE_BATCH.ENABLE_EDITS_BDR_TRIGGERS", [func_area_par])
 
-    bcd_model.objects.using('biochem').filter(batch=batch_id).delete()
-    bcs_model.objects.using('biochem').filter(batch=batch_id).delete()
     if unlock:
         unlock.delete()
 
@@ -808,21 +813,11 @@ def get_batch_list(request, mission_id, form_class: Type[BiochemDBBatchForm]) ->
 
 
 def get_update_controls(request, mission_id, form_class: Type[BiochemDBBatchForm]) -> HttpResponse:
-
-    soup = BeautifulSoup('', 'html.parser')
-
-    form: BiochemDBBatchForm = form_class(mission_id=mission_id, initial=request.GET)
+    form: BiochemDBBatchForm = form_class(mission_id=mission_id, collapsed=False, initial=request.GET)
 
     html = render_crispy_form(form)
-    form_soup = BeautifulSoup(html, 'html.parser')
 
-    form_body = form_soup.find(id=form.get_collapsable_card_body_id())
-    form_body.attrs['hx-swap-oob'] = 'true'
-
-    soup.append(form_soup.find(id=form.get_id_builder().get_card_header_id()))
-    soup.append(form_body)
-
-    return HttpResponse(soup)
+    return HttpResponse(html)
 
 
 def stage_1_validation(request, mission_id, batch_id, logger_name, batch_func=None) -> HttpResponse:

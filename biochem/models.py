@@ -263,8 +263,7 @@ class BcdD(models.Model):
     # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
     batch = models.ForeignKey(Bcbatches, related_name='discrete_data_edits', db_column='batch_seq', blank=True,
-                              null=True,
-                              on_delete=models.CASCADE)  #
+                              null=True, on_delete=models.CASCADE)
     dis_sample_key_value = models.CharField(max_length=50, blank=True, null=True)
 
     class Meta:
@@ -276,10 +275,6 @@ class BcdD(models.Model):
         bcd_str = ", ".join(
             [f"{attr.name}: {getattr(self, attr.name)}" for attr in BcdD._meta.fields if hasattr(self, attr.name)])
         return bcd_str
-
-
-class BcdDReportModel(BcdD):
-    pass
 
 
 class BcsD(models.Model):
@@ -352,16 +347,14 @@ class BcsD(models.Model):
     # if the data validates.
     process_flag = models.CharField(max_length=3, blank=True, null=True)
     batch = models.ForeignKey(Bcbatches, related_name='discrete_station_edits', db_column='batch_seq', blank=True,
-                              null=True,
-                              on_delete=models.CASCADE)  #
+                              null=True, on_delete=models.CASCADE)
 
     class Meta:
         managed = False
         db_table = 'BCDISCRETESTATNEDITS'
 
-
-class BcsDReportModel(BcsD):
-    pass
+    def __str__(self):
+        return f"{self.mission_name} - {self.mission_descriptor} - {self.event_collector_stn_name} - {self.event_collector_event_id}"
 
 
 class BcdP(models.Model):
@@ -419,10 +412,6 @@ class BcdP(models.Model):
     class Meta:
         managed = False
         db_table = 'BCPLANKTONDATAEDITS'
-
-
-class BcdPReportModel(BcdP):
-    pass
 
 
 class BcsP(models.Model):
@@ -509,10 +498,6 @@ class BcsP(models.Model):
     class Meta:
         managed = False
         db_table = 'BCPLANKTONSTATNEDITS'
-
-
-class BcsPReportModel(BcsP):
-    pass
 
 
 # For demonstration purposes

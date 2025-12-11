@@ -78,12 +78,11 @@ class TestGetBCSPRows(AbstractTestDatabase):
         core_factory.PhytoplanktonSampleFactory.create_batch(10, bottle=bottle)
 
         bottles = core_models.Bottle.objects.all()
-        bcs_model = self.bio_model
 
         batch_factory = biochem_factory.BcBatchesFactory
         batch_factory._meta.database = 'biochem'
         batch = batch_factory()
-        create_rows = upload.get_bcs_p_rows("test_user", bottles, batch, bcs_model)
+        create_rows = upload.get_bcs_p_rows("test_user", bottles, batch)
 
         self.assertEqual(len(create_rows), 1)
 
@@ -178,6 +177,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
 
     def setUp(self):
         utilities.create_model_table([bio_models.Bcbatches], 'biochem')
+        utilities.create_model_table([bio_models.BcdD], 'biochem')
 
         self.sample_database = settings_factory.BcDatabaseConnection(name=settings.DATABASES['biochem']['NAME'])
         caches['biochem_keys'].set('database_id', self.sample_database.pk, timeout=3600)
@@ -187,6 +187,7 @@ class TestFakeBioChemDBUpload(AbstractTestDatabase):
         self.mission = core_factory.MissionFactory(mission_descriptor="test_db")
 
     def tearDown(self):
+        utilities.delete_model_table([bio_models.BcdD], 'biochem')
         utilities.delete_model_table([bio_models.Bcbatches], 'biochem')
 
     @tag("test_data_marked_for_upload")
