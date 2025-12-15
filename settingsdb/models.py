@@ -81,11 +81,11 @@ class SampleTypeConfig(models.Model):
     sample_field = models.CharField(verbose_name=_("Sample Column"), max_length=50,
                                     help_text=_("Lowercase name of the column that contains the bottle ids"))
 
-    value_field = models.CharField(verbose_name=_("Value Column"), max_length=50,
-                                   help_text=_("Lowercase name of the column that contains the value data"))
-
     tab = models.IntegerField(verbose_name=_("Tab"), default=0, help_text=_("The tab number data is located on."
                                                                             "For MS Excel, the first tab is zero"))
+
+    value_field = models.CharField(verbose_name=_("Value Column"), max_length=50,
+                                   help_text=_("Lowercase name of the column that contains the value data"))
 
     flag_field = models.CharField(verbose_name=_("Flag Column"), max_length=50, blank=True, null=True,
                                   help_text=_("Lowercase name of the column that contains flags, if it exists"))
@@ -104,6 +104,39 @@ class SampleTypeConfig(models.Model):
 
     def __str__(self):
         return f"{self.sample_type}"
+
+
+class SampleFileType(models.Model):
+    name = models.CharField(verbose_name=_("File Configuration Name"), max_length=100, help_text=_("Short descriptive name for this configuration"))
+    file_type = models.CharField(verbose_name=_("File Type"), max_length=5, help_text=_("The file extension in uppercase (CSV, XLS, DAT)"))
+    skip = models.IntegerField(verbose_name=_("Header Row"), default=0, help_text=_("The number of rows to skip to find the header row. Zero if it's the first row. "))
+    tab = models.IntegerField(verbose_name=_("Tab"), default=0, help_text=_("The tab of the an excel file the data is located on. Zero if this is a text file type like CSV or DAT."))
+    sample_field = models.CharField(verbose_name=_("Sample ID Column"), max_length=50, help_text=_("Upper case name of the column that contains the value data"))
+    comment_field = models.CharField(verbose_name=_("Comment Column"), max_length=50, blank=True, null=True, help_text=_("Upper case name of the column containing comments, if it exists"))
+    are_blank_sample_ids_replicates = models.BooleanField(verbose_name=_("Are Blank Sample IDs Replicates?"), default=True)
+    allowed_replicates = models.IntegerField(verbose_name=_("Allowed Replicates?"), default=2,
+                                             help_text=_("The number of replicates allowed for this sample. Not a limitation, just a test."))
+
+    def __str__(self):
+        return f"{self.name}: {self.file_type}"
+
+class SampleTypeVariable(models.Model):
+    sample_type = models.ForeignKey(SampleFileType, verbose_name=_("Sample Type"), related_name="variables",
+                                    on_delete=models.CASCADE)
+
+    name = models.CharField(verbose_name=_("Name"), max_length=100, help_text=_("Short descriptive name for this column of data"))
+
+    value_field = models.CharField(verbose_name=_("Value Column"), max_length=50,
+                                   help_text=_("Lowercase name of the column that contains the value data"))
+
+    flag_field = models.CharField(verbose_name=_("Flag Column"), max_length=50, blank=True, null=True,
+                                  help_text=_("Lowercase name of the column that contains flags, if it exists"))
+
+    limit_field = models.CharField(verbose_name=_("Detection Limit Column"), max_length=50, blank=True, null=True,
+                                   help_text=_("Lowercase name of the column that contains flags, if it exists"))
+
+    datatype = models.IntegerField(verbose_name=_("Datatype"), blank=True, null=True,
+                                   help_text=_("The biochem datatype this variable is intended for"))
 
 
 class EngineType(models.IntegerChoices):

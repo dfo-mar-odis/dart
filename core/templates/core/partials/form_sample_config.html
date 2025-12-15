@@ -21,29 +21,23 @@
 {#        file and the parsers use the file config settings to load data from the files #}
 <form id="id_form_load_samples" hx-encoding="multipart/form-data" onkeydown="return event.key != 'Enter';">
     <input type="hidden" name="mission_id" value="{% if mission %}{{ mission.pk }}{% endif %}">
-{% block file_input_form_block %}
     {% if mission %}
-    <div class="row">
+    <div class="row mb-2">
         <div class="col">
             {# choose file input #}
             <input id="id_input_sample_file" class="form-control form-control-sm"
                    type="file" name="sample_file" accept=".dat,.csv,.xls,.xlsx,.xlsm"
+                   hx-target="#div_id_file_config_section"
                    hx-trigger="change, reload_sample_file from:body"
-                   hx-get="{% url 'core:form_sample_config_load' %}?mission_id={{ mission.pk }}"
+                   hx-post="{% url "core:form_sample_config_load" %}?clear_form=true"
+                   hx-indicator="#div_id_file_config_spinner"
             />
-        </div>
-        <div class="col-auto">
-            <button class="btn btn-primary btn-sm" name="add_sample"
-                title="{% trans "Add Sample Type" %}"
-                hx-get="{% url 'core:form_sample_config_new' %}"
-                hx-target="#div_id_sample_type_holder"
-            >{% custom_icon 'plus-square' %}</button>
         </div>
     </div>
     {% endif %}
-    <div id="div_id_sample_type_holder">{# Anchor point for file message and new/update sample type form #}</div>
-    <div id="div_id_loaded_sample_type">
-        <div id="div_id_loaded_samples_list">{# anchor point for previously loaded file configurations #}</div>
+    <div id="div_id_file_config_section">
+    {% if file_config_form %}
+        {% crispy file_config_form %}
+    {% endif %}
     </div>
-{% endblock %}
 </form>

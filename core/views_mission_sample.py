@@ -17,11 +17,10 @@ from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
 
-from core import forms, form_biochem_batch_discrete, form_btl_load
+from core import forms, form_biochem_batch_discrete
 
 from core import models
 from core import views
-from core.form_sample_type_config import process_file
 from core.parsers import SampleParser
 
 from settingsdb import models as settings_models
@@ -138,8 +137,6 @@ class SampleDetails(GenericDetailView):
                               views.reports.keys()}
 
         context['mission'] = self.object
-        context['bulk_load_form'] = form_btl_load.BottleLoadForm(mission=self.object)
-
         context['biochem_batch_form'] = form_biochem_batch_discrete.BiochemDiscreteBatchForm(mission_id=self.object.pk)
 
         return context
@@ -234,7 +231,7 @@ def load_samples(request):
 
         config_ids = request.POST.getlist('sample_config')
         file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
+        file_name, file_type, data = "", "", b""
 
         config_count = len(config_ids)
         for index, config_id in enumerate(config_ids):

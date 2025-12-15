@@ -1,0 +1,108 @@
+graph TD
+
+    subgraph sg_http[Http Requests]
+        A((Choose File)) -->|Trigger: load_sample_config
+        Target: Form Section| lsc1
+
+        ldvf_add_btn(("click
+        add value_field")) -->|Trigger: load_sample_config
+        Target: Form Section| ldvf1
+
+        ldvf_remove_btn(("click
+        remove value_field")) -->|Trigger: load_sample_config
+        Target: Form Section| ldvf1
+
+        subgraph load_sample_config
+            lsc1[[Call: get_sample_parser]]
+            lsc1 --> lsc2[Acquire File Headers from SampleParser]
+            lsc2 --> lsc3[[Call: get_header_table_placeholder]]
+            lsc3 --> lsc4[Create SampleFileTypeForm]
+            lsc4 --> lsc_response1[Response: SampleFileTypeForm]
+        end
+
+        subgraph load_data_value_form
+            ldvf1{Is remove
+            in request.GET}
+            ldvf1 --> |No| ldvf2[[Call: get_sample_parser]]
+            ldvf1 --> |Yes|ldvf_response1["Response: Empty"]
+            ldvf2 --> ldvf3[Acquire File Headers from SampleParser]
+            ldvf3 --> ldvf4[Exclude sample_field, comment_field, value_field]
+            ldvf4 --> ldvf5[Create SampleVariableForm]
+            ldvf5 --> ldvf_response2["Response: SampleVariableForm row"]
+        end
+
+        subgraph reload_headers
+            rh1[[Call: Construct SampleParser]]
+            rh1 --> rh2[Acquire File Headers from SampleParser]
+            rh2 --> rh3[[Call: add_header_table]]
+            rh3 --> rh_response1[Response: Header Table]
+        end
+
+        subgraph reload_buttons
+            rb1[request.POST.getlist value_field]
+            rb1 --> rb2{Is list of
+            value_fields empty}
+            rb2 --> |Yes|rb_response1[Response: Empty]
+            rb2 --> |No|rb_response2[Response: Form Submit Buttons]
+        end
+
+        lsc_response1 --> lsc_swap1[Swap: File Config Form Section]
+        lsc_swap1 --> lcs_trigger[After Settle Trigger]
+
+        rb_response1 --> rb_swap1["Swap: Form Submitt Button Row"]
+        rb_response2 --> rb_swap1
+
+        rh_response1 --> rh_swap1["Swap: Table Header Selection Row"]
+
+        ldvf_response1 --> ldvf_swap1[Swap: SampleVariableForm beforeend]
+        ldvf_response2 --> ldvf_swap2[Swap: delete]
+        ldvf_swap1 --> ldvf_trigger[After Settle Trigger]
+        ldvf_swap2 --> ldvf_trigger
+    end
+
+    subgraph helper[Helper Functions]
+        subgraph get_sample_parser
+            gsp1[Process request.POST] --> gsp2[Construct SampleParser]
+        end
+
+        subgraph add_header_table
+            direction TB
+            aht0[[Call: get_header_table_placeholder]] --> aht1[For each column in columns]
+            aht1 --> aht2{Is column.name
+            sample_value}
+            aht2 --> |Yes: Set as text|aht4[Add to Header Table]
+            aht2 --> |No|aht3{Is column.name
+            in
+            chosen_headers}
+            aht3 -->|Yes| aht5[button add value_field
+            Post: load_data_value_form
+            Target: Value Fields Form
+            swap: beforeend] --> aht4
+            aht3 -->|No| aht6[button remove value_field
+            Post: load_data_value_form
+            Target: Value Form == column.id
+            swap: Delete] --> aht4
+
+        end
+
+        subgraph get_header_table_placeholder
+            ghtp[Add placeholder for Headers]
+        end
+        get_sample_parser ~~~ add_header_table
+        add_header_table ~~~ get_header_table_placeholder
+
+    end
+
+    sg_http ~~~ helper
+
+    lcs_trigger --> |Trigger: reload_header
+    Target: header row| rh1
+
+    lcs_trigger --> |Trigger: reload_buttons
+    Target: button row| rb1
+
+    ldvf_trigger -->|Trigger: reload_header
+    Target: header row| rh1
+
+    ldvf_trigger --> |Trigger: reload_buttons
+    Target: button row| rb1

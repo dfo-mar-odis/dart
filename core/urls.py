@@ -2,10 +2,8 @@ from django.urls import path
 
 from . import views, views_mission_sample, views_sample_type, views_mission_plankton
 from . import views_mission_sample_type, views_mission_event
-from . import form_biochem_database, form_biochem_pre_validation, form_btl_load, form_sample_type_config
+from . import form_biochem_database, form_biochem_pre_validation, form_sample_type_config
 from . import form_mission_sample_type, form_plankton_load, form_mission_settings, views_mission_gear_type
-
-# TODO: this will eventually be removed and we'll pull the urls from the extending classes
 from . import form_biochem_batch, form_biochem_batch_discrete, form_biochem_batch_plankton
 
 from . import views_biochem
@@ -25,17 +23,16 @@ urlpatterns = [
     path(f'elog/update/<int:mission_id>/', views.hx_update_elog_config, name="update_elog_config"),
 ]
 
-urlpatterns.extend(views_biochem.urlpatterns)
 urlpatterns.extend(views_mission_event.mission_event_urls)
 urlpatterns.extend(views_sample_type.sample_type_urls)
 urlpatterns.extend(views_mission_sample.url_patterns)
 urlpatterns.extend(views_mission_sample_type.mission_sample_type_urls)
 urlpatterns.extend(views_mission_plankton.plankton_urls)
 urlpatterns.extend(views_mission_gear_type.url_patterns)
-urlpatterns.extend(form_btl_load.bottle_load_urls)
+
 urlpatterns.extend(form_biochem_database.database_urls)
+urlpatterns.extend(form_sample_type_config.url_patterns)
 urlpatterns.extend(form_biochem_pre_validation.database_urls)
-urlpatterns.extend(form_sample_type_config.sample_type_config_urls)
 urlpatterns.extend(form_mission_sample_type.sample_type_urls)
 urlpatterns.extend(form_plankton_load.plankton_urls)
 urlpatterns.extend(form_mission_settings.mission_urls)
@@ -46,3 +43,6 @@ urlpatterns.extend(reports.report_urls)
 urlpatterns.extend(form_biochem_batch.url_patterns)
 urlpatterns.extend(form_biochem_batch_discrete.url_patterns)
 urlpatterns.extend(form_biochem_batch_plankton.url_patterns)
+
+# new functionality for checking out existing Biochem missions
+urlpatterns.extend(views_biochem.urlpatterns)

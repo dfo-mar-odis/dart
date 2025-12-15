@@ -268,44 +268,86 @@ def profile_summary(request, mission_id):
 
 
 def std_sample_report(request, mission_id, **kwargs):
-    mission = core_models.Mission.objects.get(pk=mission_id)
+    try:
+        mission = core_models.Mission.objects.get(pk=mission_id)
 
-    data = ",".join(kwargs['headers']) + '\n'
+        # Get all required keys or provide useful error message
+        headers = kwargs.get('headers', [])
+        sensors = kwargs.get('sensors', [])
+        samples = kwargs.get('samples', [])
+        report_name = kwargs.get('report_name', 'Sample_Report')
 
-    bottles = core_models.Bottle.objects.filter(event__mission_id=mission_id).order_by('bottle_id')
+        # Prefetch related data to reduce database queries
+        bottles = (core_models.Bottle.objects
+                   .filter(event__mission_id=mission_id)
+                   .select_related('event')
+                   .prefetch_related('samples', 'samples__discrete_values', 'samples__type')
+                   .order_by('bottle_id'))
 
-    for bottle in bottles:
-        row = [bottle.event.station, bottle.event.event_id, bottle.pressure, bottle.bottle_id]
-        for sensor in kwargs['sensors']:
-            sensor = bottle.samples.filter(type__name__iexact=sensor)
-            if sensor.exists():
-                row += sensor.values_list('discrete_values__value', flat=True)
-            else:
-                row.append('')
+        # Build CSV data efficiently using list operations
+        csv_rows = [",".join(headers)]
 
-        for sample in kwargs['samples']:
-            sample = bottle.samples.filter(type__name__iexact=sample)
-            if sample.exists():
-                row += sample.values_list('discrete_values__value', flat=True)
-            else:
-                row.append('')
-        data += ",".join([str(val) for val in row]) + '\n'
+        for bottle in bottles:
+            row = [
+                str(bottle.event.station),
+                str(bottle.event.event_id),
+                str(bottle.pressure),
+                str(bottle.bottle_id)
+            ]
 
-    file_to_send = ContentFile(data)
+            # Create a dictionary of sample types for faster lookup
+            bottle_samples = {}
+            for sample in bottle.samples.all():
+                bottle_samples[sample.type.name.lower()] = sample
 
-    response = HttpResponse(file_to_send, content_type="text/csv")
-    response['Content-Length'] = file_to_send.size
-    response['Content-Disposition'] = f'attachment; filename="{mission.name}_{kwargs["report_name"]}.csv"'
+            # Process sensors and samples with the cached data
+            for sensor_name in sensors:
+                if sample := bottle_samples.get(sensor_name.lower()):
+                    values = [str(val) for val in sample.discrete_values.values_list('value', flat=True)]
+                    row.extend(values)
+                else:
+                    row.append('')
 
-    return response
+            for sample_name in samples:
+                if sample := bottle_samples.get(sample_name.lower()):
+                    values = [str(val) for val in sample.discrete_values.values_list('value', flat=True)]
+                    row.extend(values)
+                else:
+                    diff = len(headers) - len(row)
+                    row += ["" for _ in range(diff)]
+
+            csv_rows.append(",".join(row))
+
+        # Join all rows at once instead of repeated concatenation
+        data = '\n'.join(csv_rows)
+
+        file_to_send = ContentFile(data)
+
+        response = HttpResponse(file_to_send, content_type="text/csv")
+        response['Content-Length'] = file_to_send.size
+        response['Content-Disposition'] = f'attachment; filename="{mission.name}_{report_name}.csv"'
+
+        return response
+
+    except core_models.Mission.DoesNotExist:
+        return HttpResponse(f"Mission with ID {mission_id} not found", status=404)
+    except KeyError as e:
+        return HttpResponse(f"Missing required parameter: {str(e)}", status=400)
 
 
 # The problem with this report is it depends on there being a SampleType with a short name 'oxy'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def oxygen_report(request, mission_id):
     sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
-    samples = ['oxy']
-    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S', 'Oxy_W_Rep1', 'Oxy_W_Rep2']
+    header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S']
+
+    sample_key = 'oxy'
+    replicate_name = "Oxy_W_Rep"
+    sample_type = core_models.MissionSampleType.objects.get(name__iexact=sample_key)
+    replicates = core_models.Sample.objects.filter(type=sample_type).values_list('discrete_values__replicate', flat=True).distinct()
+    for replicate in replicates:
+        header += [f'{replicate_name}{replicate}']
+    samples = [sample_key]
 
     return std_sample_report(request, mission_id=mission_id, report_name='Oxygen_Rpt',
                              headers=header, sensors=sensors, samples=samples)
@@ -314,10 +356,17 @@ def oxygen_report(request, mission_id):
 # The problem with this report is it depends on there being a SampleType with a short name 'sal'
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def salt_report(request, mission_id):
-    sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
-    samples = ['salts']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
-              'Sal_CTD_P', 'Sal_CTD_S', 'Sal_Rep1', 'Sal_Rep2']
+              'Sal_CTD_P', 'Sal_CTD_S']
+    sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
+
+    sample_key = 'salts'
+    replicate_name = "Sal_Rep"
+    sample_type = core_models.MissionSampleType.objects.get(name__iexact=sample_key)
+    replicates = core_models.Sample.objects.filter(type=sample_type).values_list('discrete_values__replicate', flat=True).distinct()
+    for replicate in replicates:
+        header += [f'{replicate_name}{replicate}']
+    samples = [sample_key]
 
     return std_sample_report(request, mission_id=mission_id, report_name='Salinity_Summary', headers=header,
                              sensors=sensors, samples=samples)
@@ -331,8 +380,14 @@ def chl_report(request, mission_id):
 
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID"]
     header += sensors
-    header += ['Chl_Rep1', 'Chl_Rep2']
-    samples = ['chl']
+
+    sample_key = 'chl'
+    replicate_name = "Chl_Rep"
+    sample_type = core_models.MissionSampleType.objects.get(name__iexact=sample_key)
+    replicates = core_models.Sample.objects.filter(type=sample_type).values_list('discrete_values__replicate', flat=True).distinct()
+    for replicate in replicates:
+        header += [f'{replicate_name}{replicate}']
+    samples = [sample_key]
 
     return std_sample_report(request, mission_id=mission_id, report_name='Chl_Summary', headers=header,
                              sensors=sensors, samples=samples)

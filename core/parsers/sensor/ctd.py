@@ -258,6 +258,9 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         validation_err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.bottle)
         errors.append(validation_err)
 
+    existing_bottles = {
+        b.bottle_id: b for b in event.bottles.all()
+    }
     bottle_number = 0
     for line, row in bottle_data.iterrows():
         bottle_number += 1
@@ -286,11 +289,11 @@ def process_bottles(event: core_models.Event, data_frame: pandas.DataFrame):
         valid = validation.validate_bottle_sample_range(event=event, bottle_id=bottle_id)
         errors += valid
 
-        if event.bottles.filter(bottle_id=bottle_id).exists():
+        if bottle_id in existing_bottles:
             # If a bottle already exists for this event then we'll update its fields rather than
             # creating a whole new bottle. Reason being there may be samples attached to bottles that are
             # being reloaded from a calibrated bottle file post mission.
-            b = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
+            b = existing_bottles.get(bottle_id)
 
             check_fields = {'bottle_number': bottle_number, 'date_time': date, 'pressure': pressure,
                             'latitude': latitude, 'longitude': longitude}
@@ -325,10 +328,10 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
     # convert all column names to lowercase
     data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
-    new_samples: [core_models.Sample] = []
-    update_samples: [core_models.Sample] = []
-    new_discrete_samples: [core_models.DiscreteSampleValue] = []
-    update_discrete_samples: [core_models.DiscreteSampleValue] = []
+    new_samples: list[core_models.Sample] = []
+    update_samples: list[core_models.Sample] = []
+    new_discrete_samples: list[core_models.DiscreteSampleValue] = []
+    update_discrete_samples: list[core_models.DiscreteSampleValue] = []
     # validate and remove bottles that don't exist
     if data_frame_avg.shape[0] > (event.total_samples + 1):
         message = _('Event contained more than the expected number of bottles. Additional bottles will be dropped. \n')
@@ -348,7 +351,9 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
         drop_rows = data_frame_avg.shape[0] - (event.total_samples + 1)
         data_frame_avg = data_frame_avg[:-drop_rows]
 
-    bottles = core_models.Bottle.objects.filter(event=event)
+    existing_bottles = {
+        b.bottle_id: b for b in event.bottles.all()
+    }
 
     # make global sample types local to this mission to be attached to samples when they're created
     logger.info("Creating local sample types")
@@ -389,7 +394,7 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
                                       type=core_models.ErrorType.validation).save()
                 continue
 
-        if not bottles.filter(bottle_id=bottle_id).exists():
+        if bottle_id not in existing_bottles:
             message = _("Bottle does not exist for event \n")
             message += _("Event") + f" #{event.event_id} " + _("Bottle ID") + f" #{bottle_id}"
             message += _("\nEvent Comments : ")
@@ -402,9 +407,9 @@ def process_data(event: core_models.Event, data_frame: pandas.DataFrame, column_
                                   type=core_models.ErrorType.validation).save()
             continue
 
-        bottle = bottles.get(bottle_id=bottle_id)
+        bottle = existing_bottles[bottle_id]
         for column in column_headers:
-            if (sample := core_models.Sample.objects.filter(bottle=bottle, type=sample_types[column])).exists():
+            if (sample := bottle.samples.filter(type=sample_types[column])).exists():
                 sample = sample.first()
                 if updated_value(sample, 'file', file_name):
                     update_samples.append(sample)

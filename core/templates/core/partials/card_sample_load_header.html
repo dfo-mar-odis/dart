@@ -2,28 +2,31 @@
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
-<div >
-    {% block new_sample_block %}
+<div id="div_id_sample_load_header">
     <div class="card">
         <div class="card-header">
             <div class="row">
                 <button class="btn btn-light btn-sm col-auto" data-bs-toggle="collapse"
                         href="#div_new_sample">{% custom_icon 'caret-down' %}</button>
                 <span class="card-title col-auto align-self-end h6">
-                    <span class="me-1" title="{% trans 'This form allows for the configuration and loading of sample files. Dart can handle .xls, .xlsx, .csv and .dat file formats. Once a file has been selected, Dart will either provide the option to select samples previously configured or allow for the configuration of new samples. At a minimum, a sample file requires ID column and a value column. Create one configuration for each value column that is to be loaded from from the file. If sample configurations have been created for a file, select the checkbox at the end of the configuration card for whichever samples are to be loaded, then click the &quot;Load Selected Samples&quot; checkmark button to start the load process.' %}">{% custom_icon "question-circle" %}</span>{% trans "Load Sample from file" %}</span>
+                    <span class="me-1" title="{% trans 'This form allows for the configuration and loading of sample files. Dart can handle .xls, .xlsx, .csv and .dat file formats. Once a file has been selected, Dart will either provide the option to select samples previously configured or allow for the configuration of new samples. At a minimum, a sample file requires ID column and a value column. Create one configuration for each value column that is to be loaded from from the file. If sample configurations have been created for a file, select the checkbox at the end of the configuration card for whichever samples are to be loaded, then click the &quot;Load Selected Samples&quot; checkmark button to start the load process.' %}">{% custom_icon "question-circle" %}</span>{% trans "Load Sample from file" %}
+                    <span id="div_id_file_config_spinner" class="htmx-indicator">
+                        <div class="spinner-border text-primary" role="status" style="height: 20px; width: 20px;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </span>
+                </span>
             </div>
         </div>
+        <div id="div_id_sample_load_message"></div>
         <div class="collapse col" id="div_new_sample">
             <div class="card-body">
                 <div class="mb-2 col">
                     <div id="new_sample_form" class="card-body">
-                        {% block new_sample_form_block %}
-                            {% include 'core/partials/form_sample_config.html' %}
-                        {% endblock %}
+                        {% include 'core/partials/form_sample_config.html' %}
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    {% endblock %}
 </div>

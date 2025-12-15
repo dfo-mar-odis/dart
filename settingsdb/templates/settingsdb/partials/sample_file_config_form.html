@@ -1,0 +1,35 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+<div id="div_id_sample_file_card_{% if config %}{{ config.pk }}{% else %}new{% endif %}">
+<div class="card mb-2">
+    <div class="card-header">
+        <div class="row">
+            <div class="col">
+                <span class="card-title h6">{% if config %}{{ config }}{% else %}{% trans "New Configuration" %}{% endif %}</span>
+            </div>
+            <div class="col-auto">
+                {# buttons go here #}
+                {% if config %}
+                <button class="btn btn-sm btn-secondary"
+                        title="{% trans "Cancel" %}"
+                        hx-get="{% url 'settingsdb:form_sample_file_config_get_card' config.pk %}"
+                        hx-target="#div_id_sample_file_card_{{ config.pk }}"
+                >{% custom_icon 'x-square' %}</button>
+                {% endif %}
+                <label title="{% trans "Accept" %}" class="btn btn-sm btn-primary" for="input_id_hidden_submit_{% if config %}{{ config.pk }}{% else %}new{% endif %}">{% custom_icon 'check-square' %}</label>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {# sample config details #}
+        {% if sample_card_form %}
+            {% crispy sample_card_form %}
+        {% endif %}
+        {% if config %}
+            {% include 'settingsdb/partials/sample_file_config_subform.html' %}
+        {% endif %}
+    </div>
+</div>
+</div>

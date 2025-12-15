@@ -1,0 +1,60 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+{% load crispy_forms_tags %}
+
+{# CSRF token is added in the settingsdb/partials/sample_file_config_form.html template #}
+<form hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+<div class="card mb-2">
+    <div id="div_id_sample_card_{{ config.pk }}_subform" class="card-body">
+        {% if sample_card_subform %}
+            {% crispy sample_card_subform %}
+        {% endif %}
+    </div>
+</div>
+<div class="card mb-2">
+    <div id="div_id_sample_card_variables"  class="vertical-scrollbar-sm"
+         hx-get="{% url 'settingsdb:form_sample_file_update_vars' config.pk %}"
+         hx-trigger="update_variable_list from:body"
+    >
+        <table class="table table-sm table-striped">
+            <thead class="sticky-top">
+            <tr>
+                <th></th>
+                <th>{% trans 'Variable Name' %}</th>
+                <th>{% trans 'Value column' %}</th>
+                <th>{% trans 'QC column' %}</th>
+                <th>{% trans 'Limit column' %}</th>
+                <th>{% trans 'Default Biochem Datatype' %}</th>
+            </tr>
+            </thead>
+            <tbody>
+                {% for sample_variable in config.variables.all %}
+                    <tr id="tr_id_sample_variable_{{ sample_variable.pk }}">
+                        <td><div class="row">
+                            <div class="col-auto">
+                                <button class="btn btn-sm btn-primary"
+                                        title="{% trans "Edit Column Details" %}"
+                                        hx-get="{% url 'settingsdb:form_sample_file_variable_edit' sample_variable.pk%}"
+                                        hx-target="#div_id_sample_card_{{ config.pk }}_subform"
+                                >{% custom_icon "pencil-square" %}</button>
+                                <button
+                                        title="{% trans "Delete Column Details" %}"
+                                        hx-delete="{% url "settingsdb:form_sample_file_variable_delete" sample_variable.pk %}"
+                                        hx-target="#tr_id_sample_variable_{{ sample_variable.pk }}"
+                                        hx-swap="delete"
+                                        hx-confirm="{% trans 'Are you sure?' %}"
+                                        class="btn btn-sm btn-danger">{% custom_icon "dash-square" %}</button>
+                            </div>
+                        </div></td>
+                        <td>{{ sample_variable.name }}</td>
+                        <td>{{ sample_variable.value_field.upper }}</td>
+                        <td>{{ sample_variable.flag_field.upper }}</td>
+                        <td>{{ sample_variable.limit_field.upper }}</td>
+                        <td>{{ sample_variable.datatype }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</form>

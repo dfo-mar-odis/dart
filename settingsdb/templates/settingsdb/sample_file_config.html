@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% load crispy_forms_tags %}
+{% load bootstrap_icons %}
+{% load i18n %}
+
+{% block content %}
+    <div class="container-fluid">
+    {% include 'settingsdb/partials/sample_file_config_form.html' %}
+    {% for config in configs %}
+        {% include 'settingsdb/partials/sample_file_config_card.html' with config=config %}
+    {% endfor %}
+    </div>
+{% endblock %}

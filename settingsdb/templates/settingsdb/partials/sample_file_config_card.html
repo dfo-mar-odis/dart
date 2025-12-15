@@ -1,0 +1,94 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div id="div_id_sample_file_card_{{ config.pk }}">
+<div class="card mb-2">
+    <div class="card-header">
+        <div class="row">
+            <div class="col">
+                <span class="card-title h6">{{ config }}</span>
+            </div>
+            <div class="col-auto">
+                {# buttons go here #}
+                <button class="btn btn-sm btn-danger"
+                        title="{% trans "Delete Configuration" %}"
+                        hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'
+                        hx-confirm="{% trans "Are you sure?" %}"
+                        hx-swap="delete"
+                        hx-target="#div_id_sample_file_card_{{ config.pk }}"
+                        hx-post="{% url 'settingsdb:form_sample_file_type_variable_delete' config.pk %}"
+                >{% custom_icon 'dash-square' %}</button>
+                <button class="btn btn-sm btn-primary"
+                        title="{% trans "Edit Configuration" %}"
+                        hx-get="{% url 'settingsdb:form_sample_file_config_get_form_card' config.pk %}"
+                        hx-target="#div_id_sample_file_card_{{ config.pk }}"
+                >{% custom_icon 'pencil-square' %}</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        {# sample config details #}
+        <div class="card mb-2">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <b>{%  trans 'Tab' %} : </b>{{ config.tab }}
+                    </div>
+                    <div class="col">
+                        <b>{%  trans 'Number of lines to skip for header row' %} : </b>{{ config.skip }}
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col">
+                        <b>{%  trans 'Expected allowed replicates' %} : </b>{{ config.allowed_replicates }}
+                    </div>
+                    <div class="col">
+                        <b>{%  trans 'Are blank sample ID cells considered replicates' %} : </b>{{ config.are_blank_sample_ids_replicates }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card mb-2">
+            <div class="card-body">
+                <div class="row">
+                    <div class="col">
+                        <b>{%  trans 'ID Column' %} : </b>{{ config.sample_field.upper }}
+                    </div>
+                    {% if config.comment_field %}
+                        <div class="col">
+                            <b>{%  trans 'Comment Column' %} : </b>{{ config.comment_field }}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-2">
+            <div class="vertical-scrollbar-sm">
+                <table class="table table-sm table-striped">
+                    <thead class="sticky-top">
+                    <tr>
+                        <th>{% trans 'Variable Name' %}</th>
+                        <th>{% trans 'Value column' %}</th>
+                        <th>{% trans 'QC column' %}</th>
+                        <th>{% trans 'Limit column' %}</th>
+                        <th>{% trans 'Default Biochem Datatype' %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                        {% for sample_variable in config.variables.all %}
+                            <tr>
+                                <td>{{ sample_variable.name }}</td>
+                                <td>{{ sample_variable.value_field.upper }}</td>
+                                <td>{{ sample_variable.flag_field.upper }}</td>
+                                <td>{{ sample_variable.limit_field.upper }}</td>
+                                <td>{{ sample_variable.datatype }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</div>

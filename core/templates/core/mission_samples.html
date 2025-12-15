@@ -25,11 +25,7 @@
 
 {% block container %}container-fluid{% endblock %}
 {% block content %}
-    <form class="container-fluid" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}' onkeydown="return event.key != 'Enter';">
-    {% if bulk_load_form %}
-        {% crispy bulk_load_form%}
-    {% endif %}
-    </form>
+
     <div class="mb-2" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     {% include 'core/partials/card_sample_load_header.html' %}
     </div>

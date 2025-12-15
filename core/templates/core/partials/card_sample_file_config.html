@@ -1,0 +1,36 @@
+{% extends 'core/partials/card_collapsable_placeholder.html' %}
+{% load i18n %}
+{% load bootstrap_icons %}
+
+{% block card_header %}
+    {{ block.super }}
+    <div class="col"></div>
+    <div class="col-auto"><button hx-trigger="{{ trigger }}" hx-post="{{ post }}" hx-target="{{ target }}" class="btn btn-sm btn-primary">{% custom_icon 'check-square' %}</button></div>
+{% endblock %}
+
+{% block card_body %}
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-auto"><b>{% trans "Are Blank Sample IDs Replicates" %} :</b> {{ config.are_blank_sample_ids_replicates }}</div>
+            <div class="col-auto"><b>{% trans "Allowed Replicates" %} :</b> {{ config.allowed_replicates }}</div>
+        </div>
+        <div class="vertical-scrollbar-sm">
+        <table class="table table-sm table-striped">
+            <thead class="sticky-top">
+            <tr><th>Variable Name</th><th>Column Name</th><th>Flag Column</th><th>Detection Limit Column</th></tr>
+            </thead>
+            <tbody>
+            {% for var in config.variables.all %}
+                <tr>
+                <td>{{ var.name }}</td>
+                <td>{{ var.value_field }}</td>
+                <td>{{ var.flag_field }}</td>
+                <td>{{ var.limit_field }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        </div>
+    </div>
+{% endblock %}

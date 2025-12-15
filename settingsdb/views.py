@@ -22,7 +22,7 @@ from render_block import render_block_to_string
 from config.utils import load_svg
 from settingsdb import models as setting_models
 from core import models
-from settingsdb import filters, utils
+from settingsdb import filters, utils, form_sample_file_config
 
 from config.views import GenericTemplateView
 
@@ -443,3 +443,14 @@ def fixstation(request, station_id):
     response['Content-Length'] = file_to_send.size
     response['Content-Disposition'] = f'attachment; filename="FixStation_{station}.csv"'
     return response
+
+
+class SampleFileConfigView(GenericTemplateView):
+    home_url = reverse_lazy('settingsdb:mission_filter')
+    template_name = 'settingsdb/sample_file_config.html'
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['configs'] = setting_models.SampleFileType.objects.all()
+        context['sample_card_form'] = form_sample_file_config.SampleFileTypeForm()
+        return context
