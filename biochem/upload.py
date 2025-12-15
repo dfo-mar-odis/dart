@@ -257,7 +257,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bcs_row.mission_leader = mission.lead_scientist
         bcs_row.mission_sdate = m_start_date
         bcs_row.mission_edate = m_end_date
-        bcs_row.mission_institute = institute.description if institute else "Not Specified"
+        bcs_row.mission_institute = institute.name if institute else "Not Specified"
         bcs_row.mission_platform = mission.platform
         bcs_row.mission_protocol = mission.protocol
         bcs_row.mission_geographic_region = mission.geographic_region
