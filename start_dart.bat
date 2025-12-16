@@ -20,7 +20,7 @@ echo ============================================ >> logs/start_dart.log
 
 REM Check if Oracle Instant Client is in the CLASSPATH If not and the version number isn't empty
 REM we'll give the user a popup saying we can't update to 4.2.0+ and just start the server
-echo %CLASSPATH% | findstr /i "Oracle\12.2.0_Instant_x64" >nul
+echo %PATH% | findstr /i /r "Oracle\\*._Instant_" >nul
 if errorlevel 1 (
     msg %username% "Oracle Instant Client 12 is required for DART 4.2.0+. Please install it from the DFO software center and run start_dart.bat again to update the applciation."
     del NULL
