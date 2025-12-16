@@ -1,0 +1,16 @@
+flowchart TD
+    A[User clicks button] --> B[Button triggers hx-get to its URL]
+    B --> C{Conditions met?}
+    C -->|No| D[Return bootstrap alert with issue description]
+    C --> |Yes|C1{Is hx-post?}
+    C1 -->|No| E[Return websocket-enabled alert]
+    E --> F[websocket alert has
+    hx-trigger=load
+    hx-post=URL]
+    F --> C1
+    C1 --> |Yes|H[Process activated by button runs]
+    H --> I[Running process updates websocket alert]
+    I --> J[Process completes]
+    J --> K{Success or Failure?}
+    K -->|Success| L[Return bootstrap alert-success to replace websocket alert]
+    K -->|Failure| M[Return bootstrap alert-danger to replace websocket alert]

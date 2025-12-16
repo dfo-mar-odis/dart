@@ -17,7 +17,7 @@ from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
 
-from core import forms, form_biochem_discrete, form_btl_load
+from core import forms, form_biochem_batch_discrete, form_btl_load
 
 from core import models
 from core import views
@@ -139,6 +139,9 @@ class SampleDetails(GenericDetailView):
 
         context['mission'] = self.object
         context['bulk_load_form'] = form_btl_load.BottleLoadForm(mission=self.object)
+
+        context['biochem_batch_form'] = form_biochem_batch_discrete.BiochemDiscreteBatchForm(mission_id=self.object.pk)
+
         return context
 
 
@@ -170,8 +173,14 @@ def get_file_error_card(request, mission_id):
             div = soup.new_tag('div', attrs={'class': 'col'})
             msgs = error.message.split("\n")
             for msg in msgs:
+                if msg.strip() == "":
+                    continue
+
                 div.append(msg_div := soup.new_tag('div'))
-                msg_div.string = msg
+                if error.line:
+                    msg_div.string = _("Line") + f" {error.line} : {msg}"
+                else:
+                    msg_div.string = msg
 
             url = reverse_lazy('core:mission_samples_delete_file_error', args=(error.pk,))
             btn_attrs = {
@@ -535,35 +544,6 @@ def add_sensor_to_upload(request, mission_id, sensor_id, **kwargs):
     return Http404("You shouldn't be here")
 
 
-def biochem_batches_card(request, mission_id):
-
-    # The first time we get into this function will be a GET request from the mission_samples.html template asking
-    # to put the UI component on the web page.
-
-    # The second time will be whenever a database is connected to or disconnected from which will be a POST
-    # request that should update the Batch selection drop down and then fire a trigger to clear the tables
-
-    soup = BeautifulSoup('', 'html.parser')
-    form_soup = form_biochem_discrete.get_batches_form(request, mission_id)
-
-    if request.method == "POST":
-        batch_div = form_soup.find('div', {"id": "div_id_selected_batch"})
-        batch_div.attrs['hx-swap-oob'] = 'true'
-        soup.append(batch_div)
-        response = HttpResponse(soup)
-        response['HX-Trigger'] = 'clear_batch'
-        return response
-
-    soup.append(biochem_card_wrapper := soup.new_tag('div', id="div_id_biochem_batches_card_wrapper"))
-    biochem_card_wrapper.attrs['class'] = "mb-2"
-    biochem_card_wrapper.attrs['hx-trigger'] = 'biochem_db_connect from:body'
-    biochem_card_wrapper.attrs['hx-post'] = request.path
-    biochem_card_wrapper.attrs['hx-swap'] = 'none'
-
-    biochem_card_wrapper.append(form_soup)
-    return HttpResponse(soup)
-
-
 def delete_file_error(request, error_id):
     models.FileError.objects.filter(id=error_id).delete()
 
@@ -585,7 +565,6 @@ url_patterns = [
     path('sample/list/<int:mission_id>/', list_samples, name="mission_samples_sample_list"),
 
     path('sample/upload/sensor/<int:mission_id>/<int:sensor_id>/', add_sensor_to_upload, name="mission_samples_add_sensor_to_upload"),
-    path(f'sample/batch/<int:mission_id>/', biochem_batches_card, name="mission_samples_biochem_batches_card"),
 
     path(f'sample/sample/error/<int:error_id>/', delete_file_error, name="mission_samples_delete_file_error"),
 ]

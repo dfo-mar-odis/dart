@@ -1,0 +1,30 @@
+{% load bootstrap_icons %}
+
+<div id="div_id " class="border border-2 border-black mb-2 vertical-scrollbar-sm">
+<table class="table table-striped table-sm">
+    <thead id="thead_id_bbe" class="sticky-top">
+        <tr>
+            <th class="border border-end border-2" style="white-space: nowrap;">STATN_DATA_TABLE_NAME</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">RECORD_SEQUENCE_VALUE</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">COLUMN_NAME</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">ERROR_CODE</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">STATN_DATA_CREATED_DATE</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">COLLECTOR_SAMPLE_ID</th>
+            <th class="border border-end border-2" style="white-space: nowrap;">BATCH_SEQ</th>
+        </tr>
+    </thead>
+    <tbody id="tbody_id_bbe">
+        {% for error in errors %}
+            <tr>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.statn_data_table_name }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.record_sequence_value }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.column_name }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;"><i title="{{ error.error_code.long_desc }}">{% custom_icon 'question-circle' %}</i> {{ error.error_code.description }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.statn_data_created_date }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.collector_sample_id }}</td>
+                <td class="border border-end border-2" style="white-space: nowrap;">{{ error.batch.pk }}</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+</div>

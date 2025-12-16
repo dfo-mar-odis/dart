@@ -54,19 +54,14 @@
                 </div>
             </div>
         </div>
-        <div class="mb-2">
-            {% include 'core/partials/card_biochem_validation.html' %}
-        </div>
-        <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:form_biochem_get_database_connection_form" mission.pk %}">
+        <div id="div_id_biochem_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="load" hx-get="{% url "core:form_biochem_get_database_connection_form" %}">
             {# The Biochem database form will be swapped in here after the page loads #}
             {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
             {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}
         </div>
-        <div id="div_id_biochem_batches_card_wrapper" class="mb-2" hx-swap="outerHTML" hx-trigger="biochem_db_connect from:body" hx-get="{% url "core:mission_plankton_biochem_plankton_card" mission.pk %}">
-            {# The Biochem database form will be swapped in here after the page loads #}
-            {# the div_id_biochem_card_wrapper will then be replaced with an element that will swap the upload and download #}
-            {# buttons onto the card whenever the BiochemUploadForm is updated and returns an Hx-Trigger='biochem_db_update' in the response #}
-        </div>
+        {% if biochem_batch_form %}
+            {% crispy biochem_batch_form %}
+        {% endif %}
     </div>
 
 {% endblock %}

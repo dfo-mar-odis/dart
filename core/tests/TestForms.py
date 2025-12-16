@@ -30,7 +30,7 @@ class TestMissionPlanktonForm(DartTestCase):
         self.mission = core_factory.MissionFactory()
 
     def test_plankton_form(self):
-        url = reverse('core:mission_plankton_plankton_details', args=('default', self.mission.pk,))
+        url = reverse('core:mission_plankton_plankton_details', args=['default', self.mission.pk])
 
         response = self.client.get(url)
 
@@ -49,7 +49,7 @@ class TestMissionSamplesForm(DartTestCase):
 
     def test_ctd_card(self):
         # The CTD card should have a form with a text input and a refresh button
-        url = reverse('core:mission_samples_sample_details', args=('default', self.mission.pk,))
+        url = reverse('core:mission_samples_sample_details', args=['default', self.mission.pk])
 
         response = self.client.get(url)
 

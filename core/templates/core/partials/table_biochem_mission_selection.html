@@ -1,0 +1,29 @@
+{% load bootstrap_icons %}
+{% load i18n %}
+
+<table class="table table-striped table-sm">
+    <thead class="sticky-top">
+    <tr>
+        <th>{# Button column #}</th>
+        <th>{%  trans 'Mission ID' %}</th>
+        <th>{%  trans 'Name' %}</th>
+        <th>{%  trans 'Descriptor' %}</th>
+        <th>{%  trans 'Type' %}</th>
+        <th>{%  trans 'Start Date' %}</th>
+        <th>{%  trans 'End Date' %}</th>
+    </tr>
+    </thead>
+    <tbody id="tbody_id_mission_selection">
+    {% for mission in missions %}
+        <tr>
+            <th><button class="btn btn-primary btn-sm" hx-target="#div_id_card_alert_biochem_mission_summary" hx-get="{% url "core:form_biochem_mission_summary_download" mission.mission_seq %}">{% custom_icon 'arrow-down-square' %}</button></th>
+            <td>{{ mission.mission_seq }}</td>
+            <td>{{ mission.name }}</td>
+            <td>{{ mission.descriptor }}</td>
+            <td>{{ mission.mission_type }}</td>
+            <td>{{ mission.start_date }}</td>
+            <td>{{ mission.end_date }}</td>
+        </tr>
+    {% endfor %}
+    </tbody>
+</table>

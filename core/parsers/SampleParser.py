@@ -296,9 +296,17 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
             value = row[value_field]
 
-            if str(value).upper() == 'NA':
-                # if the value is 'na' or 'NA' then this should be a null value.
-                value = None
+            if str(value).upper() == 'NA' or str(value).strip() == '':
+                # if the value is 'na' or 'NA' then skip over this row. Otherwise we'll create an empty
+                # Sample and Biochem validation will fail later when a sample with a null value is created.
+
+                # Todo: If this values is blank and there's an existing sample, with no values,
+                #  it should probably be removed
+                if (existing_sample:=existing_samples.filter(bottle__bottle_id=sample_id)).exists():
+                       existing_sample = existing_sample.first()
+                       if not existing_sample.discrete_values:
+                            existing_sample.delete()
+                continue
 
             if sample_id not in bottle_keys:
                 # if this sample ID is in the excluded samples range then skip it.

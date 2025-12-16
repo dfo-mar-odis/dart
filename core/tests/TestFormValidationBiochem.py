@@ -13,7 +13,6 @@ from django.utils.translation import gettext as _
 from core import form_biochem_pre_validation, views_mission_sample
 from core import models as core_models
 from core.tests import CoreFactoryFloor as core_factory
-from core.form_biochem_batch import get_mission_batch_id
 
 from config.tests.DartTestCase import DartTestCase
 
@@ -22,74 +21,6 @@ from biochem import models as bio_models
 logger = logging.getLogger(f'dart.test.{__name__}')
 
 biochem_db = 'biochem'
-
-
-@tag('view', 'view_mission_sample_validation')
-class TestViewMissionSampleValidation(SimpleTestCase):
-
-    fixtures = ['default_biochem_fixtures']
-    test_name = '18te2409'
-
-    def setUp(self):
-        self.mission = core_factory.MissionFactory(mission_descriptor=self.test_name)
-
-    def setup_connection(self):
-        self.databases = settings.DATABASES
-        self.databases[biochem_db] = self.databases['default'].copy()
-        self.databases[biochem_db]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
-
-    def get_batches_model(self):
-        try:
-            bio_models.Bcbatches.objects.using(biochem_db).exists()
-        except OperationalError as ex:
-            with connections[biochem_db].schema_editor() as editor:
-                editor.create_model(bio_models.Bcbatches)
-
-    # I've found when running this test class All Tests it's required to add the biochem_db to the databases first
-    # otherwise you get a django.
-    @classmethod
-    def setUpClass(cls):
-        # databases = settings.DATABASES
-        # databases[biochem_db] = databases['default'].copy()
-        # databases[biochem_db]['NAME'] = 'file:memorydb_biochem?mode=memory&cache=shared'
-        pass
-
-    @classmethod
-    def tearDownClass(cls):
-        if biochem_db in settings.DATABASES:
-            settings.DATABASES.pop(biochem_db)
-
-    def test_get_batch_id_no_model(self):
-        # if there is no connection or model available to get the batch ID then 1 should be returned
-        batch_id = get_mission_batch_id()
-
-        self.assertEqual(1, batch_id)
-
-    def test_get_batch_id_with_connection(self):
-        # if the connection exists, but there is no batches table, return 1
-        self.setup_connection()
-
-        batch_id = get_mission_batch_id()
-        self.assertEqual(1, batch_id)
-
-    def test_get_batch_id_with_model(self):
-        # if the connection exists and there is a batches table, get the lowest batch ID, which should be 1
-        # if the table is empty
-        self.setup_connection()
-        self.get_batches_model()
-
-        batch_id = get_mission_batch_id()
-        self.assertEqual(1, batch_id)
-
-    def test_get_batch_id_with_model_with_mission(self):
-        # if the connection exists and there is a batches table and there are missions, get the lowest free batch ID
-        self.setup_connection()
-        self.get_batches_model()
-
-        bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=1, name=self.test_name)
-        bio_models.Bcbatches.objects.using(biochem_db).create(batch_seq=5, name=self.test_name)
-        batch_id = get_mission_batch_id()
-        self.assertEqual(2, batch_id)
 
 
 @tag('forms', 'form_biochem_pre_validation')
