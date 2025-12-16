@@ -114,9 +114,6 @@ INSTALLED_APPS = [
     # bi-directional communication with user
     'channels',
 
-    # bootstrap for css styling
-    'bootstrap5',
-
 ] + REGISTERED_APPS
 
 MIDDLEWARE = [
