@@ -2,7 +2,7 @@
 pyqt6==6.8.0
 
 # we have to use Django3 because Django4 doesn't support Oracle12
-Django>=5.0.0
+Django<6.0.0
 asgiref<4,>=3.6.0
 
 # used for dynamic Oracle connections for biochem upload and for copying external sqlite dbs
