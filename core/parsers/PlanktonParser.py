@@ -308,8 +308,7 @@ def is_number(s):
 
 
 def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, existing_bottles: QuerySet,
-                         gear_type: int, mesh_size: int,
-                         start_pressure: float = None, end_pressure: float = None):
+                         gear_type: int, mesh_size: int, start_pressure: float = None, end_pressure: float = 0):
 
     # we don't actually create the bottles here, we check to see if a bottle object exists in the existing bottles
     # array, if not then we check to see if it exists in the create_bottles dictionary, if not we create a bottle
@@ -321,6 +320,17 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
     elif (bottle := existing_bottles.filter(bottle_id=bottle_id)).exists():
         # use an existing bottle if one hasn't been recently created
         bottle = bottle.first()
+
+        # update the bottle attributes if required.
+        updates = set()
+        updates.add(updated_value(bottle, 'gear_type_id', gear_type))
+        updates.add(updated_value(bottle, 'mesh_size', mesh_size))
+        updates.add(updated_value(bottle, 'pressure', start_pressure))
+        updates.add(updated_value(bottle, 'end_pressure', end_pressure))
+
+        updates.remove("")
+        if updates:
+            bottle.save()
     else:
         # create a new bottle if it doesn't exist and hasn't been recently created bottles, then add the new
         # bottle to the recently created bottles array
@@ -341,10 +351,7 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
             raise ValueError(message)
 
         bottle = core_models.Bottle(bottle_id=bottle_id, event=event, gear_type_id=gear_type, mesh_size=mesh_size,
-                                    pressure=start_pressure, closed=event.end_date)
-
-        if end_pressure is not None and not np.isnan(end_pressure):
-            bottle.end_pressure = end_pressure
+                                    pressure=start_pressure, end_pressure=end_pressure, closed=event.end_date)
 
         create_bottles[bottle_id] = bottle
 
@@ -455,6 +462,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         value = row[config.get(required_field='data_value').mapped_field]
         what_was_it = row[config.get(required_field='what_was_it').mapped_field]
         pressure = row[config.get(required_field='depth').mapped_field]
+        end_pressure = 0
 
         gear_type = get_gear_type(mesh_size)
         min_sieve = get_min_sieve(proc_code=proc_code, mesh_size=mesh_size)
@@ -494,7 +502,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         try:
             bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
                                           gear_type=gear_type.pk, mesh_size=mesh_size,
-                                          start_pressure=pressure)
+                                          start_pressure=pressure, end_pressure=end_pressure)
         except ValueError as e:
             message = str(e)
             message += " " + _("Bottle ID") + f" : {bottle_id}"
