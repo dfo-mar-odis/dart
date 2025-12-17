@@ -1,0 +1,2191 @@
+[
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "type": "unknown",
+        "model": "Unknown",
+        "gear_size": "",
+        "description": "Gear Used, Unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "unspecified",
+        "gear_size": "unknown",
+        "description": "Bottle, size and type not known"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin",
+        "gear_size": "unknown",
+        "description": "Niskin bottle, size unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 1L",
+        "gear_size": "1 liter",
+        "description": "Niskin bottle, 1 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 1.2L",
+        "gear_size": "1.2 liter",
+        "description": "Niskin bottle, 1.2 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 1.7L",
+        "gear_size": "1.7 liter",
+        "description": "Niskin bottle, 1.7 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 5L",
+        "gear_size": "5 liter",
+        "description": "Niskin bottle, 5 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 12L",
+        "gear_size": "12 liter",
+        "description": "Niskin bottle, 12 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 30L",
+        "gear_size": "30 liter",
+        "description": "Niskin bottle, 30 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 100L",
+        "gear_size": "100 liter",
+        "description": "Niskin bottle, 100 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Knudsen 1L",
+        "gear_size": "1 liter",
+        "description": "Knudsen bottle, 1 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Go-Flo 5L",
+        "gear_size": "5 liter",
+        "description": "Go-Flo bottle, 5 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Go-Flo 12L",
+        "gear_size": "12 liter",
+        "description": "Go-Flo bottle, 12 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Go-Flo 30L",
+        "gear_size": "30 liter",
+        "description": "Go-Flo bottle, 30 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Lever Action 5L",
+        "gear_size": "5 liter",
+        "description": "Lever action bottle, 5 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Blumer 100L",
+        "gear_size": "100 liter",
+        "description": "Blumer bottle, 100 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Go-Flo 100L",
+        "gear_size": "100 liter",
+        "description": "Go-Flo bottle, 100 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 1.5L",
+        "gear_size": "1.5 liter",
+        "description": "Niskin bottle, 1.5 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 10L",
+        "gear_size": "10 liter",
+        "description": "Niskin bottle, 10 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Go-Flo",
+        "gear_size": "unknown",
+        "description": "Go-Flo bottle, size unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Trace Element 12L",
+        "gear_size": "12 liter",
+        "description": "Trace element bottle, 12 L, modified Niskin bottle: silicone O-rings, spring replaced with teflon tubing sheathed shocked cord"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Niskin 8L",
+        "gear_size": "8 liter",
+        "description": "Niskin bottle, 8 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "",
+        "gear_size": "unknown",
+        "description": "Net, type, mesh and size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Auger",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Corer",
+        "model": "Box corer",
+        "gear_size": "unknown",
+        "description": "Box corer, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Nansen",
+        "gear_size": "unknown",
+        "description": "Nansen bottle, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Benthic sampler",
+        "model": "Benthic sampler",
+        "gear_size": "unknown",
+        "description": "Benthic sampler, unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Pump Profiling System - BO",
+        "gear_size": "",
+        "description": "Pump profiling system, Biological Oceanography, BIO"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000029,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Animal specimen",
+        "model": "Bird",
+        "gear_size": "",
+        "description": "Bird"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000030,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Grab",
+        "model": "Grab",
+        "gear_size": "unknown",
+        "description": "Grab, type and size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000031,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bubbler",
+        "model": "",
+        "gear_size": "",
+        "description": "Bubbler, type unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000032,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bucket",
+        "model": "bucket",
+        "gear_size": "",
+        "description": "Bucket, size and material unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Glass bulb",
+        "gear_size": "",
+        "description": "Glass bulb"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Ice, from bottom of floe",
+        "gear_size": "",
+        "description": "Ice, from bottom of floe"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000035,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Ice, from middle of floe",
+        "gear_size": "",
+        "description": "Ice, from middle of floe"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000036,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Ice, from top of floe",
+        "gear_size": "",
+        "description": "Ice, from top of floe"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000037,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Challenger",
+        "gear_size": "",
+        "description": "Challenger in-situ pump"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Chips",
+        "gear_size": "",
+        "description": "Ice chips"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000039,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Corer",
+        "model": "Lehigh corer",
+        "gear_size": "",
+        "description": "Lehigh corer"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Plant specimen",
+        "model": "Lichen",
+        "gear_size": "",
+        "description": "Lichen"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Plant specimen",
+        "model": "Moss",
+        "gear_size": "",
+        "description": "Moss"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000042,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Neuston Net - Oil tow",
+        "gear_size": "243 um",
+        "description": "Oil tow, 243 um, towed on sea surface for 1 nm, sampled about 740 square meters of sea surface to a depth of 15 - 20 cm, see Levy and Walton, 1971: An evaluation of two neuston samplers.  BIO Rep. 71-9: 10 p."
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000043,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Pump",
+        "gear_size": "",
+        "description": "Pump, unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000044,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Surface sampler",
+        "model": "Sea surface sampler",
+        "gear_size": "",
+        "description": "Sea surface sampler, type unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000045,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Surface sampler",
+        "model": "Garrett screen",
+        "gear_size": "",
+        "description": "Sea surface microlayer sampler, Garrett screen, see Garrett. 1965.  Collection of slick-forming materials from the sea surface.  Limnol. Oceanogr.  10: 602-605"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000046,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice, snow",
+        "model": "Shovel",
+        "gear_size": "",
+        "description": "Shovel"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000047,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Ship's seawater line",
+        "gear_size": "",
+        "description": "Ship's seawater line, fixed depth pump mounted on ship's hull"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000048,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Grab",
+        "model": "Van Veen",
+        "gear_size": "unknown",
+        "description": "Van Veen grab, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000049,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Vertical plankton tow",
+        "gear_size": "0.5 m x 75 um",
+        "description": "Vertical plankton tow, round opening, 0.5 m diameter, 75 um mesh"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000050,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Ice sampler",
+        "gear_size": "",
+        "description": "Ice sampler, type unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000051,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Ship's fire hose",
+        "gear_size": "",
+        "description": "Ship's fire hose"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000052,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Ice corer",
+        "gear_size": "",
+        "description": "Ice corer, type unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000053,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Dredge",
+        "model": "Sediment dredge",
+        "gear_size": "",
+        "description": "Sediment dredge, type unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000054,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Corer",
+        "model": "Sediment corer",
+        "gear_size": "",
+        "description": "Sediment corer, type unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000055,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Animal specimen",
+        "model": "Fish",
+        "gear_size": "",
+        "description": "Fish"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000056,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "'Fat Albert'",
+        "gear_size": "",
+        "description": "Custom water bottle, designed to be short in vertical dimension.  Sealing of end caps was never completely satisfactory"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000057,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "BOT 8L",
+        "gear_size": "8 liter",
+        "description": "Custom bottle, similar to niskin, used latex springs and other non-contaminating materials, made by Brooke Ocean Technology (BOT) based on a design by. J.-G. Dessureault.  Some problems experienced with bottles leaking"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000058,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "SIO 10L",
+        "gear_size": "10 liter",
+        "description": "Custom bottle, designed by Scripps Institution of Oceanography"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000059,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Acoustic",
+        "model": "Norman",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000060,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Acoustic",
+        "model": "RDI",
+        "gear_size": "",
+        "description": "ADCP"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000061,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Batfish",
+        "model": "Batfish",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000062,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Knudsen",
+        "gear_size": "unknown",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000063,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "AquaShuttle",
+        "gear_size": "",
+        "description": "ctd 7 fluorescence"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000064,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "GUILDLINE CTD",
+        "gear_size": "",
+        "description": "Guildline"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000065,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "SBE 911",
+        "gear_size": "",
+        "description": "SeaBird Electronics model 911"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000066,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "SBE 25",
+        "gear_size": "",
+        "description": "SeaBird Electronics model 25"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000067,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "SBE 19",
+        "gear_size": "",
+        "description": "SeaBird Electronics model 19"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000068,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "MVP/CTD",
+        "gear_size": "",
+        "description": "moving vessel profiler designed by Bedford Institute of Oceanography (BIO) and Brooks Engineering"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 90,
+        "type": "CTD",
+        "model": "XBT",
+        "gear_size": "",
+        "description": "Expendable bathythermograph"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000070,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Experiment",
+        "model": "in situ",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000071,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Ice",
+        "model": "Ice corer",
+        "gear_size": "",
+        "description": "SIPRE ice auger"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000072,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Light",
+        "model": "BUD",
+        "gear_size": "",
+        "description": "BUD (Biological Up Down)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000073,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Light",
+        "model": "light meter",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000074,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Light",
+        "model": "MER2040",
+        "gear_size": "",
+        "description": "MER2040"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000075,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Light",
+        "model": "MILD",
+        "gear_size": "",
+        "description": "son of BUD (Biological Up Down)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000076,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.5m xbow",
+        "gear_size": "0.5 m",
+        "description": "1/2m ring diameter; cross bow attachment to wire"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000077,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "20x20 Soviet Pelagic Trawl",
+        "gear_size": "20 x 20",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000078,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "BIONESS 1.0m",
+        "gear_size": "1.0 m",
+        "description": "Bioness with 1m frame"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000079,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Bongo 61cm",
+        "gear_size": "61 cm",
+        "description": "Bongo with 61cm frame diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000080,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Bongo",
+        "gear_size": "unknown",
+        "description": "Bongo of unknown frame diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000081,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Bongo 60cm",
+        "gear_size": "60 cm",
+        "description": "Bongo with 60cm frame diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000082,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Bongo 20cm",
+        "gear_size": "20 cm",
+        "description": "Bongo with 20cm frame diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000083,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "CPR",
+        "gear_size": "",
+        "description": "continuous plankton recorder"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000084,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "HydroBIOS",
+        "gear_size": "0.5 m",
+        "description": "multinet gear, 0.5M square mouth"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000085,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Icelandic sampler",
+        "gear_size": "",
+        "description": "Icelandic highspeed plankton sampler (IHSS)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000086,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "IGYPT trawl",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000087,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Issacs Kidd Midwater Trawl 3ft",
+        "gear_size": "3 ft",
+        "description": "3 ft"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000088,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Issacs Kidd Midwater Trawl 6ft",
+        "gear_size": "6 ft",
+        "description": "6 ft"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000089,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Issacs Kidd Midwater Trawl 10ft",
+        "gear_size": "10 ft",
+        "description": "10 ft"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000090,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Issacs Kidd Midwater Trawl",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000091,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "LHPR",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000092,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "BIONESS 0.5m",
+        "gear_size": "0.5 m",
+        "description": "BIONESS with 0.5m x 0.5m frame (AKA MiniNESS). Original MiniNESS equipped with 243 um (front section) and 202 um (back section) nets."
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000093,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "MOCNESS",
+        "gear_size": "",
+        "description": "multiple opening and closing net and environmental sensing system"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000094,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Neuston Net",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000095,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "NIO 1m",
+        "gear_size": "1 m",
+        "description": "1m"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000096,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "NorPac",
+        "gear_size": "",
+        "description": "unknown size"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000097,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "OPC side nets",
+        "gear_size": "",
+        "description": "bongo nets attached to VOPC on crossbow"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000098,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "OPC experimental",
+        "gear_size": "",
+        "description": "SN (Scott net);  ring net attached to the bottom of the OPC frame"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000099,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.75 o/c",
+        "gear_size": "0.75 m",
+        "description": "3/4m ring diameter; opening and closing net"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000100,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.75m octagonal frame",
+        "gear_size": "0.75 m",
+        "description": "3/4m frame diameter; octagonal/hexagonal frame"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000101,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net - flexible ring",
+        "gear_size": "",
+        "description": "flexible rings for pulling through ice-auger holes"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000102,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.75m xbow",
+        "gear_size": "0.75 m",
+        "description": "3/4m ring diameter; cross bow attachment to wire"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000103,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.5m o/c",
+        "gear_size": "0.5 m",
+        "description": "1/2m ring diameter; opening and closing net"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000104,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 1.0m",
+        "gear_size": "1.0 m",
+        "description": "1m ring diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000105,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.5m",
+        "gear_size": "0.5 m",
+        "description": "1/2m ring diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000106,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "RMT 1 + 8 (NIO)",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000107,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "RMT 8 (NIO)",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000108,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "SCOR",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000109,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "OPC experimental TriNets",
+        "gear_size": "",
+        "description": "net attached directly to the OPC outflow; designed to catch all objects that had passed through the OPC"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000110,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Tucker trawl 4m",
+        "gear_size": "4 m",
+        "description": "4 sq m"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000111,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Tucker trawl 4.5m",
+        "gear_size": "4.5 m",
+        "description": "4.5 sq m"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000112,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Tucker trawl",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000113,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Tucker trawl 8m",
+        "gear_size": "8 m",
+        "description": "8 sq m"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000114,
+    "fields": {
+        "data_center_code": 90,
+        "type": "OPC",
+        "model": "OPC batfish",
+        "gear_size": "",
+        "description": "Optical Plankton Counter mounted on the Batfish"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000115,
+    "fields": {
+        "data_center_code": 90,
+        "type": "OPC",
+        "model": "OPC laser",
+        "gear_size": "",
+        "description": "Optical Plankton Counter using laser light source"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000116,
+    "fields": {
+        "data_center_code": 90,
+        "type": "OPC",
+        "model": "OPC vopc",
+        "gear_size": "",
+        "description": "Vertical Optical Plankton Counter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000117,
+    "fields": {
+        "data_center_code": 90,
+        "type": "OPC",
+        "model": "OPC bioness",
+        "gear_size": "",
+        "description": "Optical Plankton Counter mounted on the BIONESS"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000118,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Ship's clean scientific seawater line",
+        "gear_size": "",
+        "description": "Ship's clean scientific seawater line, fixed depth pump mounted on ship's hull, plastic piping, used by the BIO Forward Lab System"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000119,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Pump Profiling System - Metrology",
+        "gear_size": "",
+        "description": "Pump profiling system, Metrology, BIO"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000120,
+    "fields": {
+        "data_center_code": 90,
+        "type": "special",
+        "model": "NO3 Analyser",
+        "gear_size": "",
+        "description": "in development"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000121,
+    "fields": {
+        "data_center_code": 90,
+        "type": "special",
+        "model": "sediment trap",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000126,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Russian 4L",
+        "gear_size": "4 liter",
+        "description": "Russian design, 4 L"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000137,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Grab",
+        "model": "Ekman",
+        "gear_size": "unknown",
+        "description": "Ekman grab, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000138,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Grab",
+        "model": "Shipek",
+        "gear_size": "unknown",
+        "description": "Shipek grab, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000139,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Bottle",
+        "model": "Hopper 500L",
+        "gear_size": "500 L",
+        "description": "500 L hopper filled from multiple 100 L bottles"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000140,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "LVSP",
+        "gear_size": "",
+        "description": "Large volume surface pump"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000141,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Corer",
+        "model": "Hand-held corer",
+        "gear_size": "unknown",
+        "description": "Hand-held corer, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000142,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Millipore 0.8um",
+        "gear_size": "0.8 um",
+        "description": "Millipore filter, 0.8 um pore size"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000143,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Nuclepore 0.8um",
+        "gear_size": "0.8 um",
+        "description": "Nuclepore filter, 0.8 um pore size"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000144,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Nuclepore 12um",
+        "gear_size": "12 um",
+        "description": "Nuclepore filter, 12 um pore size"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000145,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Glass fibre",
+        "gear_size": "fine",
+        "description": "Whatman GFF filter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000146,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Glass fibre",
+        "gear_size": "coarse",
+        "description": "Whatman GFC filter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000147,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Glass fibre",
+        "gear_size": "",
+        "description": "Glass fibre filter, mesh size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000148,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Silver 0.8 um",
+        "gear_size": "0.8 um",
+        "description": "Silver filter, 0.8 um pore size"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000149,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Silver",
+        "gear_size": "",
+        "description": "Silver filter, size unspecified"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000150,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Miller Sampler",
+        "gear_size": "",
+        "description": "modified version of Hardy Plankton sampler, high speed sampler"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000151,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Neuston",
+        "gear_size": "",
+        "description": "Sameoto Box Neuston Net"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000152,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Hensen net",
+        "gear_size": "72 cm",
+        "description": "72 cm Hensen net (ICNAF)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000153,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Stramin 2m",
+        "gear_size": "2 m",
+        "description": "2 m Stramin net (ICNAF)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000154,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Millipore",
+        "gear_size": "8 um",
+        "description": "Millipore filter, 8 um pore size"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000155,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Filter",
+        "model": "Stainless steel screen",
+        "gear_size": "unknown",
+        "description": "Stainless steel screen, mesh size unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000156,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Corer",
+        "model": "corer",
+        "gear_size": "unknown",
+        "description": "Corer, type and size unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000157,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Pump",
+        "model": "Surface pump",
+        "gear_size": "",
+        "description": "Surface pump, type unknown"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000158,
+    "fields": {
+        "data_center_code": 90,
+        "type": "special",
+        "model": "epibenthic sled",
+        "gear_size": "",
+        "description": "ZOOPLANKTON DATA --special sled designed for thesis"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000159,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Nansen 1m",
+        "gear_size": "1 m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000160,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Experiment",
+        "model": "PI experiment",
+        "gear_size": "",
+        "description": "Primary production and light experiment"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000161,
+    "fields": {
+        "data_center_code": 90,
+        "type": "THERMOMETER",
+        "model": "VEMCO electronic thermometer",
+        "gear_size": "",
+        "description": "electronic temperature logger, MFD"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000162,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Tucker trawl 1m",
+        "gear_size": "1 m",
+        "description": "1 sq m"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000163,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Bongo 50cm",
+        "gear_size": "50 cm",
+        "description": "Bongo with 50cm frame diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000164,
+    "fields": {
+        "data_center_code": 20,
+        "type": "secchi",
+        "model": "secchi - black and white quarters",
+        "gear_size": "",
+        "description": "secchi disk with black and white quarters; used to gauge water clarity by measuring the depth at which it is no longer visible from the surface"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000165,
+    "fields": {
+        "data_center_code": 90,
+        "type": "THERMOMETER",
+        "model": "MFD Minilogger",
+        "gear_size": "",
+        "description": "digital temperature/depth recorder"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000166,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.75m",
+        "gear_size": "0.75 m",
+        "description": "3/4m ring diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000167,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD+auxilliary sensor",
+        "model": "SBE19+Wetlabs fluorometer",
+        "gear_size": "",
+        "description": "SBE19+Wetlabs WETStar miniature fluorometer"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000168,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD+auxilliary sensor",
+        "model": "SBE911+Wetlabs fluorometer",
+        "gear_size": "",
+        "description": "SBE911+Wetlabs WETStar miniature fluorometer"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000169,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD+auxilliary sensor",
+        "model": "SBE19+SeaTech transmissometer",
+        "gear_size": "",
+        "description": "SBE19+ transmissometer"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000170,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD+auxilliary sensor",
+        "model": "SBE911+fluorometer+oxygen sensor",
+        "gear_size": "",
+        "description": "SBE911+Wetlabs WETStar miniature fluorometer+SBE43 oxygen probe"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000171,
+    "fields": {
+        "data_center_code": 30,
+        "type": "CTD + rosette",
+        "model": "multiple",
+        "gear_size": "",
+        "description": "CTD and rosette bottle sampler: CTD model, sensors & other details to be specified in comment section"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000173,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD",
+        "model": "bathythermograph",
+        "gear_size": "",
+        "description": "bathythermograph (BT)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000174,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Bongo 65cm",
+        "gear_size": "65 cm",
+        "description": "Bongo with 65cm frame diameter; (note: it is unclear if this is an inner or outer diameter measurement; the 61cm bongos used during SSIP have an outer diameter of 65cm)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000175,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Bongo 49.5cm",
+        "gear_size": "49.5 cm",
+        "description": "Bongo with 49.5cm inner frame diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000176,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Lobster 1948 description",
+        "gear_size": "mouth size 12' x 3'",
+        "description": "mouth of net on surface of water; a net 12 feet in width by 2 feet in depth and 18 feet in length tapered off to 16 inches at the cod end.  Mouth of net attached to a f12 ft by 2ft rame made of 3/4 inch galvanized pipe."
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000177,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Lobster 1949 description",
+        "gear_size": "mouth size 12' x 2'",
+        "description": "mouth of net partially above surface of water (floats attached to mouth frame); a net 12 feet in width by 3 feet in depth and 25 feet in length tapered off to 10 inches at the cod end. Mouth of net attached to a f12 ft by 2ft rame made of 3/4 inch galvanized pipe with floats made of 5gal steel oil drums attached to framework"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000178,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Tucker trawl 2.5m",
+        "gear_size": "2.5 m",
+        "description": "2.5m x 2.5m frame"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000179,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "Bongo 56cm",
+        "gear_size": "56 cm",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000180,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "Bongo 58cm",
+        "gear_size": "58 cm",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000181,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "Bongo 40cm",
+        "gear_size": "40 cm",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000182,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "BIONESS 0.25m",
+        "gear_size": "0.25m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000183,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "Ring 0.56m",
+        "gear_size": "0.56 m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000184,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "Ring 0.58m",
+        "gear_size": "0.58 m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000185,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "Ring net 0.6m",
+        "gear_size": "0.6 m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000186,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "SCOR 0.5m",
+        "gear_size": "0.5m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000187,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "NorPac 0.42m",
+        "gear_size": "0.42m",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000188,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "MOCNESS 1.34",
+        "gear_size": "1.34",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000189,
+    "fields": {
+        "data_center_code": 50,
+        "type": "Net",
+        "model": "RMT 3",
+        "gear_size": "",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000190,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Clarke-Bumpus Sampler",
+        "gear_size": "8 inches diameter",
+        "description": "standard sized Clarke-Bumpus sampler; opening/closing net"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000191,
+    "fields": {
+        "data_center_code": 90,
+        "type": "Net",
+        "model": "Ring net 0.3m",
+        "gear_size": "0.3 m",
+        "description": "1/3m ring diameter  (30cm)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000192,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Bottle",
+        "model": "Van Dorn",
+        "gear_size": "unknown",
+        "description": "Van Dorn bottle"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000193,
+    "fields": {
+        "data_center_code": 30,
+        "type": "Net",
+        "model": "Ring net 1.0m o/c",
+        "gear_size": "1.0 m",
+        "description": "1m ring diameter, opening and closing net"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000194,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD",
+        "model": "GUILDLINE CTD Mark IV",
+        "gear_size": "",
+        "description": "Guildline Mark IV CTD"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000195,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Clarke-Bumpus Sampler 12.5cm",
+        "gear_size": "12.5cm diameter",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000196,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Light",
+        "model": "Pyranometer - Eppley",
+        "gear_size": "",
+        "description": "Eppley 50-junction pyranometer"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000197,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Submersible",
+        "model": "PICES IV water samples",
+        "gear_size": "",
+        "description": "water samples taken through sampling valve inside the submersible"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000198,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Apstein net 0.2m",
+        "gear_size": "0.2 m",
+        "description": "0.2m diameter Apstein net (for image see http://commons.wikimedia.org/wiki/Image:Biological_sampling_device_of_Apstein_net.jpg)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000199,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Ice",
+        "model": "Ice corer",
+        "gear_size": "7.5cm",
+        "description": "SIPRE ice auger"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000200,
+    "fields": {
+        "data_center_code": 20,
+        "type": "CTD",
+        "model": "Applied Microsystems 12",
+        "gear_size": "",
+        "description": "Applied Microsystems model 12"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000201,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Ring net 0.225",
+        "gear_size": "0.225 m",
+        "description": "1/4m ring diameter"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000202,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Pump",
+        "model": "Masteflex Bevline",
+        "gear_size": "",
+        "description": "MAsterflex pump using bevline tubing, drawn from depth"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000203,
+    "fields": {
+        "data_center_code": 25,
+        "type": "special",
+        "model": "water column integrator",
+        "gear_size": "9m",
+        "description": "9.1m long integrating sampling tygon tube (3cm inner diameter). End of tube kept above bottom by sounding weight hung 0.5m from tube. Integrating tube system lowered to bottom and water in tube trapped by closing a valve at top of tube. Multiple casts mixed in a carboy to minimize patchiness."
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000204,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Specialized surface net",
+        "gear_size": "0.5m(w)  x 0.2m(d)",
+        "description": "very similar to the design of Mercier (Mercier, F. 1983. Feeding ecology and lipid deposition in migrating Northern Phalaropes in the Quoddy Region, N.B. Unpubl. M.Sc. thesis, Department of Zoology, University of Guelph: 85 pp.)"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000205,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Benthos multiple plankton sampler",
+        "gear_size": "modified",
+        "description": "modified Benthos multiple plankton sampler"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000206,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Puget Sound o/c net",
+        "gear_size": "",
+        "description": "Opening/Closing ring net used by Dalhousie University during Globec"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000207,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "Multiple Plankton Sampler - Hudson 70",
+        "gear_size": "",
+        "description": "a modified Benthos Multiple Plankton Sampler"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000209,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Corer",
+        "model": "Slo-corer",
+        "gear_size": "",
+        "description": "Bothner, M.H., M. Buchholtz ten Brink and F.T. Manheim. 1998. Environmental Research 45(2):127-155 http://www.dfo-mpo.gc.ca/aquaculture/rd2009/rdmisc-divers_04-eng.htm"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000211,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Corer",
+        "model": "ROPOS",
+        "gear_size": "",
+        "description": "ROPOS ROV plastic tube deployed http://oceanexplorer.noaa.gov/technology/subs/ropos/media/core_sediment.html"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000212,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Corer",
+        "model": "Piston corer",
+        "gear_size": "",
+        "description": "Information to be updated"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000213,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Special",
+        "model": "ROPOS suction apparatus",
+        "gear_size": "",
+        "description": "ROPOS ROV suction gear; similar to a vacuum cleaner; often used to collect surface sediment"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000214,
+    "fields": {
+        "data_center_code": 20,
+        "type": "Net",
+        "model": "MANTA",
+        "gear_size": "70cm",
+        "description": "Newston net surface sampler"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000215,
+    "fields": {
+        "data_center_code": 30,
+        "type": "CTD + bottles",
+        "model": "unspecified",
+        "gear_size": "unspecified",
+        "description": "CTD + Niskin bottles on a wire, not rosette"
+    }
+},
+{
+    "model": "bio_tables.bcgear",
+    "pk": 90000216,
+    "fields": {
+        "data_center_code": 30,
+        "type": "Net",
+        "model": "HydroBios mini",
+        "gear_size": "0.35cmx0.35cm",
+        "description": "multinet gear, 5 pcs, length: 160cm, net opening: 0.35cmx0.35cm=0.125m2\r\n(Product ID:438 120)"
+    }
+}
+]

@@ -1,0 +1,65 @@
+[
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "UNASSIGNED",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "male",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "female",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "indeterminate",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "undeterminable",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsex",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 20,
+        "name": "reassign",
+        "description": ""
+    }
+}
+]

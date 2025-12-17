@@ -1,0 +1,146 @@
+[
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter",
+        "description": "electronic readout of volume of water filtered"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter",
+        "description": "volume calculated from recorded revolutions and flow meter calibrations"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "calculated",
+        "description": "volume calculated using depth, wire angle and net mouth opening"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "estimated",
+        "description": "estimate of volume calculated using depth and gear mouth opening (wire angle ignored)"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "method used to calculate volume of water filtered was not recorded"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "qualitative",
+        "description": "unable to calculate volume of water filtered"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": "this field should be updated with correct value"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flag",
+        "description": "data entered as previously calculated values; volume filtered not recorded"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "flow meter bad",
+        "description": "flow meter not working"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "NA",
+        "description": "not applicable; perhaps net lost; perhaps data from a bottle"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "volume should be recalculated",
+        "description": "use raw data and recalculate volume"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 30,
+        "name": "flow meter",
+        "description": "volume calculated from recorded revolutions and flow meter calibrations; NOTE:  one of the variables/factors in the equation may be suspect and the result may be \"low."
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 20,
+        "name": "flow meter",
+        "description": "data report indicates use of flow metres and the report also provided the volume of water filtered."
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gear_specific",
+        "description": "gear specific; example refer to box core sample analysis methodology"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "conversion1 (per millilitre)",
+        "description": "volume value set to convert data to units per cubic metre; data values are in units of per millilitre; volume = 0.000001m³ (which is 1 mL). The query will return 1000000 count/m³ for 1 bacteria/mL"
+    }
+},
+{
+    "model": "bio_tables.bcvolumemethod",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "conversion2 (per litre)",
+        "description": "volume value set to convert data to units per cubic metre; data values are in units of per litre; volume = 0.001 m³ (which is 1L). The query will return 1000 count/m³ for 1 cell/L"
+    }
+}
+]

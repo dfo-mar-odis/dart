@@ -1,6 +1,5 @@
 import logging
 
-from bootstrap5.utils import render_template_file
 from bs4 import BeautifulSoup
 from crispy_forms.helper import FormHelper
 from crispy_forms.utils import render_crispy_form
@@ -9,6 +8,7 @@ from crispy_forms.layout import Layout, Field, Row, Div, HTML, Hidden
 
 from django import forms
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
 from django.utils.html import escape
 from django.utils.translation import gettext as _
@@ -258,7 +258,7 @@ def list_missions(request):
 
         context["missions"] = missions
 
-    html = render_template_file('core/partials/table_biochem_mission_selection.html', context=context)
+    html = render_to_string('core/partials/table_biochem_mission_selection.html', context=context)
     table_soup = BeautifulSoup(html, 'html.parser')
     if missions and missions.has_next():
         trs = table_soup.find('tbody').find_all('tr')

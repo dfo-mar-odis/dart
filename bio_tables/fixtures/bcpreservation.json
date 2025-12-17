@@ -1,0 +1,662 @@
+[
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "",
+        "type": "unknown"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not applicable",
+        "description": "",
+        "type": "not applicable"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not assigned",
+        "description": "",
+        "type": "not assigned"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "none",
+        "description": "fresh sample",
+        "type": "none"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "preserved",
+        "description": "preservation (unspecified)",
+        "type": "preserved"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Hg2Cl2",
+        "description": "mercuric chloride",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "CH3Cl",
+        "description": "chloroform",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "gluteraldehyde",
+        "description": "gluteraldehyde",
+        "type": "gluteraldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "irradiation",
+        "description": "gamma irradiation",
+        "type": "irradiation"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "HCl",
+        "description": "acidifed with HCl",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "HNO3",
+        "description": "acidifed with HNO3",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, % unknown",
+        "description": "otoliths",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, 5 %",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, 4 %",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, 2 %",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, buffered, 10 % ",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, buffered, 7.5 % ",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 90,
+        "name": "glycerine + thymol",
+        "description": "",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 90,
+        "name": "bouins",
+        "description": "to dissolve fish gonads",
+        "type": "bouins"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ethanol, 70 %",
+        "description": "",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ethanol, 70 % + glycerin, 1 %",
+        "description": "to keep delicate specimens from drying out",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ethanol, 90%",
+        "description": "",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ethanol, % unknown",
+        "description": "",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 90,
+        "name": "gluteraldehyde, % unknown",
+        "description": "preservative of ultrastructure for histological work",
+        "type": "gluteraldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 90,
+        "name": "lugols",
+        "description": "phytoplankton preservation",
+        "type": "lugols"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 90,
+        "name": "lugols, acidic",
+        "description": "phytoplankton preservation",
+        "type": "lugols"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 90,
+        "name": "lugols, basic",
+        "description": "phytoplankton preservation",
+        "type": "lugols"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-20)",
+        "description": "frozen at - 20 C",
+        "type": "frozen"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 90,
+        "name": "refrigerated",
+        "description": "refrigerated (temperature not specified)",
+        "type": "refrigerated"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000029,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen",
+        "description": "frozen (temperature not specified)",
+        "type": "frozen"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000030,
+    "fields": {
+        "data_center_code": 90,
+        "name": "refrigerated (4)",
+        "description": "refrigerated at 4 C",
+        "type": "refrigerated"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000031,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-80)",
+        "description": "frozen at - 80 C",
+        "type": "frozen"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000032,
+    "fields": {
+        "data_center_code": 90,
+        "name": "room temperature",
+        "description": "room temperature",
+        "type": "room temperature"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-196)",
+        "description": "frozen in liquid nitrogen at -196 C",
+        "type": "frozen"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 90,
+        "name": "bad sample",
+        "description": "sample lost,discarded,broken,unrepresentative",
+        "type": "bad sample"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000035,
+    "fields": {
+        "data_center_code": 90,
+        "name": "sorted on-board & frozen",
+        "description": "",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000036,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde",
+        "description": "sorted on board then stored",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000037,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ethanol",
+        "description": "sorted on-board & stored in ethanol",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, buffered, 5 %",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000039,
+    "fields": {
+        "data_center_code": 90,
+        "name": "formaldehyde, buffered, 4 %",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 90,
+        "name": "paraformaldehyde, 1%",
+        "description": "paraformaldehyde, 1%",
+        "type": "paraformaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 20,
+        "name": "H3PO4 40%",
+        "description": "40% Phosphoric Acid by volume",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000043,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ethanol 95%",
+        "description": "",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000044,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ethanol 100%",
+        "description": "",
+        "type": "ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000045,
+    "fields": {
+        "data_center_code": 20,
+        "name": "formaldehyde and ethanol",
+        "description": "fixed in 5% formalin then preserved in 100% ethanol",
+        "type": "formaldehyde/ethanol"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000046,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gluteraldehyde, 2%",
+        "description": "",
+        "type": "gluteraldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000047,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen or dessicated",
+        "description": "sample frozen or desicated, details not specified",
+        "type": "frozen/dessicated"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000048,
+    "fields": {
+        "data_center_code": 20,
+        "name": "formalin-methanamine",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000049,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mercury chloride",
+        "description": "mercury chloride for CO2 preservation",
+        "type": "mercury chloride"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000050,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Dried_Dessicated_1",
+        "description": "Oven dried at <60C and dessicated",
+        "type": "dried/dessicated"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000051,
+    "fields": {
+        "data_center_code": 20,
+        "name": "paraform/glutaraldehyd_1",
+        "description": "1% para-formaldehyde/glutaraldehyde 1:1 by volume",
+        "type": "paraformaldehyde/glutaraldehyd"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000052,
+    "fields": {
+        "data_center_code": 25,
+        "name": "formalin-acetid acid, 2 %",
+        "description": "2% formalin acetic acid (FAA)",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000053,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P1",
+        "description": "acidified with 1 ml/L Seastar high purity HNO3 in a clean laboratory",
+        "type": "acidified"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000054,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P2",
+        "description": "washed of residual salt,  air-dried in  clean bench",
+        "type": "dried"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000055,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P3",
+        "description": "Total Hg - unfilt. sample - EPA Method 1631",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000056,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P4",
+        "description": "Methyl Hg - unfilt. sample - EPA Method 1630",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000057,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P5",
+        "description": "acidified with 2.5 mL/L B.D.H. Aristar HCl",
+        "type": "acidified"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000058,
+    "fields": {
+        "data_center_code": 20,
+        "name": "formaldehyde, hexa/tetram, 10%",
+        "description": "10% formalin solution buffered with hexamethylene tetramine",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000059,
+    "fields": {
+        "data_center_code": 20,
+        "name": "formalin:acetic acid",
+        "description": "formalin:acetic acid",
+        "type": "formalin:acetic acid"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000060,
+    "fields": {
+        "data_center_code": 20,
+        "name": "formaldehyde, 5 %",
+        "description": "5-10% formalin solution written in notes",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000062,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P7",
+        "description": "acidified with 2.5 mL/L Baker Ultrex HCl",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000064,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P8",
+        "description": "Dried",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000066,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_P6",
+        "description": "ice, frozen, double bagged",
+        "type": ""
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000067,
+    "fields": {
+        "data_center_code": 20,
+        "name": "formaldehyde, buffered, 2 %",
+        "description": "",
+        "type": "formaldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000068,
+    "fields": {
+        "data_center_code": 30,
+        "name": "gluteraldehyde, 0.1%",
+        "description": "",
+        "type": "gluteraldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 30,
+        "name": "frozen (-20) acetone",
+        "description": "frozen in acetone at - 20 C",
+        "type": "frozen"
+    }
+}
+]

@@ -1,0 +1,146 @@
+[
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 10,
+    "fields": {
+        "name": "NAFC",
+        "location": "St John's, Nfld.",
+        "description": "North Atlantic Fisheries Center"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 11,
+    "fields": {
+        "name": "NAFC_INREVIEW",
+        "location": "Nfld",
+        "description": "NAFC - DATA IN REVIEW BY BIO"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 20,
+    "fields": {
+        "name": "BIO",
+        "location": "Dartmouth, N.S.",
+        "description": "Bedford Institute of Oceanography"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 21,
+    "fields": {
+        "name": "BIO_SAHFOS",
+        "location": "Dartmouth, N.S.",
+        "description": "Bedford Institute of Oceanography SAHFOS data"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 22,
+    "fields": {
+        "name": "BIO_NotReleasedYet",
+        "location": "Dartmouth, N.S.",
+        "description": "Bedford Institute of Oceanography"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 23,
+    "fields": {
+        "name": "BIO_INREVIEW",
+        "location": "Dartmouth, N.S.",
+        "description": "Bedford Insitute of Oceanography - DATA IN REVIEW"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 24,
+    "fields": {
+        "name": "BIO_REBOOT",
+        "location": "Dartmouth, N.S.",
+        "description": "BIO reload of discrete data, for review prior to release"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 25,
+    "fields": {
+        "name": "GFC",
+        "location": "Moncton, N.B.",
+        "description": "Gulf Fisheries Centre"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 26,
+    "fields": {
+        "name": "GFC_INREVIEW",
+        "location": "Gulf",
+        "description": "GFC - DATA IN REVIEW BY BIO"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 30,
+    "fields": {
+        "name": "IML",
+        "location": "Mont Joli, P.Q.",
+        "description": "Institut Maurice-Lamontagne"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 31,
+    "fields": {
+        "name": "IML_NotReleasedYet",
+        "location": "Mont-Joli,P.Q.",
+        "description": "Institut Maurice-Lamontagne - Restricted"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 40,
+    "fields": {
+        "name": "MEDS",
+        "location": "Ottawa, Ont.",
+        "description": "Marine Environmental Data Service"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 41,
+    "fields": {
+        "name": "VMS_BOTTLE",
+        "location": "Ottawa, Ont.",
+        "description": "VMS Bottle Archives"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 50,
+    "fields": {
+        "name": "IOS",
+        "location": "Patricia Bay, B.C.",
+        "description": "Institute of Ocean Sciences"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 60,
+    "fields": {
+        "name": "CCIW",
+        "location": "Burlington, On",
+        "description": "Canadian Center for Inland Water"
+    }
+},
+{
+    "model": "bio_tables.bcdatacenter",
+    "pk": 90,
+    "fields": {
+        "name": "NATIONAL",
+        "location": "NATIONAL",
+        "description": "Nationally approved codes."
+    }
+}
+]

@@ -1,10 +1,9 @@
-import easygui
-
 import pandas as pd
 
 from io import BufferedReader
 from io import BytesIO
 
+from PyQt6.QtWidgets import QFileDialog
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
@@ -419,7 +418,25 @@ def list_plankton(request, mission_id):
 
 def upload_multinet(request, mission_id, **kwargs):
     mission = core_models.Mission.objects.get(pk=mission_id)
-    result = easygui.fileopenbox("Open multinet file", "Multinet", default="*", filetypes="*.T**", multiple=True)
+
+    app = settings.app if hasattr(settings, 'app') else None
+    if not app:
+        raise InterruptedError("App object has not been configured")
+
+    start_dir = settings.dir if hasattr(settings, 'dir') else None
+
+    # Create and configure the file dialog
+    file_dialog = QFileDialog()
+    file_dialog.setWindowTitle("Open multinet files")
+    file_dialog.setNameFilter("Multinet File (*.T**)")
+    file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
+    file_dialog.setDirectory(start_dir)
+
+    # Open the dialog and get the selected file
+    if not file_dialog.exec():
+        return HttpResponse()
+
+    result = file_dialog.selectedFiles()[0]
 
     if result:
         for file in result:

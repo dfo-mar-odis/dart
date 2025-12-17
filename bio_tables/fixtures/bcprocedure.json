@@ -1,0 +1,155 @@
+[
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not analysed",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "quant analysis complete",
+        "description": "quantitative"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "quant analysis incomplet",
+        "description": "quantitative selected groups analysed"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": "sorting info not available"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 20,
+        "name": "lost",
+        "description": "sample lost in transit"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 20,
+        "name": "rotten",
+        "description": "sample rotten"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 20,
+        "name": "hit bottom",
+        "description": "sample hit bottom and not sorted"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 20,
+        "name": "damaged during analysis",
+        "description": "sample damaged during sort"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 20,
+        "name": "do not analyse",
+        "description": "sample not to be sorted for various reasons"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 20,
+        "name": "not representative",
+        "description": "sample not representative"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 20,
+        "name": "qualitative analysis",
+        "description": "qualitative only, see species/cruise comments"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 20,
+        "name": "quantitative (Flow Cytometry)",
+        "description": "counts from flow cytometer"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 30,
+        "name": "quantitative analysis",
+        "description": "quantitative complete or selected groups analyzed (not defined, example for legacy datasets taxonomic groups may have been identified separately and it is unclear if when the results were combined if all groups were examined )"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 20,
+        "name": "quantitative (bacteria counts)",
+        "description": "for method refer to Bunch 1979 Fisheries and Marine Service Manuscript Report no 1515, April 1979"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Vilks_1970",
+        "description": "foraminifera quantitative analysis"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Mixed analysis",
+        "description": "Sample completely analyzed (all taxa are identified) but there was a mix of quantitative and qualitative analysis. (all the taxa of a certain group were quantitatively analyzed and for all the others presence was noted)"
+    }
+},
+{
+    "model": "bio_tables.bcprocedure",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Experimental",
+        "description": "Sample collected for experimental purposes: Not analyzed for species abundance"
+    }
+}
+]
