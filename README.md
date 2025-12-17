@@ -1,7 +1,7 @@
 # Requirements
 * Python 3.13+
 * Git
-* C++ Visual Build Tools - required for oracle connections
+* Oracle Instant Client 12+ (can be accquired from the DFO Software Center)
 
 # Installation
 1. Before installation you must have Python 3.13 and [Git](https://git-scm.com/) installed.
