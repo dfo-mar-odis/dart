@@ -17,8 +17,6 @@
 The first time running the application may take several minutes to start while python packages and the initial local database is created. When you see `Listening on TCP address 127.0.0.1:8000` in the command window, open a web browser and enter localhost:8000 in the address bar.
 
 ***NOTE:***  
-If the application had issues installing the cx_Oracle package you'll have to install [Microsoft Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/), which can also be installed from the DFO software center.
-
 You'll also need to install Oracle Instant Client, from the DFO software center.
 
 To stop the server, close the command window.
