@@ -1,0 +1,596 @@
+[
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "none",
+        "description": "none"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "%",
+        "description": "percent"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Bq/l",
+        "description": "Becquerels / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "cc/g",
+        "description": "millilters STP / gram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "dbar",
+        "description": "decibar"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "degrees C",
+        "description": "degrees Celsius"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mBq/l",
+        "description": "milliBecquerels / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mg C/m**3/day",
+        "description": "milligrams carbon/(cubic metre * day)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mg/l",
+        "description": "milligrams / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ml/l",
+        "description": "millilitres STP / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "p",
+        "description": "millimoles / kilogram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "micromol/m**3",
+        "description": "micromoles / metre**3"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "o/oo PDB",
+        "description": "parts / thousand, relative to PDB"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pM",
+        "description": "picomoles / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pmole/kg",
+        "description": "picomoles / kilogram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ppmv",
+        "description": "parts / million (volume)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 90,
+        "name": "tu",
+        "description": "tritium units"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 90,
+        "name": "tu81n",
+        "description": "tritium units (normalized to 1981)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ug/g",
+        "description": "micrograms / gram  (part per million)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mg/m3",
+        "description": "milligrams / metre**3"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mmol/m3",
+        "description": "milli mol/metre**3"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 90,
+        "name": "umole/kg",
+        "description": "micromoles / kilogram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 90,
+        "name": "uE m-2 s-1",
+        "description": "microEinsteins / (square metre * sec)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 90,
+        "name": "m",
+        "description": "metres"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 90,
+        "name": "pmol m-3 h-1",
+        "description": "picomoles / (cubic metre * hour)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 90,
+        "name": "C chl-1 h-1 W-1 m-2",
+        "description": "mg C / (mg chl_a * hour * watt * square metre )"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 90,
+        "name": "o/oo SMOW",
+        "description": "parts / thousand, relative to Standard Mean Ocean Water (SMOW)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 90,
+        "name": "g/kg",
+        "description": "grams / kilogram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mm",
+        "description": "millimetres"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mg/m2",
+        "description": "milligrams / metre**2"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 90,
+        "name": "test units",
+        "description": "tests / day"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000037,
+    "fields": {
+        "data_center_code": 20,
+        "name": "S/m",
+        "description": "Siemens per metre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hours",
+        "description": "time (hours)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000039,
+    "fields": {
+        "data_center_code": 20,
+        "name": "W m-2",
+        "description": "Watts / square metre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mg C mg Chl-1 h-1",
+        "description": "mg C / (mg Chl_a * hour)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mg C/m**3/h",
+        "description": "milligrams carbon per cubic metre per hour"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000042,
+    "fields": {
+        "data_center_code": 20,
+        "name": "pmol/L/h",
+        "description": "picomoles / litre / hour"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000044,
+    "fields": {
+        "data_center_code": 20,
+        "name": "kg/m3",
+        "description": "kilograms / metres**3"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000045,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Millions/l",
+        "description": "Millions(counts) / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000048,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Volts",
+        "description": "Instrument voltage response"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000053,
+    "fields": {
+        "data_center_code": 30,
+        "name": "cal/mg",
+        "description": "Calories / milligram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000054,
+    "fields": {
+        "data_center_code": 20,
+        "name": "degrees F",
+        "description": "degrees Fahrenheit"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000055,
+    "fields": {
+        "data_center_code": 90,
+        "name": "umol/m3/day",
+        "description": "micromoles / cubic metre / day"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000056,
+    "fields": {
+        "data_center_code": 90,
+        "name": "umol/m3/hr",
+        "description": "micromoles / cubic metre / hour"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000057,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mg O2 m-3 h-1",
+        "description": "mg O2 m-3 h-1"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000058,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ng/l",
+        "description": "nanograms / litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000059,
+    "fields": {
+        "data_center_code": 20,
+        "name": "cm",
+        "description": "centimetres"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000060,
+    "fields": {
+        "data_center_code": 20,
+        "name": "pmol/L",
+        "description": "pmol/L"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000061,
+    "fields": {
+        "data_center_code": 20,
+        "name": "nmol/l",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000062,
+    "fields": {
+        "data_center_code": 20,
+        "name": "(mg C m-2hr-1)/I0",
+        "description": "PP normalized to incident radiation (mg C m-2 hr-1) / (cal m-2 hr-1)"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000063,
+    "fields": {
+        "data_center_code": 20,
+        "name": "(mg C m-2hr-1)/I0Bz",
+        "description": "PP normalized to incident radiation and phyto biomass(mg C m-2 hr-1) / ((cal m-2 hr-1)(mg Chla m-2))"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000064,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ug at m-3",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000066,
+    "fields": {
+        "data_center_code": 20,
+        "name": "m-1",
+        "description": "per metre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000067,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ppm",
+        "description": "parts per million"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000068,
+    "fields": {
+        "data_center_code": 20,
+        "name": "cal / g dry wt",
+        "description": "calories per gram of dry weight"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mg/m2/day",
+        "description": "milligrams / metre**2 / day"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000070,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Micrometer",
+        "description": "Microscope units, conversion to mm depends upon the ocular power of the microscope."
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000071,
+    "fields": {
+        "data_center_code": 20,
+        "name": "per individual",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000072,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mg/ind",
+        "description": "milligrams per individual"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000073,
+    "fields": {
+        "data_center_code": 20,
+        "name": "eggs fem-1 day-1",
+        "description": "rate measurement - number of eggs produced by an individual female per day"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000074,
+    "fields": {
+        "data_center_code": 20,
+        "name": "l-1",
+        "description": "per litre; example plankton counts or grams per litre; phyto often expressed as cells per litre"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000075,
+    "fields": {
+        "data_center_code": 20,
+        "name": "mL-1",
+        "description": "per millilitre; example plankton counts or grams per mL; bacteria often expressed as cells per mL"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000076,
+    "fields": {
+        "data_center_code": 20,
+        "name": "uatm",
+        "description": "micro atmospheres"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000077,
+    "fields": {
+        "data_center_code": 20,
+        "name": "fmol/kg",
+        "description": "Femto moles per kilogram"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000078,
+    "fields": {
+        "data_center_code": 20,
+        "name": "NTU",
+        "description": "Nephelometric turbidity units - measurement of turbidity"
+    }
+},
+{
+    "model": "bio_tables.bcunit",
+    "pk": 90000079,
+    "fields": {
+        "data_center_code": 20,
+        "name": "m-1 sr-1",
+        "description": "per m per steradian for turbidity measurements"
+    }
+}
+]

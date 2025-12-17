@@ -1,0 +1,5012 @@
+[
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Not Applicable",
+        "parameter_description": "Used when not a reteivable parameter",
+        "unit_seq": 90000000,
+        "places_before": 0,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "2459.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Pressure",
+        "parameter_description": "Pressure",
+        "unit_seq": 90000004,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "12000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Salinity",
+        "parameter_description": "Salinity",
+        "unit_seq": 90000000,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "400.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Temperature",
+        "parameter_description": "Temperature",
+        "unit_seq": 90000005,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "-3.00000",
+        "maximum_value": "35.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "O2",
+        "parameter_description": "Dissolved oxygen",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "560.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Oil in water",
+        "parameter_description": "Total dissolved / dispersed oil",
+        "unit_seq": 90000019,
+        "places_before": 6,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "3000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Alkalinity",
+        "parameter_description": "Total alkalinity",
+        "unit_seq": 90000021,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "10000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Carbonate",
+        "parameter_description": "Carbonate ion concentration",
+        "unit_seq": 90000021,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "pH",
+        "parameter_description": "pH",
+        "unit_seq": 90000000,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "2.00000",
+        "maximum_value": "9.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "pKa",
+        "parameter_description": "pK for the first dissociation constant of H2CO3",
+        "unit_seq": 90000000,
+        "places_before": 1,
+        "places_after": 4,
+        "minimum_value": "5.00000",
+        "maximum_value": "7.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Calcium",
+        "parameter_description": "Calcium",
+        "unit_seq": 90000010,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "15.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Magnesium",
+        "parameter_description": "Magnesium",
+        "unit_seq": 90000010,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "35.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Silicate",
+        "parameter_description": "Dissolved reactive silicate",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "260.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Phosphate",
+        "parameter_description": "Dissolved inorganic phosphate",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Nitrate",
+        "parameter_description": "Nitrate + nitrite",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "75.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "POC",
+        "parameter_description": "Particulate organic carbon (POC)",
+        "unit_seq": 90000019,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "11000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "POH",
+        "parameter_description": "Particulate organic hydrogen (POH)",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PON",
+        "parameter_description": "Particulate organic nitrogen (PON)",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "TOC",
+        "parameter_description": "Total organic carbon (dissolved + particulate, TOC)",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "999.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "C13 - Total CO2",
+        "parameter_description": "C-13/C-12 ratio in TCO2, v PDB (PeeDee Belemnite)",
+        "unit_seq": 90000012,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-20.00000",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "O18 - Total CO2",
+        "parameter_description": "O-18/O-16 ratio in TCO2, v PDB (PeeDee Belemnite)",
+        "unit_seq": 90000012,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-30.00000",
+        "maximum_value": "10.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "C13 - Sed. Org. C",
+        "parameter_description": "C-13/C-12 in organic carbon, surface sediments, v PDB (PeeDee Belemnite)",
+        "unit_seq": 90000012,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-35.00000",
+        "maximum_value": "-5.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "SPM",
+        "parameter_description": "Suspended particulate matter (SPM)",
+        "unit_seq": 90000008,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cesium-137 - total",
+        "parameter_description": "Cesium-137 - unfiltered",
+        "unit_seq": 90000006,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "300.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "C13 - POC",
+        "parameter_description": "C-13/C-12 ratio in particulate organic carbon, v PDB (PeeDee Belemnite)",
+        "unit_seq": 90000012,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-60.00000",
+        "maximum_value": "-10.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Strontium-90 - total",
+        "parameter_description": "Strontium-90 - unfiltered",
+        "unit_seq": 90000006,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Methane",
+        "parameter_description": "Methane",
+        "unit_seq": 90000011,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Nitrite",
+        "parameter_description": "Nitrite",
+        "unit_seq": 90000020,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "25.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Ammonia",
+        "parameter_description": "Ammonia",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000029,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Chlorophyll A",
+        "parameter_description": "Chlorophyll a",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 6,
+        "minimum_value": "0.00000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000030,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Phaeophytin",
+        "parameter_description": "Phaeophytin",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000031,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "O18 - Water",
+        "parameter_description": "O-18/O-16 in water, v SMOW (Standard Mean Ocean Water)",
+        "unit_seq": 90000012,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-60.00000",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000032,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Fe - unfiltered",
+        "parameter_description": "Fe - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 6,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "100000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Mn - unfiltered",
+        "parameter_description": "Mn - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Co - unfiltered",
+        "parameter_description": "Co - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000035,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Ni - unfiltered",
+        "parameter_description": "Ni - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000036,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cu - unfiltered",
+        "parameter_description": "Cu - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000037,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Zn - unfiltered",
+        "parameter_description": "Zn - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cd - unfiltered",
+        "parameter_description": "Cd - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000039,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Al - unfiltered",
+        "parameter_description": "Al - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 6,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "200000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Fe - filtered",
+        "parameter_description": "Fe - filtered",
+        "unit_seq": 90000019,
+        "places_before": 6,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "30000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Mn - filtered",
+        "parameter_description": "Mn - filtered",
+        "unit_seq": 90000019,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000042,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Co - filtered",
+        "parameter_description": "Co - filtered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000043,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Ni - filtered",
+        "parameter_description": "Ni - filtered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "250.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000044,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cu - filtered",
+        "parameter_description": "Cu - filtered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "250.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000045,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Zn - filtered",
+        "parameter_description": "Zn - filtered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000046,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cd - filtered",
+        "parameter_description": "Cd - filtered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "10.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000047,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Al - filtered",
+        "parameter_description": "Al - filtered",
+        "unit_seq": 90000019,
+        "places_before": 6,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000048,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Sulfate",
+        "parameter_description": "Sulfate",
+        "unit_seq": 90000010,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000049,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Acidified calcium",
+        "parameter_description": "Acidified calcium",
+        "unit_seq": 90000021,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000050,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Helium E-08",
+        "parameter_description": "Helium E-08",
+        "unit_seq": 90000003,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000051,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "He3",
+        "parameter_description": "Delta He3",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000052,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "He3 error",
+        "parameter_description": "Delta He3 Error",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000053,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Tritium",
+        "parameter_description": "H-3, tritium (unfiltered)",
+        "unit_seq": 90000002,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000054,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Tritium error",
+        "parameter_description": "Tritium error",
+        "unit_seq": 90000002,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000055,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Sediment oil",
+        "parameter_description": "Oil in sediments",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000056,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Ethane",
+        "parameter_description": "Ethane",
+        "unit_seq": 90000015,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000057,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Propane",
+        "parameter_description": "Propane",
+        "unit_seq": 90000015,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000058,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Butane",
+        "parameter_description": "Butane",
+        "unit_seq": 90000015,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000059,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cesium-137 error",
+        "parameter_description": "Cesium-137 error (unfiltered)",
+        "unit_seq": 90000006,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "2.50000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000060,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "V - filtered",
+        "parameter_description": "V - filtered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000061,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cr - filtered",
+        "parameter_description": "Cr - filtered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000062,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Ba - filtered",
+        "parameter_description": "Ba - filtered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000063,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Freon 11",
+        "parameter_description": "Freon 11 (CFC 11; CFCl3)",
+        "unit_seq": 90000014,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-0.50000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000064,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Freon 12",
+        "parameter_description": "Freon 12 (CFC 12; CF2Cl2)",
+        "unit_seq": 90000014,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-0.50000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000065,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Tritium 81",
+        "parameter_description": "Tritium, referenced to 1981",
+        "unit_seq": 90000002,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000066,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Hg - total",
+        "parameter_description": "Hg concentration after sample oxidation",
+        "unit_seq": 90000013,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000067,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Hg - reactive",
+        "parameter_description": "Hg concentration before sample oxidation",
+        "unit_seq": 90000013,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000068,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Cr - unfiltered",
+        "parameter_description": "Cr - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "AOU",
+        "parameter_description": "Apparent oxygen utilization (AOU)",
+        "unit_seq": 90000021,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-200.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000070,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "NO_Broecker",
+        "parameter_description": "Broecker's parameter NO = O2 + 9.83 * NO3",
+        "unit_seq": 90000021,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "600.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000071,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Total phosphorus",
+        "parameter_description": "Total phosphorus concentration (organic + inorganic)",
+        "unit_seq": 90000020,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000072,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Urea",
+        "parameter_description": "Urea",
+        "unit_seq": 90000020,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "10.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000073,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Chloride",
+        "parameter_description": "Chloride",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000074,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Freon 113",
+        "parameter_description": "Freon 113 (CFC 113; 1,1,2-trichlorotrifluoroethane)",
+        "unit_seq": 90000014,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-0.50000",
+        "maximum_value": "25.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000075,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "CCl4",
+        "parameter_description": "Carbon tetrachloride (CCl4)",
+        "unit_seq": 90000014,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-0.50000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000076,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Methyl chloroform",
+        "parameter_description": "Methyl chloroform (CH3CCl3)",
+        "unit_seq": 90000014,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "-0.50000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000077,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "CO2 (total)",
+        "parameter_description": "Total inorganic carbon (TIC), Total CO2 (TCO2)",
+        "unit_seq": 90000021,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "3000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000078,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Hydrogen sulfide",
+        "parameter_description": "Hydrogen sulfide",
+        "unit_seq": 90000020,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000079,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Phosphate: part.",
+        "parameter_description": "Particulate phosphate",
+        "unit_seq": 90000020,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000080,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Total nitrogen",
+        "parameter_description": "Total nitrogen",
+        "unit_seq": 90000020,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000081,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Pb - filtered",
+        "parameter_description": "Pb - filtered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "0.50000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000082,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PrimProd_InSitu_Day",
+        "parameter_description": "Primary production, in situ",
+        "unit_seq": 90000007,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000083,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Incident radiation",
+        "parameter_description": "Incident radiation",
+        "unit_seq": 90000022,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000084,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PAR",
+        "parameter_description": "Photosynthetically active radiation (400-700 nm)",
+        "unit_seq": 90000022,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000085,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Photic depth",
+        "parameter_description": "Photic depth (1 % of surface light level)",
+        "unit_seq": 90000023,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000086,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Leucine production",
+        "parameter_description": "Bacterial leucine production",
+        "unit_seq": 90000024,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000087,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Thymidine production",
+        "parameter_description": "Bacterial thymidine production",
+        "unit_seq": 90000024,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000088,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_TYPE_OF_FIT",
+        "parameter_description": "Type of fit (number of parameters)",
+        "unit_seq": 90000000,
+        "places_before": 1,
+        "places_after": 0,
+        "minimum_value": "3.00000",
+        "maximum_value": "4.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000089,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Production max",
+        "parameter_description": "Primary production maximum",
+        "unit_seq": 90000025,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000090,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "% Sfc light",
+        "parameter_description": "Percentage surface light",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000091,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "BUG_MEAS - length",
+        "parameter_description": "length measurement",
+        "unit_seq": 90000028,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "Mary Kennedy"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000092,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "BUG_MEAS - width",
+        "parameter_description": "width measurement of a bug",
+        "unit_seq": 90000028,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "Mary Kennedy"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000093,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "BUG_MEAS - diameter",
+        "parameter_description": "diameter measurement",
+        "unit_seq": 90000028,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "Mary Kennedy"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000094,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_ALPHA",
+        "parameter_description": "Primary Production Parameter ALPHA",
+        "unit_seq": 90000025,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "Mary Kennedy"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000095,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "BOD - 5 day",
+        "parameter_description": "Bacterial oxygen demand, 5 day",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "P. Strain"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000096,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_PM",
+        "parameter_description": "PRIMARY PRODUCTION:  PRODUCTION MAXIMUM",
+        "unit_seq": 90000040,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000097,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_PS",
+        "parameter_description": "PRIMARY PRODUCTION PS",
+        "unit_seq": 90000040,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000098,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_BETA",
+        "parameter_description": "PRIMARY PRODUCTION BETA",
+        "unit_seq": 90000025,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000099,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_RB",
+        "parameter_description": "PRIMARY PRODUCTION RB",
+        "unit_seq": 90000040,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000100,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_IK",
+        "parameter_description": "PRIMARY PRODUCTION IK",
+        "unit_seq": 90000039,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000101,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_IS",
+        "parameter_description": "PRIMARY PRODUCTION IS",
+        "unit_seq": 90000039,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000102,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_IB",
+        "parameter_description": "PRIMARY PRODUCTION IB",
+        "unit_seq": 90000039,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000103,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_IM",
+        "parameter_description": "PRIMARY PRODUCTION IM",
+        "unit_seq": 90000039,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000104,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_TS",
+        "parameter_description": "PRIMARY PRODUCTION TS SAMPLE TEMPERATURE",
+        "unit_seq": 90000038,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "M. KENNEDY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000105,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Oil in surf layer",
+        "parameter_description": "Dissolved/dispersed oil in the surface microlayer",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "BIOCHEM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000110,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Oil - tarballs",
+        "parameter_description": "Particulate petroleum residues (tarballs)",
+        "unit_seq": 90000033,
+        "places_before": 4,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "BIOCHEM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000113,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "conductivity_CTD",
+        "parameter_description": "conductivity from CTD in Siemens per meter",
+        "unit_seq": 90000037,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "10.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000114,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Rosette trip #",
+        "parameter_description": "gives firing order of bottles on CTD rosette",
+        "unit_seq": 90000000,
+        "places_before": 2,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "25.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000115,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "CTD_ scan #",
+        "parameter_description": "can link to scan number on UP trace of ODF file",
+        "unit_seq": 90000000,
+        "places_before": 6,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "999999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000116,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Rosette position #",
+        "parameter_description": "position of bottle in rosette -- useful when looking for \"leakers\"",
+        "unit_seq": 90000000,
+        "places_before": 2,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "36.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000117,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "PP_INC",
+        "parameter_description": "Primary Production INC",
+        "unit_seq": 90000038,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "99.00000",
+        "originally_entered_by": "BIOCHEM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000118,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "PP_TI",
+        "parameter_description": "PRIMARY PRODUCTION TS SAMPLE TEMPERATURE",
+        "unit_seq": 90000005,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000120,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Carbonate alkalinity",
+        "parameter_description": "Carbonate alkalinity",
+        "unit_seq": 90000021,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "BCMESD"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000121,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "secchi_depth",
+        "parameter_description": "secchi",
+        "unit_seq": 90000023,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.01000",
+        "maximum_value": "999.99000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000122,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Pb - unfiltered",
+        "parameter_description": "Lead - unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "0.50000",
+        "originally_entered_by": "R. Benjamin"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000124,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "delete",
+        "parameter_description": "delete - entered type twice",
+        "unit_seq": 90000022,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "4000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000125,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Leucine Incorp.",
+        "parameter_description": "Leucine Incorporation",
+        "unit_seq": 90000042,
+        "places_before": 4,
+        "places_after": 3,
+        "minimum_value": "0.00100",
+        "maximum_value": "999.99900",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000126,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Bacterial Prod.",
+        "parameter_description": "Bacterial Production BODC - BPRD",
+        "unit_seq": 90000041,
+        "places_before": 2,
+        "places_after": 4,
+        "minimum_value": "0.00010",
+        "maximum_value": "99.99990",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000127,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Diss. Organic Carbon",
+        "parameter_description": "Dissolved Organic Carbon = CORG DX from MEDS Parm List",
+        "unit_seq": 90000020,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000132,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Fluorescence in Volt",
+        "parameter_description": "In situ Fluorecsence by fluorometer in volts",
+        "unit_seq": 90000048,
+        "places_before": 3,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000133,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Light Tansmittance",
+        "parameter_description": "Percent light transmission measured by Transmisometer or other device",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000135,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Chlorophyll B",
+        "parameter_description": "Chlorophyll B",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "10.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000136,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Chlorophyll C",
+        "parameter_description": "Chlorophyll C",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "15.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000137,
+    "fields": {
+        "data_center_code": 30,
+        "parameter_name": "Density",
+        "parameter_description": "Density",
+        "unit_seq": 90000044,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "-0.20000",
+        "maximum_value": "40.00000",
+        "originally_entered_by": "DEVINEL"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000138,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Calorimetry",
+        "parameter_description": "Calories measured using a Bomb Calorimeter?",
+        "unit_seq": 90000053,
+        "places_before": 6,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "999999.99900",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000139,
+    "fields": {
+        "data_center_code": 30,
+        "parameter_name": "Dry Weight Biomass",
+        "parameter_description": "Dry weight biomass",
+        "unit_seq": 90000019,
+        "places_before": 6,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "999999.99990",
+        "originally_entered_by": "ISABELLE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000140,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "PrimProd_InSitu_Hr",
+        "parameter_description": "Primary production determined using 14C uptake and rate calculated per hour",
+        "unit_seq": 90000041,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000143,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "ATP",
+        "parameter_description": "Biomass estimator using ATP activity",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 6,
+        "minimum_value": "0.00000",
+        "maximum_value": "8.00000",
+        "originally_entered_by": "DEVINEL"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000148,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Nucleic acid - RNA",
+        "parameter_description": "Ribonucleic acid (RNA); biochemical indicator of microplankton biomass",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "26.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000149,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Protein",
+        "parameter_description": "Protein; biochemical indicator of microplankton biomass",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "700.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000150,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Nucleic acid - DNA",
+        "parameter_description": "Deoxyribonucleic acid (DNA); biochemical indicator of microplankton biomass",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "25.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000151,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "NO3Uptake_SIS_hr",
+        "parameter_description": "Nitrogen (nitrate) uptake rate measurements from SIS experiments (units = per hour)",
+        "unit_seq": 90000056,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000152,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "NO3Uptake_SIS_day",
+        "parameter_description": "Nitrogen (nitrate) uptake rate measurements from SIS experiments (units = per day)",
+        "unit_seq": 90000055,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000153,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "NH3Uptake_SIS_hr",
+        "parameter_description": "Nitrogen (Ammonia) uptake rate measurements ifrom SIS experiments (units = per hour)",
+        "unit_seq": 90000056,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000154,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "NH3Uptake_SIS_day",
+        "parameter_description": "Nitrogen (Ammonia) uptake rate measurements from SIS experiments (units = per day)",
+        "unit_seq": 90000055,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000155,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "UreaUptake_SIS_hr",
+        "parameter_description": "not to be used yet Mary to update this week",
+        "unit_seq": 90000056,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000156,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "UreaUptake_SIS_day",
+        "parameter_description": "not to be used yet Mary to update this week",
+        "unit_seq": 90000055,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000159,
+    "fields": {
+        "data_center_code": 30,
+        "parameter_name": "PrimProd_SIS_Hr",
+        "parameter_description": "Primary production determined using 14C uptake, simulated insitu incubation, rate calculated per hr",
+        "unit_seq": 90000041,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "DEVINEL"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000160,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_ACAROT",
+        "parameter_description": "alpha-carotene",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000161,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_ALLOX",
+        "parameter_description": "alloxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000162,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_ASTAX",
+        "parameter_description": "astaxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000163,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_BCAROT",
+        "parameter_description": "beta-carotene",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000164,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_BUT19",
+        "parameter_description": "19-butanoyl-oxy-fucoxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000165,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_BUTLIKE",
+        "parameter_description": "hplc pigment similar to but19",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000166,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_CHLA",
+        "parameter_description": "hplc chlorophyll a (includes chlorophyllide a+)",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000167,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_CHLB",
+        "parameter_description": "chlorophyll-b (includes dv-chlb if any present)",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000168,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_CHLC12",
+        "parameter_description": "chlorophyll - c1+c2",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000169,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_CHLIDEA",
+        "parameter_description": "chlorophyllide-a",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000170,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_DIADINOX",
+        "parameter_description": "diadinoxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000171,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_DIATOX",
+        "parameter_description": "diatoxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000172,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_FUCOX",
+        "parameter_description": "fucoxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000173,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_HEX19",
+        "parameter_description": "19-hexanoyl-oxy-fucoxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000174,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_HEXLIKE",
+        "parameter_description": "hplc pigment similar to hex19 (elutes ~0.1 minute after 19hex)",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000175,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_PERID",
+        "parameter_description": "peridinin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000176,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_PHAEO",
+        "parameter_description": "total hplc phaeopigment concentration (includes all phaeophorbides and phaeophytins)",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000177,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_PYROPHAE",
+        "parameter_description": "pytophaeophorbide a",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000178,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_VIOLAX",
+        "parameter_description": "violaxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000179,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_ZEA",
+        "parameter_description": "zeaxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000180,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_PRASINOX",
+        "parameter_description": "prasinoxanthin",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000181,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_HEXLIKE2",
+        "parameter_description": "hplc pigment similar to hex19 (elutes ~0.2 minute after 19hex)",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000182,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "HPLC_CHLC3",
+        "parameter_description": "chlorophyll - c3",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "KennedyM"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000183,
+    "fields": {
+        "data_center_code": 90,
+        "parameter_name": "Incubation_hrs",
+        "parameter_description": "length of production incubation/experiment in time (hours)",
+        "unit_seq": 90000038,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "99.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000184,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "O2_PG_Insitu_hr",
+        "parameter_description": "Phytosynthetic rate measurement made by changes in dissolved O2 - Gross oxygen production; insitu",
+        "unit_seq": 90000057,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-99.00000",
+        "maximum_value": "999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000185,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "O2_PN_Insitu_hr",
+        "parameter_description": "Phytosynthetic rate measurement made by changes in dissolved O2 - Net oxygen production; insitu incu",
+        "unit_seq": 90000057,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-99.00000",
+        "maximum_value": "999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000186,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "O2_PR_Insitu_hr",
+        "parameter_description": "Phytosynthetic rate measurement made by changes in dissolved O2 - Oxygen respiration; insitu incubat",
+        "unit_seq": 90000057,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-99.00000",
+        "maximum_value": "999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000187,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IncT_06H_N15",
+        "parameter_description": "length of 6hr H_N15 incubation in time (hours)",
+        "unit_seq": 90000038,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "99.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000188,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IncT_24H_N15",
+        "parameter_description": "length of 24hr H_N15 incubation in time (hours)",
+        "unit_seq": 90000038,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "99.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000189,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "PrimProd_SIS_Hr_C13",
+        "parameter_description": "Primary production from simulated in situ experiments using C13 (Carbon per area per hour)",
+        "unit_seq": 90000041,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000190,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IncT_insitu",
+        "parameter_description": "Length of insitu incubation in time hours)",
+        "unit_seq": 90000038,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "72.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000191,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "PrimProd_SIS_Hr_24hr",
+        "parameter_description": "Primary production determined using 14C uptake, 24hr SIS incubation, rate calculated per hr",
+        "unit_seq": 90000041,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000192,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IncT_24H_SISC14",
+        "parameter_description": "Incubation time for 24hr SIS incubation using C14",
+        "unit_seq": 90000038,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "72.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000193,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Size-LengthRangeMin",
+        "parameter_description": "size measurement, length range minimum",
+        "unit_seq": 90000028,
+        "places_before": 5,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "10000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000194,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IceAlgaeAreal_Chl",
+        "parameter_description": "Ice algae areal chlorophyll",
+        "unit_seq": 90000033,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000195,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IceAlgaeAreal_Phaeo",
+        "parameter_description": "Ice algae areal phaeo",
+        "unit_seq": 90000033,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000196,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "SnowDepthRange",
+        "parameter_description": "depth range of snow (ice algae studies)",
+        "unit_seq": 90000059,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000197,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IceAlgaeAreal_ATP",
+        "parameter_description": "ice algae areal ATP",
+        "unit_seq": 90000033,
+        "places_before": 2,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "9.99990",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000198,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "pH_invitro_temp",
+        "parameter_description": "reference lab temperature",
+        "unit_seq": 90000005,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "-2.00000",
+        "maximum_value": "35.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000199,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ba - unfiltered_01",
+        "parameter_description": "Barium / Unfiltered_01",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": null,
+        "maximum_value": null,
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000200,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "POP",
+        "parameter_description": "particulate organic phosphate",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1500.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000201,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Diss. Organic Phosph",
+        "parameter_description": "dissolved organic Phosphorus",
+        "unit_seq": 90000020,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000202,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "extinction Coef",
+        "parameter_description": "extinction Coefficient (K)",
+        "unit_seq": 90000066,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000203,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "IncTemp_06H_N15",
+        "parameter_description": "temperature of incubation for 6hr H_N15 incubation in degrees Celcuis",
+        "unit_seq": 90000005,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-2.00000",
+        "maximum_value": "35.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000204,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "DryWeight_TotalSamp",
+        "parameter_description": "dry weight of the total sample",
+        "unit_seq": 90000019,
+        "places_before": 5,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "99999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000205,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "DryWeight_Carbon",
+        "parameter_description": "carbon content of dry weight",
+        "unit_seq": 90000019,
+        "places_before": 5,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "99999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000206,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "DryWeight_AshFree",
+        "parameter_description": "ash free dry weight value",
+        "unit_seq": 90000019,
+        "places_before": 5,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000207,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "DryWeight_calories",
+        "parameter_description": "caloric content of dry weight",
+        "unit_seq": 90000068,
+        "places_before": 5,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "99999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000208,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "PrimProd_SIS_Day_C14",
+        "parameter_description": "primary Production frim simulated insitu using C14",
+        "unit_seq": 90000007,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000209,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "delete",
+        "parameter_description": "error",
+        "unit_seq": 90000055,
+        "places_before": 4,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000210,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_POC",
+        "parameter_description": "Sedimentating_POC",
+        "unit_seq": 90000069,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000211,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_PON",
+        "parameter_description": "Sedimentating PON",
+        "unit_seq": 90000069,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000212,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_Chl",
+        "parameter_description": "Sedimentating_Chl",
+        "unit_seq": 90000069,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000213,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_Phaeo",
+        "parameter_description": "Sedimentating_Phaeo",
+        "unit_seq": 90000069,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000214,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_C",
+        "parameter_description": "Sedimentating_Carbon",
+        "unit_seq": 90000069,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000215,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_N",
+        "parameter_description": "Sedimentating_Nitrogen",
+        "unit_seq": 90000069,
+        "places_before": 5,
+        "places_after": 5,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000216,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sedimentating_IncT",
+        "parameter_description": "Sedimentating_Incubation_Time",
+        "unit_seq": 90000038,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000217,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mo-particulate",
+        "parameter_description": "Molybdenum - particulate",
+        "unit_seq": 90000027,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000218,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "B-particulate",
+        "parameter_description": "Boron - particulate",
+        "unit_seq": 90000027,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000219,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ca-particulate",
+        "parameter_description": "Calcium - particulate",
+        "unit_seq": 90000027,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "400.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000220,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mn-particulate",
+        "parameter_description": "Manganese - particulate",
+        "unit_seq": 90000027,
+        "places_before": 5,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000221,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Be-particulate",
+        "parameter_description": "Beryllium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000222,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ni-particulate",
+        "parameter_description": "Nickel - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000223,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Bi-particulate",
+        "parameter_description": "Bismuth - particulate",
+        "unit_seq": 90000018,
+        "places_before": 1,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000224,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Na-particulate",
+        "parameter_description": "Sodium - particulate",
+        "unit_seq": 90000027,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "300.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000225,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Fe-particulate",
+        "parameter_description": "Iron - particulate",
+        "unit_seq": 90000027,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000226,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Co-particulate",
+        "parameter_description": "Cobalt -  particulate",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "90.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000227,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cu-particulate",
+        "parameter_description": "Copper - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000228,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cr-particulate",
+        "parameter_description": "Chromium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000229,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "La-particulate",
+        "parameter_description": "Lanthanum - particulate",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "90.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000230,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mg-particulate",
+        "parameter_description": "Magnesium - particulate",
+        "unit_seq": 90000027,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000231,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Li-particulate",
+        "parameter_description": "Lithium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000232,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "K-particulate",
+        "parameter_description": "Potassium - particulate",
+        "unit_seq": 90000027,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000233,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cd-particulate",
+        "parameter_description": "Cadmium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000234,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Te-particulate",
+        "parameter_description": "Tellurium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000235,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ag-particulate",
+        "parameter_description": "Silver particulate",
+        "unit_seq": 90000027,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000236,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Zn-particulate",
+        "parameter_description": "Zinc - particulate",
+        "unit_seq": 90000018,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000237,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "As-particulate",
+        "parameter_description": "Arsenic - particulate",
+        "unit_seq": 90000018,
+        "places_before": 5,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000238,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ti-particulate",
+        "parameter_description": "Titanium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 4,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "9000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000239,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "V-particulate",
+        "parameter_description": "Vanadium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000240,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Tl-particulate",
+        "parameter_description": "Thallium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 1,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "9.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000241,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "U-particulate",
+        "parameter_description": "Uranium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000242,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Al-particulate",
+        "parameter_description": "Aluminium - particulate",
+        "unit_seq": 90000027,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000243,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sr-particulate",
+        "parameter_description": "Strontium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000244,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Rb-particulate",
+        "parameter_description": "Rubidium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000245,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "P-particulate",
+        "parameter_description": "Phosphorus - particulate",
+        "unit_seq": 90000027,
+        "places_before": 4,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "9000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000246,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ba-particulate",
+        "parameter_description": "Barium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 4,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000247,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Pb-particulate",
+        "parameter_description": "Lead - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000248,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Se-particulate",
+        "parameter_description": "Selenium - particulate",
+        "unit_seq": 90000018,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000249,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "S-particulate",
+        "parameter_description": "Sulphur - particulate",
+        "unit_seq": 90000027,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000250,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sn-particulate",
+        "parameter_description": "Tin - particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "250.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000251,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sb-particulate",
+        "parameter_description": "Antimony - particulate",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000252,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Al",
+        "parameter_description": "Aluminium - filtered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000253,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cr",
+        "parameter_description": "Chromium - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000254,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cd",
+        "parameter_description": "Cadmium - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 3,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000255,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "As",
+        "parameter_description": "Arsenic - filtered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000256,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Be",
+        "parameter_description": "Beryllium - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000257,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ca",
+        "parameter_description": "Calcium - filtered not preserved",
+        "unit_seq": 90000008,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000258,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "B",
+        "parameter_description": "Boron - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000259,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Pb",
+        "parameter_description": "Lead - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 3,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000260,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Se",
+        "parameter_description": "Selenium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000261,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "U",
+        "parameter_description": "Uranium -  filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000262,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Zn",
+        "parameter_description": "Zinc - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000263,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Rb",
+        "parameter_description": "Rubidium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "500.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000264,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "V",
+        "parameter_description": "Vanadium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "9.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000265,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sb",
+        "parameter_description": "Antimony - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000266,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Tl",
+        "parameter_description": "Thallium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000267,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ti",
+        "parameter_description": "Titanium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "90.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000268,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Te",
+        "parameter_description": "Tellurium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000269,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sr",
+        "parameter_description": "Strontium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000270,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sn",
+        "parameter_description": "Tin - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 1,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000271,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mo",
+        "parameter_description": "Molybdenum - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "20.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000272,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ni",
+        "parameter_description": "Nickel - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "-1.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000273,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "K",
+        "parameter_description": "Potassium - particulate",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000274,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cu",
+        "parameter_description": "Copper - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "90.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000275,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ag",
+        "parameter_description": "Silver - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "10.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000276,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Na",
+        "parameter_description": "Sodium - filtered or unfiltered",
+        "unit_seq": 90000008,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000277,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mn",
+        "parameter_description": "Manganese - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000278,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Fe",
+        "parameter_description": "Iron - Filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000279,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mg",
+        "parameter_description": "Magnesium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 0,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000280,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Li",
+        "parameter_description": "Lithium - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "-1.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000281,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "La",
+        "parameter_description": "Lanthanum - filtered or unfiltered",
+        "unit_seq": 90000019,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000282,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ba",
+        "parameter_description": "Barium - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000283,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Methyl-Hg",
+        "parameter_description": "Mercury, methyl",
+        "unit_seq": 90000069,
+        "places_before": 10,
+        "places_after": 10,
+        "minimum_value": "-1.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000284,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "P",
+        "parameter_description": "Phosphorus - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000285,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ru-particulate",
+        "parameter_description": "Ruthenium -particulate",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "-1.00000",
+        "maximum_value": "150.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000286,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "S",
+        "parameter_description": "Sulphur - filtered or unfiltered",
+        "unit_seq": 90000018,
+        "places_before": 3,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000287,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Co",
+        "parameter_description": "Cobalt - filtered not preserved",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "-1.00000",
+        "maximum_value": "30.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000288,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sulphide",
+        "parameter_description": "Sulphide",
+        "unit_seq": 90000020,
+        "places_before": 4,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000289,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "HPLC_%DVa",
+        "parameter_description": "Percent DVa",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000290,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "HPLC_%DVb",
+        "parameter_description": "Percent DVb",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000291,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "PAR_4pi_Index",
+        "parameter_description": "PAR in units of voltages",
+        "unit_seq": 90000048,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "-5.00000",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000292,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "DON",
+        "parameter_description": "Dissolved Organic Nitrogen",
+        "unit_seq": 90000020,
+        "places_before": 5,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000293,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "CDOM",
+        "parameter_description": "Coloured Dissolved Organic Matter / CTD",
+        "unit_seq": 90000019,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1500.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000294,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "CHL-SENSOR insitu",
+        "parameter_description": "aa",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 6,
+        "minimum_value": "0.00000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000295,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Clutch size",
+        "parameter_description": "The clutch size is the number of eggs produced by an individual (eg. copepod)",
+        "unit_seq": 90000000,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "200.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000297,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "C content",
+        "parameter_description": "Carbon content per individual",
+        "unit_seq": 90000072,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.99000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000298,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "N content",
+        "parameter_description": "Nitrogen content per individual",
+        "unit_seq": 90000072,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.99000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000299,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "DryWeight",
+        "parameter_description": "Dry weight of an individual",
+        "unit_seq": 90000072,
+        "places_before": 4,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "9999.99000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000300,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Egg Production Rates",
+        "parameter_description": "Egg production rate measurement as determined from experiments",
+        "unit_seq": 90000073,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "999.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000301,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Female_Maturity",
+        "parameter_description": "Percentage of females identified as mature",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000302,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Females_Spawning",
+        "parameter_description": "Measurement of the number of females that spawned",
+        "unit_seq": 90000000,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000303,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sample Size NumIndiv",
+        "parameter_description": "Sample size (number of individuals in the experiment)",
+        "unit_seq": 90000000,
+        "places_before": 3,
+        "places_after": 0,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "MARY"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000304,
+    "fields": {
+        "data_center_code": 30,
+        "parameter_name": "Chlorophyll A+B+C",
+        "parameter_description": "Chlorophyll A + B + C",
+        "unit_seq": 90000019,
+        "places_before": 3,
+        "places_after": 6,
+        "minimum_value": "0.00000",
+        "maximum_value": "250.00000",
+        "originally_entered_by": "LAFLEURC"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000306,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Al-Sediment ",
+        "parameter_description": "Aluminium - Sediment ",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "20000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000308,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ag-Sediment",
+        "parameter_description": "Silver- Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000310,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "As-Sediment",
+        "parameter_description": "Arsenic- Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000312,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Au-Sediment",
+        "parameter_description": "Gold - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000314,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ba-Sediment",
+        "parameter_description": "Barium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000316,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Be-Sediment",
+        "parameter_description": "Beryllium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000318,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Bi-Sediment",
+        "parameter_description": "Bismuth - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000320,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ca-Sediment",
+        "parameter_description": "Calcium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "5000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000322,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cd-Sediment",
+        "parameter_description": "Cadmium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000324,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ce-Sediment",
+        "parameter_description": "Cesium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000326,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Co-Sediment",
+        "parameter_description": "Cobalt - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000328,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cr-Sediment",
+        "parameter_description": "Chromium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000330,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Cu-Sediment",
+        "parameter_description": "Copper - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000332,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Fe-Sediment",
+        "parameter_description": "Iron - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "10000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000334,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Hf-Sediment",
+        "parameter_description": "Hafnium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000336,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Hg-Sediment",
+        "parameter_description": "Mercury - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000338,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "K-Sediment",
+        "parameter_description": "Potassium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000340,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "La-Sediment",
+        "parameter_description": "Lanthium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000342,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Li-Sediment",
+        "parameter_description": "Lithium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000344,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mg-Sediment",
+        "parameter_description": "Magnesium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "2000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000346,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mn-Sediment",
+        "parameter_description": "Manganese - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000348,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Mo-Sediment",
+        "parameter_description": "Molybdenum - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000350,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Na-Sediment",
+        "parameter_description": "Sodium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "10000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000352,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Nb-Sediment",
+        "parameter_description": "Niobium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000354,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ni-Sediment",
+        "parameter_description": "Nickel - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000356,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "P-Sediment",
+        "parameter_description": "Phosphorus - sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "20000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000358,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Pb-Sediment",
+        "parameter_description": "Lead - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000360,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Rb-Sediment",
+        "parameter_description": "Rubidium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000362,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "S-Sediment",
+        "parameter_description": "Sulphur - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "1000.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000364,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sb-Sediment",
+        "parameter_description": "Antimony - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000366,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sc-Sediment",
+        "parameter_description": "Scandium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000368,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Se-Sediment",
+        "parameter_description": "Selenium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000370,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sn-Sediment",
+        "parameter_description": "Tin - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000372,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Sr-Sediment",
+        "parameter_description": "Strontium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000374,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ta-Sediment",
+        "parameter_description": "Tantalum - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000376,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Th-Sediment",
+        "parameter_description": "Thorium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000378,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Ti-Sediment",
+        "parameter_description": "Titanium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000380,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "U-Sediment",
+        "parameter_description": "Uranium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000382,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "V-Sediment",
+        "parameter_description": "Vanadium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000384,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "W-Sediment",
+        "parameter_description": "Tungsten - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000386,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Y-Sediment",
+        "parameter_description": "Yttrium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000388,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Zn-Sediment",
+        "parameter_description": "Zinc - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000390,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "Zr-Sediment",
+        "parameter_description": "Zircomium - Sediment",
+        "unit_seq": 90000018,
+        "places_before": 2,
+        "places_after": 2,
+        "minimum_value": "0.00000",
+        "maximum_value": "50.00000",
+        "originally_entered_by": "BCPIERRE"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000477,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "O2 mL/L",
+        "parameter_description": "Dissolved oxygen",
+        "unit_seq": 90000009,
+        "places_before": 2,
+        "places_after": 4,
+        "minimum_value": "0.00000",
+        "maximum_value": "13.00000",
+        "originally_entered_by": "BONDS"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000478,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "CO2 (pH)",
+        "parameter_description": "Partial pressure of CO2 for pH (ocean acidification)",
+        "unit_seq": 90000076,
+        "places_before": 4,
+        "places_after": 1,
+        "minimum_value": "1.00000",
+        "maximum_value": "8000.00000",
+        "originally_entered_by": "BUGDENJ"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000479,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "SF6",
+        "parameter_description": "Sulfur Hexafluoride trace gas measurement in seawater",
+        "unit_seq": 90000077,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00001",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000480,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "TURB_T",
+        "parameter_description": "Turbidity - Beam Transmission",
+        "unit_seq": 90000001,
+        "places_before": 3,
+        "places_after": 3,
+        "minimum_value": "0.00001",
+        "maximum_value": "100.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000481,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "TURB_A",
+        "parameter_description": "Turbidity - Beam Attenuation - Min/Max values taken from WetLabs ECO BB specifications sheet.",
+        "unit_seq": 90000066,
+        "places_before": 6,
+        "places_after": 3,
+        "minimum_value": "-0.00400",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000482,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "TURB_B",
+        "parameter_description": "Turbidity - Backscattering",
+        "unit_seq": 90000079,
+        "places_before": 2,
+        "places_after": 4,
+        "minimum_value": "0.00001",
+        "maximum_value": "5.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000483,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "ALLOM",
+        "parameter_description": "Chl a allomer",
+        "unit_seq": 90000019,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "Test user"
+    }
+},
+{
+    "model": "bio_tables.bcdataretrieval",
+    "pk": 90000484,
+    "fields": {
+        "data_center_code": 20,
+        "parameter_name": "EPIMER",
+        "parameter_description": "Chl a epimer",
+        "unit_seq": 90000021,
+        "places_before": 2,
+        "places_after": 3,
+        "minimum_value": "0.00000",
+        "maximum_value": "64.00000",
+        "originally_entered_by": "Test user"
+    }
+}
+]

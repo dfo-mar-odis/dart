@@ -1,0 +1,173 @@
+[
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "vertical",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "horizontal",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "double oblique",
+        "description": "example ssip 03"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "sawtooth oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unassigned",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "surface",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ssip old stepped oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "ssip new stepped oblique",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hydrographic",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique tow with light_1",
+        "description": "oblique tow with attached strobe light"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "oblique tow with light_2",
+        "description": "oblique tow with attached unspecified light"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "multiple vertical casts",
+        "description": "vertical tow from surface to bottom to surface to bottom; unspecified number of repetitions"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 90,
+        "name": "hydrographic - integrated",
+        "description": "combined samples from discrete water 'bottles'"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 25,
+        "name": "stepped oblique - 10 min tow",
+        "description": "10 minute stepped oblique tow"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 20,
+        "name": "horizontal type2",
+        "description": "net lowered, towed horizontally at depth for specified time and then retrieved.  (Entire water column sampled)"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 20,
+        "name": "epibenthic tow",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Stepped oblique",
+        "description": "details related to sampling time at specific depths and the duration of the tow should be included in the cruise metadata"
+    }
+},
+{
+    "model": "bio_tables.bccollectionmethod",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 20,
+        "name": "gear_specific",
+        "description": "see gear description and associated sampling methodology"
+    }
+}
+]

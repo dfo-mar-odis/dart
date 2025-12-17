@@ -1,0 +1,1055 @@
+[
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not applicable",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not assigned",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "CTD pressure sensor",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "CTD conductivity sensor",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Autosal salinometer",
+        "description": "Autosal salinometer, calibrated against standard seawater."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "O2 electrode",
+        "description": "Polarographic oxygen electrode applied to a discrete sample"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000010,
+    "fields": {
+        "data_center_code": 20,
+        "name": "High Combustion IR",
+        "description": "High combustion oxidation of Carbon to CO2 and measurement by Infra Red spectrophotometry"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Dry Oxidation for TOC",
+        "description": "MacKinnon, M.D., 1978, Marine Chemistry 7:17-37"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Turner Fluorescence",
+        "description": "Chlorophyll calibrated Turner Fluorescence"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD Temperature sensor",
+        "description": "Temperature measured at depth using calibrated sensor as part of CTD package"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Reversing Themometer",
+        "description": "Specifics unknown"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD Fluorometer",
+        "description": "Insitu fluorometer calbrated and part of the CTD package"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD Oxygen Sensor",
+        "description": "Calibrated sensor as part of the CTD package"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Winkler Titration",
+        "description": "Carrit, DE and JH Carpenter. 1966. Comparison and evaluation of the currently employed modifications of the Winkler method for determining dissolved oxygen in sea-water; a NASCO Report, Sears Foundation. J Mar Res 24(3) 286-318."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD transmissometer",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD PAR meter",
+        "description": "Photosynthically active radiation sensor attached to CTD package"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 30,
+        "name": "HolmHansen",
+        "description": "Holm-Hansen, O, CJ Lorenzen, RW Holmes, JD Strickland (1965) Fluorometric determination of chlorophyll. J Cons Cons Int Explor Mer, 30 : 3-15."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Welschmeyer CHLA",
+        "description": "Welschmeyer, NA (1994) Fluorometric analysis of chlorophyll a in the presence of chlorophyll b and pheopigments. Limnol Oceanogr 39(8): 1985-1992"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Silicate / Technicon",
+        "description": "Strickland, JDH, TR Parsons (1972) A Practical Handbook of Seawater Analysis, second edition. Fish Res Board Can, Bulletin 167, 310 pp"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Phosphate / Technicon",
+        "description": "Murphy, J, JP Riley (1962) A modified single solution method for the determination of phosphate in natural waters. Anal Chim. Acta 27 : 30."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Nitrate+Nitrite / Technicon",
+        "description": "Armstrong, FAJ, CR Stearns, JDH Strickland (1967) The measurement of upwelling and subsequent biological processes by means of the Technicon Autoanalyzer and associated equipment. Deep-Sea Res 14(3) 381-389"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Nitrite / Technicon",
+        "description": "American Public Health Association (1971) Standard Methods for the examination of water and wastewater. 13th edition, pp. 240-243, Washington D.C."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000029,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Silicate / Alpkem",
+        "description": "American Public Health Association (1989) Standard Methods for the examination of water and wastewater. 17th edition, pp. 4-185, Washington D.C."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000030,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Phosphate / Alpkem",
+        "description": "EPA (1984a) Methods for chemical analysis of water and wastewater. EPA-600 / 4-79-020, « Phosphorus, all forms, » Method 365.1 (Colorimetric, Automated Ascorbic Acid)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000031,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Nitrate+Nitrite / Alpkem",
+        "description": "American Public Health Association (1989) Standard Methods for the examination of water and wastewater. 17th edition, pp. 4-185, Washington D.C."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000032,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CHN determination",
+        "description": "Ehrhardt, M (1983) Determination of particulate organic carbon and nitrogen, p. 268-275. In K Grasshoff, M Ehrhardt, K Kremling (eds), Methods of seawater analysis, 2nd revised and extended edition. Verlag Chemie GmbH, Weinheim. 419 pp"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Total suspended matter: determ",
+        "description": "Strickland, JDH, TR Parsons (1972) A Practical Handbook of Seawater Analysis, second edition (Determination of the weight of microscopic materials in seawater). Fish Res Board Can, Bulletin 167, 310 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Particulate org/inorg matter",
+        "description": "American Public Health Assoc. (1985) Fixed and volatile solids ignited at 550, pp.97-98, In Standard Methods for the examination of water and wastewater, 16th edition, Washington D.C"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000035,
+    "fields": {
+        "data_center_code": 20,
+        "name": "HPLC",
+        "description": "High Performance Liquid Chromatography (HPLC) assay of acetone extraction (GFF filtered).  Head, E.J., Horne, E.P.W. (1993) Pigment transformation and vertical flux in an area of convergence in the North Atlantic.  Deep-Sea Res. II. 40:329-346"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000036,
+    "fields": {
+        "data_center_code": 20,
+        "name": "BIO_Technicon",
+        "description": "Strain,P.M. and P.M.Clement. 1996. Nutrient and dissolved Oxygen concentrations in the LeTange Inlet, New Brunswick, in the Summer of 1994. Can.Data Rep. Fish. Aquat. Sci. 1004"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000037,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Stable Isotope",
+        "description": "F.C.Tan and P.M. Strain 1979. Carbon Isostope of Particulate Matter in the Gulf of St. Lawrence. J. Fish. Res. Board Can. 36:678-682"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 20,
+        "name": "BIO_DO_1977",
+        "description": "Levy, E.M, C.C. Cunningham, C.D. Conrad and J.D. Moffat. 1977. A titration apparatus for the determination of dissolved Oxygen in seawater. J.Fish. Res. Board. Can. 34:2218-2220."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Urea_IML_Tech",
+        "description": "Price, NM, PJ Harrison, 1987, Comparison of methods for the analysis of dissolved urea in seawater. Mar Biol 94:307-317"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000043,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CHLA/PHAEO_LG",
+        "description": "Holm-Hansen, O, CJ Lorenzen, RW Holmes, JD Strickland (1965) Fluorometric determination of chlorophyll. J Cons Cons Int Explor Mer, 30 : 3-15; Sample filtered so the pigments are from cell population >5um"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000044,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Ammonia / Technicon",
+        "description": "Van Slyke, DD and AJ Hillem, 1933, Ammonium in water and seawater, Biochem 102, p. 499"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000045,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Ammonia / Alpkem ",
+        "description": "EPA, 1984, Methods for chemical analysis of water and wastewater. EPA-600 / 4-79-020, « Nitrogen, Ammonia, » Method 350.1 (Colorimetric, Automated Phenate) STORET No. Total 00610, Dissolved 00608."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000046,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Urea / Technicon",
+        "description": "Price, NM, PJ Harrison, 1987, Comparison of methods for the analysis of dissolved urea in seawater. Mar Biol 94:307-317"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000047,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Density / sigma-t",
+        "description": "density (calculated from ctd pressure, temp, salinity)-1000"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000048,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Calorimetry",
+        "description": "Bomb Calorimeter"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000049,
+    "fields": {
+        "data_center_code": 30,
+        "name": "DryWeight Biomass",
+        "description": "Dry weight of a species obtained from a weight versus length regression\r\n"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000050,
+    "fields": {
+        "data_center_code": 20,
+        "name": "StricklandandParsons(1972)",
+        "description": "Strickland, JDH, TR Parsons (1972) A Practical Handbook of Seawater Analysis, second edition. Fish Res Board Can, Bulletin 167, 310 pp"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000053,
+    "fields": {
+        "data_center_code": 20,
+        "name": "ATP_Determination",
+        "description": "Holm-Hansen & Booth, 1966, L&O 11:510-519"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000054,
+    "fields": {
+        "data_center_code": 90,
+        "name": "spectrophotometric_1",
+        "description": "spectrophotometric analysis (Dugdale and Goering, 1967)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000055,
+    "fields": {
+        "data_center_code": 90,
+        "name": "mass_spectrometric_1",
+        "description": "mass spectrometric analysis, JGOFS Report No 19. 1996.  Protocols for the Joing Global Ocean Flux Study (JGOFS) Core Measurements.  Reprinting of IOC Manuals and Guides No 29, UNESCO, 1994. IOC, Bergen.  \n"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000057,
+    "fields": {
+        "data_center_code": 90,
+        "name": "DNA_analysis1",
+        "description": "Canadian Data Report of Fish and Aquatic Sciences #213 Phytoplankton Productivity Experiments and Nutrient Measurements in the Labrador Sea, Davis Strait"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000058,
+    "fields": {
+        "data_center_code": 90,
+        "name": "RNA_analysis1",
+        "description": "Canadian Data Report of Fish and Aquatic Sciences #213 Phytoplankton Productivity Experiments and Nutrient Measurements in the Labrador Sea, Davis Strait"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000059,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Protein_analysis1",
+        "description": "Fluorometric method based on the fluorescamine reaction described by Packard and Dortch(1975)  \n"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000060,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Tot Suspended Matter:nonFiltr",
+        "description": "American Public Health Assoc. (1985) Total non-filtrable residue (Total Suspended Matter),In Standard Methods for the examination of water and wastewater, 16th Ed., Wash.,DC."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000061,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Induction Salinometer",
+        "description": "Salinity determined using an induction salinometer"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000062,
+    "fields": {
+        "data_center_code": 20,
+        "name": "PRM_Light_Dark_Bottle_method",
+        "description": "Phytosynthetic rate measurement (PRM). Phytosynthesis by the \"light and dark bottle\" method - measure changes of dissolved oxygen"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000063,
+    "fields": {
+        "data_center_code": 20,
+        "name": "C13 method",
+        "description": "C13 method"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000064,
+    "fields": {
+        "data_center_code": 20,
+        "name": "PRM_Equation1",
+        "description": "Iz=y*It*Ki*Ks*e^-(kCHL * CHL/2)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000065,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TIC_DOE",
+        "description": "Oceanic carbon dioxide quality control:  DOE handbook of Methods; SOP 2 - determination of total dissolved inorganic carbon in sea water"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000066,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Alkalinity_DOE",
+        "description": "Oceanic carbon dioxide quality control:  DOE handbook of Methods; SOP 3 - determination of total alkalinity in sea water"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000067,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Parsons_etal(1984)",
+        "description": "Parsons, T.R., Maita, Y., Lalli, C.M. A manual of chemical and biological methods for seawater analysis. 1984. Pergamon Press, New York"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000068,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD pH sensor (calibrated)",
+        "description": "pH sensor, part of the CTD package, calibrated with lab measures"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 30,
+        "name": "CTD pH sensor (not calibrated)",
+        "description": "pH sensor, part of the CTD package, not calibrated with lab measures"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000070,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Purge-and-Trap",
+        "description": "Purge and trap system"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000071,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Guay and Faulkner",
+        "description": "Barium analytical method; Guay and Falkner, DSRII: 44, 1543-1569 (1997)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000072,
+    "fields": {
+        "data_center_code": 20,
+        "name": "IOS_Nutrients",
+        "description": "J. Barwell-Clarke and F. Whitney. 1996. Institute of Ocean Sciences  Nutrient Methods and Analysis. Canadian Technical Report of Hydrography and Ocean Sciences, No. 182, 43 p"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000073,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Platt_etal_1980",
+        "description": "Platt, T., C.L. Gallegos and W.G. Harrison. 1980. Photoinhibition of photosynthesis in natural assemblages of marine phytoplankton. J. Mar. Res 38(4):687-701"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000074,
+    "fields": {
+        "data_center_code": 20,
+        "name": "IncRad_Pyranometer",
+        "description": "Total incident radiation measured with an Eppley 40 junction pyranometer.  Output recorded on strip chart recorder.  Hourly or daily radiation estimated by integrating the record with a planimeter."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000075,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Platt_Irwin_1968",
+        "description": "Platt and Irwin.  1968. FRB Tech Report no 77.  Primary productivity measurements in St. Margaret's bay, 1967"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000076,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Potentiometric_Titration_1",
+        "description": "Potentiometric titration with curve-fitting analysis procedure.  Barron, J.L.et al (1983) A comparison of computer methods for seawater alkalinity titrations. Deep-Sea Research, 30, 441-448.   and  Johansson, O. and Wedborg, M. (1982)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000077,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Deniges_1",
+        "description": "modification of the Deniges colorimetric method (Calanus Series JFRB vol 16 no4, 1959)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000078,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Tech_AutoAnalyzerII",
+        "description": "Gordon, L.I., Jennings, J.C., Jr., Ross, A.A., and Krest, J.M., ¿A suggested Protocol for Continuous Flow Automated Analysis of Seawater Nutrients in the WOCE Hydrographic Program and the Joint Global Ocean Fluxes Study,¿ Oregon State University Coll"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000079,
+    "fields": {
+        "data_center_code": 20,
+        "name": "BIO_DO_WOCE91",
+        "description": "Culberson, C.H., Knapp, G., Stalcup, M., Williams, R.T., and Zemlyak, F., ¿A comparison of methods for the determination of dissolved oxygen in seawater,¿ Report WHPO 91-2, WOCE Hydrographic Programme Office (Aug 1991)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000080,
+    "fields": {
+        "data_center_code": 20,
+        "name": "CalorificMeasurement1",
+        "description": "Parr bomb calorimeter (see Brawn et al 1968. JFRB Caloric content of the standing crop and epibenthic invertebrates of st. Margaret's Bay, NS."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000081,
+    "fields": {
+        "data_center_code": 20,
+        "name": "StricklandandParsons(1968)",
+        "description": "Strickland, JDH, TR Parsons (1968) A manual of sea water analysis. Second edition.  Fish Res Board Can, Bulletin 125,  203 pp"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000082,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Combustion_1",
+        "description": "sample heated to 600C for period of time"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000083,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Solorzano_1969",
+        "description": "ammonia analysis using the phenolhypochlorite method of Solorzano (1969)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000084,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Winneberger_1963",
+        "description": "Winneberger, J.H., J.H. Austin and C.A. Klett. 1963.  Membrane filter weight determination. J. Water Pollution Control Fed. 35:807-813"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000085,
+    "fields": {
+        "data_center_code": 20,
+        "name": "CSAS 2008/044",
+        "description": "Harrison et al CSAS Res Doc 2008/044 Optical, chemical and biological oceanographic conditions in the Maritimes in 2007"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000086,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Kerouel_Aminot1997",
+        "description": "Kerovel, R. and A. Aminot. 1997 Fluorometric determination of ammonia in sea and estuarine waters by direct segmented flow analysis.  Mar. Chem. 57:265-275"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000087,
+    "fields": {
+        "data_center_code": 20,
+        "name": "C14_Platt_Irwin_1971",
+        "description": "Platt, T and B. Irwin (1971) Phytoplankton production and nutrients in Bedford Basin, 1969-70.  Fish.Res.Bd.Canada Tech.Rept.No.247"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000088,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Mullin_Riley(1955)",
+        "description": "The colorimetric determination of silicate with special reference to sea and natural waters.  Analytica Chim. Acta. 12: 162-176"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000089,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A1",
+        "description": "APDC/DDDC Freon extraction with back extraction into 1% HNO3 - analysis  - GFAAS Zeeman"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000090,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A2",
+        "description": "8-Hydroxyquinoline/MIBK extraction -analysis  - GFAAS Zeeman"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000091,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A3",
+        "description": "reductive precipitation using Fe/Pd with NaBH4, resolution in HNO3 - analysis - GFAAS Zeeman"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000092,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A4",
+        "description": "weighed on 5 place micro balance in clean laboratory"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000093,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A5",
+        "description": "ample filters digested (Teflon bomb)  HNO3/HF, heated to dryness, re-dissolved in HNO3 - analysis - ICP-MS (contract) "
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000094,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A6",
+        "description": "T-Hg -  EPA Method 1631, Mercury in Water by Oxidation, Purge and Trap, and Cold Vapor Atomic Fluorescence spectrometry"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000095,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A7",
+        "description": "M-Hg -  EPA Method 1630, Methyl Mercury in Water by Distillation, Aqueous Ethylation, Purge and Trap, and Cold Vapor Atomic Fluorescence spectrometry"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000096,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A8",
+        "description": "analysed at BIO using a Guildline  Autosal Salinometer to determine practical salinity as defined by the 1980 UNESCO/ICES/SCOR/IAPSO Joint Panel"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000097,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A9",
+        "description": "direct analysis after dilution -analysis  - GFAAS Zeeman"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000098,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A10",
+        "description": "APDC MIBK extraction, analysis of extract by GFAAS"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000099,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A11",
+        "description": "8-Hydroxyquinoline/MIBK extraction, analysis by GFAAS"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000100,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A12",
+        "description": "APDC MIBK extraction, analysis of extract by flame AAS"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000101,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A13",
+        "description": "APDC/DDDC Freon extraction with back extraction into 1% HNO3 - analysis  - ICP-MS (contract)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000102,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A14",
+        "description": "direct analysed by ICP-MS (contract)"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000103,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A15",
+        "description": "On site analysis with WTW Conductivity Meter  LF 197-S"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000104,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A16",
+        "description": "on site analysis with Orion 840 Dissolved Oxygen Meter "
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000105,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A17",
+        "description": "on site analysis with Orion 230A pH Meter using a Ross \"\"Sure-Flow\"\"® pH electrode\""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000106,
+    "fields": {
+        "data_center_code": 20,
+        "name": "SOP_6b",
+        "description": "SOP 6b.  Determination of the pH of sea water using the indicator dye m-cresol purple.  Dickson, A.G., Sabine, C.L. and Christian, J.R. (Eds.) 2007. Guide to best practices for Ocean CO2 Measurements.  PICES Special Publication 3, 191 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000107,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Water and Wasterwater 20th Ed",
+        "description": "Standard methods for the examination of water and wastewater:  20th Edition, 1998"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000108,
+    "fields": {
+        "data_center_code": 20,
+        "name": "JGOFS protocols",
+        "description": "Knap, A., A. Michaels, A. Close, H. Ducklow and A. Dickson (eds.) (1996) Protocols for the Joint Global Ocean Flux Study (JGOFS) Core Measurements. JGOFS Report Nr. 19, vi+170 pp. Reprint of the IOC Manuals and Guides No. 29, UNESCO 1994."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000109,
+    "fields": {
+        "data_center_code": 20,
+        "name": "CTD CDOM sensor",
+        "description": "CDOM sensor, part of the Sea-Bird CTD package"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000110,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Calanus_EggProduction",
+        "description": "Head et al"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000111,
+    "fields": {
+        "data_center_code": 20,
+        "name": "MicroscopeAnalysis",
+        "description": "Microscope methods"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000112,
+    "fields": {
+        "data_center_code": 20,
+        "name": "DryWeight_1",
+        "description": "sample dried in a 60C oven and then weighed on an electrobalance"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000113,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Richards with Thomppson (1952)",
+        "description": "Richards with Thompson (1952) as described in Strickland, JDH, TR Parsons (1968) A practical handbook of seawater analysis, First edition. Fish Res Board Can, Bulletin 167, 311 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000115,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A18",
+        "description": "Graphite Furnace Atomic Absorption Spec. (GFAAS) no Zeeman correction - direct analysis after dilution"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000117,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A19",
+        "description": "Graphite Furnace Atomic Absorption Spec. (GFAAS), liquid ion exchange alamine 336"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000119,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A20",
+        "description": "co-precipitation with Fe hydroxide"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000121,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_A21",
+        "description": "Subsample of dried core section, Total HF digestion- Equivalent to USEPA method 3052"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000122,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Alkalinity_PICES2007SOP3b",
+        "description": "Dickson, AG, CL Sabine, JR Christian (eds) 2007. Guide to best practices for ocean CO2 measurements. PICES Special Publications 3, 191 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000123,
+    "fields": {
+        "data_center_code": 30,
+        "name": "TIC_PICES2007SOP2",
+        "description": "Dickson, AG, CL Sabine, JR Christian (eds) 2007. Guide to best practices for ocean CO2 measurements. PICES Special Publications 3, 191 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000124,
+    "fields": {
+        "data_center_code": 30,
+        "name": "pH_PICES2007SOP6b",
+        "description": "Dickson, AG, CL Sabine, JR Christian (eds) 2007. Guide to best practices for ocean CO2 measurements. PICES Special Publications 3, 191 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000125,
+    "fields": {
+        "data_center_code": 30,
+        "name": "pH_PICES2007SOP6b/L&W1998",
+        "description": "Dickson, AG, CL Sabine, JR Christian (eds) 2007. Guide to best practices for ocean CO2 measurements. PICES Special Publications 3, 191 pp./Lewis, E, and DWR Wallace (1998) CO2SYS-Program developed for CO2 system "
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000126,
+    "fields": {
+        "data_center_code": 30,
+        "name": "pH_A&C1983",
+        "description": "Aminot, A, M Chaussepied (1983) Manuel des analyses chimiques en milieu marin. Centre National pour l¿exploitation des océans, Brest, 395 pp."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000127,
+    "fields": {
+        "data_center_code": 30,
+        "name": "pH_A&C1983/L&W1998",
+        "description": "Aminot,Chaussepied(1983)Manuel des analyses chimiques en milieu marin. Centre National pour l'exploitation des océans, Brest, 395 pp./Lewis, E, and DWR Wallace(1998)CO2SYS-Program developed for CO2 system "
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000128,
+    "fields": {
+        "data_center_code": 20,
+        "name": "pCO2",
+        "description": "Neill, Craig, Kenneth M. Johnson, Ernie Lewis, Douglas W. R. Wallace, 1997. Accurate Headspace Analysis of fCO2 in Discrete Water Samples Using Batch Equilibration.  Limnology and Oceanography, Vol. 42, No. 8, 1774-1783."
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000129,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Wet Oxydation for TOC",
+        "description": "Bunch, J.N. 1987. Effects of petroleum releases on bacterial numbers and microheterotrophic activity in the water and sediment of an arctic marine ecosystem. Arctic 40 (Suppl. 1): 172-183"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000130,
+    "fields": {
+        "data_center_code": 30,
+        "name": "Ammonia / Spectrophotometer",
+        "description": "Aminot,Chaussepied (1983) Manuel des analyses chimiques en milieu marin. Centre National pour l'exploitation des océans, Brest, 395 pp"
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000131,
+    "fields": {
+        "data_center_code": 20,
+        "name": "CTD Turbidity meter",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcanalysis",
+    "pk": 90000132,
+    "fields": {
+        "data_center_code": 20,
+        "name": "GO-SHIP",
+        "description": "Becker, S., et al (2019). GO-SHIP Repeat Hydrography Nutrient Manual: The precise and accurate determination of dissolved inorganic nutrients in seawater using Continuous Flow Analysis methods. GO-SHIP."
+    }
+}
+]

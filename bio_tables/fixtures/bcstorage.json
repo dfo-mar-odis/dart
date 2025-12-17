@@ -1,0 +1,218 @@
+[
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not applicable",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not assigned",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-20) > 1 year",
+        "description": "frozen at - 20 C for more than a year"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 90,
+        "name": "refrigerated",
+        "description": "refrigerated (temperature not specified)"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000005,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen",
+        "description": "frozen (temperature not specified)"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 90,
+        "name": "refrigerated (4) < 6months",
+        "description": "refrigerated at 4 C for no more than 6 months"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-80)",
+        "description": "frozen at - 80 C"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "room temperature",
+        "description": "room temperature"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-196)",
+        "description": "frozen in liquid nitrogen at -196 C"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen (-20)",
+        "description": "Kept frozen in standard chest freezer at -20 C for undisclosed period of time"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen and dessicated",
+        "description": "stored at -20C in a dessicator"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "frozen and/or dessicated",
+        "description": "sample frozen or dessicated, details not specified"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "room temp or refrigerated",
+        "description": "stored at room temperature or refrigerated"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "cool (5) and in dim light",
+        "description": "sample kept cool (5C) and in dim light"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "see preservation",
+        "description": "see preservation for storage details"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 20,
+        "name": "opaque jars",
+        "description": "samples stored in opaque containers"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_S1",
+        "description": " LDPE bottle, double bagged in ployethylene"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_S2",
+        "description": "clean polystyrene petri dish, in clean lab"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_S3",
+        "description": "Teflon bottle, double bagged in plastic"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_S4",
+        "description": "glass bottle, plastic cap with liner"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_S5",
+        "description": "LDPE bottle"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_S6",
+        "description": "Plastic envelope"
+    }
+},
+{
+    "model": "bio_tables.bcstorage",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 30,
+        "name": "frozen (-20) acetone",
+        "description": "Kept frozen in standard chest freezer at -20 C in acetone for undisclosed period of time"
+    }
+}
+]

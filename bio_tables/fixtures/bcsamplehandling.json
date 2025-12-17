@@ -1,0 +1,353 @@
+[
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000000,
+    "fields": {
+        "data_center_code": 90,
+        "name": "unknown",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000001,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not applicable",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000002,
+    "fields": {
+        "data_center_code": 90,
+        "name": "not assigned",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000003,
+    "fields": {
+        "data_center_code": 90,
+        "name": "BOD incubation",
+        "description": "5 day incubation at room temperature in the dark"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000004,
+    "fields": {
+        "data_center_code": 20,
+        "name": "C14 uptake experiment",
+        "description": ""
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000006,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Unfiltered, acidified",
+        "description": "unfiltered (whole water sample) acidified"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000007,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Unfiltered",
+        "description": "unfiltered (whole water sample)"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000008,
+    "fields": {
+        "data_center_code": 90,
+        "name": "Filtered, Methanol Extracted",
+        "description": "Subsample filtered onto GFF, frozen at least 2 Hrs, ground and extracted in Methanol"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000009,
+    "fields": {
+        "data_center_code": 20,
+        "name": "AZMP sampling protocol",
+        "description": "Mitchell, M, G Harrison, K Pauley, A Gagné, G Maillet, P Strain. 2002. Atlantic Zonal Monitoring Program Sampling Protocol. Can Tech Rep Hydrogr Ocean Sci 223, 23 p"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000011,
+    "fields": {
+        "data_center_code": 20,
+        "name": "See Analysis Description",
+        "description": "The analysis reference describes all the sampling protocols"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000012,
+    "fields": {
+        "data_center_code": 90,
+        "name": "N15uptake_filtered1",
+        "description": "Nitrogen 15 uptake experiment; GF/F filtered"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000013,
+    "fields": {
+        "data_center_code": 90,
+        "name": "GFF_filtered",
+        "description": "GF/F filtered"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000014,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Pre-filtered",
+        "description": "Sample prefiltered before analysis"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000015,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Filtered_8um",
+        "description": "Filtered (8.0 um pore size SCWP Millipore filters)"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000016,
+    "fields": {
+        "data_center_code": 20,
+        "name": "filtered",
+        "description": "filtered, filter size not indicated"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000017,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C1",
+        "description": "Sampler - 5-L LeverAction Niskin- water filtered from Niskin through tared acid cleaned 0.4µm x 47 mm diameter polycarbonate membrane filter, when clogged,  Gelman AquaPrep 4270 disk filter used to process the rest of the 2 -liter sample"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000018,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C2",
+        "description": "5-L LeverAction Niskin- unfilt water collected in LDPE 2L botl-within 5hr sample filt through tarred acid cleaned 0.4µmx47mm dia polycarb membrane filter, when clogged,Gelman AquaPrep4270 disk filt to process balance 2Lsample in portable clean bench"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000019,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C3",
+        "description": "particulate (spm) collected on tared/acid cleaned polycarbonate filter"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000020,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C4",
+        "description": "Sampler - 5-L - LeverAction Niskin -unfiltered water sample drained into Teflon bottle"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000021,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C5",
+        "description": "unfiltered water sample drained from trace metal sampler into pre-rinsed glass bottles with new caps  "
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000022,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C6",
+        "description": "Sampler - 5-L LeverAction Niskin- unfiltered water collected in LDPE 1-L bottle - within 5 hours sample filtered  through tared acid cleaned 0.4µm x 47 mm diameter polycarbonate membrane filter"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000023,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C7",
+        "description": "Sampler - 5-L LeverAction Niskin- unfiltered water collected in LDPE 1-L bottle - within 24 hours sample filtered  through tarred acid cleaned 0.4µm x 47 mm diameter polycarbonate membrane filter"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000024,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C8",
+        "description": "Sampler - 12-L Go-Flo Niskin- water filtered from Niskin through tarred acid cleaned 0.4µm x 47 mm diameter polycarbonate membrane filter"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000025,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C9",
+        "description": "Sampler - 12-L - Go-Flo Niskin -unfiltered water sample drained into Teflon bottle"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000026,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C10",
+        "description": "Masterflexpump,acid cleaned Bev-A-Line tubing,unfilt water,LDPE2-Lbtl within5hr,sample filt through tarred acid cleaned 0.4µmx47mm dia polycarb membr filt,when clogged,Gelman AquaPrep4270 disk filter,process the rest of the 2Lsamp in port clean bench"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C11",
+        "description": "Sampler - 5-L LeverAction Niskin- water filtered from Niskin through Gelman AquaPrep # 12026 cartridge filter used to process the 1 -liter sample"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000028,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C12",
+        "description": "Sampler - 5-L LeverAction Niskin- water filtered from Niskin through Gelman AquaPrep # 4270 cartridge filter used to process the 1 -liter sample"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000029,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C13",
+        "description": "Sampler - 12-L Niskin sampler with internal spring replace with shock cord - unfiltered sample collected in 2 L LDPE bottle, filtered samples through 0.4 um, 47 mm Nuclepore filters directly from Niskin using N2 pressurization."
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000030,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C14",
+        "description": "Sampler - 5-L LeverAction Niskin- water filtered from Niskin through Gelman mini capsule filter # 12123  used to process the 1 -liter sample"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000031,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C15",
+        "description": "Sampler - 5-L LeverAction Niskin-on CTD system - unfiltered water collected in HDPE 1-L bottle"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000032,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C16",
+        "description": "Sampler - 5-L LeverAction Niskin- water filtered from Niskin through tarred acid cleaned 0.4µm x 47 mm diameter polycarbonate membrane filter"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000033,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C17",
+        "description": "unfiltered water sample collected at river site by hand using plastic gloves, near surface, bottle rinsed twice prior to filling"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000034,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C18",
+        "description": "unfilt water,in LDPE1L botl-within minutes sample filt through tarred acid cleaned 0.4µmx47mm diameter polycarb membrfilt,when clogged, Gelman AquaPrep 4270 disk filter used to proc rest of the 1L samp-filt in the field using BIO pres sep-funnel"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000035,
+    "fields": {
+        "data_center_code": 20,
+        "name": "GFC_filtered",
+        "description": "GF/C filtered"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000036,
+    "fields": {
+        "data_center_code": 20,
+        "name": "GFC_filtered MgCO3",
+        "description": "GF/C filtered with MgCO3"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000038,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C19",
+        "description": "Slo Corer"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000040,
+    "fields": {
+        "data_center_code": 20,
+        "name": "TraceMetal_C20",
+        "description": "ROPOS Corer"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000041,
+    "fields": {
+        "data_center_code": 20,
+        "name": "Filtered-cellulose acetate",
+        "description": "Filtered on cellulose acetate"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000042,
+    "fields": {
+        "data_center_code": 30,
+        "name": "AZMP sampling protocol SGSL",
+        "description": "Subsample filtered on GFF frozen in acetone for undisclosed period of time."
+    }
+}
+]

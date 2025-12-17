@@ -7022,6 +7022,15 @@
     }
 },
 {
+    "model": "bio_tables.bcstorage",
+    "pk": 90000027,
+    "fields": {
+        "data_center_code": 30,
+        "name": "frozen (-20) acetone",
+        "description": "Kept frozen in standard chest freezer at -20 C in acetone for undisclosed period of time"
+    }
+},
+{
     "model": "bio_tables.bcsamplehandling",
     "pk": 90000000,
     "fields": {
@@ -7361,6 +7370,15 @@
         "data_center_code": 20,
         "name": "Filtered-cellulose acetate",
         "description": "Filtered on cellulose acetate"
+    }
+},
+{
+    "model": "bio_tables.bcsamplehandling",
+    "pk": 90000042,
+    "fields": {
+        "data_center_code": 30,
+        "name": "AZMP sampling protocol SGSL",
+        "description": "Subsample filtered on GFF frozen in acetone for undisclosed period of time."
     }
 },
 {
@@ -8011,6 +8029,16 @@
         "name": "gluteraldehyde, 0.1%",
         "description": "",
         "type": "gluteraldehyde"
+    }
+},
+{
+    "model": "bio_tables.bcpreservation",
+    "pk": 90000069,
+    "fields": {
+        "data_center_code": 30,
+        "name": "frozen (-20) acetone",
+        "description": "frozen in acetone at - 20 C",
+        "type": "frozen"
     }
 },
 {
@@ -23370,6 +23398,146 @@
         "method": "PO4_Filt_F",
         "priority": 1,
         "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001148,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000014,
+        "analysis": 90000132,
+        "preservation": 90000003,
+        "sample_handling": 90000041,
+        "storage": 90000001,
+        "unit": 90000020,
+        "description": "Nitrate+Nitrite / GO-SHIP / Fresh / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "UpsonP",
+        "method": "NO2NO3_Filt_Fsh",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001149,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000028,
+        "analysis": 90000132,
+        "preservation": 90000003,
+        "sample_handling": 90000041,
+        "storage": 90000001,
+        "unit": 90000020,
+        "description": "Ammonia / GO-SHIP / Fresh / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "UpsonP",
+        "method": "NH3_Filt_Fsh",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001150,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000027,
+        "analysis": 90000132,
+        "preservation": 90000003,
+        "sample_handling": 90000041,
+        "storage": 90000001,
+        "unit": 90000020,
+        "description": "Nitrite / GO-SHIP / Fresh / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "UpsonP",
+        "method": "NO2_Filt_Fsh",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001151,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000012,
+        "analysis": 90000132,
+        "preservation": 90000003,
+        "sample_handling": 90000041,
+        "storage": 90000001,
+        "unit": 90000020,
+        "description": "Silicate / GO-SHIP / Fresh / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "UpsonP",
+        "method": "SiO4_Filt_Fsh",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001152,
+    "fields": {
+        "data_center_code": 20,
+        "data_retrieval": 90000013,
+        "analysis": 90000132,
+        "preservation": 90000003,
+        "sample_handling": 90000041,
+        "storage": 90000001,
+        "unit": 90000020,
+        "description": "Phosphate / GO-SHIP / Fresh / Filtered",
+        "conversion_equation": "",
+        "originally_entered_by": "UpsonP",
+        "method": "PO4_Filt_Fsh",
+        "priority": 1,
+        "p_code": "",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001153,
+    "fields": {
+        "data_center_code": 30,
+        "data_retrieval": 90000029,
+        "analysis": 90000022,
+        "preservation": 90000069,
+        "sample_handling": 90000042,
+        "storage": 90000027,
+        "unit": 90000019,
+        "description": "Chlorophyll a / Holm-Hansen /sFrozen; Concentration of chlorophyll-a {chl-a} per unit volume of the water column [particulate >GF/F phase] by filtration, acetone extraction and fluorometry processed following the Holm-Hansen method and AZMP protocol.",
+        "conversion_equation": "",
+        "originally_entered_by": "BOURASSAMN",
+        "method": "Chl_a_H-H_sF_GFF",
+        "priority": 1,
+        "p_code": "CPHL",
+        "bodc_code": ""
+    }
+},
+{
+    "model": "bio_tables.bcdatatype",
+    "pk": 90001154,
+    "fields": {
+        "data_center_code": 30,
+        "data_retrieval": 90000030,
+        "analysis": 90000022,
+        "preservation": 90000069,
+        "sample_handling": 90000042,
+        "storage": 90000027,
+        "unit": 90000019,
+        "description": "Phaeophytin / Holm-Hansen /sFrozen; Concentration of phaeophytin per unit volume of the water column [particulate >GF/F phase] by filtration, acetone extraction and fluorometry processed following the Holm-Hansen method and AZMP protocol.",
+        "conversion_equation": "",
+        "originally_entered_by": "BOURASSAMN",
+        "method": "Phaeo_H-H_sF_GFF",
+        "priority": 1,
+        "p_code": "PHA_",
         "bodc_code": ""
     }
 },
@@ -110712,7 +110880,7 @@
         "authority": "C. Agardh 1830",
         "collectors_comment": "Round, F.E.; Crawford, R.M.; Mann, D.G. 1990. The diatoms : biology & morphology of the genera. Cambridge : Cambridge University Press. 747 p. (page 486).",
         "data_managers_comment": "IML_mai 2013",
-        "short_name": "",
+        "short_name": "149538",
         "tsn_itis": null,
         "aphiaid": null
     }
@@ -110738,15 +110906,15 @@
     "pk": 90000000005876,
     "fields": {
         "data_center_code": 30,
-        "tsn": -70438,
+        "tsn": 0,
         "taxonomic_name": "Entomoneis kjellmanii var. kariana",
         "best_nodc7": 703052200,
         "authority": "(Grunow in Cleve et Grunow) comb. nov.",
-        "collectors_comment": "Poulin, M., et Cardinal, A. 1983. Sea ice diatoms from Manitounuk Sound, southeastern Hudson Bay (Quebec, Canada). III. Cymbellaceae, Entomoneidaceae, Gomphonemataceae, and Nitzschiaceae. Can. J. Bot. 61: 107-118 (page 114).\r\n",
-        "data_managers_comment": "IML_mai 2013",
+        "collectors_comment": "Poulin, M., et Cardinal, A. 1983. Sea ice diatoms from Manitounuk Sound, southeastern Hudson Bay (Quebec, Canada). III. Cymbellaceae, Entomoneidaceae, Gomphonemataceae, and Nitzschiaceae. Can. J. Bot. 61: 107-118 (page 114).",
+        "data_managers_comment": "IML_mai 2013\r\nSelon WoRMS: Status uncertain > unassessed",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 681676
     }
 },
 {
@@ -110778,7 +110946,7 @@
         "data_managers_comment": "IML_mai 2013",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 233804
     }
 },
 {
@@ -111770,7 +111938,7 @@
         "data_managers_comment": "IML_PMAN_2015",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 149321
     }
 },
 {
@@ -111786,7 +111954,7 @@
         "data_managers_comment": "IML_PMAN_2015",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 149616
     }
 },
 {
@@ -111898,7 +112066,7 @@
         "data_managers_comment": "IML_PMAN 2009.",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 180342
     }
 },
 {
@@ -111906,15 +112074,15 @@
     "pk": 90000000006049,
     "fields": {
         "data_center_code": 30,
-        "tsn": -7,
+        "tsn": 0,
         "taxonomic_name": "Nitzschia brebissonii var. borealis",
         "best_nodc7": 703100100,
         "authority": "Grunow in Cleve and Möller",
         "collectors_comment": "Ref. book: L.K.  Medlin & G.R. Hasle (1990) Some Nitzschia and Related Diatom Species from Fast Ice Samples in the Arctic and Antarctic. Polar Biology, 10: 451-479p. (page 463).",
-        "data_managers_comment": "IML_PMAN 2009.",
+        "data_managers_comment": "IML_PMAN 2009.\r\nSelon WoRMS: Status uncertain > unassessed",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 577548
     }
 },
 {
@@ -112426,7 +112594,7 @@
         "data_managers_comment": "IML_PMAN 2019",
         "short_name": "",
         "tsn_itis": null,
-        "aphiaid": null
+        "aphiaid": 233359
     }
 },
 {
@@ -113483,6 +113651,54 @@
         "short_name": "Tharybis",
         "tsn_itis": null,
         "aphiaid": 104246
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006149,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 205957,
+        "taxonomic_name": "Euaugaptilus humilis",
+        "best_nodc7": 0,
+        "authority": "Farran, 1926",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 104395
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006150,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 0,
+        "taxonomic_name": "Rotundoecia teretivalvata",
+        "best_nodc7": 0,
+        "authority": "(Iles, 1953)",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 536010
+    }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006151,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 0,
+        "taxonomic_name": "Onychocorycaeus agilis",
+        "best_nodc7": 0,
+        "authority": "(Dana, 1849-1852)",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 359743
     }
 },
 {
