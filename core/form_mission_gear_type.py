@@ -4,8 +4,6 @@ import time
 
 import numpy as np
 
-from tkinter import filedialog
-
 import pandas as pd
 
 from PyQt6.QtWidgets import QFileDialog
