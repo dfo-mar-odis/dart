@@ -1344,7 +1344,7 @@ def import_btl_events(request, mission_id, **kwargs):
 
     app = settings.app if hasattr(settings, 'app') else None
     if not app:
-        return HttpResponse(soup)
+        raise EnvironmentError("Application was not initialized.")
 
     start_dir = settings.dir if hasattr(settings, 'dir') else None
 

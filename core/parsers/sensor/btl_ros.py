@@ -77,7 +77,7 @@ def validate_file(btl_stream, file_properties: dict = None):
         raise ValueError("Station Name is missing")
 
     try:
-        event = core_models.Event.objects.get(event_id=event_id)
+        event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
     except core_models.Event.DoesNotExist:
         # If no event exists for this file, then we have to check if the file has the headers required to
         # create the event. If it doesn't then this is not a fixed station BTL file and events will have
