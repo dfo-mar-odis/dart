@@ -396,10 +396,19 @@ class FixStationParser:
                     if utils.updated_value(sample, 'file', file_name):
                         update_samples.append(sample)
 
-                    discrete_value = sample.discrete_values.all().first()
-                    new_value = data[column.lower()]
-                    if utils.updated_value(discrete_value, 'value', new_value):
-                        update_discrete_samples.append(discrete_value)
+                    # sensor data doesn't have replicates, so we're always just dealing with the first discrete value
+                    discrete_value = sample.discrete_values.first()
+                    if discrete_value:
+                        # there's a case here where a mission may have been created with uncalibrated data,
+                        # then bad values were removed so the mission could be uploaded to Biochem. This
+                        # happens frequently with pH data. When calibrated BTL files are loaded later,
+                        # discrete_value will be None and utils.updated_value will raise a NoneType exception
+                        new_value = data[column.lower()]
+                        if utils.updated_value(discrete_value, 'value', new_value):
+                            update_discrete_samples.append(discrete_value)
+                    else:
+                        discrete_value = core_models.DiscreteSampleValue(sample=sample, value=data[column.lower()])
+                        new_discrete_samples.append(discrete_value)
                 else:
                     sample = core_models.Sample(bottle=bottle, type=sample_types[column], file=file_name)
                     new_samples.append(sample)
