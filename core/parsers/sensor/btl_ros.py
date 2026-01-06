@@ -396,6 +396,8 @@ class FixStationParser:
                     if utils.updated_value(sample, 'file', file_name):
                         update_samples.append(sample)
 
+                    # Todo: There's a case here where uncalibrated data was loaded and bad PH values were removed.
+                    #       in that case discrete_value here is None and utils.updated_value raises an exception.
                     discrete_value = sample.discrete_values.all().first()
                     new_value = data[column.lower()]
                     if utils.updated_value(discrete_value, 'value', new_value):

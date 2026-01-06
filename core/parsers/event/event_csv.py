@@ -29,6 +29,13 @@ def create_events(mission: models.Mission, data_frame: pd.DataFrame) -> dict:
         inst_type = get_instrument_type(row['INSTRUMENT_TYPE'])
         instrument = models.Instrument.objects.get(name__iexact=row['INSTRUMENT_NAME'], type=inst_type)
 
+        # if the event already exists in the database we're going to update it on our first pass
+        # if it doesn't exist we'll create a new event.
+        # if the event was added to the event map for either updating or creation, we're done
+        if (row['EVENT_ID'], instrument.pk) in events_map:
+            processed += 1
+            continue
+
         try:
             event = models.Event.objects.get(mission=mission, event_id=row['EVENT_ID'],
                                              instrument__type=instrument.type,
@@ -50,7 +57,7 @@ def create_events(mission: models.Mission, data_frame: pd.DataFrame) -> dict:
         event.flow_start = row['FLOW_DEPLOY'] if row['FLOW_DEPLOY'] else None
         event.flow_end = row['FLOW_RECOVER'] if row['FLOW_RECOVER'] else None
 
-        events_map[(row['EVENT_ID'], event.instrument.pk)] = event
+        events_map[(row['EVENT_ID'], instrument.pk)] = event
         processed += 1
 
     if create_events:
