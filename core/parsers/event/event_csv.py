@@ -2,8 +2,8 @@ import pandas as pd
 import io
 
 from core import models
-from core.models import ActionType
 from settingsdb import models as settings_models
+from django.utils.translation import gettext_lazy as _
 
 import logging
 
@@ -12,9 +12,6 @@ logger_notifications = logging.getLogger('dart.user.csv')
 
 
 def create_events(mission: models.Mission, data_frame: pd.DataFrame) -> dict:
-
-
-    # Create all events
     events_map = {}  # Map of event_id to Event object for quick lookup
 
     total_rows = data_frame.shape[0]
@@ -70,8 +67,6 @@ def create_events(mission: models.Mission, data_frame: pd.DataFrame) -> dict:
 
 
 def create_actions(file_name: str, data_frame: pd.DataFrame, events_map: dict):
-    create_actions = []
-
     total_rows = data_frame.shape[0]
     processed = 1
     for index, row in data_frame.iterrows():
@@ -101,32 +96,132 @@ def create_actions(file_name: str, data_frame: pd.DataFrame, events_map: dict):
         processed += 1
 
 
-def parse(mission: models.Mission, file_name: str, data: io.StringIO):
-    data_frame = pd.read_csv(data, na_filter=False)
-    data_frame.columns = data_frame.columns.str.upper()
+def rename_dataframe_fields(data_frame: pd.DataFrame):
+    # these are some common field names that might be used and a mapping to what the CSV parser would prefer
+    rename_fields = [
+        ('SAMPLE_ID','STARTING_ID'),
+        ('DATE_TIME (UTC)','DATE_TIME')
+    ]
+    for fields in rename_fields:
+        if fields[0] in data_frame.columns and fields[1] not in data_frame.columns:
+            data_frame[fields[1]] = data_frame[fields[0]]
 
-    # If the CSV provides SAMPLE_ID (e.g. "Sample_id") but not STARTING_ID,
-    # use SAMPLE_ID as STARTING_ID so downstream code can rely on STARTING_ID.
-    if 'SAMPLE_ID' in data_frame.columns and 'STARTING_ID' not in data_frame.columns:
-        data_frame['STARTING_ID'] = data_frame['SAMPLE_ID']
 
-    if 'DATE_TIME (UTC)' in data_frame.columns and 'DATE_TIME' not in data_frame.columns:
-        data_frame['DATE_TIME'] = data_frame['DATE_TIME (UTC)']
-
+def normalize_date_format(data_frame: pd.DataFrame):
     # Normalize DATE_TIME column to a consistent datetime format
     if 'DATE_TIME' in data_frame.columns:
         try:
             data_frame['DATE_TIME'] = pd.to_datetime(data_frame['DATE_TIME'], errors='coerce')
             if data_frame['DATE_TIME'].isnull().any():
                 logger.warning("Some DATE_TIME values could not be parsed and were set to NaT.")
-        except Exception as e:
-            logger.error(f"Error normalizing DATE_TIME column: {e}")
+        except Exception as ex:
+            logger.exception(ex)
             raise
+
+
+def normal_csv_parser(mission: models.Mission, file_name: str, data_frame: pd.DataFrame):
+    # Step 2: Create or Update events
+    event_columns = ['EVENT_ID', 'STATION', 'STARTING_ID', 'ENDING_ID', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE',
+                     'WIRE_ANGLE', 'WIRE_OUT', 'FLOW_DEPLOY', 'FLOW_RECOVER']
+
+    events_df = data_frame[event_columns]
+    events_map = create_events(mission, events_df)
+
+    # Step 3: Process actions (all rows) linked to events
+
+    action_columns = ['EVENT_ID', 'ACTION', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE', 'DATE_TIME',
+                      'LATITUDE', 'LONGITUDE', 'SOUNDING', 'DATA_COLLECTOR', 'COMMENT']
+
+    actions_df = data_frame[action_columns]
+
+    create_actions(file_name, actions_df, events_map)
+
+
+def fixed_station_csv_parser(mission: models.Mission, file_name: str, data_frame: pd.DataFrame):
+    # The create events function is going to add events that don't exist to the database. Later the create_actions
+    # function will add the actions from the dataframe to the events returned in the events_map.
+    #
+    # Presuming the created events are net events, we might be dealing with a fixed station bulk load csv:
+    # If the LATITUDE, LONGITUDE and SOUNDING columns are missing from the dataframe the create_actions function
+    # is going to try and find an existing CTD event with a matching EVENT_ID and will use that event's first action
+    # to get the lat/lon and sounding for the newly created net event.
+    #
+    # If the LATITUDE, LONGITUDE and SOUNDING columns are missing We should check the dataframe for net events
+    # to be created and remove events that don't have existing CTD events.
+
+    # if this is a fixed station csv, these columns will likely be missing from the dataframe
+    # location_columns = ['LATITUDE', 'LONGITUDE', 'SOUNDING', 'DATA_COLLECTOR']
+
+    action_columns = ['EVENT_ID', 'ACTION', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE', 'DATE_TIME']
+    # comments is an optional column
+    if 'COMMENT' in data_frame.columns:
+        action_columns.append('COMMENT')
+
+    # Check for existing CTD event with matching EVENT_ID
+    actions_df = data_frame[action_columns].copy()
+
+    df_event_ids = actions_df['EVENT_ID'].unique().tolist()
+    ctd_event_query = models.Event.objects.filter(event_id__in=df_event_ids, instrument__type=models.InstrumentType.ctd)
+    ctd_events: dict[int, models.Event] = {event.event_id: event for event in ctd_event_query}
+
+    # This will throw an exception if these fields aren't present in the dataframe, but that's good
+    # because we don't want to process random CSV files.
+    event_columns = ['EVENT_ID', 'STATION', 'STARTING_ID', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE',
+                     'WIRE_ANGLE', 'WIRE_OUT', 'FLOW_DEPLOY', 'FLOW_RECOVER']
+
+    # for net events the ending ID isn't necessary and might not be included in the CSV file if this is a fixed station.
+    if 'ENDING_ID' in data_frame.columns:
+        event_columns.append('ENDING_ID')
+
+    events_df = data_frame[event_columns].copy()
+
+    # we don't want to create events for nets that don't have a matching CTD event.
+    net_event_keys = events_df['EVENT_ID'].unique().tolist()
+    ctd_event_keys = ctd_events.keys()
+
+    # find the difference between these two key arrays and remove the elements from the events_df
+    drop_events = net_event_keys - ctd_event_keys
+
+    # Remove rows from the dataframe where an element in drop_events exists in the EVENT_ID column
+    if drop_events:
+        for evt in drop_events:
+            message = _("Missing CTD event for Net event creation")
+            models.FileError.objects.create(mission=mission, file_name=file_name, message=message, line=evt,
+                                            code=200, type=models.ErrorType.missing_id)
+
+        events_df = events_df[~events_df['EVENT_ID'].isin(drop_events)]
+        actions_df = actions_df[~actions_df['EVENT_ID'].isin(drop_events)]
+
+    events_map = create_events(mission, events_df)
+
+    # Step 3: Process actions (all rows) linked to events
+
+    for index, row in actions_df.iterrows():
+        event = ctd_events[row['EVENT_ID']]
+        first_action = event.actions.first()
+        if first_action:
+            actions_df.at[index, 'LATITUDE'] = first_action.latitude
+            actions_df.at[index, 'LONGITUDE'] = first_action.longitude
+            actions_df.at[index, 'SOUNDING'] = first_action.sounding
+            actions_df.at[index, 'DATA_COLLECTOR'] = first_action.data_collector
+
+    create_actions(file_name, actions_df, events_map)
+
+
+def parse(mission: models.Mission, file_name: str, data: io.StringIO):
+    models.FileError.objects.filter(file_name__iexact=file_name, code__range=[200, 299]).delete()
+    data_frame = pd.read_csv(data, na_filter=False)
+
+    data_frame.columns = data_frame.columns.str.upper()
+    rename_dataframe_fields(data_frame)
+    normalize_date_format(data_frame)
+
 
     # Step 1: Get all the stations and instruments from the data frame and make sure they exist
     # to be used in the following steps
 
-    # Process stations and instruments
+    # Process stations and instruments by finding unique strings in the dataframe and making sure
+    # they exist in the mission database to be used when creating events later.
     stations = data_frame['STATION'].unique().tolist()
     process_stations(stations)
 
@@ -135,68 +230,12 @@ def parse(mission: models.Mission, file_name: str, data: io.StringIO):
 
     logger_notifications.info("Processing Events")
 
-    # Step 2: Create or Update events
-
-    # This will throw an exception if these fields aren't present in the dataframe, but that's good
-    # because we don't want to process random CSV files.
-    event_columns = ['EVENT_ID', 'STATION', 'STARTING_ID', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE', 'WIRE_ANGLE',
-                     'WIRE_OUT', 'FLOW_DEPLOY', 'FLOW_RECOVER']
-
-    # for net events the ending ID isn't necessary and might not be included in the CSV file.
-    if 'ENDING_ID' in data_frame.columns:
-        event_columns.append('ENDING_ID')
-
-    events_df = data_frame[event_columns]
-    # events_df = events_df.drop_duplicates(subset=['EVENT_ID'])
-
-    events_map = create_events(mission, events_df)
-
-    # Step 3: Process actions (all rows) linked to events
-
-    action_columns = ['EVENT_ID', 'ACTION', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE', 'DATE_TIME', 'LATITUDE', 'LONGITUDE',
-                      'SOUNDING', 'DATA_COLLECTOR']
-
-    # comments is an optional column
-    if 'COMMENT' in data_frame.columns:
-        action_columns.append('COMMENT')
-
-    try:
-        # This will throw an exception if the action fields aren't present in the dataframe.
-        # Not so good here because the events were already created and now won't have their actions created.
-        # But if an existing CTD Event then we can re-use the lat/lon, sounding and data collector from that event
-        actions_df = data_frame[action_columns]
-    except KeyError as ex:
-        missing_columns = [col for col in action_columns if col not in data_frame.columns]
-        logger.error(f"Missing columns in actions data: {missing_columns}")
-
-        if 'EVENT_ID' not in missing_columns:
-            # Check for existing CTD event with matching EVENT_ID
-            actions_df = data_frame[['EVENT_ID', 'ACTION', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE', 'DATE_TIME']].copy()
-            # if a matching CTD event doesn't exist then we have to drop the actions from
-            # the data frame. Otherwise, none of the actions will be processed for events
-            # we do have data for.
-            rows_to_drop = []
-
-            for index, row in actions_df.iterrows():
-                try:
-                    event = models.Event.objects.get(event_id=row['EVENT_ID'],
-                                                     instrument__type=models.InstrumentType.ctd)
-                    first_action = event.actions.first()
-                    if first_action:
-                        actions_df.at[index, 'LATITUDE'] = first_action.latitude
-                        actions_df.at[index, 'LONGITUDE'] = first_action.longitude
-                        actions_df.at[index, 'SOUNDING'] = first_action.sounding
-                        actions_df.at[index, 'DATA_COLLECTOR'] = first_action.data_collector
-                except models.Event.DoesNotExist:
-                    logger.warning(f"No matching CTD event found for EVENT_ID: {row['EVENT_ID']}")
-                    rows_to_drop.append(index)
-
-            # Drop rows with no matching CTD event
-            actions_df.drop(index=rows_to_drop, inplace=True)
-        else:
-            raise ex
-
-    create_actions(file_name, actions_df, events_map)
+    # Check for fixed_station_test_columns in the dataframe
+    fixed_station_test_columns = ['LATITUDE', 'LONGITUDE', 'SOUNDING', 'DATA_COLLECTOR']
+    if all(column in data_frame.columns for column in fixed_station_test_columns):
+        normal_csv_parser(mission, file_name, data_frame)
+    else:
+        fixed_station_csv_parser(mission, file_name, data_frame)
 
 
 def process_stations(station_list: list[str]):
@@ -260,3 +299,5 @@ def get_action_type(action: str) -> models.ActionType:
         return models.ActionType.aborted
     else:
         return models.ActionType.other
+
+
