@@ -349,6 +349,12 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
         except core_models.Event.DoesNotExist as e:
             message = _("Net event matching ID doesn't exist.")
             raise ValueError(message)
+        except core_models.Event.MultipleObjectsReturned as e:
+            event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.net,
+                                                  instrument__name__icontains=mesh_size)
+
+        if not event.end_date:
+            raise ValueError(_("Event is missing required actions"))
 
         bottle = core_models.Bottle(bottle_id=bottle_id, event=event, gear_type_id=gear_type, mesh_size=mesh_size,
                                     pressure=start_pressure, end_pressure=end_pressure, closed=event.end_date)
