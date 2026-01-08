@@ -310,10 +310,6 @@ def is_number(s):
 def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, existing_bottles: QuerySet,
                          gear_type: int, mesh_size: int, start_pressure: float = None, end_pressure: float = 0):
 
-    # we don't actually create the bottles here, we check to see if a bottle object exists in the existing bottles
-    # array, if not then we check to see if it exists in the create_bottles dictionary, if not we create a bottle
-    # object and add it to the create_bottles dictionary. Later when it's convenient we'll add the bottles
-    # in the create_bottle dictionary to the database in a bulk create.
     if bottle_id in create_bottles.keys():
         # use a recently created bottle if it exists, but isn't in the database
          bottle = create_bottles[bottle_id]
@@ -358,16 +354,12 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
 
         bottle = core_models.Bottle(bottle_id=bottle_id, event=event, gear_type_id=gear_type, mesh_size=mesh_size,
                                     pressure=start_pressure, end_pressure=end_pressure, closed=event.end_date)
-
+        bottle.save()
         create_bottles[bottle_id] = bottle
 
     return bottle
 
-def write_plankton_data(filename, errors, create_bottles, create_plankton, update_plankton):
-    if len(create_bottles) > 0:
-        logger.info(_("Creating Net Bottles"))
-        core_models.Bottle.objects.bulk_create(create_bottles.values())
-
+def write_plankton_data(filename, errors, create_plankton, update_plankton):
     if len(create_plankton) > 0:
         logger.info(_("Creating Zooplankton Samples"))
         try:
@@ -565,7 +557,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     if len(errors) > 0:
         core_models.FileError.objects.bulk_create(errors)
     else:
-        write_plankton_data(filename, errors, create_bottles, create_plankton, update_plankton)
+        write_plankton_data(filename, errors, create_plankton, update_plankton)
 
 
 def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataframe: DataFrame, row_mapping=None):
@@ -693,4 +685,4 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             plankton = create_plankton[plankton_key]
             set_qc_flag(plankton, what_was_it, value)
 
-    write_plankton_data(filename, errors, create_bottles, create_plankton, update_plankton)
+    write_plankton_data(filename, errors, create_plankton, update_plankton)
