@@ -70,8 +70,14 @@ def validate_file(btl_stream, file_properties: dict = None):
     # Instrument name is optional. If not provided the name of a CTD is 'CTD'
     # instrument_name = self.get_mapping('instrument_name')
 
+    if event_label.upper() not in file_properties.keys():
+        raise KeyError(_('Missing header variable') + " : " + event_label.upper())
+
     if (event_id := file_properties.get(event_label.upper(), event_id)) is None:
         raise ValueError("Event ID is missing")
+
+    if station_label.upper() not in file_properties.keys():
+        raise KeyError(_('Missing header variable') + " : " + station_label.upper())
 
     if (station_name := file_properties.get(station_label.upper(), station_name)) is None:
         raise ValueError("Station Name is missing")
@@ -82,15 +88,24 @@ def validate_file(btl_stream, file_properties: dict = None):
         # If no event exists for this file, then we have to check if the file has the headers required to
         # create the event. If it doesn't then this is not a fixed station BTL file and events will have
         # to be loaded first. We've already checked for the event ID and the Station name
-        if (file_properties.get(station_label.upper(), sounding)) is None:
+        if sounding_label.upper() not in file_properties.keys():
+            raise KeyError(_('Missing header variable') + " : " + sounding_label.upper())
+
+        if (file_properties.get(sounding_label.upper(), sounding)) is None:
             message = _("File is missing a sounding header, you may have to load events from Elog, ANDES or CSV first")
             raise ValueError(message)
 
-        if (file_properties.get(station_label.upper(), latitude)) is None:
+        if lat_label.upper() not in file_properties.keys():
+            raise KeyError(_('Missing header variable') + " : " + sounding_label.upper())
+
+        if (file_properties.get(lat_label.upper(), latitude)) is None:
             message = _("File is missing a latitude header, you may have to load events from Elog, ANDES or CSV first")
             raise ValueError(message)
 
-        if (file_properties.get(station_label.upper(), longitude)) is None:
+        if lon_label.upper() not in file_properties.keys():
+            raise KeyError(_('Missing header variable') + " : " + sounding_label.upper())
+
+        if (file_properties.get(lon_label.upper(), longitude)) is None:
             message = _("File is missing a longitude header, you may have to load events from Elog, ANDES or CSV first")
             raise ValueError(message)
 
@@ -647,9 +662,12 @@ class FixStationBulkParser:
         instrument_cache = {}
         station = None
 
-        # Fetch existing events as a list of (event_id, instrument.pk) tuples
-        existing_events = list(self.mission.events.values_list('event_id', 'instrument__pk'))
+        # Fetch existing events as a list of event_ids tuples
+        existing_events = self.mission.events.filter(instrument__type=core_models.InstrumentType.ctd).values_list('event_id', flat=True)
         bottle_count = len(self.file_list)
+
+        serial_number_default = mapping['instrument_name'].get('default', 'CTD')
+
         for index, file in enumerate(self.file_list):
             logger_notifications.info(_("Updating events") + " : %d/%d", (index + 1), bottle_count)
             file_name = os.path.basename(file)
@@ -658,9 +676,11 @@ class FixStationBulkParser:
             btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
             try:
                 validate_file(btl_data)
+            except KeyError as e:
+                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=104))
+                continue
             except ValueError as e:
-                message = _("Missing BTL headers or missing event") + f": {file_name}: {e}"
-                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=message, code=103))
+                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=103))
                 continue
 
             try:
@@ -675,30 +695,29 @@ class FixStationBulkParser:
                 cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
                 event_properties: dict = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
 
-                if station is None:
-                    # Get station once loop (since it's constant)
-                    station_name = event_properties.get(label_station)
-                    try:
-                        station = core_models.Station.objects.get(name__iexact=station_name)
-                    except core_models.Station.DoesNotExist:
-                        station = core_models.Station.objects.create(name=station_name)
-
                 event_id = event_properties.get(label_event)
                 parsed_events[event_id] = [file, ros_file]
 
-                serial_number_default = mapping['instrument_name'].get('default', 'CTD')
-                serial_number = event_properties.get(label_serial_number, serial_number_default)
-                ctd_instrument = core_models.InstrumentType.ctd
+                if int(event_id) not in existing_events:
+                    if station is None:
+                        # Get station once loop (since it's constant)
+                        station_name = event_properties.get(label_station)
+                        try:
+                            station = core_models.Station.objects.get(name__iexact=station_name)
+                        except core_models.Station.DoesNotExist:
+                            station = core_models.Station.objects.create(name=station_name)
 
-                # Get or create instrument (using cache)
-                instrument_key = (ctd_instrument, serial_number)
-                if instrument_key not in instrument_cache:
-                    instrument_cache[instrument_key] = core_models.Instrument.objects.get_or_create(
-                        type=ctd_instrument, name=serial_number)[0]
+                    serial_number = event_properties.get(label_serial_number, serial_number_default)
+                    ctd_instrument = core_models.InstrumentType.ctd
 
-                instrument = instrument_cache[instrument_key]
+                    # Get or create instrument (using cache)
+                    instrument_key = (ctd_instrument, serial_number)
+                    if instrument_key not in instrument_cache:
+                        instrument_cache[instrument_key] = core_models.Instrument.objects.get_or_create(
+                            type=ctd_instrument, name=serial_number)[0]
 
-                if (int(event_id), instrument.pk) not in existing_events:
+                    instrument = instrument_cache[instrument_key]
+
                     # Get or create event
                     event = core_models.Event(
                         mission=self.mission,
@@ -723,6 +742,23 @@ class FixStationBulkParser:
 
         if create_events:
             core_models.Event.objects.bulk_create(create_events)
+
+        # we're going to attach the event files to the event.
+        new_files = []
+        btl_file_type = core_models.FileType.objects.get_or_create(name='BTL', extension='BTL',
+                                                                   description='Bottle files')[0]
+        ros_file_type = core_models.FileType.objects.get_or_create(name='ROS', extension='ROS',
+                                                                   description='Rosette files')[0]
+        for event_id in parsed_events:
+            btl_file = os.path.basename(parsed_events[event_id][0])
+            ros_file = os.path.basename(parsed_events[event_id][1])
+            event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
+            event.files.filter(file_type__in=[btl_file_type, ros_file_type]).delete()
+            new_files.append(core_models.EventFile(event=event, file_name=btl_file, file_type=btl_file_type))
+            new_files.append(core_models.EventFile(event=event, file_name=ros_file, file_type=ros_file_type))
+
+        if new_files:
+            core_models.EventFile.objects.bulk_create(new_files)
 
         return parsed_events
 
@@ -768,7 +804,9 @@ class FixStationBulkParser:
 
         core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=100).delete()
         core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=101).delete()
+        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=102).delete()
         core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=103).delete()
+        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=104).delete()
 
         parsed_events = self.create_events()
         self.process_bottles(parsed_events)

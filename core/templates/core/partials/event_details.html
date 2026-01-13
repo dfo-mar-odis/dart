@@ -6,7 +6,7 @@
 
 {% if event %}
 <p><b>{% trans 'Instrument: ' %}</b><span>{{ event.instrument }}</span></p>
-{% if event.files %}<p><b>{% trans 'File: ' %}</b><span>{{ event.files }}</span></p>{% endif %}
+{% if event.files %}<p><b>{% trans 'File: ' %}</b><span>{% for file in event.files.all %}{{ file.file_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></p>{% endif %}
 
 {% for error in event.validation_errors.all %}
     <div class="alert alert-danger" role="alert">
