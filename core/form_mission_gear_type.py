@@ -318,11 +318,10 @@ def validate_event_and_bottle(df):
         except core_models.Event.DoesNotExist:
             errors.append((idx + 1, f"No Bottle with bottle_id={sample_id} for Event {event_id}"))
 
-    if len(errors) == 0 and len(update_bottles) > 0:
+    if len(update_bottles) > 0:
         core_models.Bottle.objects.bulk_update(update_bottles, ['volume'])
-        return None
 
-    return errors
+    return errors if len(errors) > 0 else None
 
 
 def process_file(mission, file_path):
