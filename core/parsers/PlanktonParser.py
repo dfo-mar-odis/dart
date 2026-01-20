@@ -1,5 +1,6 @@
 import logging
 import numpy as np
+from django.template.backends.django import reraise
 
 from pandas import DataFrame
 
@@ -307,6 +308,16 @@ def is_number(s):
     return True
 
 
+def validate_bottle_event(event: core_models.Event, bottle_id: int):
+    # Throws an exception if the bottle doesn't validate
+    if bottle_id < event.sample_id:
+        raise ValueError(_("Bottle ID doesn't match expected IDs for the event"))
+    elif event.end_sample_id and bottle_id > event.end_sample_id:
+        raise ValueError(_("Bottle ID doesn't match expected IDs for the event"))
+    elif bottle_id > event.sample_id:
+        raise ValueError(_("Bottle ID doesn't match expected IDs for the event"))
+
+
 def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, existing_bottles: QuerySet,
                          gear_type: int, mesh_size: int, start_pressure: float = None, end_pressure: float = 0):
 
@@ -316,6 +327,12 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
     elif (bottle := existing_bottles.filter(bottle_id=bottle_id)).exists():
         # use an existing bottle if one hasn't been recently created
         bottle = bottle.first()
+
+        try:
+            validate_bottle_event(bottle.event, bottle.bottle_id)
+        except ValueError as ex:
+            bottle.delete()
+            raise ex
 
         # update the bottle attributes if required.
         updates = set()
@@ -351,6 +368,11 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
 
         if not event.end_date:
             raise ValueError(_("Event is missing required actions"))
+
+        try:
+            validate_bottle_event(event, bottle_id)
+        except ValueError as ex:
+            raise ex
 
         bottle = core_models.Bottle(bottle_id=bottle_id, event=event, gear_type_id=gear_type, mesh_size=mesh_size,
                                     pressure=start_pressure, end_pressure=end_pressure, closed=event.end_date)
