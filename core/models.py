@@ -482,7 +482,7 @@ class Bottle(models.Model):
         return [90000010, None]
 
     def __str__(self):
-        return f"{int(self.bottle_id)}:{int(self.bottle_number)}:{self.pressure}:[{self.latitude}, {self.longitude}]"
+        return f"{int(self.bottle_id)}:{self.pressure}:[{self.latitude}, {self.longitude}]"
 
     class Meta:
         unique_together = ['event', 'bottle_number']
