@@ -103,10 +103,10 @@ class TestFixStationParser(DartTestCase):
         btl_sample_file = open(btl_path, mode='rb')
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(KeyError) as context:
             validate_file(btl_data)
 
-        self.assertEqual(str(context.exception), "Event ID is missing")
+        self.assertEqual(str(context.exception), "'Missing header variable : EVENT_NUMBER'")
 
     @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_station_name')
     def test_validate_file_missing_station_name(self):
@@ -127,10 +127,10 @@ class TestFixStationParser(DartTestCase):
         btl_sample_file = open(btl_path, mode='rb')
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
-        with self.assertRaises(ValueError) as context:
+        with self.assertRaises(KeyError) as context:
             validate_file(btl_data)
 
-        self.assertEqual(str(context.exception), "Station Name is missing")
+        self.assertEqual(str(context.exception), "'Missing header variable : STATION_NAME'")
 
     @tag('parser_fixstation_validation', 'parsers_fixstation_test_validate_file_missing_sounding')
     def test_validate_file_missing_sounding(self):

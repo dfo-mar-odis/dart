@@ -141,8 +141,11 @@ class TestFormPlanktonLoad(DartTestCase):
         file = os.path.join(file_location, file_name)
 
         # the events will have to exist for this to load, the numbers come from the 'event' column of the sample file
-        core_factory.NetEventFactory(mission=self.mission, event_id=2)
-        core_factory.NetEventFactory(mission=self.mission, event_id=88)
+        net_2 = core_factory.NetEventFactory(mission=self.mission, event_id=2, sample_id=488275)
+        net_88 = core_factory.NetEventFactory(mission=self.mission, event_id=88, sample_id=488685)
+
+        core_factory.BottleFactory(event=net_2, bottle_id=488275)
+        core_factory.BottleFactory(event=net_88, bottle_id=488685)
 
         url = reverse(self.import_plankton_url, args=[self.mission.pk])
         with open(file, 'rb') as fp:

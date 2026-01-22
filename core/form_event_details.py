@@ -23,9 +23,9 @@ from PyQt6.QtWidgets import QFileDialog
 from render_block import render_block_to_string
 
 from core import forms as core_forms, models
-from core.parsers import FilterLogParser
 from core.parsers.event import elog, andes, event_csv
 from core.parsers.sensor.btl_ros import FixStationParser
+from core.parsers.sensor.btl_ros import logger_notifications as fixed_station_logger
 
 from config.utils import load_svg
 from core.parsers.sensor.qat import QATParser
@@ -1114,47 +1114,6 @@ def delete_attachment(request, attachment_id):
     return HttpResponse()
 
 
-def load_filter_log(request, event_id):
-    soup = BeautifulSoup('', 'html.parser')
-
-    if request.method == 'GET':
-        attrs = {
-            'alert_area_id': "div_id_card_message_area_event_details",
-            # make sure not to use _ as gettext*_lazy*, only use _ as django.utils.translation.gettext
-            'message': _("Loading"),
-            'logger': FilterLogParser.logger_notifications.name,
-            'hx-post': request.path,
-            'hx-trigger': 'load',
-            'hx-target': "#div_id_card_message_area_event_details"
-        }
-        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
-
-    event = models.Event.objects.get(pk=event_id)
-    time.sleep(2)
-    file = request.FILES['filter_log']
-    FilterLogParser.parse(event, file.name, file)
-
-    soup = BeautifulSoup('', 'html.parser')
-    soup.append(msg_area := soup.new_tag("div", id="div_id_card_message_area_event_details"))
-    if models.FileError.objects.filter(file_name=file.name).exists():
-        attrs = {
-            'component_id': "div_id_card_message_area_event_details_alert",
-            'message': _("Issues Processing File"),
-            'alert_type': 'danger'
-        }
-        msg_area.append(core_forms.blank_alert(**attrs))
-
-    # we have to clear the file input or when the user clicks the button to load the same file, nothing will happen
-    input_html = (f'<input id="btn_id_filter_log_event_details" type="file" name="filter_log" accept=".xlsx" '
-                  f'multiple="false" hx-get="{request.path}" hx-trigger="change" hx-swap="none" '
-                  f'hx-swap-oob="true" class="invisible"/>')
-    soup.append(BeautifulSoup(input_html))
-
-    response = HttpResponse(soup)
-    response['Hx-Trigger'] = "event_selected"
-    return response
-
-
 def load_bottle_file(request, event_id):
     soup = BeautifulSoup('', 'html.parser')
 
@@ -1163,7 +1122,7 @@ def load_bottle_file(request, event_id):
             'alert_area_id': "div_id_card_message_area_event_details",
             # make sure not to use _ as gettext*_lazy*, only use _ as django.utils.translation.gettext
             'message': _("Loading"),
-            'logger': FilterLogParser.logger_notifications.name,
+            'logger': fixed_station_logger.name,
             'hx-post': request.path,
             'hx-trigger': 'load',
             'hx-target': "#div_id_card_message_area_event_details"
@@ -1439,6 +1398,5 @@ event_detail_urls = [
     path(f'event/attachment/edit/<int:attachment_id>/', edit_attachment, name="form_event_edit_attachment"),
     path(f'event/attachment/delete/<int:attachment_id>/', delete_attachment, name="form_event_delete_attachment"),
 
-    path(f'event/fixstation/<int:event_id>/', load_filter_log, name="form_event_fix_station_filter_log"),
     path(f'event/fixstation/btl/<int:event_id>/', load_bottle_file, name="form_event_fix_station_bottle"),
 ]

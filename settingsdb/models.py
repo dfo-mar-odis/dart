@@ -1,4 +1,5 @@
 from django.db import models
+from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
 from core import models as core_models
@@ -22,7 +23,7 @@ class GlobalSampleTypeCategory(models.Model):
 class GlobalSampleType(models.Model):
     short_name = models.CharField(verbose_name=_("Short/Column Name"), max_length=20,
                                   help_text=_("The column name of a sensor or a short name commonly "
-                                              "used for the sample"), unique=True)
+                                              "used for the sample"))
     long_name = models.CharField(verbose_name=_("Name"), max_length=126, null=True, blank=True,
                                  help_text=_("Short descriptive name for this type of sample/sensor"))
 
@@ -42,7 +43,7 @@ class GlobalSampleType(models.Model):
                                     help_text=_("Identify this sample type as a type of sensor"))
 
     class Meta:
-        ordering = ('is_sensor', 'short_name')
+        ordering = ('is_sensor', Lower('short_name'))
 
     def get_mission_sample_type(self, mission: core_models.Mission):
         database = mission._state.db

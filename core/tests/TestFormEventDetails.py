@@ -21,7 +21,6 @@ class TestMissionEventForm(DartTestCase):
     delete_action_url = "core:form_event_delete_action"
     add_attachment_url = "core:form_event_add_attachment"
     edit_attachment_url = "core:form_event_edit_attachment"
-    filter_log_url = "core:form_event_fix_station_filter_log"
 
     def setUp(self) -> None:
         self.client = Client()
@@ -511,25 +510,3 @@ class TestMissionEventForm(DartTestCase):
         self.assertTrue(event_form.is_valid())
         event_form.save()
         self.assertTrue(models.Station.objects.using('default').filter(name=global_station.name).exists())
-
-    @tag("form_mission_event_test_load_filter_log")
-    def test_load_filter_log(self):
-        # provided a database and event_id a get request to the load filter log url should return
-        # an alert dialog to be swapped into the EventDetail card's message area.
-        event = core_factory.CTDEventFactory()
-        url = reverse(self.filter_log_url, args=(event.pk,))
-
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, 'html.parser')
-        self.assertIsNotNone(soup)
-
-        msg_area = soup.find(id="div_id_card_message_area_event_details")
-        self.assertIsNotNone(msg_area)
-
-        msg_area_alert = soup.find(id="div_id_card_message_area_event_details_alert")
-        self.assertIn('hx-post', msg_area_alert.attrs)
-        self.assertEqual(url, msg_area_alert.attrs['hx-post'])
-
-        self.assertIn('hx-trigger', msg_area_alert.attrs)
-        self.assertEqual('load', msg_area_alert.attrs['hx-trigger'])

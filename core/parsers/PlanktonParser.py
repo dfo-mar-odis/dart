@@ -341,7 +341,9 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
         updates.add(updated_value(bottle, 'pressure', start_pressure))
         updates.add(updated_value(bottle, 'end_pressure', end_pressure))
 
-        updates.remove("")
+        if "" in updates:
+            updates.remove("")
+
         if updates:
             bottle.save()
     else:
