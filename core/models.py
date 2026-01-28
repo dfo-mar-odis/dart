@@ -36,6 +36,11 @@ class Mission(models.Model):
                                    blank=True, default="", null=False,
                                    help_text=_("Example: \"Fall AZMP\", \"Groundfish\", \"AZOMP\"."
                                                "Used as a subtitle in the loading status report"))
+
+    fixed_station = models.BooleanField(verbose_name=_("Is Fixed Station?"), default=False,
+                                        help_text=_("If this is a fixed station, CTD events are loaded form BTL files."
+                                                    "If not a fixed station, events must be loaded from CSV, ANDES or "
+                                                    "Elog before BTL files are loaded."))
     # default to version 3.2.7
     dart_version = models.CharField(verbose_name=_("Dart Version"), max_length=50,
                                     default="b7f674184f401a6a0192ba5e91462fcd3d97ee04")

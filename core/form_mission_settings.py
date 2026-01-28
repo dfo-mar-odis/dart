@@ -36,9 +36,9 @@ class MissionSettingsForm(forms.ModelForm):
 
     class Meta:
         model = models.Mission
-        fields = ['name', 'description', 'geographic_region', 'mission_descriptor', 'data_center', 'lead_scientist',
-                  'start_date', 'end_date', 'platform', 'protocol', 'collector_comments', 'data_manager_comments',
-                  'start_underway_sample', 'end_underway_sample']
+        fields = ['name', 'description', 'fixed_station', 'geographic_region', 'mission_descriptor', 'data_center',
+                  'lead_scientist', 'start_date', 'end_date', 'platform', 'protocol', 'collector_comments',
+                  'data_manager_comments', 'start_underway_sample', 'end_underway_sample']
 
     @property
     def get_btn_add(self):
@@ -154,6 +154,9 @@ class MissionSettingsForm(forms.ModelForm):
             ),
             Row(
                 Column(Field('description')),
+            ),
+            Row(
+                Column(Field('fixed_station')),
             ),
             Row(
                 Column(
