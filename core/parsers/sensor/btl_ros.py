@@ -36,7 +36,7 @@ def get_btl_mapping() -> dict:
         return json.load(f)
 
 
-def validate_file(btl_stream, file_properties: dict = None) -> None:
+def validate_fixed_station_file(btl_stream, file_properties: dict = None) -> None:
     btl_mapping = get_btl_mapping()
 
     if not file_properties:
@@ -125,6 +125,37 @@ def validate_file(btl_stream, file_properties: dict = None) -> None:
             raise ValueError("Longitude is missing from the header. Cannot create event")
 
 
+def validate_btl_file(btl_stream, file_properties: dict = None) -> None:
+    # if this is not a fixed station file, then the only thing we care about is that the event in the BTL
+    # file matches an existing event. Ideally we'll be able to also match the station
+    btl_mapping = get_btl_mapping()
+
+    if not file_properties:
+        data: pd.DataFrame = ctd.read.from_btl(btl_stream)
+
+        metadata: dict = data.__getattr__('_metadata')
+        header = metadata['header']
+
+        header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
+        cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
+        file_properties = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
+
+    # required values. Event_id to get an event, station to confirm this BTL file is for the correct station
+    event_label = btl_mapping['event_id'].get('label', 'Event_Number')
+    event_id = btl_mapping['event_id'].get('default', None)
+
+    station_label = btl_mapping['station'].get('label', 'Station_Name')
+    station_name = btl_mapping['station'].get('default', None)
+
+    if event_label.upper() not in file_properties.keys():
+        raise KeyError(_('Missing header variable') + " : " + event_label.upper())
+
+    if (event_id := file_properties.get(event_label.upper(), event_id)) is None:
+        raise ValueError("Event ID is missing")
+
+    event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
+
+
 class FixStationParser:
     field_mappings: dict = None
     file_properties: dict = None
@@ -196,7 +227,11 @@ class FixStationParser:
             else:
                 raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
 
-            if (btl := core_models.Bottle.objects.exclude(event=self.event).filter(bottle_id=bottle_id)).exists():
+            # when looking for existing bottles that overlap with another event exclude bottles from this event
+            # and bottles created for net events
+            btl = core_models.Bottle.objects.exclude(event=self.event).exclude(
+                event__instrument__type=core_models.InstrumentType.net).filter(bottle_id=bottle_id)
+            if btl.exists():
                 # if the bottle exists for an event other than the current event
                 if not (btl.first().event == self.event):
                     raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")
@@ -501,8 +536,6 @@ class FixStationParser:
     def process_actions(self, data: pd.DataFrame):
         btl_mapping = self.get_field_mapping()
 
-        # We're in the process of updating the header for fixstation BTL files.
-        # station_label = self.get_mapping('event_id')
         sounding_label = btl_mapping['sounding'].get('label', 'Sounding').upper()
         sounding_default = btl_mapping['sounding'].get('default', None)
 
@@ -521,10 +554,6 @@ class FixStationParser:
         latitude = self.file_properties.get(lat_label, lat_default)
         longitude = self.file_properties.get(lon_label, lon_default)
 
-        # First determine if this is a fixed station BTL file or an AZMP bottle file
-        # Fixed station files have latitude and longitude in the header
-        is_fixed_station = latitude is not None and longitude is not None
-
         if self.event.actions.count() <= 0:
            # For all files, sounding is required
            if not sounding:
@@ -532,67 +561,58 @@ class FixStationParser:
                message += "\n" + _("You may have to load events from (Elog, Andes or CSV) first")
                raise KeyError(message)
 
-           # For fixed station files, latitude and longitude are also required
-           if is_fixed_station:
-               if not latitude:
-                   message = _("Could not find latitude label to create actions: ") + lat_label
-                   message += "\n" + _("You may have to load events from (Elog, Andes or CSV) first")
-                   raise KeyError(message)
+           if not latitude:
+               message = _("Could not find latitude label to create actions: ") + lat_label
+               message += "\n" + _("You may have to load events from (Elog, Andes or CSV) first")
+               raise KeyError(message)
 
-               if not longitude:
-                   message = _("Could not find longitude label to create actions: ") + lon_label
-                   message += "\n" + _("You may have to load events from (Elog, Andes or CSV) first")
-                   raise KeyError(message)
+           if not longitude:
+               message = _("Could not find longitude label to create actions: ") + lon_label
+               message += "\n" + _("You may have to load events from (Elog, Andes or CSV) first")
+               raise KeyError(message)
 
-        # Process latitude and longitude only for fixed station files
-        if is_fixed_station:
-           try:
-               sounding = sounding.strip()
-               lat_array = latitude.strip().split(" ")
-               lon_array = longitude.strip().split(" ")
-           except Exception as e:
-               message = f"Invalid decimal degree Lat/Lon provided ({latitude[0].strip() if latitude else 'Missing'}, {longitude[0].strip() if longitude else 'Missing'})"
-               raise ValueError(message) from e
+        try:
+           sounding = sounding.strip()
+           lat_array = latitude.strip().split(" ")
+           lon_array = longitude.strip().split(" ")
+        except Exception as e:
+           message = f"Invalid decimal degree Lat/Lon provided ({latitude[0].strip() if latitude else 'Missing'}, {longitude[0].strip() if longitude else 'Missing'})"
+           raise ValueError(message) from e
 
-           lat = self._process_coordinate(lat_array, is_latitude=True)
-           lon = self._process_coordinate(lon_array, is_latitude=False)
+        lat = self._process_coordinate(lat_array, is_latitude=True)
+        lon = self._process_coordinate(lon_array, is_latitude=False)
 
-           if station.exists():
-               station = station.first()
-               if station.latitude and station.longitude:
-                   station_coords = (station.latitude, station.longitude)
-                   new_coords = (lat, lon)
-                   distance_km = geodesic(station_coords, new_coords).kilometers
-                   if distance_km > 1:
-                       error_message = _("Coordinates are more than 1 km away from the nominal station") + f" : {station_coords}"
-                       core_models.EventError.objects.create(
-                           event=self.event,
-                           message=error_message,
-                           type=core_models.ErrorType.validation,
-                           code=102
-                       )
+        if station.exists():
+           station = station.first()
+           if station.latitude and station.longitude:
+               station_coords = (station.latitude, station.longitude)
+               new_coords = (lat, lon)
+               distance_km = geodesic(station_coords, new_coords).kilometers
+               if distance_km > 1:
+                   error_message = _("Coordinates are more than 1 km away from the nominal station") + f" : {station_coords}"
+                   core_models.EventError.objects.create(
+                       event=self.event,
+                       message=error_message,
+                       type=core_models.ErrorType.validation,
+                       code=102
+                   )
 
-           for btl in self.event.bottles.all():
-               btl.latitude = lat
-               btl.longitude = lon
-               btl.save()
-        else:
-           # For AZMP files, just use the sounding value without lat/lon processing
-           sounding = sounding[0].strip() if sounding else None
+        for btl in self.event.bottles.all():
+           btl.latitude = lat
+           btl.longitude = lon
+           btl.save()
 
-        # Create or update actions with appropriate coordinate values
-        if is_fixed_station:
-            # For all file types, process bottles and actions
-            bottom_bottle = self.event.bottles.order_by('pressure').first()
-            surface_bottle = self.event.bottles.order_by('pressure').last()
+        # For all file types, process bottles and actions
+        bottom_bottle = self.event.bottles.order_by('pressure').first()
+        surface_bottle = self.event.bottles.order_by('pressure').last()
 
-            self._create_update_action(core_models.ActionType.bottom, bottom_bottle, sounding, lat, lon)
-            self._create_update_action(core_models.ActionType.recovered, surface_bottle, sounding, lat, lon)
+        self._create_update_action(core_models.ActionType.bottom, bottom_bottle, sounding, lat, lon)
+        self._create_update_action(core_models.ActionType.recovered, surface_bottle, sounding, lat, lon)
 
-            self.event.sample_id = min(bottom_bottle.bottle_id, surface_bottle.bottle_id)
-            self.event.end_sample_id = max(bottom_bottle.bottle_id, surface_bottle.bottle_id)
+        self.event.sample_id = min(bottom_bottle.bottle_id, surface_bottle.bottle_id)
+        self.event.end_sample_id = max(bottom_bottle.bottle_id, surface_bottle.bottle_id)
 
-            self.event.save()
+        self.event.save()
 
     def parse(self):
         self.mission.file_errors.filter(file_name=self.btl_filename).delete()
@@ -617,8 +637,18 @@ class FixStationParser:
         self.process_sensors(column_headers=col_headers)
         self.process_data(self.btl_filename, data, column_headers=col_headers)
 
+        # we only need to update actions using BTL file data if this is a fixed station.
+        # If event data was loaded from an elog, or ANDES file, this is not a fixed station.
+        # If event data was loaded from a CSV, this might not be a fixed station
+        #   * Fixed station Nets are loaded from CSV, but CTD events are not.
+        #
+        # I think we add a core.models.Mission field "fixed_station = True", then in the
+        # andes, elog and event_csv parsers we set fixed_station = False
+
         # now create bottom, recover actions, event.sample_id, event.end_sample_id and sounding if they don't exist
-        self.process_actions(data)
+        is_fixed_station = self.mission.fixed_station
+        if is_fixed_station:
+            self.process_actions(data)
 
         # if the bottle with the highest pressure was the last bottle closed we're using bottles
         # on a wire. If it was the first one closed we're using a CTD + Rosette
@@ -677,6 +707,10 @@ class FixStationBulkParser:
 
         serial_number_default = mapping['instrument_name'].get('default', 'CTD')
 
+        # How do we know if this is a fixed station?
+        # if CTD events were loaded from a CSV, ANDES or Elog file, this is not a fixed station
+        is_fixed_station = self.mission.fixed_station
+
         for index, file in enumerate(self.file_list):
             logger_notifications.info(_("Updating events") + " : %d/%d", (index + 1), bottle_count)
             file_name = os.path.basename(file)
@@ -684,7 +718,10 @@ class FixStationBulkParser:
             btl_sample_file = open(file, mode='rb')
             btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
             try:
-                validate_file(btl_data)
+                if is_fixed_station:
+                    validate_fixed_station_file(btl_data)
+                else:
+                    validate_btl_file(btl_data)
             except KeyError as e:
                 self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=104))
                 continue
