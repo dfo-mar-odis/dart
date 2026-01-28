@@ -16,6 +16,7 @@ from django.utils.translation import gettext as _
 from config import utils
 from core import models as core_models
 from bio_tables import models as bio_models
+from core.utils import is_number
 from settingsdb.models import  GlobalSampleType, GlobalStation
 
 import logging
@@ -35,7 +36,7 @@ def get_btl_mapping() -> dict:
         return json.load(f)
 
 
-def validate_file(btl_stream, file_properties: dict = None):
+def validate_file(btl_stream, file_properties: dict = None) -> None:
     btl_mapping = get_btl_mapping()
 
     if not file_properties:
@@ -485,6 +486,14 @@ class FixStationParser:
             except ValueError:
                 raise ValueError(f"Invalid degrees/minutes format for {coord_type}: {' '.join(coord_array)}")
 
+        # Case 3: degrees + minutes format no direction specified (e.g., "45 30.0")
+        elif len(coord_array) == 2 and is_number(coord_array[0]):
+            try:
+                # If not specified we're going to assume this takes place in the Northwest Atlantic
+                return self._convert_to_decimal_deg('W' if is_latitude else 'N', coord_array[0], coord_array[1])
+            except ValueError:
+                raise ValueError(f"Invalid degrees/minutes format for {coord_type}: {' '.join(coord_array)}")
+
         # Invalid format
         else:
             raise ValueError(f"Unrecognized {coord_type} format: {' '.join(coord_array)}")
@@ -682,6 +691,9 @@ class FixStationBulkParser:
             except ValueError as e:
                 self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=103))
                 continue
+            except Exception as e:
+                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=105))
+                continue
 
             try:
                 # Construct the expected .ros file path
@@ -690,6 +702,7 @@ class FixStationBulkParser:
                     raise FileNotFoundError(f"No matching .ros file found for: {file}")
 
                 data = ctd.read.from_btl(file)
+
                 header: str = data._metadata['header']
                 header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
                 cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
@@ -802,11 +815,7 @@ class FixStationBulkParser:
         # Get all file names upfront for batch deletion of errors
         file_names = [os.path.basename(file) for file in self.file_list]
 
-        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=100).delete()
-        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=101).delete()
-        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=102).delete()
-        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=103).delete()
-        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code=104).delete()
+        core_models.FileError.objects.filter(mission=self.mission, file_name__in=file_names, code__gte=100).filter(code__lte=299).delete()
 
         parsed_events = self.create_events()
         self.process_bottles(parsed_events)
