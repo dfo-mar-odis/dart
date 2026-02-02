@@ -63,7 +63,8 @@ class GlobalSampleType(models.Model):
 
     def __str__(self):
         label = self.short_name + (f" - {self.long_name}" if self.long_name else "")
-        label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
+        if self.datatype:
+            label += f" {self.datatype.data_type_seq} : {self.datatype.description}"
 
         return label
 
