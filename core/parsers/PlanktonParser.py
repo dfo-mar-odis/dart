@@ -487,6 +487,17 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         end_pressure = 0
 
         gear_type = get_gear_type(mesh_size)
+        if gear_type is None:
+            error_message = _("Could not identify gear type for mesh size ") + str(mesh_size)
+            message = (_("Line ") + str(line) + " " + error_message)
+            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+                                          type=core_models.ErrorType.plankton)
+            errors.append(error)
+
+            user_logger.error(message)
+            logger.error(message)
+            has_errors = True
+
         min_sieve = get_min_sieve(proc_code=proc_code, mesh_size=mesh_size)
         max_sieve = get_max_sieve(proc_code=proc_code)
         split_fraction = get_split_fraction(proc_code=proc_code, split=split)
@@ -522,9 +533,11 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             has_errors = True
 
         try:
-            bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
-                                          gear_type=gear_type.pk, mesh_size=mesh_size,
-                                          start_pressure=pressure, end_pressure=end_pressure)
+            # Do not create bottles if there are issues with the data.
+            if not has_errors:
+                bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
+                                              gear_type=gear_type.pk, mesh_size=mesh_size,
+                                              start_pressure=pressure, end_pressure=end_pressure)
         except ValueError as e:
             message = str(e)
             message += " " + _("Bottle ID") + f" : {bottle_id}"
