@@ -383,8 +383,9 @@ def list_samples(request, mission_id):
         th1.attrs['style'] = "left: -1px;"
 
         th2 = th1.find_next_sibling('th')
-        th2.attrs['class'] = "sticky-column"
-        th2.attrs['style'] = "left: 89px;"
+        if th2 is not None:
+            th2.attrs['class'] = "sticky-column"
+            th2.attrs['style'] = "left: 89px;"
 
     # 9 rows are visible on screen so let's put the trigger on line 8, which is sure to be in the table
     # and will trigger the reload before the user hits the bottlm
