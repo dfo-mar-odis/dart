@@ -90158,5 +90158,21 @@
         "tsn_itis": null,
         "aphiaid": 359743
     }
+},
+{
+    "model": "bio_tables.bcnatnltaxoncode",
+    "pk": 90000000006152,
+    "fields": {
+        "data_center_code": 20,
+        "tsn": 98340,
+        "taxonomic_name": "Calappidae",
+        "best_nodc7": 0,
+        "authority": "De Haan, 1833",
+        "collectors_comment": "",
+        "data_managers_comment": "",
+        "short_name": "",
+        "tsn_itis": null,
+        "aphiaid": 106747
+    }
 }
 ]
