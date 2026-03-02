@@ -1,10 +1,11 @@
 {% load i18n %}
 {% load bootstrap_icons %}
 
-<div class="horizontal-scrollbar">
+<div class="horizontal-scrollbar" id="div_bottle_table_id" hx-get="{% url 'core:form_event_list_bottles' event.pk %}" hx-trigger="update_bottles" hx-target="#div_bottle_table_id">
 <table id="bottle_table_id" class="table table-striped table-sm">
     <thead>
     <tr class="bg-light">
+        <th></th>
         <th>{% trans 'Bottle ID' %}</th>
         <th>{% trans 'Closed' %}</th>
         <th>{% trans 'Pressure' %}</th>
@@ -14,8 +15,26 @@
     </tr>
     </thead>
     <tbody id="tbody_bottle_table_id">
+    {% for bottle in missing_bottles %}
+        <tr id="missing-bottle-{{ bottle }}">
+            <form>
+                <td><button class="btn btn-primary btn-sm"
+                            hx-post="{% url 'core:form_event_create_bottle' event.pk bottle %}"
+                            hx-swap="none"
+                >{% custom_icon 'plus-square' %}</button></td>
+                <th>{{ bottle }}</th>
+                <th><input type="datetime-local" name="bottle_closed" value="{{ event.actions.last.date_time|date:'Y-m-d H:i:s' }}" /></th>
+                <td><input type="number" min="0" name="bottle_pressure" value="0"/></td>
+            </form>
+        </tr>
+    {% endfor %}
     {% for bottle, bottle_samples in bottle_list.items %}
         <tr id="bottle-{{ bottle.pk }}">
+            <td><button class="btn btn-danger btn-sm"
+                            hx-confirm="{% trans 'This will delete all discrete data associated with this bottle. Are you sure?' %}"
+                            hx-delete="{% url 'core:form_event_delete_bottle' bottle.pk %}"
+                            hx-swap="none"
+                >{% custom_icon 'dash-square' %}</button></td>
             <th>{{ bottle.bottle_id }}</th>
             <th>{{ bottle.closed }}</th>
             <th>{{ bottle.pressure }}</th>
