@@ -332,13 +332,14 @@ def list_samples(request, mission_id):
     queryset = queryset.order_by('bottle__bottle_id')
     queryset = queryset.values(
         'bottle__bottle_id',
+        'bottle__event__event_id',
         'bottle__pressure',
         'type__id',
         'discrete_values__replicate',
         'discrete_values__value',
     )
     df = read_frame(queryset)
-    df.columns = ["Sample", "Pressure", "Sensor", "Replicate", "Value"]
+    df.columns = ["Sample", "Event", "Pressure", "Sensor", "Replicate", "Value"]
 
     try:
         sensors = mission.mission_sample_types.all()
@@ -349,7 +350,7 @@ def list_samples(request, mission_id):
             if replicate_count:
                 required_columns.extend([(sensor.pk, i + 1) for i in range(replicate_count)])
 
-        df = pd.pivot_table(df, values='Value', index=['Sample', 'Pressure'], columns=['Sensor', 'Replicate'])
+        df = pd.pivot_table(df, values='Value', index=['Sample', 'Event', 'Pressure'], columns=['Sensor', 'Replicate'])
         # Add missing columns in one go, filling with np.nan
         for col in required_columns:
             if col not in df.columns:
@@ -457,12 +458,20 @@ def format_all_sensor_table(df_soup: BeautifulSoup, mission: models.Mission):
     sensor_column.attrs['class'] = "sticky-column"
     sensor_column.attrs['style'] = "left: -1px;"
 
+    # copy the 'Event' label
+    index_column = index_column.findNext('th')
+    sensor_column = sensor_column.findNext('th')
+    sensor_column.attrs['class'] = "sticky-column"
+    sensor_column.attrs['style'] = "left: 89px;"
+    sensor_column.string = index_column.string
+
     # copy the 'Pressure' label
     index_column = index_column.findNext('th')
     sensor_column = sensor_column.findNext('th')
     sensor_column.attrs['class'] = "sticky-column"
     sensor_column.attrs['style'] = "left: 89px;"
     sensor_column.string = index_column.string
+
     # remove the now unneeded index_header row
     index_headers.decompose()
 
@@ -473,7 +482,7 @@ def format_all_sensor_table(df_soup: BeautifulSoup, mission: models.Mission):
 
     # the first column of the table will have the 'Sample' and 'Pressure' lables under it so it spans two columns
     upload_row_title = df_soup.new_tag('th')
-    upload_row_title.attrs['colspan'] = "2"
+    upload_row_title.attrs['colspan'] = "3"
     upload_row_title.string = _("Biochem upload")
     upload_row_title.attrs['class'] = "sticky-column"
     upload_row_title.attrs['style'] = "left: -1px;"
