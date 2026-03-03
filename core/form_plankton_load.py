@@ -362,10 +362,10 @@ def list_plankton(request, mission_id):
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():
-        data_columns = ["Sample", "Pressure", "Station", "Type", "Name", "Modifier", "Sex", "Stage", "Split", "Count",
+        data_columns = ["Sample", "Event", "Pressure", "Station", "Type", "Name", "Modifier", "Sex", "Stage", "Split", "Count",
                         "Wet", "Dry", "Volume", "Percent", "Comments"]
 
-        samples = samples.values("bottle__bottle_id", "bottle__pressure", 'bottle__event__station__name',
+        samples = samples.values("bottle__bottle_id", "bottle__event__event_id", "bottle__pressure", 'bottle__event__station__name',
                                  "bottle__event__instrument__type", "taxa__taxonomic_name", "modifier", "sex__name",
                                  "stage__name", "split_fraction", "count", "raw_wet_weight", "raw_dry_weight", "volume",
                                  "percent", "comments")
