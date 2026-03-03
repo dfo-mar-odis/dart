@@ -9,24 +9,16 @@
         <th>{% trans 'Bottle ID' %}</th>
         <th>{% trans 'Closed' %}</th>
         <th>{% trans 'Pressure' %}</th>
+    {% if event.instrument.type == 1 %}
         {% for sample_type in sample_types %}
         <th>{{ sample_type.name }}</th>
         {% endfor %}
+    {% endif %}
     </tr>
     </thead>
     <tbody id="tbody_bottle_table_id">
     {% for bottle in missing_bottles %}
-        <tr id="missing-bottle-{{ bottle }}">
-            <form>
-                <td><button class="btn btn-primary btn-sm"
-                            hx-post="{% url 'core:form_event_create_bottle' event.pk bottle %}"
-                            hx-swap="none"
-                >{% custom_icon 'plus-square' %}</button></td>
-                <th>{{ bottle }}</th>
-                <th><input type="datetime-local" name="bottle_closed" value="{{ event.actions.last.date_time|date:'Y-m-d H:i:s' }}" /></th>
-                <td><input type="number" min="0" name="bottle_pressure" value="0"/></td>
-            </form>
-        </tr>
+        {% include 'core/partials/form_bottle.html' with event=event bottle_id=bottle %}
     {% endfor %}
     {% for bottle, bottle_samples in bottle_list.items %}
         <tr id="bottle-{{ bottle.pk }}">
@@ -38,6 +30,7 @@
             <th>{{ bottle.bottle_id }}</th>
             <th>{{ bottle.closed }}</th>
             <th>{{ bottle.pressure }}</th>
+        {% if event.instrument.type == 1 %}
             {% for sample_type in sample_types %}
                 <td>
                 <input type="checkbox" id="{{ bottle.pk }}_{{ sample_type.pk }}"
@@ -47,6 +40,7 @@
                  class="form-check-input" disabled />
                 </td>
             {% endfor %}
+        {% endif %}
             </tr>
     {% endfor %}
     </tbody>

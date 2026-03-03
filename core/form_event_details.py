@@ -928,20 +928,28 @@ def get_selected_event(request):
     card_details_content.append(event_details_content)
 
     samples = models.MissionSampleType.objects.filter(is_sensor=False)
-    bottles = event.bottles.all()
-    bottle_list = {bottle: [sample.type for sample in bottle.samples.all()] for bottle in bottles}
-    bottle_ids = [bottle.bottle_id for bottle in bottles]
-    missing_bottles = [bottle_id for bottle_id in range(event.sample_id, event.end_sample_id + 1) if bottle_id not in bottle_ids]
 
-    bottle_html = render_to_string("core/partials/table_bottle.html",
-                                   context={"event": event,
-                                            "sample_types": samples,
-                                            "bottle_list": bottle_list,
-                                            "missing_bottles": missing_bottles
-                                            })
-    bottle_soup = BeautifulSoup(bottle_html, 'html.parser')
+    if event.instrument.type in [models.InstrumentType.ctd, models.InstrumentType.net]:
+        bottles = event.bottles.all()
+        bottle_ids = [bottle.bottle_id for bottle in bottles]
+        missing_bottles = []
 
-    event_details_content.append(bottle_soup.find())
+        if event.instrument.type == models.InstrumentType.ctd:
+            bottle_list = {bottle: [sample.type for sample in bottle.samples.all()] for bottle in bottles}
+            missing_bottles = [bottle_id for bottle_id in range(event.sample_id, event.end_sample_id + 1) if bottle_id not in bottle_ids]
+        elif event.instrument.type == models.InstrumentType.net:
+            bottle_list = {bottle: [] for bottle in bottles}
+            missing_bottles = [event.sample_id] if event.sample_id not in bottle_ids else []
+
+        bottle_html = render_to_string("core/partials/table_bottle.html",
+                                       context={"event": event,
+                                                "sample_types": samples,
+                                                "bottle_list": bottle_list,
+                                                "missing_bottles": missing_bottles
+                                                })
+
+        bottle_soup = BeautifulSoup(bottle_html, 'html.parser')
+        event_details_content.append(bottle_soup.find())
 
     soup.append(card)
     return HttpResponse(soup)
@@ -1399,8 +1407,21 @@ def list_bottles(request, event_id):
 def create_bottle(request, event_id, bottle_id):
     event = models.Event.objects.get(pk=event_id)
 
-    closed = request.POST.get('bottle_closed', event.actions.last().date_time)
-    pressure = request.POST.get('bottle_pressure', 0)
+    closed = request.POST.get('bottle_closed', '')
+    pressure = request.POST.get('bottle_pressure', '')
+
+    if closed == '' or pressure == '':
+        context = {"event": event, "bottle_id": bottle_id, "closed": closed, "pressure": pressure}
+        html = render_to_string("core/partials/form_bottle.html", context=context)
+        form_soup = BeautifulSoup(html, 'html.parser')
+
+        if closed == '':
+            form_soup.find('input', attrs={'name': 'bottle_closed'}).attrs['class'].append('is-invalid')
+
+        if pressure == '':
+            form_soup.find('input', attrs={'name': 'bottle_pressure'}).attrs['class'].append('is-invalid')
+
+        return HttpResponse(form_soup.prettify())
 
     if not models.Bottle.objects.filter(bottle_id=bottle_id, event__instrument__type=models.InstrumentType.ctd).exists():
         models.Bottle.objects.create(bottle_id=bottle_id, event=event, closed=closed, pressure=pressure)

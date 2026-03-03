@@ -1,0 +1,12 @@
+{% load bootstrap_icons %}
+
+<tr id="missing-bottle-{{ bottle_id }}">
+    <form id="bottle_form_{{ bottle_id }}" class="form-inline">
+        <td><button class="btn btn-primary btn-sm"
+                    hx-post="{% url 'core:form_event_create_bottle' event.pk bottle_id %}"
+                    hx-target="#missing-bottle-{{ bottle_id }}">{% custom_icon 'plus-square' %}</button></td>
+        <th>{{ bottle_id }}</th>
+        <th><input class="form-control form-control-sm" type="datetime-local" name="bottle_closed" value="{{ date_time|default:event.actions.last.date_time|date:'Y-m-d H:i:s' }}" /></th>
+        <td><input class="form-control form-control-sm" type="number" min="0" name="bottle_pressure" value="{{ pressure|default:"0" }}"/></td>
+    </form>
+</tr>
