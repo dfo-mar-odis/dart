@@ -292,7 +292,7 @@ def list_samples(request, queryset, card_title, delete_samples_url, process_samp
     if page > 0:
         return table_soup.find('tbody').findAll('tr', recursive=False)
 
-    card_soup = get_samples_card(card_title, show_scrollbar=(pages > 1 or queryset.count() > 11))
+    card_soup = get_samples_card(card_title, show_scrollbar=True)
 
     card_body = card_soup.find(id=f"div_id_card_body_{SAMPLES_CARD_NAME}")
     card_body.append(table)
