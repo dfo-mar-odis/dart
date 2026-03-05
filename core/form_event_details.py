@@ -933,10 +933,12 @@ def get_selected_event(request):
         bottles = event.bottles.all()
         bottle_ids = [bottle.bottle_id for bottle in bottles]
         missing_bottles = []
+        bottle_list = {}
 
         if event.instrument.type == models.InstrumentType.ctd:
             bottle_list = {bottle: [sample.type for sample in bottle.samples.all()] for bottle in bottles}
-            missing_bottles = [bottle_id for bottle_id in range(event.sample_id, event.end_sample_id + 1) if bottle_id not in bottle_ids]
+            if event.end_sample_id and event.sample_id:
+                missing_bottles = [bottle_id for bottle_id in range(event.sample_id, event.end_sample_id + 1) if bottle_id not in bottle_ids]
         elif event.instrument.type == models.InstrumentType.net:
             bottle_list = {bottle: [] for bottle in bottles}
             missing_bottles = [event.sample_id] if event.sample_id not in bottle_ids else []

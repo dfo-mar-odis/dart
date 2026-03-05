@@ -18,7 +18,9 @@
     </thead>
     <tbody id="tbody_bottle_table_id">
     {% for bottle in missing_bottles %}
+        {% if bottle %}
         {% include 'core/partials/form_bottle.html' with event=event bottle_id=bottle %}
+        {% endif %}
     {% endfor %}
     {% for bottle, bottle_samples in bottle_list.items %}
         <tr id="bottle-{{ bottle.pk }}">
