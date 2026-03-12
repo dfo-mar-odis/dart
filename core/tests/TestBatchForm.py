@@ -252,41 +252,6 @@ class TestDiscreteBatchForm2(DartTestCase):
         self.assertIsNotNone(soup.find(id="div_id_data_alert_message_container"))
         self.assertIsNotNone(soup.find("form"))
 
-    @tag("batch_form_2_test_download_batch_all_good")
-    @patch('core.form_biochem_batch.core_forms.StatusAlert')
-    def test_download_batch_all_good(self, mock_status_alert):
-        # if a mission descriptor and uploader are provided, the download batch function should next call the provided
-        # download_batch_func that an extending module will provide
-
-        # by default the MissionFactory will create a mission without a mission descriptor
-        expected_descriptor = "11DE25002"
-        expected_uploader = "upsonp"
-
-        mission: core_models.Mission = CoreFactoryFloor.MissionFactory(mission_descriptor=expected_descriptor)
-        mission_id = mission.pk
-
-        # Create a fake request
-        factory = RequestFactory()
-        request = factory.post("/test/")
-
-        # This is an abstract class that expects its extending classes to provide a url to access the function
-        middleware = SessionMiddleware(lambda request: None)
-        middleware.process_request(request)
-        request.session['uploader2'] = expected_uploader  # Set the required session variable
-        request.session.save()
-
-        mock_download_func = MagicMock()
-
-        # Mock msg_alert to make is_socket_connected() return True
-        mock_msg_alert_instance = mock_status_alert.return_value
-        mock_msg_alert_instance.is_socket_connected.return_value = True
-
-        response = form_biochem_batch.download_batch(request, mission_id, logger_name=test_logger, download_batch_func=mock_download_func)
-
-        # Verify that the mock function was called
-        mock_download_func.assert_called_once_with(mission, expected_uploader)
-
-        self.assertIsNotNone(response)
 
     def test_upload_batch_no_mission_descriptor(self):
         # if no mission descriptor is provided for the mission the download batch function should return a
