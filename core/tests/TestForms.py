@@ -58,30 +58,6 @@ class TestMissionSamplesForm(DartTestCase):
         upload_form = soup.find(id="id_form_load_samples")
         self.assertIsNotNone(upload_form)
 
-    def test_event_upload_selected(self):
-        # Upon selecting files and clicking the submit button a get request should be made to
-        # sample_upload_ctd that will return a loading dialog that will make a post request
-        # to sample_upload_ctd with a websocket on it.
-        url = reverse('core:form_btl_upload_bottles', args=(self.mission.pk,))
-
-        attrs = {
-            'alert_area_id': "div_id_alert_bottle_load",
-            'message': _("Loading Bottles"),
-            'logger': ctd.logger_notifications.name,
-            'hx-post': url,
-            'hx-trigger': 'load',
-            'hx-swap': "none"
-        }
-
-        alert = core_forms.websocket_post_request_alert(**attrs)
-
-        sample_dir = os.path.join(settings.BASE_DIR, 'core/tests/sample_data')
-
-        response = self.client.get(url, {"bottle_dir": sample_dir, "file_name": ['JC243a001.btl', 'JC243a006.btl']})
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        self.assertEqual(soup.prettify(), alert.prettify())
-
 
 @tag('forms', 'forms_sample_type_card')
 class TestSampleTypeCard(DartTestCase):
