@@ -525,6 +525,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         bcd_row.pl_gen_wet_weight = wet_weight
         bcd_row.pl_gen_dry_weight = sample.raw_dry_weight
         bcd_row.pl_gen_bio_volume = sample.volume
+        bcd_row.pl_gen_data_qc_code = sample.flag
 
         bcd_row.pl_gen_presence = 'Y'
         bcd_row.pl_gen_collector_comment = sample.collector_comment
