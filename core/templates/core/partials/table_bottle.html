@@ -1,24 +1,38 @@
 {% load i18n %}
 {% load bootstrap_icons %}
 
-<div class="horizontal-scrollbar">
+<div class="horizontal-scrollbar" id="div_bottle_table_id" hx-get="{% url 'core:form_event_list_bottles' event.pk %}" hx-trigger="update_bottles" hx-target="#div_bottle_table_id">
 <table id="bottle_table_id" class="table table-striped table-sm">
     <thead>
     <tr class="bg-light">
+        <th></th>
         <th>{% trans 'Bottle ID' %}</th>
         <th>{% trans 'Closed' %}</th>
         <th>{% trans 'Pressure' %}</th>
+    {% if event.instrument.type == 1 %}
         {% for sample_type in sample_types %}
         <th>{{ sample_type.name }}</th>
         {% endfor %}
+    {% endif %}
     </tr>
     </thead>
     <tbody id="tbody_bottle_table_id">
+    {% for bottle in missing_bottles %}
+        {% if bottle %}
+        {% include 'core/partials/form_bottle.html' with event=event bottle_id=bottle %}
+        {% endif %}
+    {% endfor %}
     {% for bottle, bottle_samples in bottle_list.items %}
         <tr id="bottle-{{ bottle.pk }}">
+            <td><button class="btn btn-danger btn-sm"
+                            hx-confirm="{% trans 'This will delete all discrete data associated with this bottle. Are you sure?' %}"
+                            hx-delete="{% url 'core:form_event_delete_bottle' bottle.pk %}"
+                            hx-swap="none"
+                >{% custom_icon 'dash-square' %}</button></td>
             <th>{{ bottle.bottle_id }}</th>
             <th>{{ bottle.closed }}</th>
             <th>{{ bottle.pressure }}</th>
+        {% if event.instrument.type == 1 %}
             {% for sample_type in sample_types %}
                 <td>
                 <input type="checkbox" id="{{ bottle.pk }}_{{ sample_type.pk }}"
@@ -28,6 +42,7 @@
                  class="form-check-input" disabled />
                 </td>
             {% endfor %}
+        {% endif %}
             </tr>
     {% endfor %}
     </tbody>
