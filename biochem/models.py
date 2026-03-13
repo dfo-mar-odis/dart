@@ -409,6 +409,7 @@ class BcdP(models.Model):
                               on_delete=models.CASCADE)  #
     pl_gen_modifier = models.CharField(max_length=50, blank=True, null=True)
     pl_gen_unit = models.IntegerField(blank=True, null=True)
+    pl_gen_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1129,6 +1130,7 @@ class Bcplanktngenerledits(models.Model):
 
     modifier = models.CharField(max_length=50, blank=True, null=True)
     unit_seq = models.IntegerField(blank=True, null=True)
+    data_qc_code = models.CharField(max_length=2, blank=True, null=True)
 
     class Meta:
         managed = False

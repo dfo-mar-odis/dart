@@ -7,7 +7,8 @@ from django.test import tag
 from django.conf import settings
 from django.utils.translation import gettext as _
 
-from core.parsers.sensor.btl_ros import FixStationParser, validate_file
+from core.parsers.sensor import btl_ros
+from core.parsers.sensor.btl_ros import FixStationParser
 
 from core.tests import CoreFactoryFloor as core_factory
 from core import models as core_models
@@ -29,8 +30,10 @@ class TestFixStationParser(DartTestCase):
         self.btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
         self.ros_data = io.StringIO(ros_sample_file.read().decode("cp1252"))
 
+        self.mission = core_factory.MissionFactory(fixed_station=True)
         self.station = core_factory.StationFactory(name='HL_0')
-        self.event = core_factory.CTDEventFactoryBlank(event_id=1, station=self.station, sample_id=None, end_sample_id=None)
+        self.event = core_factory.CTDEventFactoryBlank(mission=self.mission, event_id=1, station=self.station,
+                                                       sample_id=None, end_sample_id=None)
 
     @tag('parsers_fixstation_test_parse')
     def test_parse(self):
@@ -104,7 +107,7 @@ class TestFixStationParser(DartTestCase):
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
         with self.assertRaises(KeyError) as context:
-            validate_file(btl_data)
+            btl_ros.validate_fixed_station_file(btl_data)
 
         self.assertEqual(str(context.exception), "'Missing header variable : EVENT_NUMBER'")
 
@@ -116,7 +119,7 @@ class TestFixStationParser(DartTestCase):
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
         with self.assertRaises(ValueError) as context:
-            validate_file(btl_data)
+            btl_ros.validate_fixed_station_file(btl_data)
 
         self.assertEqual(str(context.exception), "Station Name is missing")
 
@@ -128,7 +131,7 @@ class TestFixStationParser(DartTestCase):
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
         with self.assertRaises(KeyError) as context:
-            validate_file(btl_data)
+            btl_ros.validate_fixed_station_file(btl_data)
 
         self.assertEqual(str(context.exception), "'Missing header variable : STATION_NAME'")
 
@@ -140,7 +143,7 @@ class TestFixStationParser(DartTestCase):
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
         with self.assertRaises(ValueError) as context:
-            validate_file(btl_data)
+            btl_ros.validate_fixed_station_file(btl_data)
 
         self.assertEqual(str(context.exception), "Sounding is missing from the header. Cannot create event")
 
@@ -152,7 +155,7 @@ class TestFixStationParser(DartTestCase):
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
         with self.assertRaises(ValueError) as context:
-            validate_file(btl_data)
+            btl_ros.validate_fixed_station_file(btl_data)
 
         self.assertEqual(str(context.exception), "Latitude is missing from the header. Cannot create event")
 
@@ -164,6 +167,6 @@ class TestFixStationParser(DartTestCase):
         btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
 
         with self.assertRaises(ValueError) as context:
-            validate_file(btl_data)
+            btl_ros.validate_fixed_station_file(btl_data)
 
         self.assertEqual(str(context.exception), "Longitude is missing from the header. Cannot create event")

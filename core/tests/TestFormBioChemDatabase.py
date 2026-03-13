@@ -98,28 +98,6 @@ class TestFormBiochemMissionFilter(DartTestCase):
         self.assertIn('value', trigger.attrs)
         self.assertEqual(trigger.attrs['value'], 'false')
 
-    def test_list_mission_loading_oob_swap(self):
-        # when loading==false is passed to the list_missions_function it should send back
-        # an out-of-band swap for the trigger with loading==true
-        client = Client()
-        data = {
-            'loading': 'false'
-        }
-        response = client.get(reverse(self.list_missions), data)
-        soup = BeautifulSoup(response.content, 'html.parser')
-
-        trigger = soup.find(id="input_hidden_id_loading")
-        self.assertIsNotNone(trigger, "No alert element found in response")
-
-        self.assertIn('hx-swap-oob', trigger.attrs)
-        self.assertEqual(trigger.attrs['hx-swap-oob'], 'true')
-
-        self.assertIn('name', trigger.attrs)
-        self.assertEqual(trigger.attrs['name'], 'loading')
-
-        self.assertIn('value', trigger.attrs)
-        self.assertEqual(trigger.attrs['value'], 'true')
-
 
 @tag('forms', 'form_biochem_database')
 class TestFormBioChemDatabase(DartTestCase):

@@ -282,7 +282,7 @@ def set_data_column(plankton: core_models.PlanktonSample, what_was_it, value, up
             raise ValueError({'missing_value', 'what_was_it'})
 
 
-def set_qc_flag(plankton: core_models.PlanktonSample, what_was_it: int, value):
+def set_plankton_values(plankton: core_models.PlanktonSample, what_was_it: int, value):
     match what_was_it:
         case 1:
             plankton.count = value
@@ -590,7 +590,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
                 create_plankton[plankton_key] = plankton
 
             plankton = create_plankton[plankton_key]
-            set_qc_flag(plankton, what_was_it, value)
+            set_plankton_values(plankton, what_was_it, value)
 
     if len(errors) > 0:
         core_models.FileError.objects.bulk_create(errors)
@@ -721,6 +721,6 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
                 create_plankton[plankton_key] = plankton
 
             plankton = create_plankton[plankton_key]
-            set_qc_flag(plankton, what_was_it, value)
+            set_plankton_values(plankton, what_was_it, value)
 
     write_plankton_data(filename, errors, create_plankton, update_plankton)
