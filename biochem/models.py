@@ -366,13 +366,14 @@ class BcdP(models.Model):
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
     event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
     event_collector_stn_name = models.CharField(max_length=50, blank=True, null=True)
+
     pl_gen_national_taxonomic_seq = models.BigIntegerField(blank=True, null=True)
     pl_gen_collector_taxonomic_id = models.CharField(max_length=20, blank=True, null=True)
     pl_gen_life_history_seq = models.IntegerField(blank=True, null=True)
     pl_gen_trophic_seq = models.IntegerField(blank=True, null=True)
     pl_gen_min_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
     pl_gen_max_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
-    pl_gen_split_fraction = models.DecimalField(max_digits=5, decimal_places=4, blank=True, null=True)
+    pl_gen_split_fraction = models.DecimalField(max_digits=9, decimal_places=8, blank=True, null=True)
     pl_gen_sex_seq = models.IntegerField(blank=True, null=True)
     pl_gen_counts = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
     pl_gen_count_pct = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)
@@ -383,6 +384,12 @@ class BcdP(models.Model):
     pl_gen_collector_comment = models.CharField(max_length=2000, blank=True, null=True)
     pl_gen_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
     pl_gen_source = models.CharField(max_length=30, blank=True, null=True)
+    pl_gen_split_formula = models.CharField(max_length=50, blank=True, null=True)
+    pl_gen_source_date = models.DateField(blank=True, null=True)
+    pl_gen_modifier = models.CharField(max_length=50, blank=True, null=True)
+    pl_gen_unit = models.IntegerField(blank=True, null=True)
+    pl_gen_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+
     pl_freq_data_type_seq = models.IntegerField(blank=True, null=True)
     pl_freq_upper_bin_size = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)
     pl_freq_lower_bin_size = models.DecimalField(max_digits=6, decimal_places=3, blank=True, null=True)
@@ -391,15 +398,18 @@ class BcdP(models.Model):
     pl_freq_data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
     pl_freq_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
     pl_freq_detail_collector = models.CharField(max_length=50, blank=True, null=True)
+
     pl_detail_data_type_seq = models.IntegerField(blank=True, null=True)
     pl_detail_data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
     pl_detail_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
     pl_detail_detail_collector = models.CharField(max_length=50, blank=True, null=True)
+
     pl_indiv_data_type_seq = models.IntegerField(blank=True, null=True)
     pl_indiv_bug_seq = models.IntegerField(blank=True, null=True)
     pl_indiv_data_value = models.DecimalField(max_digits=10, decimal_places=5, blank=True, null=True)
     pl_indiv_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
     pl_indiv_data_collector = models.CharField(max_length=50, blank=True, null=True)
+
     created_by = models.CharField(max_length=30)
     created_date = models.DateField()
     data_center_code = models.IntegerField(blank=True, null=True)
@@ -407,9 +417,6 @@ class BcdP(models.Model):
     batch = models.ForeignKey(Bcbatches, related_name='plankton_data_edits', db_column='batch_seq', blank=True,
                               null=True,
                               on_delete=models.CASCADE)  #
-    pl_gen_modifier = models.CharField(max_length=50, blank=True, null=True)
-    pl_gen_unit = models.IntegerField(blank=True, null=True)
-    pl_gen_data_qc_code = models.CharField(max_length=2, blank=True, null=True)
 
     class Meta:
         managed = False
@@ -1104,7 +1111,7 @@ class Bcplanktngenerledits(models.Model):
     trophic_seq = models.IntegerField(blank=True, null=True)
     min_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
     max_sieve = models.DecimalField(max_digits=8, decimal_places=4, blank=True, null=True)
-    split_fraction = models.DecimalField(max_digits=5, decimal_places=4, blank=True, null=True)
+    split_fraction = models.DecimalField(max_digits=9, decimal_places=8, blank=True, null=True)
     sex_seq = models.IntegerField(blank=True, null=True)
     counts = models.DecimalField(max_digits=15, decimal_places=3, blank=True, null=True)
     count_pct = models.DecimalField(max_digits=15, decimal_places=5, blank=True, null=True)
@@ -1131,6 +1138,9 @@ class Bcplanktngenerledits(models.Model):
     modifier = models.CharField(max_length=50, blank=True, null=True)
     unit_seq = models.IntegerField(blank=True, null=True)
     data_qc_code = models.CharField(max_length=2, blank=True, null=True)
+
+    split_formula = models.CharField(max_length=50, blank=True, null=True)
+    source_date = models.DateField(blank=True, null=True)
 
     class Meta:
         managed = False
