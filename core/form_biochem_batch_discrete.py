@@ -199,7 +199,10 @@ def stage1_validation_func(mission_id, batch_id) -> None:
             raise ValidationError("Database package function failed: Station data in the BCD table did not validate.")
 
         user_logger.info(f"Moving BCS/BCD data to workbench")
-        cur.callfunc("POPULATE_DISCRETE_EDITS_PKG.POPULATE_DISCRETE_EDITS", str, [batch_id])
+        result = cur.callfunc("POPULATE_DISCRETE_EDITS_PKG.POPULATE_DISCRETE_EDITS", str, [batch_id])
+        if result.upper() == 'OK':
+            biochem_models.BcsD.objects.using('biochem').filter(batch_id=batch_id).delete()
+            biochem_models.BcdD.objects.using('biochem').filter(batch_id=batch_id).delete()
 
         cur.execute('commit')
 

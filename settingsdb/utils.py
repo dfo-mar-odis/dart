@@ -2,12 +2,14 @@ import os
 from datetime import datetime
 import pytz
 
+from django.apps import apps
 from django.conf import settings
-from django.core.management import call_command
 from django.db import connections
+from django.core.management import call_command
 from django.db.migrations.executor import MigrationExecutor
 
 import settingsdb.models
+
 from settingsdb import models
 from bio_tables import models as biomodels
 from config import settings
@@ -85,18 +87,37 @@ def connect_database(database):
 
     databases = settings.DATABASES
     mission_database = 'mission_db'
-    if mission_database not in databases or database != databases[mission_database].get('LOADED', None):
+    if mission_database in databases:
+        if databases[mission_database].get('LOADED', None) != database:
+            close_connection()
+        else:
+            return
 
-        try:
-            location = models.LocalSetting.objects.get(connected=True)
-        except settingsdb.models.LocalSetting.DoesNotExist as ex:
-            location = models.LocalSetting.objects.order_by('id').first()
-            location.connected = True
-            location.save()
+    try:
+        location = models.LocalSetting.objects.get(connected=True)
+    except settingsdb.models.LocalSetting.DoesNotExist as ex:
+        location = models.LocalSetting.objects.order_by('id').first()
+        location.connected = True
+        location.save()
 
-        databases[mission_database] = databases['default'].copy()
-        databases[mission_database]['NAME'] = os.path.join(location.database_location, f'{database}.sqlite3')
-        databases[mission_database]["LOADED"] = database
+    # Someone once recommended that Dart databases start with the DART_ prefix to make it clear they are Dart database.
+    # This however maks it a pain to work with on the command line. So now we will check for the database with and
+    # without the DART_ prefix and use whichever one we find, priority given to whatever name the user provided if
+    # it exists.
+    db_path = os.path.join(location.database_location, f'{database}.sqlite3')
+    if not os.path.exists(db_path) and not database.upper().startswith('DART_'):
+        database = f'DART_{database.upper()}'
+        db_path_prefix = os.path.join(location.database_location, f'{database}.sqlite3')
+        if os.path.exists(db_path_prefix):
+            db_path = db_path_prefix
+
+    if not os.path.exists(db_path):
+        raise FileNotFoundError(f"Database file not found at {db_path}")
+
+    logger.info(f"Connecting to database {database}")
+    databases[mission_database] = databases['default'].copy()
+    databases[mission_database]['NAME'] = db_path
+    databases[mission_database]["LOADED"] = database
 
 
 def is_database_synchronized(database):
@@ -119,6 +140,14 @@ def migrate(database):
 def get_dart_git_version():
     repo = Repo(settings.BASE_DIR)
     return  repo.head.commit.hexsha
+
+
+def close_connection(mission_database='mission_db'):
+    databases = settings.DATABASES
+    if mission_database in connections:
+        logger.info(f"closing {mission_database} connection")
+        del connections[mission_database]
+        connections.close_all()
 
 
 def close_connections():
