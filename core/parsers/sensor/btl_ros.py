@@ -372,9 +372,10 @@ class FixStationParser:
             GlobalSampleType.objects.bulk_create(create_sensors)
 
     def process_sensors(self, column_headers: list[str]):
-        # Given a list of column, 'SampleType' objects will be created if they do not already exist
-        # or aren't part of a set of excluded sensors
-        self.process_ros_sensors(sensors=column_headers)
+        if self.ros_stream:
+            # Given a list of column, 'SampleType' objects will be created if they do not already exist
+            # or aren't part of a set of excluded sensors
+            self.process_ros_sensors(sensors=column_headers)
 
         # The ROS file gives us all kinds of information about special sensors that are commonly added and removed from
         # the CTD, but it does not cover sensors that are normally on the CTD by default. i.e. Sal00, Potemp090C,
@@ -665,7 +666,7 @@ class FixStationParser:
 
         core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 
-    def __init__(self, event: core_models.Event, btl_filename: str, btl_stream: io.StringIO, ros_stream: io.StringIO):
+    def __init__(self, event: core_models.Event, btl_filename: str, btl_stream: io.StringIO, ros_stream: io.StringIO | None):
         self.event = event
         self.mission = self.event.mission
         self.mission_sample_types = {
@@ -675,7 +676,7 @@ class FixStationParser:
 
         self.btl_filename = btl_filename
         self.btl_stream: io.StringIO = btl_stream
-        self.ros_stream: io.StringIO = ros_stream
+        self.ros_stream: io.StringIO|None = ros_stream
 
         self.file_properties: dict = None
 
@@ -723,12 +724,15 @@ class FixStationBulkParser:
                 else:
                     validate_btl_file(btl_data)
             except KeyError as e:
+                logger.exception(e)
                 self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=104))
                 continue
             except ValueError as e:
+                logger.exception(e)
                 self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=103))
                 continue
             except Exception as e:
+                logger.exception(e)
                 self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=105))
                 continue
 
@@ -736,7 +740,9 @@ class FixStationBulkParser:
                 # Construct the expected .ros file path
                 ros_file = os.path.splitext(file)[0] + ".ros"
                 if not os.path.exists(ros_file):
-                    raise FileNotFoundError(f"No matching .ros file found for: {file}")
+                    logger.warning(f"No matching .ros file found for: {file}")
+                    ros_file = None
+                    # raise FileNotFoundError(f"No matching .ros file found for: {file}")
 
                 data = ctd.read.from_btl(file)
 
@@ -797,15 +803,19 @@ class FixStationBulkParser:
         new_files = []
         btl_file_type = core_models.FileType.objects.get_or_create(name='BTL', extension='BTL',
                                                                    description='Bottle files')[0]
+
         ros_file_type = core_models.FileType.objects.get_or_create(name='ROS', extension='ROS',
                                                                    description='Rosette files')[0]
         for event_id in parsed_events:
             btl_file = os.path.basename(parsed_events[event_id][0])
-            ros_file = os.path.basename(parsed_events[event_id][1])
             event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
             event.files.filter(file_type__in=[btl_file_type, ros_file_type]).delete()
+
             new_files.append(core_models.EventFile(event=event, file_name=btl_file, file_type=btl_file_type))
-            new_files.append(core_models.EventFile(event=event, file_name=ros_file, file_type=ros_file_type))
+
+            if len(parsed_events) > 1:
+                ros_file = os.path.basename(parsed_events[event_id][1])
+                new_files.append(core_models.EventFile(event=event, file_name=ros_file, file_type=ros_file_type))
 
         if new_files:
             core_models.EventFile.objects.bulk_create(new_files)
@@ -831,8 +841,10 @@ class FixStationBulkParser:
                 with open(btl_file, 'r', encoding='cp1252') as btl:
                     btl_input = io.StringIO(btl.read())
 
-                with open(ros_file, 'r', encoding='cp1252') as ros:
-                    ros_input = io.StringIO(ros.read())
+                ros_input = None
+                if ros_file:
+                    with open(ros_file, 'r', encoding='cp1252') as ros:
+                        ros_input = io.StringIO(ros.read())
 
                 parser = FixStationParser(event=event, btl_filename=os.path.basename(btl_file),
                                           btl_stream=btl_input, ros_stream=ros_input)
