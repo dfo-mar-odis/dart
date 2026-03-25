@@ -7,6 +7,7 @@ from enum import Enum
 from django.db.models import QuerySet
 
 import config.utils
+from core.models import NET_TYPES
 from settingsdb.models import FileConfiguration
 
 from core import models as core_models
@@ -275,9 +276,6 @@ def parse_files(mission, files):
     # send_user_notification_elog(group_name, mission, f"Process Actions and Attachments {process_message}")
     errors += process_attachments_actions(mission, message_objects)
 
-    # send_user_notification_elog(group_name, mission, f"Process Other Variables {process_message}")
-    errors += process_variables(mission, message_objects[ParserType.MID])
-
     error_count = len(errors)
     for err, error in enumerate(errors):
 
@@ -326,10 +324,7 @@ def get_instrument_name(instrument_name: str) -> core_models.InstrumentType:
         instrument_type = core_models.InstrumentType[instrument_name.lower()].value
         return instrument_type
     except KeyError:
-        if instrument_name.upper() == "BIONESS":
-            return core_models.InstrumentType.net
-
-        if instrument_name.upper() == "RINGNET":
+        if instrument_name.upper() in NET_TYPES:
             return core_models.InstrumentType.net
 
         if instrument_name.upper() == "VIKING BUOY":
@@ -365,10 +360,10 @@ def get_instrument(name, attachments):
     instrument_name = name.upper()
     instrument_type = get_instrument_name(instrument_name=name)
     if instrument_type == core_models.InstrumentType.net:
-        if instrument_name.upper() == "BIONESS":
-            instrument_name = instrument_name.upper()
+        if instrument_name.upper() in ["RINGNET", "NET"]:
+            instrument_name = get_net_mesh_size("RINGNET", attachments)
         else:
-            instrument_name = get_net_mesh_size(name, attachments)
+            instrument_name = instrument_name.upper()
 
     instrument = core_models.Instrument(name=instrument_name, type=instrument_type)
 
@@ -729,93 +724,3 @@ def get_create_and_update_variables(mission: core_models.Mission, action: core_m
             variables_to_update.append(update_variable)
 
     return [variables_to_create, variables_to_update]
-
-
-# Anything that wasn't consumed by the other process methods will be considered a variable and attached to
-# the action it falls under. This way users can still query an action for a variable even if DART doesn't do
-# anything with it.
-def process_variables(mission: core_models.Mission, mid_dictionary_buffer: {}) -> [tuple]:
-    database = mission._state.db
-    errors = []
-
-    fields_create = []
-    fields_update = []
-
-    existing_actions = {str(action.mid): action for action in
-                        core_models.Action.objects.filter(event__mission=mission)}
-
-    elog_configuration = get_or_create_file_config()
-    required_fields = ['lead_scientist', 'protocol', 'cruise', 'platform']
-    mapped_fields = {field.required_field: field.mapped_field for field in
-                     elog_configuration.filter(required_field__in=required_fields)}
-
-    update_mission = False
-    if mission.lead_scientist == 'N/A' or mission.platform == 'N/A' or mission.protocol == 'N/A':
-        update_mission = True
-
-    mid_list = list(mid_dictionary_buffer.keys())
-    mid_count = len(mid_list)
-    for mid, buffer in mid_dictionary_buffer.items():
-        index = mid_list.index(mid) + 1
-        logger_notifications.info(_("Processing Additional Variables for Elog Message") + f" : %d/%d", index, mid_count)
-        try:
-            # lead_scientists_field = get_field(elog_configuration, 'lead_scientist', buffer)
-            # protocol_field = get_field(elog_configuration, 'protocol', buffer)
-            # cruise_field = get_field(elog_configuration, 'cruise', buffer)
-            # platform_field = get_field(elog_configuration, 'platform', buffer)
-            field_errors = validate_buffer_fields(required_fields, mapped_fields, mid, buffer)
-            if len(field_errors) > 0:
-                # if there are missing fields report the errors and move on to the next message
-                errors += field_errors
-                continue
-
-            lead_scientists: str = buffer.pop(mapped_fields['lead_scientist'])
-            protocol: str = buffer.pop(mapped_fields['protocol'])
-            cruise: str = buffer.pop(mapped_fields['cruise'])
-            platform: str = buffer.pop(mapped_fields['platform'])
-
-            if update_mission:
-                if (lead_scientists and lead_scientists.strip() != '') and mission.lead_scientist == 'N/A':
-                    mission.lead_scientist = lead_scientists
-                    mission.save()
-
-                if (protocol and protocol.strip() != '') and mission.protocol == 'N/A':
-                    # make sure the protocal isn't more than 50 characters if it's not 'AZMP' or 'AZOMP'
-                    mission.protocol = protocol[:50]
-
-                    proto = re.search('azmp', protocol, re.IGNORECASE)
-                    if proto:
-                        mission.protocol = 'AZMP'
-
-                    proto = re.search('azomp', protocol, re.IGNORECASE)
-                    if proto:
-                        mission.protocol = 'AZOMP'
-
-                if (platform and platform.strip() != '') and mission.platform == 'N/A':
-                    mission.platform = platform
-
-                if update_mission:
-                    mission.save()
-
-                update_mission = False
-                if mission.platform == 'N/A' or mission.protocol == 'N/A':
-                    update_mission = True
-
-            if mid in existing_actions.keys():
-                action = existing_actions[mid]
-                # models.get_variable_name(name=k) is going to be a bottle neck if a variable doesn't already exist
-                variables_arrays = get_create_and_update_variables(mission, action, buffer)
-                fields_create += variables_arrays[0]
-                fields_update += variables_arrays[1]
-        except KeyError as ex:
-            logger.error(ex)
-            errors.append((mid, ex.args[0]["message"], ex,))
-        except Exception as ex:
-            message = _("Error processing variables, see error.log for details")
-            logger.exception(ex)
-            errors.append((mid, message, ex,))
-
-    core_models.VariableField.objects.bulk_create(fields_create)
-    core_models.VariableField.objects.bulk_update(objs=fields_update, fields=['value'])
-
-    return errors

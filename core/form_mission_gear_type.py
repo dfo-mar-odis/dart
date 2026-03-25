@@ -1,3 +1,4 @@
+import io
 import os
 import threading
 import time
@@ -37,8 +38,8 @@ import logging
 user_logger = logging.getLogger('dart.user.gear_type')
 logger = logging.getLogger('dart')
 
-class GearTypeFilterForm(SampleFilterForm):
 
+class GearTypeFilterForm(SampleFilterForm):
     filter_gear_type_description = forms.ChoiceField(
         help_text=_("Filter Samples based on existing gear type assigned"),
         required=False,
@@ -88,11 +89,10 @@ class GearTypeFilterForm(SampleFilterForm):
         gear_list = biochem_models.BCGear.objects.all().order_by('type', 'gear_seq')
         self.fields['filter_gear_type_description'].choices = ([(0, '------')] +
                                                                [(g.pk, f'{g.gear_seq} : {g.type} : {g.description}')
-                                                               for g in gear_list])
+                                                                for g in gear_list])
 
 
 class GearTypeSelectionForm(core_forms.CollapsableCardForm):
-
     class GearTypeSelectionIdBuilder(core_forms.CollapsableCardForm.CollapsableCardIDBuilder):
         def get_button_apply_id(self):
             return f'btn_id_apply_gear_type_{self.card_name}'
@@ -116,7 +116,8 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
     def get_btn_apply_gear_type(self):
         attrs = {
             'id': self.get_id_builder().get_button_apply_id(),
-            'hx-post': reverse_lazy('core:form_mission_gear_type_update_gear_type', args=[self.mission_id, self.instrument_type]),
+            'hx-post': reverse_lazy('core:form_mission_gear_type_update_gear_type',
+                                    args=[self.mission_id, self.instrument_type]),
             'hx-swap': 'none',
         }
         icon = load_svg("check-square")
@@ -186,14 +187,16 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
     def __init__(self, mission_id, instrument_type, render_description_list=True, *args, **kwargs):
         self.mission_id = mission_id
         self.instrument_type = instrument_type
-        self.update_form_url = reverse_lazy('core:form_mission_gear_type_filter_datatype', args=[self.mission_id, self.instrument_type])
+        self.update_form_url = reverse_lazy('core:form_mission_gear_type_filter_datatype',
+                                            args=[self.mission_id, self.instrument_type])
 
         super().__init__(*args, card_name="gear_type_selection", card_title=_("Gear Type Selection"), **kwargs)
 
         self.fields['gear_type_description'].choices = [(0, '------')]
         if render_description_list:
             gear_qs = biochem_models.BCGear.objects.all().order_by('type', 'gear_seq')
-            self.fields['gear_type_description'].choices += [(b.gear_seq, f"{b.gear_seq} : {b.type} : {b.description}") for b in gear_qs]
+            self.fields['gear_type_description'].choices += [(b.gear_seq, f"{b.gear_seq} : {b.type} : {b.description}")
+                                                             for b in gear_qs]
             if 'gear_type_code' in self.initial:
                 self.fields['gear_type_description'].initial = self.initial['gear_type_code']
 
@@ -218,15 +221,16 @@ def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> Quer
     elif bool(sample_id_start) and bool(sample_id_end):
         queryset = queryset.filter(bottle_id__gte=sample_id_start, bottle_id__lte=sample_id_end)
 
-    gear_code = int(filter_dict.get('filter_gear_type_code', 0) or filter_dict.get('filter_gear_type_description', 0) or 0)
+    gear_code = int(
+        filter_dict.get('filter_gear_type_code', 0) or filter_dict.get('filter_gear_type_description', 0) or 0)
 
     if gear_code:
         queryset = queryset.filter(gear_type_id=gear_code)
 
     return queryset
 
-def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
 
+def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
     instrument_type = kwargs['instrument_type']
 
     headers = [
@@ -258,6 +262,7 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
 
     html = df.to_html(index=False)
     return BeautifulSoup(html, 'html.parser')
+
 
 def list_samples(request, mission_id, instrument_type, **kwargs):
     card_title = _('Samples')
@@ -324,20 +329,52 @@ def validate_event_and_bottle(df):
     return errors if len(errors) > 0 else None
 
 
-def process_file(mission, file_path):
-    file_name = os.path.basename(file_path)
-    core_models.FileError.objects.filter(mission=mission, file_name=file_name).delete()
+def process_bioness_file(mission, files: list):
+    for file_path in files:
+        file_name = os.path.basename(file_path)
+        core_models.FileError.objects.filter(mission=mission, file_name=file_name).delete()
 
-    expected_columns = ["mission", "tow", "event", "sample_id", "net_number", "volume"]
-    df = pd.read_excel(file_path)
-    if list(df.columns) != expected_columns:
-        raise ValueError(f"Header does not match expected columns: {expected_columns}")
+        expected_columns = ["mission", "tow", "event", "sample_id", "net_number", "volume"]
+        df = pd.read_excel(file_path)
+        if list(df.columns) != expected_columns:
+            raise ValueError(f"Header does not match expected columns: {expected_columns}")
 
-    errors = validate_event_and_bottle(df)
-    if errors:
-        for error in errors:
-            core_models.FileError.objects.create(mission=mission, message=error[1], line=error[0],
-                                            file_name=file_name, type=core_models.ErrorType.validation, code=1000)
+        errors = validate_event_and_bottle(df)
+        if errors:
+            for error in errors:
+                core_models.FileError.objects.create(mission=mission, message=error[1], line=error[0],
+                                                     file_name=file_name, type=core_models.ErrorType.validation, code=1000)
+
+
+def process_multinet_file(mission, files: list):
+    for file_path in files:
+        file_name = os.path.basename(file_path)
+        core_models.FileError.objects.filter(mission=mission, file_name=file_name).delete()
+
+        from core.parsers.multinet_volume import update_volume_data
+        from core.parsers.multinet_volume import VolumeParser
+        with open(file_path, 'r') as file:
+            file_content = file.read()
+            file_stream = io.StringIO(file_content)
+            volume_data = VolumeParser(file_stream)
+            volume_data.parse()
+
+        try:
+            update_volume_data(volume_data, mission)
+        except core_models.Event.DoesNotExist:
+            message = f"No Event found for Station {volume_data.header_info['Station']} and Instrument type MULTINET"
+            logger.error(message)
+            core_models.FileError.objects.create(mission=mission, message=message, line=0,
+                                                 file_name=file_name, type=core_models.ErrorType.validation, code=1000)
+        except core_models.Bottle.DoesNotExist as ex:
+            message = str(ex)
+            logger.error(message)
+            core_models.FileError.objects.create(mission=mission, message=message, line=0,
+                                                 file_name=file_name, type=core_models.ErrorType.validation, code=1000)
+        except Exception as ex:
+            logger.exception(ex)
+            core_models.FileError.objects.create(mission=mission, message=str(ex), line=0,
+                                                 file_name=file_name, type=core_models.ErrorType.validation, code=1000)
 
 
 def load_volume(request, mission_id, thread_id=None, **kwargs):
@@ -372,7 +409,7 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
             message_div.append(ul_elm := soup.new_tag('ul'))
             for error in errors:
                 ul_elm.append(li_elm := soup.new_tag('li'))
-                error_msg = f"Line {error.line} - {error.message}"
+                error_msg = f"file {error.file_name}: Line {error.line} - {error.message}"
                 li_elm.string = error_msg
                 logger.error(error_msg)
 
@@ -390,10 +427,11 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
 
     start_dir = settings.dir if hasattr(settings, 'dir') else None
 
+    volue_parsers = ["BIONESS (*.xlsx)", "Multinet (*.txt)"]
     # Create and configure the file dialog
     file_dialog = QFileDialog()
-    file_dialog.setWindowTitle("Select a BIONESS_volume File")
-    file_dialog.setNameFilter("xlsx (*.xlsx)")
+    file_dialog.setWindowTitle("Select volume Files")
+    file_dialog.setNameFilter(";;".join(volue_parsers))
     file_dialog.setFileMode(QFileDialog.FileMode.ExistingFiles)
     file_dialog.setDirectory(start_dir)
 
@@ -401,12 +439,19 @@ def load_volume(request, mission_id, thread_id=None, **kwargs):
     if not file_dialog.exec():
         return HttpResponse(soup)
 
-    file_path = file_dialog.selectedFiles()[0]
-    settings.dir = os.path.dirname(file_path)
-    logger.info(f"Selected file: {file_path}")
+    selected_file_type = file_dialog.selectedNameFilter()
 
-    if file_path:
-        (t := threading.Thread(target=process_file, args=(mission, file_path,), daemon=True)).start()
+    if selected_file_type.upper() == volue_parsers[0].upper():
+        volue_parser_func = process_bioness_file
+    elif selected_file_type.upper() == volue_parsers[1].upper():
+        volue_parser_func = process_multinet_file
+
+    files = file_dialog.selectedFiles()
+    logger.info(f"Selected file: {files}")
+
+    if files:
+        settings.dir = os.path.dirname(files[0])
+        (t := threading.Thread(target=volue_parser_func, args=(mission, files,), daemon=True)).start()
 
         attrs = {
             'alert_area_id': base_notifications_id,
@@ -435,8 +480,8 @@ def update_gear_type_samples(request, mission_id, instrument_type=None, **kwargs
     response['HX-Trigger'] = 'reload_samples'
     return response
 
-def clear_filters(request, mission_id, instrument_type):
 
+def clear_filters(request, mission_id, instrument_type):
     form = GearTypeFilterForm(mission_id=mission_id, instrument_type=instrument_type, collapsed=False)
     return form_mission_sample_filter.clear_filters(form)
 
@@ -462,11 +507,15 @@ url_patterns = [
     path(f'geartype/load_volume/<int:mission_id>/', load_volume, name="form_gear_type_load_volume"),
     path(f'geartype/load_volume/<int:mission_id>/<str:thread_id>/', load_volume, name="form_gear_type_load_volume"),
 
-    path(f'geartype/delete/<int:mission_id>/<str:instrument_type>/', delete_samples, name="form_gear_type_delete_samples"),
+    path(f'geartype/delete/<int:mission_id>/<str:instrument_type>/', delete_samples,
+         name="form_gear_type_delete_samples"),
 
-    path(f'geartype/<int:mission_id>/<str:instrument_type>/', filter_gear_type, name="form_mission_gear_type_filter_datatype"),
-    path(f'geartype/apply/<int:mission_id>/<str:instrument_type>/', update_gear_type_samples, name="form_mission_gear_type_update_gear_type"),
-    path(f'geartype/clear/<int:mission_id>/<int:instrument_type>/', clear_filters, name="form_mission_sample_type_clear"),
+    path(f'geartype/<int:mission_id>/<str:instrument_type>/', filter_gear_type,
+         name="form_mission_gear_type_filter_datatype"),
+    path(f'geartype/apply/<int:mission_id>/<str:instrument_type>/', update_gear_type_samples,
+         name="form_mission_gear_type_update_gear_type"),
+    path(f'geartype/clear/<int:mission_id>/<int:instrument_type>/', clear_filters,
+         name="form_mission_sample_type_clear"),
 
     path(f'geartype/<int:mission_id>/<int:instrument_type>/list_samples/', list_samples,
          name="mission_gear_type_sample_list"),

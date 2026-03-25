@@ -17,6 +17,20 @@ import logging
 logger = logging.getLogger('dart')
 
 
+# Used to identify what type of net is being used in a net event.
+# This is important for computing the volume of water and for setting the gear type.
+NET_TYPES = {
+    'MULTINET': {'MESH_SIZE': 202, 'GEAR_TYPE': 90000084},
+    'BIONESS': {'MESH_SIZE': 202, 'GEAR_TYPE': 90000092},
+    # ringnets come in a 202Um and a 76um variety
+    'RINGNET': {
+        '202': {'MESH_SIZE': 202, 'GEAR_TYPE': 90000102},
+        '76': {'MESH_SIZE': 76, 'GEAR_TYPE': 90000105},
+        '70': {'MESH_SIZE': 70, 'GEAR_TYPE': 90000105},
+    }
+}
+
+
 # Used to track a list of reusable names, should be extended to create separated tables
 class SimpleLookupName(models.Model):
     name = models.CharField(verbose_name=_("Field Name"), max_length=50, unique=True)
@@ -750,3 +764,5 @@ class FileError(AbstractError):
 
     def __str__(self):
         return f"{self.file_name}: {self.mission} - {self.get_type_display()} : {self.message}"
+
+

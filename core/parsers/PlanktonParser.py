@@ -1,4 +1,6 @@
 import logging
+import re
+
 import numpy as np
 from django.template.backends.django import reraise
 
@@ -446,6 +448,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     # don't care about aborted events
     # events = events.exclude(actions__type=core_models.ActionType.aborted)
     # ringnet_bottles: QuerySet = core_models.Bottle.objects.filter(event__in=events)
+    events = {e.event_id: e.instrument for e in mission.events.filter(instrument__type=core_models.InstrumentType.net).exclude(actions__type=core_models.ActionType.aborted)}
     ringnet_bottles: QuerySet = core_models.Bottle.objects.filter(event__instrument__type=core_models.InstrumentType.net)
 
     mission.file_errors.filter(file_name=filename).delete()
@@ -467,6 +470,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
 
         bottle_id = row[config.get(required_field='id').mapped_field]
         event_id = row[config.get(required_field='event').mapped_field]
+
         taxa_name = row[config.get(required_field='taxa').mapped_field]
         ncode = row[config.get(required_field='ncode').mapped_field]
         taxa_id = 90000000000000 + int(ncode)
@@ -484,10 +488,26 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         split = row[config.get(required_field='split_fraction').mapped_field]
         value = row[config.get(required_field='data_value').mapped_field]
         what_was_it = row[config.get(required_field='what_was_it').mapped_field]
-        pressure = row[config.get(required_field='depth').mapped_field]
-        end_pressure = 0
 
-        gear_type = get_gear_type(mesh_size)
+        depth_value = row[config.get(required_field='depth').mapped_field]
+
+        if isinstance(depth_value, str) and re.match(r'^\d+-\d+$', depth_value):
+            pressure, end_pressure = map(float, depth_value.split('-'))
+        else:
+            pressure = float(depth_value)
+            end_pressure = 0
+
+        if event_id in events:
+            instrument = events[event_id]
+            NET_REGISTER = core_models.NET_TYPES[instrument.name.upper()]
+            if instrument.name.upper() in ['NET', 'RINGNET']:
+                NET_REGISTER = NET_REGISTER.get(mesh_size, None)
+
+            gear_type_code = NET_REGISTER.get('GEAR_TYPE', None)
+            gear_type = bio_models.BCGear.objects.get(pk=gear_type_code)
+        else:
+            gear_type = get_gear_type(mesh_size)
+
         if gear_type is None:
             error_message = _("Could not identify gear type for mesh size ") + str(mesh_size)
             message = (_("Line ") + str(line) + " " + error_message)
@@ -607,7 +627,8 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
     dataframe.columns = map(str.upper, dataframe.columns)
 
     # for zooplankton bottles are associated with a RingNet bottles, which won't exist and will have to be created
-    events = mission.events.filter(instrument__type=core_models.InstrumentType.net)
+    events = mission.events.filter(instrument__type=core_models.InstrumentType.net).exclude(actions__type=core_models.ActionType.aborted)
+    existing_events = {e.event_id: e for e in events}
 
     # don't care about aborted events
     # events = events.exclude(actions__type=core_models.ActionType.aborted)
@@ -619,6 +640,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
     create_bottles = {}
     update_plankton = {'objects': [], 'fields': set()}
     errors = []
+    GEAR_TYPE_REGISTER = core_models.NET_TYPES['BIONESS']
     for line, row in dataframe.iterrows():
         updated_fields = set("")
 
@@ -629,6 +651,9 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
 
         bottle_id = row[config.get(required_field='id').mapped_field]
         event_id = row[config.get(required_field='event').mapped_field]
+        if event_id in existing_events:
+            instrument = existing_events[event_id].instrument
+
         taxa_name = row[config.get(required_field='taxa').mapped_field]
         ncode = row[config.get(required_field='ncode').mapped_field]
         taxa_id = 90000000000000 + int(ncode)
@@ -650,7 +675,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
         end_pressure = row[config.get(required_field='end_depth').mapped_field]
         qc_flag = row[config.get(required_field='data_qc_code').mapped_field]
 
-        gear_type = 90000092
+        gear_type = GEAR_TYPE_REGISTER['GEAR_TYPE']
         min_sieve = get_min_sieve(proc_code=proc_code, mesh_size=mesh_size)
         max_sieve = get_max_sieve(proc_code=proc_code)
         split_fraction = get_split_fraction(proc_code=proc_code, split=split)
@@ -665,10 +690,6 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             continue
 
         try:
-            # Todo: We need to check that the event exists and that the bottle_id is in the event before we create
-            #       a new bottle. Otherwise we might be creating a bottle that shouldn't exist in this mission,
-            #       but for loading historical data, this is actually an advantage because they have to make up
-            #       bottle IDs for the historical data.
             bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
                                           gear_type=gear_type, mesh_size=mesh_size,
                                           start_pressure=pressure, end_pressure=end_pressure)
