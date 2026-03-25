@@ -202,6 +202,8 @@ class TestElogParser(DartTestCase):
             ('ctd', core_models.InstrumentType.ctd),
             ('RingNet', core_models.InstrumentType.net),
             ('Viking Buoy', core_models.InstrumentType.buoy),
+            ('Bioness', core_models.InstrumentType.net),
+            ('Multinet', core_models.InstrumentType.net),
         ]
 
         for instrument in instruments:
@@ -217,6 +219,8 @@ class TestElogParser(DartTestCase):
             (('ctd', ''), core_models.InstrumentType.ctd),
             (('RingNet', '76um'), core_models.InstrumentType.net),
             (('RingNet', '202um'), core_models.InstrumentType.net),
+            (('Bioness', ''), core_models.InstrumentType.net),
+            (('Multinet', ''), core_models.InstrumentType.net),
         ]
 
         # make sure the stations don't currently exist
@@ -229,7 +233,7 @@ class TestElogParser(DartTestCase):
         self.assertEqual(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.ctd)), 1)
 
         # there should be 2 nets
-        self.assertEqual(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.net)), 2)
+        self.assertEqual(len(core_models.Instrument.objects.filter(type=core_models.InstrumentType.net)), 4)
         # one named 202um
         self.assertEqual(len(core_models.Instrument.objects.filter(name__iexact='202')), 1)
 
