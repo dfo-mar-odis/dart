@@ -1011,9 +1011,9 @@ def checkin_mission(mission_id: int, batch_id: int, label: str, header_model,
         # We'll do this by getting the most recent version of this mission checked into BCMissions by out
         # current user.
         uploader = get_uploader().upper()
-        new_mission = biochem_models.Bcmissions.objects.using('biochem').order_by("created_date").filter(
+        new_mission = biochem_models.Bcmissions.objects.using('biochem').order_by("-mission_seq").filter(
             descriptor=dart_mission.mission_descriptor, created_by__iexact=uploader
-        ).last()
+        ).first()
         if new_mission:
             if is_mission_type_discrete:
                 dart_mission.biochem_discreate_mission_seq = new_mission.mission_seq
@@ -1069,9 +1069,22 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
 
         code = biochem_models.Bcactivityedits.objects.using('biochem').filter(batch_id=batch_id).values_list(
             'data_pointer_code', flat=True).distinct()[0]
+
+        dart_mission = core_models.Mission.objects.get(pk=mission_id)
+
+        missions = biochem_models.Bcmissions.objects.using('biochem').filter(
+            descriptor__iexact=dart_mission.mission_descriptor
+        )
+
+        if code == 'DH':
+            missions = missions.filter(events__discrete_headers__isnull=False).distinct()
+        elif code == 'PL':
+            missions = missions.filter(events__planktonheaders__isnull=False).distinct()
+
         context = {
             'mission_id': mission_id,
-            'label': code
+            'label': code,
+            'bc_missions': missions,
         }
 
         html = render_to_string("core/partials/form_clear_mission_seq.html", context=context, request=request)
@@ -1204,12 +1217,16 @@ def get_batch_errors(request, mission_id, batch_id):
     return HttpResponse(alert)
 
 
-def clear_mission_seq(request, mission_id, label):
+def clear_mission_seq(request, mission_id, label, **kwargs):
+    mission_seq = None
+    if 'mission_seq' in kwargs:
+        mission_seq = int(kwargs['mission_seq'])
+
     mission = core_models.Mission.objects.get(pk=mission_id)
     if label.upper() == "DH":
-        mission.biochem_discreate_mission_seq = None
+        mission.biochem_discreate_mission_seq = mission_seq
     else:
-        mission.biochem_plankton_mission_seq = None
+        mission.biochem_plankton_mission_seq = mission_seq
 
     mission.save()
 
@@ -1223,5 +1240,7 @@ url_patterns = [
     path(f'<int:mission_id>/{prefix}/set_descriptor/', set_descriptor, name="form_biochem_batch_mission_descriptor"),
     path(f'<int:mission_id>/{prefix}/set_uploader/', set_uploader, name="form_biochem_batch_uploader"),
     path(f'<int:mission_id>/{prefix}/batch_errors/<int:batch_id>/', get_batch_errors, name="form_biochem_batch_batch_errors"),
-    path(f'<int:mission_id>/{prefix}/clear_mission_seq/<str:label>/', clear_mission_seq, name="form_biochem_batch_clear_mission_seq")
+    path(f'<int:mission_id>/{prefix}/clear_mission_seq/<str:label>/', clear_mission_seq, name="form_biochem_batch_clear_mission_seq"),
+    path(f'<int:mission_id>/{prefix}/clear_mission_seq/<str:label>/<int:mission_seq>', clear_mission_seq,
+         name="form_biochem_batch_clear_mission_seq")
 ]
