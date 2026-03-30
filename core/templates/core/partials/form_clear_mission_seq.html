@@ -1,0 +1,6 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+<p>The existing linked mission Dart was tracking was not found. You can clear the mission link from Dart and check in this mission anyway to create a new mission in Biochem for Dart to track.</p>
+<button class="btn btn-sm btn-primary" type="button" hx-swap="none" hx-post="{% url 'core:form_biochem_batch_clear_mission_seq' mission_id label %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    {% custom_icon 'check-square' %}
+</button>

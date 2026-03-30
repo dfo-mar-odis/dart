@@ -19,6 +19,7 @@ from django.core.exceptions import ValidationError
 from django.db import OperationalError, connections, models, DatabaseError, transaction
 
 from django.http import HttpResponse
+from django.template.backends.django import reraise
 from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
 from django.utils.connection import ConnectionDoesNotExist
@@ -787,7 +788,11 @@ def checkout_existing_mission(mission_seq: int, label, header_model, oracle_proc
     # and then get the mission from the event.
     # This might throw a "does not exist" exception if the mission was removed by some other application
     # But we'll have to deal with that at a higher level.
-    bc_mission = biochem_models.Bcmissions.objects.using('biochem').get(mission_seq=mission_seq)
+    try:
+        bc_mission = biochem_models.Bcmissions.objects.using('biochem').get(mission_seq=mission_seq)
+    except biochem_models.Bcmissions.DoesNotExist as ex:
+        logger.exception(ex)
+        raise biochem_models.Bcmissions.DoesNotExist(f"Mission with mission_seq {mission_seq} does not exist. It may have been removed by another application.")
 
     # First, check if the mission is locked
     if hasattr(bc_mission, 'locked_missions'):
@@ -1031,6 +1036,7 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
         return response
 
     msg_alert.include_close_button()
+    response_actions = []
     try:
         if not batch_func:
             raise NotImplementedError("Batch function is not implemented.")
@@ -1043,7 +1049,7 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
 
         msg_alert.set_message("Success")
         msg_alert.set_type("success")
-
+        response_actions.append("reload_batch")
     except ValidationError as ex:
         msg_alert.set_message(f"Failed to check-in batch: {str(ex)}")
         msg_alert.set_type("danger")
@@ -1051,16 +1057,25 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
         logger.exception(ex)
 
     except biochem_models.Bcmissions.DoesNotExist as ex:
+        logger.exception(ex)
         # In this case, we should give the user to option to check in a new mission regardless of the fact that the
         # existing mission they were trying to replace doesn't exist. We want the user to be aware that the old
         # mission was removed for some reason, but checking in the new mission isn't going to create a duplicate.
         # This could also happen if the mission was originally uploaded to BiochemP, but then the mission DB
         # was copied and reuploaded to BiochemT for some kind of testing. In which case the user might want
         # to clear the linked mission.
-        msg_alert.set_message(f"Expected existing mission does not exist: {str(ex)}")
-        msg_alert.set_type("danger")
+        msg_alert.set_message(f"{str(ex)}")
+        msg_alert.set_type("warning")
 
-        logger.exception(ex)
+        code = biochem_models.Bcactivityedits.objects.using('biochem').filter(batch_id=batch_id).values_list(
+            'data_pointer_code', flat=True).distinct()[0]
+        context = {
+            'mission_id': mission_id,
+            'label': code
+        }
+
+        html = render_to_string("core/partials/form_clear_mission_seq.html", context=context, request=request)
+        msg_alert.get_message_container().append(BeautifulSoup(html, "html.parser"))
 
     except PermissionError as ex:
         # In this case, the old mission was locked by someone else and our user will have to know to go get the
@@ -1077,7 +1092,7 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
         logger.exception(ex)
 
     response = HttpResponse(msg_alert)
-    response['HX-Trigger-After-Settle'] = "reload_batch"
+    response['HX-Trigger-After-Settle'] = ",".join(response_actions)
     return response
 
 
@@ -1188,9 +1203,25 @@ def get_batch_errors(request, mission_id, batch_id):
     alert.include_close_button()
     return HttpResponse(alert)
 
+
+def clear_mission_seq(request, mission_id, label):
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    if label.upper() == "DH":
+        mission.biochem_discreate_mission_seq = None
+    else:
+        mission.biochem_plankton_mission_seq = None
+
+    mission.save()
+
+    response = HttpResponse()
+    response['HX-Trigger-After-Settle'] = "checkin_selected_batch"
+    return response
+
+
 prefix = 'biochem/batch'
 url_patterns = [
     path(f'<int:mission_id>/{prefix}/set_descriptor/', set_descriptor, name="form_biochem_batch_mission_descriptor"),
     path(f'<int:mission_id>/{prefix}/set_uploader/', set_uploader, name="form_biochem_batch_uploader"),
     path(f'<int:mission_id>/{prefix}/batch_errors/<int:batch_id>/', get_batch_errors, name="form_biochem_batch_batch_errors"),
+    path(f'<int:mission_id>/{prefix}/clear_mission_seq/<str:label>/', clear_mission_seq, name="form_biochem_batch_clear_mission_seq")
 ]
