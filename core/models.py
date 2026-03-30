@@ -1,7 +1,6 @@
 import datetime
 import numpy as np
 
-import bio_tables.models
 from core.utils import distance
 
 from django.db.models.functions import Lower
@@ -110,6 +109,17 @@ class Mission(models.Model):
                                                             "that will be present in a sample file, but have no "
                                                             "associated events or bottles."))
     end_underway_sample = models.IntegerField(verbose_name=_("End Underway Sample ID"), blank=True, null=True)
+
+    # If this mission has been uploaded to biochem before, record the mission sequence number. Dart
+    # should only beable to replace missions it was used to upload in the first place.
+    biochem_discreate_mission_seq = models.IntegerField(verbose_name=_("Discrete Mission Sequences"), null=True, blank=True,
+                                              help_text=_("The mission sequence number of an existing Biochem discrete"
+                                                          " mission that this mission's discrete data should replace"))
+
+    biochem_plankton_mission_seq = models.IntegerField(verbose_name=_("Plankton Mission Sequences"), null=True, blank=True,
+                                                       help_text=_(
+                                                           "The mission sequence number of an existing Biochem Plankton"
+                                                           " mission that this mission's plankton data should replace"))
 
     @property
     def get_batch_name(self):
@@ -451,7 +461,7 @@ class Bottle(models.Model):
     #
     # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
     # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
-    gear_type = models.ForeignKey(bio_tables.models.BCGear, verbose_name="Gear Type", related_name="bottles",
+    gear_type = models.ForeignKey(bio_models.BCGear, verbose_name="Gear Type", related_name="bottles",
                                   on_delete=models.DO_NOTHING, default=90000171)
 
     # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
@@ -524,7 +534,7 @@ class MissionSampleType(models.Model):
     is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
                                     help_text=_("Identify this sample type as a type of sensor"))
 
-    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+    datatype = models.ForeignKey(bio_models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
 
     def __str__(self):
@@ -593,7 +603,7 @@ class DiscreteSampleValue(models.Model):
 
     # Individual samples can have different datatype than the general datatype provided by the
     # sample type. If this is blank the sample.type.datatype value should be used for the sample
-    datatype = models.ForeignKey(bio_tables.models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
+    datatype = models.ForeignKey(bio_models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
                                  blank=True, on_delete=models.SET_NULL)
 
     bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
@@ -617,15 +627,15 @@ class PlanktonSample(models.Model):
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
     bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)
 
-    taxa = models.ForeignKey(bio_tables.models.BCNatnlTaxonCode, verbose_name=_("Taxonomy"),
+    taxa = models.ForeignKey(bio_models.BCNatnlTaxonCode, verbose_name=_("Taxonomy"),
                              related_name="plankton_data", on_delete=models.DO_NOTHING)
 
     # default unassigned BCLIFEHISTORIES 90000000
-    stage = models.ForeignKey(bio_tables.models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
+    stage = models.ForeignKey(bio_models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
                               on_delete=models.DO_NOTHING)
 
     # default unassigned BCSEXES 90000000
-    sex = models.ForeignKey(bio_tables.models.BCSex, verbose_name=_("Sex"), default=90000000,
+    sex = models.ForeignKey(bio_models.BCSex, verbose_name=_("Sex"), default=90000000,
                             on_delete=models.DO_NOTHING)
 
     # 1 for phytoplankton, more complicated for zooplankton

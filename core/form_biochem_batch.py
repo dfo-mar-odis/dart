@@ -16,7 +16,7 @@ from django import forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import OperationalError, connections, models, DatabaseError
+from django.db import OperationalError, connections, models, DatabaseError, transaction
 
 from django.http import HttpResponse
 from django.template.loader import render_to_string
@@ -33,6 +33,9 @@ from core import form_biochem_database
 from biochem import models as biochem_models
 
 import logging
+
+from core.form_biochem_database import get_database_connection_form, get_uploader
+
 logger = logging.getLogger("dart")
 user_logger = logging.getLogger("dart.user")
 
@@ -773,54 +776,51 @@ def delete_batch(mission_id, batch_id, label):
         unlock.delete()
 
 
-def checkout_existing_mission(mission: biochem_models.Bcmissionedits, label, header_model, oracle_proc) -> biochem_models.Bcmissions | None:
+def checkout_existing_mission(mission_seq: int, label, header_model, oracle_proc) -> biochem_models.Bcmissions | None:
     return_status = ''
     return_value = ''
     data_pointer_code = "DH" if label == 'DISCRETE' else "PL"
 
-    # if the mission doesn't have discrete headers, then it doesn't belong here in form_biochem_discrete
-    headers = header_model.objects.using('biochem').filter(event__mission__descriptor__iexact=mission.descriptor)
+    # if a mission was previously uploaded with Dart, The Dart mission will have a reference to the previous mission descriptor
 
-    if headers.exists():
-        bc_mission = headers.first().event.mission
-        mission_seq = bc_mission.mission_seq
+    # Both the BcPlanktnHedrs and BcDiscreteHedrs tables have a similar format so we can get their event
+    # and then get the mission from the event.
+    # This might throw a "does not exist" exception if the mission was removed by some other application
+    # But we'll have to deal with that at a higher level.
+    bc_mission = biochem_models.Bcmissions.objects.using('biochem').get(mission_seq=mission_seq)
 
-        # Check if the mission with the mission_seq is already checked out to the users edit tables
-        user_missions = biochem_models.Bcmissionedits.objects.using('biochem').filter(mission=bc_mission)
-        if not user_missions.exists():
-            # If not checked out, check if the mission with mission_seq is in the BCLockedMissions table
-            # If in the locked missions table and not in the users table we shouldn't be deleting or overriding
-            if hasattr(bc_mission, 'locked_missions'):
-                msg = f"'{bc_mission.locked_missions.downloaded_by}' " + _("already has this mission checked out. "
-                                                                           "Mission needs to be released from BCLockedMissions before it can be modified.")
-                raise PermissionError(msg)
-
-            # Todo: There's also a case where there could be multiple versions of a mission in the Archive.
-            #       In this case I only retrieve the first mission that matches the mission.mission_descriptor,
-            #       but I don't think this is the right thing to do, I'll need to ask.
-            # Todo:
-            #       years later and I still really don't have an answer to this. It really only happens for legacy
-            #       missions uploaded by a specific person. Most of the time missions have one discreate entry
-            #       and one plankton entry, and that's it.
-            # check it out to the edit tables.
-            with connections['biochem'].cursor() as cur:
-                user_logger.info(f"Downloading existing mission to edit tables with matching descriptor {mission_seq}")
-                return_value = cur.callproc(oracle_proc, [mission_seq, return_status])
-
-            if return_value[1] is None:
-                biochem_models.Bclockedmissions.objects.using('biochem').create(
-                    mission=bc_mission,
-                    mission_name=bc_mission.name,
-                    descriptor=bc_mission.descriptor,
-                    data_pointer_code=data_pointer_code,  # reference to BCDataPointers table - "DH" for discrete, "PL" for plankton
-                    downloaded_by=form_biochem_database.get_uploader(),
-                    downloaded_date=datetime.now()).save(using='biochem')
-                return bc_mission
+    # First, check if the mission is locked
+    if hasattr(bc_mission, 'locked_missions'):
+        # if it is locked and it's not locked by our user then raise a permissions issue.
+        user = get_uploader()
+        if bc_mission.locked_missions.downloaded_by.upper() != user:
+            locked_msg = _("already has this mission checked out. Mission needs to be released from BCLockedMissions before it can be modified.")
+            msg = f"'{bc_mission.locked_missions.downloaded_by}' " + locked_msg
+            raise PermissionError(msg)
         else:
-            return user_missions.first().mission
+            # if our user already has the mission checked out then we want to return it.
+            return bc_mission
 
+    # If the mission isn't locked and isn't checked out by our user, then check it out to the edit tables.
+    with connections['biochem'].cursor() as cur:
+        user_logger.info(f"Downloading existing mission to edit tables with matching descriptor {mission_seq}")
+        return_value = cur.callproc(oracle_proc, [mission_seq, return_status])
+
+        # Once checked out, add a lock table entry to prevent others from modifying this mission while we're working with it.
+        if return_value[1] is None:
+            biochem_models.Bclockedmissions.objects.using('biochem').create(
+                mission=bc_mission,
+                mission_name=bc_mission.name,
+                descriptor=bc_mission.descriptor,
+                data_pointer_code=data_pointer_code,  # reference to BCDataPointers table - "DH" for discrete, "PL" for plankton
+                downloaded_by=form_biochem_database.get_uploader(),
+                downloaded_date=datetime.now()).save(using='biochem')
+
+            # return the newly locked mission for use in Dart
+            return bc_mission
+
+    # if we can't find, checkout or lock the mission, return None
     return None
-
 
 def get_batch_list(request, mission_id, form_class: Type[BiochemDBBatchForm]) -> HttpResponse:
     if batch_id := request.session.get('batch_id', None):
@@ -959,59 +959,66 @@ def checkin_mission(mission_id: int, batch_id: int, label: str, header_model,
     return_status = ''
     return_value = ''
 
-    # check for existing mission matching this batch and check it out to the user edit tables if it exists
-    # This is to create a backup which the user can then recover from if something goes wrong.
-    batch = biochem_models.Bcbatches.objects.using('biochem').get(batch_seq=batch_id)
-    batch_mission_edit = batch.mission_edits.first()
+    # check if the batch already exists in the user's edit tables. If it does and it shows indications of being
+    # a backup of a previous mission, then we will not allow the user to check this mission back in.
+    bc_mission_edits = biochem_models.Bcmissionedits.objects.using('biochem').get(batch_id=batch_id)
+    if bc_mission_edits.mission_id:
+        raise NotImplementedError("Dart cannot currently be used to re-archive a backed up mission, this must be done manually through Biochem. Please contact the administrator to resolve this issue.")
 
-    bc_mission: biochem_models.Bcmissions = checkout_existing_mission(
-        mission=batch_mission_edit,
-        label=label,
-        header_model=header_model,
-        oracle_proc=oracle_checkout_proc
-    )
+    is_mission_type_discrete = True if header_model._meta.verbose_name.upper() == "BCDISCRETEHEDRS" else False
+    dart_mission = core_models.Mission.objects.get(pk=mission_id)
+    if is_mission_type_discrete:
+        mission_seq = dart_mission.biochem_discreate_mission_seq
+    else:
+        mission_seq = dart_mission.biochem_plankton_mission_seq
 
-    # if the **batch_mission_edit** mission has a mission_seq it needs to be archived using the
-    # REARCHIVE_DISCRETE_MISSION function. Otherwise, the cursor will return without errors, but won't actually have
-    # done anything ( -_-), seriously...
-    # if batch_mission_edit.mission_id is not None:
-    #     stage2_validation_func(batch_mission_edit.mission_id, batch_id)
+    # First, Has Dart uploaded a version of this mission in the past.
+    # If so, checkout and lock the mission we're replacing
+    # If not, we're just creating a new mission.
+    bc_mission: biochem_models.Bcmissions | None = None
+    if mission_seq is not None:
+        # This might raise a permissions error if someone else has this mission checked out or it might
+        # raise a "Does Not Exist Error" if the mission was removed by other means. In either case we need
+        # to notify the user at a higher level this has happened and we don't want to create a duplicate mission
+        bc_mission = checkout_existing_mission(
+            mission_seq=mission_seq,
+            label=label,
+            header_model=header_model,
+            oracle_proc=oracle_checkout_proc
+        )
 
     # check in new mission
     with connections['biochem'].cursor() as cur:
+
         user_logger.info(f"Uploading new mission with batch id {batch_id}")
         return_value = cur.callproc(oracle_archive_proc, [batch_id, return_status])
 
-    # if the checkin fails release the old mission and delete it from the edit tables
-    # if successful delete the new mission from the edit tables, but keep the old one.
-    try:
-        if return_value[1] is not None:
-            raise ValueError(return_value[1])
+        if return_status:
+            # Something has gone wrong and an exception should be raised to notify the user that the check-in failed.
+            raise Exception(f"Check-in failed with message: {return_status}")
 
-        # confirm the replacement mission was uploaded, this will throw a DoesNotExist exception if the mission doesn't
-        # exist in Biochem
-        if batch_mission_edit.mission_id is not None:
-            biochem_models.Bcmissions.objects.using('biochem').get(mission_seq=batch_mission_edit.mission_id)
-        elif bc_mission:
-            biochem_models.Bcmissions.objects.using('biochem').exclude(mission_seq=bc_mission.mission_seq).get(
-                descriptor=batch_mission_edit.descriptor, created_date=batch_mission_edit.created_date)
-
-        # if the mission exists in the lock tables and there was no problem archiving it,
-        # then remove it from the locked table
+        # if the mission exists in the lock tables and there was no problem archiving it, remove the old linked mission
         if bc_mission and bc_mission.locked_missions:
             bc_mission.delete()
 
+        # once checked in we need to record the mission_seq so future uploads will know which mission
+        # Dart was associated with.
+        # We'll do this by getting the most recent version of this mission checked into BCMissions by out
+        # current user.
+        uploader = get_uploader().upper()
+        new_mission = biochem_models.Bcmissions.objects.using('biochem').order_by("created_date").filter(
+            descriptor=dart_mission.mission_descriptor, created_by__iexact=uploader
+        ).last()
+        if new_mission:
+            if is_mission_type_discrete:
+                dart_mission.biochem_discreate_mission_seq = new_mission.mission_seq
+            else:
+                dart_mission.biochem_plankton_mission_seq = new_mission.mission_seq
+
+            dart_mission.save()
+
+        # Remove the batch we just checked in
         delete_batch_func(mission_id, batch_id)
-    except biochem_models.Bcmissions.DoesNotExist as ex:
-        user_logger.error(f"Issues with archiving mission: {return_value[1]}")
-
-        if bc_mission and bc_mission.locked_missions:
-            old_batch_id = biochem_models.Bcmissionedits.objects.using('biochem').filter(
-                mission_edt_seq=bc_mission.mission_seq).first().batch.batch_seq
-            delete_batch_func(mission_id, old_batch_id)
-            bc_mission.locked_missions.delete()
-
-        raise DatabaseError("Could not check in new mission")
 
 
 def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, batch_func: Callable) -> HttpResponse:
@@ -1028,6 +1035,10 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
         if not batch_func:
             raise NotImplementedError("Batch function is not implemented.")
 
+        # Todo: We should have something here that if there are missions with matching mission names/descriptors
+        #  The user might want to choose an existing mission this new mission should replace if the dart mission isn't
+        #  currently linked to an existing biochem mission.
+
         batch_func(mission_id, batch_id)
 
         msg_alert.set_message("Success")
@@ -1035,6 +1046,26 @@ def checkin_batch(request, mission_id: int, batch_id: int, logger_name: str, bat
 
     except ValidationError as ex:
         msg_alert.set_message(f"Failed to check-in batch: {str(ex)}")
+        msg_alert.set_type("danger")
+
+        logger.exception(ex)
+
+    except biochem_models.Bcmissions.DoesNotExist as ex:
+        # In this case, we should give the user to option to check in a new mission regardless of the fact that the
+        # existing mission they were trying to replace doesn't exist. We want the user to be aware that the old
+        # mission was removed for some reason, but checking in the new mission isn't going to create a duplicate.
+        # This could also happen if the mission was originally uploaded to BiochemP, but then the mission DB
+        # was copied and reuploaded to BiochemT for some kind of testing. In which case the user might want
+        # to clear the linked mission.
+        msg_alert.set_message(f"Expected existing mission does not exist: {str(ex)}")
+        msg_alert.set_type("danger")
+
+        logger.exception(ex)
+
+    except PermissionError as ex:
+        # In this case, the old mission was locked by someone else and our user will have to know to go get the
+        # other user to unlock the mission before an updated version can be added to Biochem.
+        msg_alert.set_message(f"Existing version of this mission already exists: {str(ex)}")
         msg_alert.set_type("danger")
 
         logger.exception(ex)
