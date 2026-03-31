@@ -38,7 +38,8 @@ class MissionSettingsForm(forms.ModelForm):
         model = models.Mission
         fields = ['name', 'description', 'fixed_station', 'geographic_region', 'mission_descriptor', 'data_center',
                   'lead_scientist', 'start_date', 'end_date', 'platform', 'protocol', 'collector_comments',
-                  'data_manager_comments', 'start_underway_sample', 'end_underway_sample']
+                  'data_manager_comments', 'start_underway_sample', 'end_underway_sample',
+                  'biochem_discreate_mission_seq', 'biochem_plankton_mission_seq']
 
     @property
     def get_btn_add(self):
@@ -219,6 +220,10 @@ class MissionSettingsForm(forms.ModelForm):
                     ),
                     Row(Field('collector_comments')),
                     Row(Field('data_manager_comments')),
+                    Row(
+                        Column(Field('biochem_discreate_mission_seq')),
+                        Column(Field('biochem_plankton_mission_seq')),
+                    ),
                     Row(
                         Column(Field('start_underway_sample')),
                         Column(Field('end_underway_sample')),

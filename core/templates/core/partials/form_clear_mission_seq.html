@@ -1,0 +1,31 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+<p>The existing linked mission Dart was tracking was not found. You can clear the mission link from Dart and check in this mission anyway to create a new mission in Biochem for Dart to track.</p>
+<button class="btn btn-sm btn-primary" type="button" hx-swap="none" hx-post="{% url 'core:form_biochem_batch_clear_mission_seq' mission_id label %}" hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+    <span class="me-2">{% custom_icon 'check-square' %}</span> Link to new mission
+</button>
+
+{% if bc_missions %}
+<div>
+Link to another mission with the same descriptor
+<table class="table table-striped">
+<tr>
+    <th>{% trans 'Mission Sequence' %}</th><th>{% trans 'Name' %}</th><th>{% trans 'Descriptor' %}</th><th>{% trans 'Created' %}</th><th>{% trans 'Created By' %}</th>
+</tr>
+{% for mission in bc_missions %}
+    <tr>
+        <td><button class="btn btn-sm btn-warning" type="button"
+                    hx-confirm="{% trans 'This will replace an existing mission. Are you sure?' %}"
+                    hx-swap="none" hx-post="{% url 'core:form_biochem_batch_clear_mission_seq' mission_id label mission.mission_seq%}"
+                    hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
+            <span class="me-2">{% custom_icon 'check-square' %}</span> Link to {{ mission.mission_seq }}
+        </button></td>
+        <td>{{ mission.name }}</td>
+        <td>{{ mission.descriptor }}</td>
+        <td>{{ mission.prod_created_date }}</td>
+        <td>{{ mission.created_by }}</td>
+    </tr>
+    {% endfor %}
+</table>
+</div>
+{% endif %}
