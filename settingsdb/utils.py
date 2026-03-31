@@ -146,7 +146,7 @@ def close_connection(mission_database='mission_db'):
     databases = settings.DATABASES
     if mission_database in connections:
         logger.info(f"closing {mission_database} connection")
-        del connections[mission_database]
+        # del connections[mission_database]
         connections.close_all()
 
 
