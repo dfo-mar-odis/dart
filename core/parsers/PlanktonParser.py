@@ -499,9 +499,14 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
 
         if event_id in events:
             instrument = events[event_id]
-            NET_REGISTER = core_models.NET_TYPES[instrument.name.upper()]
-            if instrument.name.upper() in ['NET', 'RINGNET']:
-                NET_REGISTER = NET_REGISTER.get(mesh_size, None)
+            # The instrument name should be either BIONESS, MULTINET, NET or RINGNET
+            # if the instrument name is not BIONESS, MULTINET or some other defined name for a specific net type
+            # then we should assume the net type is a RINGNET and the name is likely a key for the sub-net type
+            net_type_name = instrument.name.upper()
+            if net_type_name not in ['BIONESS', 'MULTINET']:
+                NET_REGISTER = core_models.NET_TYPES['RINGNET'].get(str(mesh_size), None)
+            else:
+                NET_REGISTER = core_models.NET_TYPES[net_type_name]
 
             gear_type_code = NET_REGISTER.get('GEAR_TYPE', None)
             gear_type = bio_models.BCGear.objects.get(pk=gear_type_code)

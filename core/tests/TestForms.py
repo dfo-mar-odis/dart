@@ -8,7 +8,6 @@ from django.utils.translation import gettext as _
 
 from core import forms as core_forms
 
-from core.parsers.sensor import ctd
 from config import settings
 from config.tests.DartTestCase import DartTestCase
 
