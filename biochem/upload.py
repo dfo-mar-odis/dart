@@ -116,7 +116,14 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
 
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
+    bottles = bottles.select_related(
+        'event__mission__data_center',
+        'event__station'
+    )
+
     total_bottles = len(bottles)
+    date_now_string = datetime.now().strftime("%Y-%m-%d")
+
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
             user_logger.info(_("Compiling Bottle") + " : %d/%d", (count + 1), total_bottles)
@@ -127,83 +134,90 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
-        bcs_row = models.BcsD(dis_sample_key_value=dis_sample_key_value, dis_headr_collector_sample_id=bottle.bottle_id)
+        try:
+            sounding_action = event.sounding_action
+            header_sounding = sounding_action.sounding
+            header_comment = sounding_action.data_collector
+            event_collector_comment = None
+
+        except ValueError as ex:
+            logger.exception(ex)
+            header_sounding = None
+            header_comment = "Unknown"
+            event_collector_comment = "No sounding action found for this event"
 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
 
-        bcs_row.created_by = uploader
+        header_slat = bottle.latitude if bottle.latitude else event.start_location[0]
+        header_elat = bottle.latitude if bottle.latitude else event.end_location[1]
 
-        bcs_row.mission_descriptor = mission.mission_descriptor
-        bcs_row.mission_name = mission.name
-        bcs_row.mission_leader = mission.lead_scientist
-        bcs_row.mission_sdate = m_start_date
-        bcs_row.mission_edate = m_end_date
-        bcs_row.mission_platform = mission.platform
-        bcs_row.mission_protocol = mission.protocol
-        bcs_row.mission_geographic_region = mission.geographic_region
-        bcs_row.mission_collector_comment1 = mission.collector_comments
-        bcs_row.mission_collector_comment2 = mission.more_comments
-        bcs_row.mission_data_manager_comment = mission.data_manager_comments
-        bcs_row.mission_institute = primary_data_center.name if primary_data_center else "Not Specified"
+        header_slon = bottle.longitude if bottle.longitude else event.start_location[0]
+        header_elon = bottle.longitude if bottle.longitude else event.end_location[1]
 
-        bcs_row.event_collector_event_id = f'{event.event_id:03d}'
-        bcs_row.event_collector_comment1 = event.comments
-        bcs_row.event_data_manager_comment = DART_EVENT_COMMENT
-        bcs_row.event_collector_stn_name = event.station.name
-        bcs_row.event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
-        bcs_row.event_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
-        bcs_row.event_stime = datetime.strftime(event.start_date, "%H%M")
-        bcs_row.event_etime = datetime.strftime(event.end_date, "%H%M")
-        bcs_row.event_utc_offset = 0
-        bcs_row.event_min_lat = min(event.start_location[0], event.end_location[0])
-        bcs_row.event_max_lat = max(event.start_location[0], event.end_location[0])
-        bcs_row.event_min_lon = min(event.start_location[1], event.end_location[1])
-        bcs_row.event_max_lon = max(event.start_location[1], event.end_location[1])
+        bcs_row = models.BcsD(
+            dis_sample_key_value=dis_sample_key_value,
+            dis_headr_collector_sample_id=bottle.bottle_id,
+            created_by = uploader,
 
-        bcs_row.dis_headr_gear_seq = 90000019  # typically 90000019, not always
-        bcs_row.dis_headr_time_qc_code = 1
-        bcs_row.dis_headr_position_qc_code = 1
+            mission_descriptor = mission.mission_descriptor,
+            mission_name = mission.name,
+            mission_leader = mission.lead_scientist,
+            mission_sdate = m_start_date,
+            mission_edate = m_end_date,
+            mission_platform = mission.platform,
+            mission_protocol = mission.protocol,
+            mission_geographic_region = mission.geographic_region,
+            mission_collector_comment1 = mission.collector_comments,
+            mission_collector_comment2 = mission.more_comments,
+            mission_data_manager_comment = mission.data_manager_comments,
+            mission_institute = primary_data_center.name if primary_data_center else "Not Specified",
 
-        try:
-            sounding_action = event.sounding_action
-            bcs_row.dis_headr_sounding = sounding_action.sounding
-            bcs_row.dis_headr_collector = sounding_action.data_collector
-        except ValueError as ex:
-            logger.exception(ex)
-            bcs_row.dis_headr_sounding = None
-            bcs_row.dis_headr_collector = "Unknown"
-            bcs_row.event_collector_comment2 = "No sounding action found for this event"
+            event_collector_event_id = f'{event.event_id:03d}',
+            event_collector_comment1 = event.comments,
+            event_data_manager_comment = DART_EVENT_COMMENT,
+            event_collector_stn_name = event.station.name,
+            event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d"),
+            event_edate = datetime.strftime(event.end_date, "%Y-%m-%d"),
+            event_stime = datetime.strftime(event.start_date, "%H%M"),
+            event_etime = datetime.strftime(event.end_date, "%H%M"),
+            event_utc_offset = 0,
+            event_min_lat = min(event.start_location[0], event.end_location[0]),
+            event_max_lat = max(event.start_location[0], event.end_location[0]),
+            event_min_lon = min(event.start_location[1], event.end_location[1]),
+            event_max_lon = max(event.start_location[1], event.end_location[1]),
 
-        bcs_row.dis_headr_responsible_group = mission.protocol
+            dis_headr_gear_seq = 90000019,  # typically 90000019, not always
+            dis_headr_time_qc_code = 1,
+            dis_headr_position_qc_code = 1,
 
-        bcs_row.dis_headr_sdate = datetime.strftime(bottle.closed, "%Y-%m-%d")
-        bcs_row.dis_headr_edate = datetime.strftime(bottle.closed, "%Y-%m-%d")
-        bcs_row.dis_headr_stime = datetime.strftime(bottle.closed, "%H%M")
-        bcs_row.dis_headr_etime = datetime.strftime(bottle.closed, "%H%M")
+            dis_headr_sounding = header_sounding,
+            dis_headr_collector = header_comment,
+            event_collector_comment2 = event_collector_comment,
 
-        if bottle.latitude:
-            bcs_row.dis_headr_slat = bottle.latitude
-            bcs_row.dis_headr_elat = bottle.latitude
-        else:
-            bcs_row.dis_headr_slat = event.start_location[0]
-            bcs_row.dis_headr_elat = event.end_location[0]
+            dis_headr_responsible_group = mission.protocol,
 
-        if bottle.longitude:
-            bcs_row.dis_headr_slon = bottle.longitude
-            bcs_row.dis_headr_elon = bottle.longitude
-        else:
-            bcs_row.dis_headr_slon = event.start_location[1]
-            bcs_row.dis_headr_elon = event.end_location[1]
+            dis_headr_sdate = datetime.strftime(bottle.closed, "%Y-%m-%d"),
+            dis_headr_edate = datetime.strftime(bottle.closed, "%Y-%m-%d"),
+            dis_headr_stime = datetime.strftime(bottle.closed, "%H%M"),
+            dis_headr_etime = datetime.strftime(bottle.closed, "%H%M"),
 
-        bcs_row.dis_headr_start_depth = bottle.pressure
-        bcs_row.dis_headr_end_depth = bottle.pressure
+            dis_headr_slat = header_slat,
+            dis_headr_elat = header_elat,
 
-        # The process flag is used by the Biochem upload app to indicate if the data should be processed by
-        # the application. Pl/SQL code is run on the table and this flag is set to 'SVE' depending on
-        # if the data validates.
-        bcs_row.process_flag = 'NR'
-        bcs_row.data_center_code = primary_data_center.data_center_code
+            dis_headr_slon = header_slon,
+            dis_headr_elon = header_elon,
+
+            dis_headr_start_depth = bottle.pressure,
+            dis_headr_end_depth = bottle.pressure,
+
+            # The process flag is used by the Biochem upload app to indicate if the data should be processed by
+            # the application. Pl/SQL code is run on the table and this flag is set to 'SVE' depending on
+            # if the data validates.
+            process_flag = 'NR',
+            data_center_code = primary_data_center.data_center_code,
+            created_date = date_now_string
+        )
 
         if batch:
             bcs_row.batch = batch
@@ -211,9 +225,6 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             bcs_row.batch_id = 0
 
         bcs_objects_to_create.append(bcs_row)
-
-    for bcs_row in bcs_objects_to_create:
-        bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
 
     return bcs_objects_to_create
 
@@ -228,7 +239,16 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
     # mission = core_models.Mission.objects.get(pk=mission_id)
     # institute: bio_tables.models.BCDataCenter = mission.data_center
 
+    bottles = bottles.select_related(
+        'event__mission__data_center',
+        'event__station',
+        'event__instrument',
+        'gear_type'
+    )
+
     total_bottles = len(bottles)
+    date_now_string = datetime.now().strftime("%Y-%m-%d")
+
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
             user_logger.info(_("Compiling BCS") + " : %d/%d", (count + 1), total_bottles)
@@ -246,95 +266,18 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
 
-        bcs_row = models.BcsP(plank_sample_key_value=plankton_key)
+        bottle_volume = bottle.computed_volume
 
-        # updated_fields.add(updated_value(bcs_row, 'dis_headr_collector_sample_id', bottle.bottle_id))
-        bcs_row.created_date = datetime.now().strftime("%Y-%m-%d")
-        bcs_row.created_by = uploader
+        header_slat = bottle.latitude if bottle.latitude else event.start_location[0]
+        header_slon = bottle.longitude if bottle.longitude else event.start_location[1]
 
-        bcs_row.mission_descriptor = mission.mission_descriptor
-        bcs_row.mission_name = mission.name
-        bcs_row.mission_leader = mission.lead_scientist
-        bcs_row.mission_sdate = m_start_date
-        bcs_row.mission_edate = m_end_date
-        bcs_row.mission_institute = institute.name if institute else "Not Specified"
-        bcs_row.mission_platform = mission.platform
-        bcs_row.mission_protocol = mission.protocol
-        bcs_row.mission_geographic_region = mission.geographic_region
-        bcs_row.mission_collector_comment = mission.collector_comments
-        bcs_row.mission_more_comment = mission.more_comments
-        bcs_row.mission_data_manager_comment = mission.data_manager_comments
+        header_elat = bottle.latitude if bottle.latitude else event.end_location[0]
+        header_elon = bottle.longitude if bottle.longitude else event.end_location[1]
 
-        bcs_row.event_collector_event_id = f'{event.event_id:03d}'
-        bcs_row.event_collector_stn_name = event.station.name
-        bcs_row.event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
-        bcs_row.event_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
-        bcs_row.event_stime = datetime.strftime(event.start_date, "%H%M")
-        bcs_row.event_etime = datetime.strftime(event.end_date, "%H%M")
-        bcs_row.event_utc_offset = 0
-        bcs_row.event_min_lat = min(event.start_location[0], event.end_location[0])
-        bcs_row.event_max_lat = max(event.start_location[0], event.end_location[0])
-        bcs_row.event_min_lon = min(event.start_location[1], event.end_location[1])
-        bcs_row.event_max_lon = max(event.start_location[1], event.end_location[1])
-
-        bcs_row.event_collector_comment = None
-        bcs_row.event_more_comment = None
-        bcs_row.event_data_manager_comment = DART_EVENT_COMMENT
-
-        bcs_row.pl_headr_collector_sample_id = bottle.bottle_id
-        bcs_row.pl_headr_gear_seq = bottle.gear_type.gear_seq
-
-        # This was set to 1 in the existing AZMP Template for phyto
-        bcs_row.pl_headr_time_qc_code = 1
-
-        # This was set to 1 in the existing AZMP Template for phyto
-        bcs_row.pl_headr_position_qc_code = 1
-        bcs_row.pl_headr_preservation_seq = 90000039
-
-
-        # use the event starts and stops if not provided by the bottle.
-        bcs_row.pl_headr_sdate = datetime.strftime(event.start_date, "%Y-%m-%d")
-        bcs_row.pl_headr_edate = datetime.strftime(event.end_date, "%Y-%m-%d")
-        bcs_row.pl_headr_stime = datetime.strftime(event.start_date, "%H%M")
-        bcs_row.pl_headr_etime = datetime.strftime(event.end_date, "%H%M")
-
-        if bottle.latitude:
-            bcs_row.pl_headr_slat = bottle.latitude
-            bcs_row.pl_headr_elat = bottle.latitude
-        else:
-            bcs_row.pl_headr_slat = event.start_location[0]
-            bcs_row.pl_headr_elat = event.end_location[0]
-
-        if bottle.longitude:
-            bcs_row.pl_headr_slon = bottle.longitude
-            bcs_row.pl_headr_elon = bottle.longitude
-        else:
-            bcs_row.pl_headr_slon = event.start_location[1]
-            bcs_row.pl_headr_elon = event.end_location[1]
-
-        bcs_row.pl_headr_start_depth = bottle.pressure
+        start_pressure = bottle.pressure
+        end_pressure = bottle.pressure
         if hasattr(bottle, 'end_pressure') and bottle.end_pressure is not None:
-            bcs_row.pl_headr_end_depth = bottle.end_pressure
-        else:
-            bcs_row.pl_headr_end_depth = bottle.pressure
-
-        bcs_row.process_flag = 'NR'
-        bcs_row.data_center_code = institute.data_center_code
-
-        if batch:
-            bcs_row.batch = batch
-        else:
-            bcs_row.batch_id = 0
-
-        try:
-            sounding_action = event.sounding_action
-            bcs_row.pl_headr_sounding = sounding_action.sounding
-            bcs_row.pl_headr_collector = sounding_action.data_collector
-        except ValueError as ex:
-            logger.exception(ex)
-            bcs_row.pl_headr_sounding = None
-            bcs_row.pl_headr_collector = "Unknown"
-            bcs_row.event_more_comment = "No sounding action found for this event"
+            end_pressure = bottle.end_pressure
 
         collection_method = 90000010  # hydrographic if this is phytoplankton
         procedure = 90000001
@@ -346,23 +289,101 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             collection_method = 90000001  # vertical if this is zooplankton
             large_plankton_removed = 'Y'  # Yes if Zooplankton
 
-        responsible_group = mission.protocol
+        try:
+            sounding_action = event.sounding_action
+            header_sounding = sounding_action.sounding
+            header_collector = sounding_action.data_collector
+            header_comment = None
+        except ValueError as ex:
+            logger.exception(ex)
+            header_sounding = None
+            header_collector = "Unknown"
+            header_comment = "No sounding action found for this event"
 
-        bottle_volume = bottle.computed_volume
-        bcs_row.pl_headr_volume_method_seq = bottle_volume[0]
-        bcs_row.pl_headr_volume = bottle_volume[1]
+        bcs_row = models.BcsP(
+            plank_sample_key_value=plankton_key,
+            created_date = date_now_string,
+            created_by = uploader,
+            mission_descriptor = mission.mission_descriptor,
+            mission_name = mission.name,
+            mission_leader = mission.lead_scientist,
+            mission_sdate = m_start_date,
+            mission_edate = m_end_date,
+            mission_institute = institute.name if institute else "Not Specified",
+            mission_platform = mission.platform,
+            mission_protocol = mission.protocol,
+            mission_geographic_region = mission.geographic_region,
+            mission_collector_comment = mission.collector_comments,
+            mission_more_comment = mission.more_comments,
+            mission_data_manager_comment = mission.data_manager_comments,
 
-        bcs_row.pl_headr_lrg_plankton_removed = large_plankton_removed
-        bcs_row.pl_headr_mesh_size = bottle.mesh_size
-        bcs_row.pl_headr_collection_method_seq = collection_method
-        bcs_row.pl_headr_collector_deplmt_id = None
-        bcs_row.pl_headr_procedure_seq = procedure
-        bcs_row.pl_headr_storage_seq = storage
-        bcs_row.pl_headr_meters_sqd_flag = "Y"
-        bcs_row.pl_headr_collector_comment = event.comments
-        bcs_row.pl_headr_data_manager_comment = DART_EVENT_COMMENT
-        bcs_row.pl_headr_responsible_group = responsible_group
-        bcs_row.pl_headr_shared_data = shared
+            event_collector_event_id = f'{event.event_id:03d}',
+            event_collector_stn_name = event.station.name,
+            event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d"),
+            event_edate = datetime.strftime(event.end_date, "%Y-%m-%d"),
+            event_stime = datetime.strftime(event.start_date, "%H%M"),
+            event_etime = datetime.strftime(event.end_date, "%H%M"),
+            event_utc_offset = 0,
+            event_min_lat = min(event.start_location[0], event.end_location[0]),
+            event_max_lat = max(event.start_location[0], event.end_location[0]),
+            event_min_lon = min(event.start_location[1], event.end_location[1]),
+            event_max_lon = max(event.start_location[1], event.end_location[1]),
+
+            event_collector_comment = None,
+            event_data_manager_comment = DART_EVENT_COMMENT,
+
+            pl_headr_collector_sample_id = bottle.bottle_id,
+            pl_headr_gear_seq = bottle.gear_type.gear_seq,
+
+            # This was set to 1 in the existing AZMP Template for phyto
+            pl_headr_time_qc_code = 1,
+
+            # This was set to 1 in the existing AZMP Template for phyto
+            pl_headr_position_qc_code = 1,
+            pl_headr_preservation_seq = 90000039,
+
+            # use the event starts and stops if not provided by the bottle.
+            pl_headr_sdate = datetime.strftime(event.start_date, "%Y-%m-%d"),
+            pl_headr_edate = datetime.strftime(event.end_date, "%Y-%m-%d"),
+            pl_headr_stime = datetime.strftime(event.start_date, "%H%M"),
+            pl_headr_etime = datetime.strftime(event.end_date, "%H%M"),
+
+            pl_headr_slat = header_slat,
+            pl_headr_elat = header_elat,
+
+            pl_headr_slon = header_slon,
+            pl_headr_elon = header_elon,
+
+            pl_headr_start_depth = start_pressure,
+            pl_headr_end_depth = end_pressure,
+
+            process_flag = 'NR',
+            data_center_code = institute.data_center_code,
+
+            pl_headr_sounding = header_sounding,
+            pl_headr_collector = header_collector,
+            event_more_comment = header_comment,
+
+            pl_headr_volume_method_seq = bottle_volume[0],
+            pl_headr_volume = bottle_volume[1],
+
+            pl_headr_lrg_plankton_removed = large_plankton_removed,
+            pl_headr_mesh_size = bottle.mesh_size,
+            pl_headr_collection_method_seq = collection_method,
+            pl_headr_collector_deplmt_id = None,
+            pl_headr_procedure_seq = procedure,
+            pl_headr_storage_seq = storage,
+            pl_headr_meters_sqd_flag = "Y",
+            pl_headr_collector_comment = event.comments,
+            pl_headr_data_manager_comment = DART_EVENT_COMMENT,
+            pl_headr_responsible_group = mission.protocol,
+            pl_headr_shared_data = shared
+        )
+
+        if batch:
+            bcs_row.batch = batch
+        else:
+            bcs_row.batch_id = 0
 
         bcs_objects_to_create.append(bcs_row)
 
@@ -376,7 +397,14 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
 
     user_logger.info("Compiling BCD Discrete samples")
 
+    samples = samples.select_related(
+        'sample__bottle__event__mission__data_center',
+        'sample__bottle__event__station',
+        'sample__type__datatype'
+    )
+
     total_samples = len(samples)
+    date_now_string = datetime.now().strftime("%Y-%m-%d")
     for count, ds_sample in enumerate(samples):
         # dis_data_num = count + dis_data_num
         if count % 10 == 9:
@@ -388,6 +416,13 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
 
         # Use the row level datatype if provided otherwise use the mission level datatype
         bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
+        limit = ds_sample.limit if ds_sample.limit else None
+        location = event.start_location
+
+        header_date = bottle.closed if bottle.closed else event.start_date
+
+        header_location_lat = bottle.latitude if bottle.latitude else location[0]
+        header_location_lon = bottle.longitude if bottle.longitude else location[1]
 
         primary_data_center = mission.data_center
 
@@ -396,68 +431,29 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         # If the sample doesn't have a dis_data_num or it doesn't match an existing sample create a new row
         collector_id = f'{bottle.bottle_id}'
 
-        bcd_row = models.BcdD(dis_detail_collector_samp_id=collector_id)
-
-        # if not existing_sample:
-        #     updated_fields.add(updated_value(bcd_row, 'dis_data_num', dis_data_num))
-
-        bcd_row.dis_detail_data_type_seq = bc_data_type.data_type_seq
-
-        # ########### Stuff that we get from the bottle object ################################################### #
-        bcd_row.dis_header_start_depth = bottle.pressure
-        bcd_row.dis_header_end_depth = bottle.pressure
-
-        # ########### Stuff that we get from the event object #################################################### #
-        event = bottle.event
-
-        bcd_row.event_collector_event_id = f'{event.event_id:03d}'
-        bcd_row.event_collector_stn_name = event.station.name
-
-        if bottle.latitude and bottle.longitude:
-            bcd_row.dis_header_slat = bottle.latitude
-            bcd_row.dis_header_slon = bottle.longitude
-        else:
-            location = event.start_location
-            bcd_row.dis_header_slat = location[0]
-            bcd_row.dis_header_slon = location[1]
-
-        if bottle.closed:
-            bcd_row.dis_header_sdate = bottle.closed.strftime("%Y-%m-%d")
-            bcd_row.dis_header_stime = bottle.closed.strftime("%H%M")
-        else:
-            event_date = event.start_date
-            bcd_row.dis_header_sdate = event_date.strftime("%Y-%m-%d")
-            bcd_row.dis_header_stime = event_date.strftime("%H%M")
-
-        # ########### Stuff that we get from the Mission object #################################################### #
-        bcd_row.dis_detail_detail_collector = mission.lead_scientist
-
-        # mission descriptor
-        # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code
-        # 18VA13666 <- HL_02, 2013, fixstation
-        # 18HU21185 <- Hudson, AZMP, 2021
-        #
-        # According to Robert Benjamin, this identifier is provided by MEDS and will have to be part of the
-        # core.models.Mission object as it gets entered later on.
-        bcd_row.mission_descriptor = mission.mission_descriptor
-
-        bcd_row.dis_detail_data_qc_code = ds_sample.flag if ds_sample.flag else 0
-        bcd_row.dis_detail_detection_limit = ds_sample.limit
-
-        limit = ds_sample.limit if ds_sample.limit else None
-        bcd_row.dis_detail_detection_limit = limit
-
-        # The process flag is used by the Biochem upload app to indicate if the data should be processed by
-        # the application. 'NR' is the default code indicating the data needs to be processed
-        bcd_row.process_flag = 'NR'
-        bcd_row.created_by = uploader
-        bcd_row.data_center_code = primary_data_center.data_center_code
-
-        bcd_row.dis_detail_data_type_seq = bc_data_type.data_type_seq
-        bcd_row.data_type_method = bc_data_type.method
-        bcd_row.dis_detail_data_value = ds_sample.value
-        bcd_row.created_date = datetime.now().strftime("%Y-%m-%d")
-        bcd_row.dis_sample_key_value = dis_sample_key_value
+        bcd_row = models.BcdD(
+            dis_detail_collector_samp_id=collector_id,
+            dis_detail_data_type_seq = bc_data_type.data_type_seq,
+            dis_header_start_depth = bottle.pressure,
+            dis_header_end_depth = bottle.pressure,
+            event_collector_event_id = f'{event.event_id:03d}',
+            event_collector_stn_name = event.station.name,
+            dis_header_slat = header_location_lat,
+            dis_header_slon =header_location_lon,
+            dis_header_sdate = header_date.strftime("%Y-%m-%d"),
+            dis_header_stime = header_date.strftime("%H%M"),
+            dis_detail_detail_collector = mission.lead_scientist,
+            mission_descriptor = mission.mission_descriptor,
+            dis_detail_data_qc_code = ds_sample.flag if ds_sample.flag else 0,
+            dis_detail_detection_limit = limit,
+            process_flag = 'NR',
+            created_by = uploader,
+            data_center_code = primary_data_center.data_center_code,
+            data_type_method = bc_data_type.method,
+            dis_detail_data_value = ds_sample.value,
+            created_date = date_now_string,
+            dis_sample_key_value = dis_sample_key_value
+        )
 
         if batch:
             bcd_row.batch = batch
@@ -482,7 +478,19 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     user_logger.info("Compiling BCD Plankton samples")
 
+    # Prefetch all related objects in a single query to avoid N+1
+    samples = samples.select_related(
+        'bottle__event__mission__data_center',
+        'bottle__event__station',
+        'bottle__gear_type',
+        'taxa',
+        'stage',
+        'sex',
+    )
+
     total_samples = len(samples)
+    date_now_string = datetime.now().strftime("%Y-%m-%d")
+
     for count, sample in enumerate(samples):
         if count % 10 == 9:
             user_logger.info(_("Compiling BCD Plankton rows") + " : %d/%d", (count + 1), total_samples)
@@ -493,97 +501,44 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
         plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
 
-        bcd_row = models.BcdP(plank_sample_key_value=plankton_key)
-
-        # ########### Stuff that we get from the event object #################################################### #
-        # PLANK_DATA_NUM - is the autogenerated primary key
-        # PLANK_SAMPLE_KEY_VALUE - is unique to a mission_event_sample_xxx
-
-        # ########### Stuff that we get from the sample object #################################################### #
-        # updated_fields.add(uploader.updated_value(bcd_row, 'plank_sample_key_value', sample.plank_sample_key_value))
-
         taxonomic_id = sample.taxa.taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
-
-        bcd_row.pl_gen_national_taxonomic_seq = sample.taxa.pk
-        bcd_row.pl_gen_collector_taxonomic_id = taxonomic_id
-
-        bcd_row.pl_gen_life_history_seq = sample.stage.pk
-        bcd_row.pl_gen_trophic_seq = 90000000
-
-        bcd_row.pl_gen_min_sieve = sample.min_sieve
-        bcd_row.pl_gen_max_sieve = sample.max_sieve
-
-        bcd_row.pl_gen_split_fraction = sample.split_fraction
-        bcd_row.pl_gen_sex_seq = sample.sex.pk
-
-        bcd_row.pl_gen_counts = sample.count
-        bcd_row.pl_gen_count_pct = sample.percent
 
         # if the wet weight is less than zero then it's being used as a code to generate a collector comment
         # and should be set to None when uploaded to biochem
         wet_weight = sample.raw_wet_weight if sample.raw_wet_weight and sample.raw_wet_weight > 0 else None
-        bcd_row.pl_gen_wet_weight = wet_weight
-        bcd_row.pl_gen_dry_weight = sample.raw_dry_weight
-        bcd_row.pl_gen_bio_volume = sample.volume
-        bcd_row.pl_gen_data_qc_code = sample.flag
 
-        bcd_row.pl_gen_presence = 'Y'
-        bcd_row.pl_gen_collector_comment = sample.collector_comment
-
-        bcd_row.pl_gen_source = "UNASSIGNED"
-        bcd_row.pl_gen_modifier = sample.modifier
-
-        # PL_GEN_DATA_MANAGER_COMMENT
-        # PL_FREQ_DATA_TYPE_SEQ
-        # PL_FREQ_UPPER_BIN_SIZE
-        # PL_FREQ_LOWER_BIN_SIZE
-        # PL_FREQ_BUG_COUNT
-        # PL_FREQ_BUG_SEQ
-        # PL_FREQ_DATA_VALUE
-        # PL_FREQ_DATA_QC_CODE
-        # PL_FREQ_DETAIL_COLLECTOR
-        # PL_DETAIL_DATA_TYPE_SEQ
-        # PL_DETAIL_DATA_VALUE
-        # PL_DETAIL_DATA_QC_CODE
-        # PL_DETAIL_DETAIL_COLLECTOR
-        # PL_INDIV_DATA_TYPE_SEQ
-        # PL_INDIV_BUG_SEQ
-        # PL_INDIV_DATA_VALUE
-        # PL_INDIV_DATA_QC_CODE
-        # PL_INDIV_DATA_COLLECTOR
-        # PL_GEN_MODIFIER
-        # PL_GEN_UNIT
-
-        # ########### Stuff that we get from the bottle object #################################################### #
-
-        # ########### Stuff that we get from the event object #################################################### #
-        event = bottle.event
-
-        bcd_row.event_collector_event_id = f'{event.event_id:03d}'
-        bcd_row.event_collector_stn_name = event.station.name
-
-        event_date = event.start_date
-
-        # ########### Stuff that we get from the Mission object #################################################### #
-        mission = event.mission
+        bcd_row = models.BcdP(plank_sample_key_value=plankton_key,
+            pl_gen_national_taxonomic_seq = sample.taxa.pk,
+            pl_gen_collector_taxonomic_id = taxonomic_id,
+            pl_gen_life_history_seq = sample.stage.pk,
+            pl_gen_trophic_seq = 90000000,
+            pl_gen_min_sieve = sample.min_sieve,
+            pl_gen_max_sieve = sample.max_sieve,
+            pl_gen_split_fraction = sample.split_fraction,
+            pl_gen_sex_seq = sample.sex.pk,
+            pl_gen_counts = sample.count,
+            pl_gen_count_pct = sample.percent,
+            pl_gen_wet_weight = wet_weight,
+            pl_gen_dry_weight = sample.raw_dry_weight,
+            pl_gen_bio_volume = sample.volume,
+            pl_gen_data_qc_code = sample.flag,
+            pl_gen_presence = 'Y',
+            pl_gen_collector_comment = sample.collector_comment,
+            pl_gen_source = "UNASSIGNED",
+            pl_gen_modifier = sample.modifier,
+            event_collector_event_id = f'{event.event_id:03d}',
+            event_collector_stn_name = event.station.name,
+            mission_descriptor = mission.mission_descriptor,
+            created_by = uploader,
+            data_center_code = mission.data_center.data_center_code,
+            created_date = date_now_string,
+            process_flag = 'NR'
+        )
 
         if batch:
             bcd_row.batch = batch
         else:
             bcd_row.batch_id = 0
-
-        # mission descriptor
-        # 18 + [ship initials i.e 'JC' for fixstation is 'VA'] + 2-digit year + 3-digit cruise number or station code
-        # 18VA13666 <- HL_02, 2013, fixstation
-        # 18HU21185 <- Hudson, AZMP, 2021
-        #
-        # According to Robert Benjamin, this identifier is provided by MEDS and will have to be part of the
-        # core.models.Mission object as it gets entered later on.
-        bcd_row.mission_descriptor = mission.mission_descriptor
-        bcd_row.created_by = uploader
-        bcd_row.data_center_code = mission.data_center.data_center_code
-        bcd_row.created_date = datetime.now().strftime("%Y-%m-%d")
-        bcd_row.process_flag = 'NR'
 
         bcd_objects_to_create.append(bcd_row)
 
