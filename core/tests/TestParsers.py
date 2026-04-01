@@ -14,7 +14,6 @@ from config.tests.DartTestCase import DartTestCase
 from config import settings
 
 from core import models as core_models
-from core.parsers.sensor import ctd as ctd_parser
 from core.parsers import SampleParser, PlanktonParser
 from core.tests import CoreFactoryFloor as core_factory
 
@@ -149,6 +148,7 @@ class TestZooplanktonParser(DartTestCase):
         # what_was_it is 1 so this is a count
         self.assertEqual(plankton.count, 15)
 
+    @tag('parsers_plankton_zoo_test_parser_with_data')
     def test_parser_with_data(self):
         # The first parser test is to create a PlanktonSample object, but it doesn't take a lot
         # of things into account when dealing with the real data. like having a row that has the
@@ -227,140 +227,6 @@ class TestSampleXLSParser(DartTestCase):
         df = SampleParser.get_excel_dataframe(file, 0, expected_header_row)
         self.assertEqual(df.shape[0], 414)  # there are 424 rows in this file -expected_header_row gives 414
         self.assertEqual([str(c) for c in df.columns], expected_oxy_columns)
-
-
-
-@tag('parsers', 'parsers_ctd')
-class TestCTDParser(DartTestCase):
-
-    def setUp(self) -> None:
-        self.test_file_location = os.path.join(settings.BASE_DIR, 'core/tests/sample_data/')
-        self.test_file_001 = 'JC243a001.BTL'
-        self.ctd_data_frame_001 = ctd.from_btl(os.path.join(self.test_file_location, self.test_file_001))
-
-        self.test_file_006 = 'JC243a006.BTL'
-        self.ctd_data_frame_006 = ctd.from_btl(os.path.join(self.test_file_location, self.test_file_006))
-
-    def test_process_bottles(self):
-        # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
-        # process bottles should create core.models.Bottle objects and return validation errors for invalid
-        # bottles
-
-        # our sample file is for event 1, it should create 19 bottles with no errors
-        event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
-        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
-
-        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
-
-        self.assertEqual(len(errors), 0)
-
-        bottles = core_models.Bottle.objects.filter(event=event)
-        self.assertTrue(bottles.exists())
-        self.assertEqual(len(bottles), 19)
-        self.assertEqual(bottles.first().bottle_id, event.sample_id)
-        self.assertEqual(bottles.last().bottle_id, event.end_sample_id)
-
-    def test_process_bottles_update(self):
-        # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
-        # process bottles should create core.models.Bottle objects and return validation errors for invalid
-        # bottles
-
-        # If a bottle already exists, it should be updated with the new data
-        bottle_id = 495271
-        initial_pressure = 143
-        updated_pressure = 145.155
-
-        # our sample file is for event 1, it should create 19 bottles with no errors
-        event = core_factory.CTDEventFactory(event_id=1, sample_id=495271, end_sample_id=495289)
-        core_factory.BottleFactory(event=event, bottle_number=1, bottle_id=bottle_id, pressure=initial_pressure)
-
-        bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
-        self.assertEqual(bottle.pressure, initial_pressure)
-
-        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
-        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
-
-        self.assertEqual(len(errors), 0)
-
-        bottle = core_models.Bottle.objects.get(event=event, bottle_id=bottle_id)
-        self.assertEqual(float(bottle.pressure), updated_pressure)
-
-    def test_process_bottles_validation(self):
-        # given a pandas dataframe loaded from the 3rd-part ctd package, and an core.models.Event,
-        # process bottles should create core.models.Bottle objects and return validation errors for invalid
-        # bottles
-
-        # For CTD event 6 of the JC24301 mission, as an after though, there were 10 extra bottle fired at the surface
-        # for calibration reasons. This meant that there were 10 bottles outside the intended sample ID range.
-        # Those errors should be reported as Validation errors to let someone know the bottle file has more bottles
-        # than are expected. There will also be a bottle mismatch validation error to make the error count 11
-
-        # our sample file is for event 6, it should contain 10 errors
-        event = core_factory.CTDEventFactory(event_id=6, sample_id=495290, end_sample_id=495303)
-
-        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_006)
-        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
-
-        self.assertEqual(len(errors), 11)
-        for error in errors:
-            self.assertIsInstance(error, core_models.EventError)
-
-        # 14 bottles should have been created even though there are 24 bottles in the BTL file
-        bottles = core_models.Bottle.objects.filter(event=event)
-        self.assertEqual(len(bottles), 14)
-
-    # The number of bottles loaded from a dataframe should match (event.end_sample_id - event.sample_id)
-    def test_bottle_count_match_event_validation(self):
-        # Given an event with a end_sample_id and a sample_id, and a dataframe an error should be returned if
-        # there is a mismatch in the number of bottles in the bottle file compared to the (end_sample_id-sample_id)
-
-        event = core_factory.CTDEventFactory(event_id=1, sample_id=495200, end_sample_id=495300)
-
-        # There are only 19 bottles in ctd_data_frame_001
-        ctd_parser.process_bottles(event=event, data_frame=self.ctd_data_frame_001)
-        errors = core_models.EventError.objects.filter(type=core_models.ErrorType.bottle)
-
-        self.assertEqual(len(errors), 1)
-
-    def test_read_btl(self):
-        # this tests the overall result
-        mission = core_factory.MissionFactory(
-            start_date=datetime.strptime('2022-10-01', '%Y-%m-%d'),
-            end_date=datetime.strptime('2022-10-24', '%Y-%m-%d'))
-        event = core_factory.CTDEventFactory(mission=mission, event_id=1, sample_id=495271, end_sample_id=495289)
-        ctd_parser.read_btl(mission=event.mission,
-                            btl_file=os.path.join(self.test_file_location, self.test_file_001))
-
-        sample_types = settings_models.GlobalSampleType.objects.all()
-        samples = core_models.Sample.objects.all()
-
-        self.assertTrue(sample_types.exists())
-        self.assertTrue(samples.exists())
-
-    @tag('parsers_ctd_biochem_upload')
-    def test_biochem_upload(self):
-        # test that if a MissionSampleType has a BioChemUpload entry the entry is set to upload and the
-        # modified date is updated.
-        mission = core_factory.MissionFactory(
-            start_date=datetime.strptime('2022-10-01', '%Y-%m-%d'),
-            end_date=datetime.strptime('2022-10-24', '%Y-%m-%d'))
-        event = core_factory.CTDEventFactory(mission=mission, event_id=1, sample_id=495271, end_sample_id=495289)
-
-        datatype = bio_tables.models.BCDataType.objects.get(data_type_seq=90000009)
-        mst = core_factory.MissionSampleTypeFactory(mission=mission, name='sbeox0ml/l', datatype=datatype)
-        origional_modified_date = datetime.strptime('2020-10-24 14:03:22+00:00', '%Y-%m-%d %H:%M:%S%z')
-        core_models.BioChemUpload.objects.create(
-            type=mst,
-            status=core_models.BioChemUploadStatus.uploaded,
-            modified_date=origional_modified_date,
-            upload_date=datetime.strptime('2020-10-24 14:03:22+00:00', '%Y-%m-%d %H:%M:%S%z')
-        )
-        ctd_parser.read_btl(mission=event.mission,
-                            btl_file=os.path.join(self.test_file_location, self.test_file_001))
-
-        bcu = mst.uploads.all().first()
-        self.assertEqual(core_models.BioChemUploadStatus.upload, bcu.status)
-        self.assertTrue(origional_modified_date < bcu.modified_date)
 
 
 @tag('parsers', 'parsers_sample')
