@@ -20,6 +20,7 @@ from core.forms import NoWhiteSpaceCharField
 from config.utils import load_svg
 from settingsdb import models as settings_models, utils as settings_utils
 
+from bio_tables import models as bio_models
 
 class MissionSettingsForm(forms.ModelForm):
 
@@ -88,6 +89,13 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['global_geographic_region'].choices += [(gr.id, gr) for gr in region_choices]
         self.fields['global_geographic_region'].choices += [(-2, _('')), (-1, _('New Region'))]
         self.fields['global_geographic_region'].required = False
+
+        # New data_center field configuration
+        self.fields['data_center'] = forms.ChoiceField(
+            label=_("Data Center"),
+            choices=[(None, '------')] + [(dc.pk, dc.name) for dc in bio_models.BCDataCenter.objects.all()],
+            required=False
+        )
 
         self.fields['mission_descriptor'].required = False
         self.fields['lead_scientist'].required = False

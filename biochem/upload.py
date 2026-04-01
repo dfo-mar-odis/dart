@@ -117,12 +117,13 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
     bottles = bottles.select_related(
-        'event__mission__data_center',
+        'event__mission',
         'event__station'
     )
 
     total_bottles = len(bottles)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
 
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
@@ -130,7 +131,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
 
         event = bottle.event
         mission = event.mission
-        primary_data_center = mission.data_center
+        primary_data_center = institutes[mission.data_center]
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
@@ -240,7 +241,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
     # institute: bio_tables.models.BCDataCenter = mission.data_center
 
     bottles = bottles.select_related(
-        'event__mission__data_center',
+        'event__mission',
         'event__station',
         'event__instrument',
         'gear_type'
@@ -249,13 +250,15 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
     total_bottles = len(bottles)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
 
+    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
+
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
             user_logger.info(_("Compiling BCS") + " : %d/%d", (count + 1), total_bottles)
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
         event = bottle.event
         mission = event.mission
-        institute: bio_tables.models.BCDataCenter = mission.data_center
+        institute: bio_tables.models.BCDataCenter = institutes[mission.data_center]
 
         if event.actions.filter(type=core_models.ActionType.aborted).exists():
             # we don't load aborted events
@@ -398,13 +401,16 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     user_logger.info("Compiling BCD Discrete samples")
 
     samples = samples.select_related(
-        'sample__bottle__event__mission__data_center',
+        'sample__bottle__event__mission',
         'sample__bottle__event__station',
         'sample__type__datatype'
     )
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+
+    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
+
     for count, ds_sample in enumerate(samples):
         # dis_data_num = count + dis_data_num
         if count % 10 == 9:
@@ -424,7 +430,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         header_location_lat = bottle.latitude if bottle.latitude else location[0]
         header_location_lon = bottle.longitude if bottle.longitude else location[1]
 
-        primary_data_center = mission.data_center
+        primary_data_center = institutes[mission.data_center]
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
@@ -480,7 +486,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     # Prefetch all related objects in a single query to avoid N+1
     samples = samples.select_related(
-        'bottle__event__mission__data_center',
+        'bottle__event__mission',
         'bottle__event__station',
         'bottle__gear_type',
         'taxa',
@@ -490,6 +496,8 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+
+    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
 
     for count, sample in enumerate(samples):
         if count % 10 == 9:
@@ -530,7 +538,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
             event_collector_stn_name = event.station.name,
             mission_descriptor = mission.mission_descriptor,
             created_by = uploader,
-            data_center_code = mission.data_center.data_center_code,
+            data_center_code = institutes[mission.data_center],
             created_date = date_now_string,
             process_flag = 'NR'
         )

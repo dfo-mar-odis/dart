@@ -24,7 +24,7 @@ class MissionFactory(DjangoModelFactory):
 
     name = factory.lazy_attribute(lambda o: faker.word())
     geographic_region = factory.lazy_attribute(lambda o: faker.word())
-    data_center = factory.SubFactory(BioFactory.BCDataCenterFactory)
+    data_center = factory.lazy_attribute(lambda o: decimal.Decimal(random.randint(20, 100)))
 
 
 class StationFactory(DjangoModelFactory):

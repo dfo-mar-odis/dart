@@ -66,8 +66,7 @@ class Mission(models.Model):
                                                      "the mission took place"))
 
     # default=20 is BIO
-    data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
-                                    on_delete=models.DO_NOTHING)
+    data_center = models.IntegerField(verbose_name=_("Data Center"), default=20)
 
     # this is provided for convince so the user won't have to re-enter the directory repeatedly. It may differ based
     # on being 'At-sea' where data is collected or on land where collected data is loaded to BioChem
