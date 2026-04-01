@@ -244,7 +244,6 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         'event__mission',
         'event__station',
         'event__instrument',
-        'gear_type'
     )
 
     total_bottles = len(bottles)
@@ -264,7 +263,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             # we don't load aborted events
             continue
 
-        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type}'
 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
@@ -336,7 +335,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             event_data_manager_comment = DART_EVENT_COMMENT,
 
             pl_headr_collector_sample_id = bottle.bottle_id,
-            pl_headr_gear_seq = bottle.gear_type.gear_seq,
+            pl_headr_gear_seq = bottle.gear_type,
 
             # This was set to 1 in the existing AZMP Template for phyto
             pl_headr_time_qc_code = 1,
@@ -409,8 +408,6 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
 
-    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
-
     for count, ds_sample in enumerate(samples):
         # dis_data_num = count + dis_data_num
         if count % 10 == 9:
@@ -429,8 +426,6 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
 
         header_location_lat = bottle.latitude if bottle.latitude else location[0]
         header_location_lon = bottle.longitude if bottle.longitude else location[1]
-
-        primary_data_center = institutes[mission.data_center]
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
@@ -454,7 +449,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
             dis_detail_detection_limit = limit,
             process_flag = 'NR',
             created_by = uploader,
-            data_center_code = primary_data_center.data_center_code,
+            data_center_code = mission.data_center,
             data_type_method = bc_data_type.method,
             dis_detail_data_value = ds_sample.value,
             created_date = date_now_string,
@@ -488,7 +483,6 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
     samples = samples.select_related(
         'bottle__event__mission',
         'bottle__event__station',
-        'bottle__gear_type',
         'taxa',
         'stage',
         'sex',
@@ -496,8 +490,6 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
-
-    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
 
     for count, sample in enumerate(samples):
         if count % 10 == 9:
@@ -507,7 +499,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         event = bottle.event
         mission = event.mission
 
-        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type}'
 
         taxonomic_id = sample.taxa.taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
 
@@ -538,7 +530,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
             event_collector_stn_name = event.station.name,
             mission_descriptor = mission.mission_descriptor,
             created_by = uploader,
-            data_center_code = institutes[mission.data_center],
+            data_center_code = mission.data_center,
             created_date = date_now_string,
             process_flag = 'NR'
         )

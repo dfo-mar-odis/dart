@@ -134,7 +134,7 @@ class TestZooplanktonParser(DartTestCase):
         self.assertEqual(plankton.sex.pk, 90000002)
 
         # this is a 202 net so it should use a 90000102 gear_type
-        self.assertEqual(bottle.gear_type.pk, 90000102)
+        self.assertEqual(bottle.gear_type, 90000102)
 
         # proc_code is 20 so the min_sieve should be mesh_size/1000
         self.assertEqual(plankton.min_sieve, 202/1000)

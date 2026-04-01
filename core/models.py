@@ -460,8 +460,7 @@ class Bottle(models.Model):
     #
     # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
     # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
-    gear_type = models.ForeignKey(bio_models.BCGear, verbose_name="Gear Type", related_name="bottles",
-                                  on_delete=models.DO_NOTHING, default=90000171)
+    gear_type = models.IntegerField(verbose_name="Gear Type", default=90000171)
 
     # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
     # The mesh can normally be used to determine the gear_type, but if the gear type is set to
@@ -480,11 +479,11 @@ class Bottle(models.Model):
             return [90000001, self.volume]
 
         # if no volume has been provided then we have to compute the volume.
-        if self.gear_type.pk == 90000102 or self.gear_type.pk == 90000105:
+        if self.gear_type == 90000102 or self.gear_type == 90000105:
             diameter = None
-            if self.gear_type.pk == 90000102: # this is a 3/4 meter diameter ringnet
+            if self.gear_type == 90000102: # this is a 3/4 meter diameter ringnet
                 diameter = 0.75
-            elif self.gear_type.pk == 90000105: # this is a 1/2 meter diameter ringnet
+            elif self.gear_type == 90000105: # this is a 1/2 meter diameter ringnet
                 diameter = 0.5
 
             area = np.pi * np.power(float(diameter / 2), 2)

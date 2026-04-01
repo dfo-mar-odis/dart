@@ -339,7 +339,7 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
 
         # update the bottle attributes if required.
         updates = set()
-        updates.add(updated_value(bottle, 'gear_type_id', gear_type))
+        updates.add(updated_value(bottle, 'gear_type', gear_type))
         updates.add(updated_value(bottle, 'mesh_size', mesh_size))
         updates.add(updated_value(bottle, 'pressure', start_pressure))
         updates.add(updated_value(bottle, 'end_pressure', end_pressure))
@@ -379,7 +379,7 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
         except ValueError as ex:
             raise ex
 
-        bottle = core_models.Bottle(bottle_id=bottle_id, event=event, gear_type_id=gear_type, mesh_size=mesh_size,
+        bottle = core_models.Bottle(bottle_id=bottle_id, event=event, gear_type=gear_type, mesh_size=mesh_size,
                                     pressure=start_pressure, end_pressure=end_pressure, closed=event.end_date)
         bottle.save()
         create_bottles[bottle_id] = bottle

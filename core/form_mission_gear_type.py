@@ -15,7 +15,7 @@ from crispy_forms.layout import Column, Field, Div, Row
 from crispy_forms.utils import render_crispy_form
 
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Subquery, OuterRef
 
 from django import forms
 from django.http import HttpResponse
@@ -225,7 +225,7 @@ def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> Quer
         filter_dict.get('filter_gear_type_code', 0) or filter_dict.get('filter_gear_type_description', 0) or 0)
 
     if gear_code:
-        queryset = queryset.filter(gear_type_id=gear_code)
+        queryset = queryset.filter(gear_type=gear_code)
 
     return queryset
 
@@ -233,12 +233,21 @@ def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> Quer
 def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
     instrument_type = kwargs['instrument_type']
 
+    queryset = queryset.annotate(
+        gear_seq=Subquery(
+            biochem_models.BCGear.objects.filter(gear_seq=OuterRef('gear_type')).values('gear_seq')[:1]
+        ),
+        gear_description=Subquery(
+            biochem_models.BCGear.objects.filter(gear_seq=OuterRef('gear_type')).values('description')[:1]
+        )
+    )
+
     headers = [
         ('bottle_id', _("Sample")),
         ('event__event_id', _("Event")),
         ('mesh_size', _("Mesh")),
-        ('gear_type__gear_seq', _("Gear Type ID")),
-        ('gear_type__description', _("Gear Type Description"))
+        ('gear_seq', _("Gear Type ID")),
+        ('gear_description', _("Gear Type Description"))
     ]
     if instrument_type == core_models.InstrumentType.net:
         headers.insert(3, ('volume', _("Volume")))
@@ -471,7 +480,7 @@ def update_gear_type_samples(request, mission_id, instrument_type=None, **kwargs
     gear_type = request.POST.get('gear_type_code', None)
 
     for bottle in bottles:
-        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(
+        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)).pk if utils.is_number(
             gear_type) else gear_type
 
     core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])

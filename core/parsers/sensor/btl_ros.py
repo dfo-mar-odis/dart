@@ -662,7 +662,7 @@ class FixStationParser:
 
         gear_type = bio_models.BCGear.objects.get(gear_seq=gear_type_code)
         for bottle in bottles:
-            bottle.gear_type = gear_type
+            bottle.gear_type = gear_type.pk
 
         core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 
