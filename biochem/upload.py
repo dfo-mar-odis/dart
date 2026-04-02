@@ -11,6 +11,7 @@ from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
 import bio_tables.models
+from bio_tables.models import BCNatnlTaxonCode
 from biochem import models
 from core import models as core_models
 
@@ -483,10 +484,9 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
     samples = samples.select_related(
         'bottle__event__mission',
         'bottle__event__station',
-        'taxa',
-        'stage',
-        'sex',
     )
+
+    existing_taxa = {bc.pk: bc for bc in BCNatnlTaxonCode.objects.all()}
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
@@ -501,21 +501,21 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
 
         plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type}'
 
-        taxonomic_id = sample.taxa.taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
+        taxonomic_id = existing_taxa[sample.taxa].taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
 
         # if the wet weight is less than zero then it's being used as a code to generate a collector comment
         # and should be set to None when uploaded to biochem
         wet_weight = sample.raw_wet_weight if sample.raw_wet_weight and sample.raw_wet_weight > 0 else None
 
         bcd_row = models.BcdP(plank_sample_key_value=plankton_key,
-            pl_gen_national_taxonomic_seq = sample.taxa.pk,
+            pl_gen_national_taxonomic_seq = sample.taxa,
             pl_gen_collector_taxonomic_id = taxonomic_id,
-            pl_gen_life_history_seq = sample.stage.pk,
+            pl_gen_life_history_seq = sample.stage,
             pl_gen_trophic_seq = 90000000,
             pl_gen_min_sieve = sample.min_sieve,
             pl_gen_max_sieve = sample.max_sieve,
             pl_gen_split_fraction = sample.split_fraction,
-            pl_gen_sex_seq = sample.sex.pk,
+            pl_gen_sex_seq = sample.sex,
             pl_gen_counts = sample.count,
             pl_gen_count_pct = sample.percent,
             pl_gen_wet_weight = wet_weight,

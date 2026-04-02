@@ -11,6 +11,7 @@ from crispy_forms.layout import Field, Layout, Row, Column
 from crispy_forms.utils import render_crispy_form
 
 from django import forms
+from django.db.models import Subquery, OuterRef
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy, path
@@ -18,6 +19,7 @@ from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
 
+from bio_tables.models import BCNatnlTaxonCode, BCSex, BCLifeHistory
 from core import models as core_models
 from core import forms as core_forms
 from core.parsers import PlanktonParser
@@ -35,7 +37,6 @@ logger = logging.getLogger('dart')
 
 
 class PlanktonForm(forms.Form):
-
     header = forms.IntegerField(label="Header Line")
     tab = forms.IntegerField(label="Tab")
 
@@ -57,7 +58,7 @@ class PlanktonForm(forms.Form):
         if tabs:
             s_field = self.base_fields['tab']
             self.fields['tab'] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
-            self.fields['tab'].choices =[(i, tabs[i]) for i in range(0, len(tabs))]
+            self.fields['tab'].choices = [(i, tabs[i]) for i in range(0, len(tabs))]
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False
@@ -162,7 +163,7 @@ def load_plankton(request, mission_id):
         dict_vals['header'] = header
 
         try:
-            dataframe = get_excel_dataframe(stream=data, sheet_number=tab, header_row=(header-1))
+            dataframe = get_excel_dataframe(stream=data, sheet_number=tab, header_row=(header - 1))
             start = dataframe.index.start if hasattr(dataframe.index, 'start') else 0
             dict_vals['header'] = max(start + 1, header)
 
@@ -206,7 +207,6 @@ def load_plankton(request, mission_id):
 
 
 def import_plankton(request, mission_id):
-
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
@@ -343,7 +343,6 @@ def import_plankton(request, mission_id):
 
 
 def list_plankton(request, mission_id):
-
     mission = core_models.Mission.objects.get(pk=mission_id)
 
     soup = BeautifulSoup('', "html.parser")
@@ -362,17 +361,39 @@ def list_plankton(request, mission_id):
         'bottle__event__instrument__type', 'bottle__bottle_id'
     )
     if samples.exists():
-        data_columns = ["Sample", "Event", "Pressure", "Station", "Type", "Name", "Modifier", "Sex", "Stage", "Split", "Count",
-                        "Wet", "Dry", "Volume", "Percent", "QC", "Comments"]
+        data_columns = ["Sample", "Event", "Pressure", "Station", "Type", "Modifier", "Split",
+                        "Count", "Wet", "Dry", "Volume", "Percent", "QC", "Comments", "Name", "Sex", "Stage"]
 
-        samples = samples.values("bottle__bottle_id", "bottle__event__event_id", "bottle__pressure", 'bottle__event__station__name',
-                                 "bottle__event__instrument__type", "taxa__taxonomic_name", "modifier", "sex__name",
-                                 "stage__name", "split_fraction", "count", "raw_wet_weight", "raw_dry_weight", "volume",
-                                 "percent", "flag", "comments")
+        samples = samples.annotate(
+            taxa_name=Subquery(
+                BCNatnlTaxonCode.objects.filter(pk=OuterRef('taxa')).values('taxonomic_name')[:1]
+            ),
+            sex_name = Subquery(
+                BCSex.objects.filter(pk=OuterRef('sex')).values('name')[:1]
+            ),
+            stage_name=Subquery(
+                BCLifeHistory.objects.filter(pk=OuterRef('stage')).values('name')[:1]
+            )
+        ).values("bottle__bottle_id", "bottle__event__event_id", "bottle__pressure",
+                 'bottle__event__station__name', "bottle__event__instrument__type", "modifier", "split_fraction",
+                 "count", "raw_wet_weight", "raw_dry_weight", "volume", "percent", "flag", "comments", "taxa_name",
+                 "sex_name", "stage_name")
+
         samples = samples[page_start:(page_start + page_limit)]
 
         dataframe = read_frame(samples)
         dataframe.columns = data_columns
+
+        columns = list(dataframe.columns)
+        last_columns = columns[-3:]
+        move_columns = columns[:-3]
+        insert_position = len(move_columns) - 9
+        new_order = (
+            move_columns[:insert_position]
+            + last_columns
+            + move_columns[insert_position:]
+        )
+        dataframe = dataframe[new_order]
         dataframe.fillna('---', inplace=True)
         dataframe['Type'] = dataframe['Type'].map({1: "phyto", 2: "zoo"}, na_action='ignore')
 
@@ -386,7 +407,10 @@ def list_plankton(request, mission_id):
         sample_th.string = ""
 
         database = settings.DATABASES[mission._state.db]['LOADED']
-        button = soup.new_tag('A', attrs={'class': 'btn btn-sm btn-primary', 'href': reverse_lazy("core:mission_gear_type_details", args=(database, mission_id, core_models.InstrumentType.net.value))})
+        button = soup.new_tag('A', attrs={'class': 'btn btn-sm btn-primary',
+                                          'href': reverse_lazy("core:mission_gear_type_details",
+                                                               args=(database, mission_id,
+                                                                     core_models.InstrumentType.net.value))})
         button.string = _("Sample")
         sample_th.append(button)
 
@@ -443,6 +467,7 @@ def upload_multinet(request, mission_id, **kwargs):
             parse_bioness(mission, file)
 
     return HttpResponse()
+
 
 url_prefix = "plankton"
 plankton_urls = [

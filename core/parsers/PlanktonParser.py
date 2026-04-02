@@ -92,8 +92,6 @@ def get_or_create_bioness_file_config() -> QuerySet[FileConfiguration]:
 
 
 def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: DataFrame):
-    database = mission._state.db
-
     config = get_or_create_phyto_file_config()
 
     total_rows = dataframe.shape[0]
@@ -157,9 +155,8 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
 
         stage = life_history if not np.isnan(life_history) else None
 
-        if (taxa := bio_models.BCNatnlTaxonCode.objects.filter(aphiaid=aphiaid,
-                                                                               taxonomic_name__iexact=name)).exists():
-            taxa = taxa[0].national_taxonomic_seq
+        if (taxa := bio_models.BCNatnlTaxonCode.objects.filter(aphiaid=aphiaid, taxonomic_name__iexact=name)).exists():
+            taxa = taxa.first().pk
             logger.debug(taxa)
         else:
             err = core_models.FileError(mission=mission, file_name=filename, line=line_number,
@@ -170,12 +167,12 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
             logger.error(err.message)
             continue
 
-        if not bottle.plankton_data.filter(taxa__national_taxonomic_seq=taxa).exists():
+        if not bottle.plankton_data.filter(taxa=taxa).exists():
             plankton = core_models.PlanktonSample(file=filename, bottle=bottle)
 
             plankton.count = count
             plankton.modifier = modifier
-            plankton.taxa_id = taxa
+            plankton.taxa = taxa
             plankton.comments = comment + (f' ({str(certainty)})' if certainty and not np.isnan(certainty) else '')
 
             if stage:
@@ -187,9 +184,9 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
 
             plankton = bottle.plankton_data.get(taxa=taxa)
             updated_fields.add(updated_value(plankton, 'count', count))
-            updated_fields.add(updated_value(plankton, 'taxa_id', taxa))
+            updated_fields.add(updated_value(plankton, 'taxa', taxa))
             updated_fields.add(updated_value(plankton, 'modifier', modifier))
-            updated_fields.add(updated_value(plankton, 'stage_id', stage if stage else 90000000))
+            updated_fields.add(updated_value(plankton, 'stage', stage if stage else 90000000))
 
             comment = comment + (f' ({str(certainty)})' if certainty and not np.isnan(certainty) else '')
             updated_fields.add(updated_value(plankton, 'comments', comment if comment else None))
@@ -259,10 +256,10 @@ def get_split_fraction(proc_code: int, split: float):
 # a Value Error is raised.
 def get_taxonomic_code(taxa_id: int, taxa_name: str) -> bio_models.BCNatnlTaxonCode:
     if taxa := bio_models.BCNatnlTaxonCode.objects.filter(pk=taxa_id):
-        taxa = taxa.first()
+        taxa = taxa.first().pk
     elif ((taxa := bio_models.BCNatnlTaxonCode.objects.filter(taxonomic_name__iexact=taxa_name))
           and taxa.count() == 1):
-        taxa = taxa.first()
+        taxa = taxa.first().pk
     else:
         raise ValueError(_("Could not find matching taxonomic entry in National Taxon Code Lookup"))
 
@@ -586,7 +583,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
 
         plankton = core_models.PlanktonSample.objects.filter(
-            bottle=bottle, taxa=taxa, stage_id=stage, sex_id=sex, proc_code=proc_code)
+            bottle=bottle, taxa=taxa, stage=stage, sex=sex, proc_code=proc_code)
         if plankton.exists():
             # taxa, bottle, stage and sex are all part of a primary key and therefore cannot be updated
             plankton = plankton.first()
@@ -609,7 +606,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             if plankton_key not in create_plankton.keys():
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, min_sieve=min_sieve, max_sieve=max_sieve,
-                    split_fraction=split_fraction, stage_id=stage, sex_id=sex,
+                    split_fraction=split_fraction, stage=stage, sex=sex,
                     file=filename, proc_code=proc_code,
                 )
                 create_plankton[plankton_key] = plankton
@@ -714,8 +711,8 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
 
         plankton_key = f'{bottle_id}_{ncode}_{stage_id}_{sex_id}_{proc_code}'
 
-        plankton = core_models.PlanktonSample.objects.filter(bottle=bottle, taxa=taxa, stage_id=stage,
-                                                             sex_id=sex, proc_code=proc_code)
+        plankton = core_models.PlanktonSample.objects.filter(bottle=bottle, taxa=taxa, stage=stage,
+                                                             sex=sex, proc_code=proc_code)
         if plankton.exists():
             # taxa, bottle, stage and sex are all part of a primary key and therefore cannot be updated
             plankton = plankton.first()
@@ -739,7 +736,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             if plankton_key not in create_plankton.keys():
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, min_sieve=min_sieve, max_sieve=max_sieve,
-                    split_fraction=split_fraction, stage_id=stage, sex_id=sex, file=filename, proc_code=proc_code
+                    split_fraction=split_fraction, stage=stage, sex=sex, file=filename, proc_code=proc_code
                 )
                 if qc_flag:
                     plankton.flag = qc_flag

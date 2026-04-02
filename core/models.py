@@ -625,16 +625,13 @@ class PlanktonSample(models.Model):
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
     bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)
 
-    taxa = models.ForeignKey(bio_models.BCNatnlTaxonCode, verbose_name=_("Taxonomy"),
-                             related_name="plankton_data", on_delete=models.DO_NOTHING)
+    taxa = models.IntegerField(verbose_name=_("Taxonomy"))
 
     # default unassigned BCLIFEHISTORIES 90000000
-    stage = models.ForeignKey(bio_models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
-                              on_delete=models.DO_NOTHING)
+    stage = models.IntegerField(verbose_name=_("Stage of Life"), default=90000000)
 
     # default unassigned BCSEXES 90000000
-    sex = models.ForeignKey(bio_models.BCSex, verbose_name=_("Sex"), default=90000000,
-                            on_delete=models.DO_NOTHING)
+    sex = models.IntegerField(verbose_name=_("Sex"), default=90000000)
 
     # 1 for phytoplankton, more complicated for zooplankton
     split_fraction = models.FloatField(verbose_name=_("Split Fraction"), default=1)

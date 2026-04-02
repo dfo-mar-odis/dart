@@ -174,7 +174,7 @@ class PhytoplanktonSampleFactory(DjangoModelFactory):
 
     file = factory.lazy_attribute(lambda o: faker.word() + ".xlsx")
     bottle = factory.SubFactory(BottleFactory)
-    taxa = factory.lazy_attribute(lambda o: random.choice(bio_tables.models.BCNatnlTaxonCode.objects.all()))
+    taxa = 90000001
     count = factory.lazy_attribute(lambda o: faker.random.randint(0, 10000))
 
 

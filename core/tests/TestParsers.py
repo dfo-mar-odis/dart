@@ -49,17 +49,17 @@ class TestPhytoplanktonParser(DartTestCase):
         id_field.mapped_field = 'ID'
         id_field.save()
 
+    @tag('parsers_plankton_phyto_test_parser')
     def test_parser(self):
 
         # this should create 32 plankton samples
-        PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name,
-                                           dataframe=self.dataframe)
+        PlanktonParser.parse_phytoplankton(mission=self.mission, filename=self.file_name, dataframe=self.dataframe)
         samples = core_models.PlanktonSample.objects.all()
         self.assertEqual(len(samples), 32)
 
     def test_update(self):
         # if a plankton sample already exists then it should be updated.
-        taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(aphiaid=148912, taxonomic_name__iexact="Thalassiosira")
+        taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(aphiaid=148912, taxonomic_name__iexact="Thalassiosira").pk
         core_factory.PhytoplanktonSampleFactory(bottle=self.bottle_mission_start, file=self.file_name, taxa=taxa,
                                                 count=1000)
 
@@ -121,7 +121,7 @@ class TestZooplanktonParser(DartTestCase):
 
         # the taxa key is 90000000000000 plus whatever the ncode is
         taxa_key = 90000000000000 + 58
-        taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(pk=taxa_key)
+        taxa = bio_tables.models.BCNatnlTaxonCode.objects.get(pk=taxa_key).pk
 
         bottle = core_models.Bottle.objects.get(bottle_id=self.event_mission_start.sample_id)
         plankton = core_models.PlanktonSample.objects.filter(bottle=bottle, taxa=taxa)
@@ -129,9 +129,9 @@ class TestZooplanktonParser(DartTestCase):
         self.assertTrue(plankton.exists())
 
         plankton = plankton.first()
-        self.assertEqual(plankton.taxa.pk, taxa_key)
-        self.assertEqual(plankton.stage.pk, 90000030)
-        self.assertEqual(plankton.sex.pk, 90000002)
+        self.assertEqual(plankton.taxa, taxa_key)
+        self.assertEqual(plankton.stage, 90000030)
+        self.assertEqual(plankton.sex, 90000002)
 
         # this is a 202 net so it should use a 90000102 gear_type
         self.assertEqual(bottle.gear_type, 90000102)
