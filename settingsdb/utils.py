@@ -76,8 +76,6 @@ def add_database(database):
     databases[mission_database]['NAME'] = get_db_location(database)
 
     call_command('migrate', database=mission_database, app_label="core")
-    call_command('migrate', database=mission_database, app_label="bio_tables")
-    load_biochem_fixtures(mission_database)
 
 
 def connect_database(database):

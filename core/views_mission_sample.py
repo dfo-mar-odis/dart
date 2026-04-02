@@ -17,6 +17,7 @@ from django.utils.translation import gettext as _
 from django_pandas.io import read_frame
 from django.conf import settings
 
+from bio_tables.models import BCDataType
 from core import forms, form_biochem_batch_discrete
 
 from core import models
@@ -54,7 +55,7 @@ def get_sensor_table_button(soup: BeautifulSoup, mission: models.Mission, sample
     if datatype:
         # if the datatype is applied at the 'standard'
         button_colour = 'btn-secondary'
-        title += f': {datatype}'
+        title += f': {BCDataType.objects.get(pk=datatype)}'
     elif row_datatype:
         # if the datatype is applied at the mission level or row level
         button_colour = 'btn-warning'
