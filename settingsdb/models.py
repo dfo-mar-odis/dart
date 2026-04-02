@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
+from bio_tables.models import BCDataType
 from core import models as core_models
 from bio_tables import models as bio_models
 
@@ -54,7 +55,7 @@ class GlobalSampleType(models.Model):
                                                                 long_name=self.long_name,
                                                                 priority=self.priority,
                                                                 is_sensor=self.is_sensor,
-                                                                datatype=self.datatype)
+                                                                datatype=self.datatype.pk)
             mission_sample_type.save(using=database)
         else:
             mission_sample_type = mission_sample_type.first()

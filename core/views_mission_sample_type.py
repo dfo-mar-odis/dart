@@ -40,7 +40,7 @@ class SampleTypeDetails(GenericDetailView):
         database = self.kwargs['database']
         initial = {'sample_type_id': self.object.id, 'mission_id': self.object.mission.id}
         if data_type_seq:
-            initial['data_type_code'] = data_type_seq.data_type_seq
+            initial['data_type_code'] = data_type_seq
 
         context['biochem_form'] = BioChemDataType(mission_sample_type=self.object)
         context['filter_form'] = MissionSampleTypeFilter(mission_sample_type=self.object)

@@ -134,7 +134,7 @@ class MissionSampleTypeFactory(DjangoModelFactory):
     name = factory.lazy_attribute(lambda o: faker.word())
     long_name = factory.lazy_attribute(lambda o: faker.name())
 
-    datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
+    datatype = 90000001
 
 
 class BottleFactory(DjangoModelFactory):

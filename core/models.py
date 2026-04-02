@@ -532,12 +532,11 @@ class MissionSampleType(models.Model):
     is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
                                     help_text=_("Identify this sample type as a type of sensor"))
 
-    datatype = models.ForeignKey(bio_models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
-                                 blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
+    datatype = models.IntegerField(verbose_name=_("BioChem DataType"), null=True, blank=True)
 
     def __str__(self):
         label = self.name + (f" - {self.long_name}" if self.long_name else "")
-        label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
+        label += f" {self.datatype}"
 
         return label
 

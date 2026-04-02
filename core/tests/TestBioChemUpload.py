@@ -219,7 +219,7 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
 
         # create some Oxygen sensor values for the Mission (self.mission)
         self.oxy_data_type = bio_tables_models.BCDataType.objects.get(data_type_seq=oxy_seq)
-        self.oxy_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=self.oxy_data_type)
+        self.oxy_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=self.oxy_data_type.pk)
 
         # bottles are attached to an event
         event = core_factory.CTDEventFactory(mission=self.mission)

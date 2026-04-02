@@ -15,6 +15,7 @@ from django_pandas.io import read_frame
 from django.conf import settings
 
 from bio_tables import models as bio_models
+from bio_tables.models import BCDataType
 from core import models as core_models
 from core import forms as core_forms
 from config.utils import load_svg
@@ -182,7 +183,7 @@ class BioChemDataType(core_forms.CollapsableCardForm):
         retrival = ""
         if self.mission_sample_type.datatype:
             try:
-                retrival = bio_models.BCDataType.objects.get(pk=(self.initial_choice if self.initial_choice else self.mission_sample_type.datatype.pk)).data_retrieval
+                retrival = bio_models.BCDataType.objects.get(pk=(self.initial_choice if self.initial_choice else self.mission_sample_type.datatype)).data_retrieval
             except bio_models.BCDataType.DoesNotExist:
                 pass # retrival text will remain blank
 
@@ -216,7 +217,7 @@ class BioChemDataType(core_forms.CollapsableCardForm):
         data_type_choices = [(None, '---------')]
 
         if mission_sample_type.datatype:
-            self.initial_choice = mission_sample_type.datatype.pk
+            self.initial_choice = mission_sample_type.datatype
 
         if data_type_choices_qs.exists():
             data_type_choices += [(st.pk, st) for st in data_type_choices_qs]
@@ -328,7 +329,7 @@ def get_samples_queryset(filter_dict: dict, sample_type: core_models.MissionSamp
     ).order_by('sample__bottle__bottle_id')
 
     if sample_type.datatype and 'out_of_range' in filter_dict:
-        bounds = sample_type.datatype.data_retrieval
+        bounds = BCDataType.objects.get(pk=sample_type.datatype).data_retrieval
         queryset = queryset.exclude(value__gte=bounds.minimum_value, value__lte=bounds.maximum_value)
 
     return queryset
@@ -381,9 +382,11 @@ def list_samples(request, mission_sample_type_id):
 
     card_title = mission_sample_type.name
     if mission_sample_type.datatype:
+        datatypes = BCDataType.objects.get(pk=mission_sample_type.datatype)
+
         card_title = (f'{mission_sample_type.name} - {mission_sample_type.datatype} '
-                      f'[{mission_sample_type.datatype.data_retrieval.minimum_value} : '
-                      f'{mission_sample_type.datatype.data_retrieval.maximum_value}]')
+                      f'[{datatypes.data_retrieval.minimum_value} : '
+                      f'{datatypes.data_retrieval.maximum_value}]')
 
     queryset = get_samples_queryset(request.POST, mission_sample_type, mission_sample_type.samples.all())
 
@@ -402,7 +405,7 @@ def update_sample_type(request, mission_sample_type_id):
 
     data_type = None
     if data_type_code:
-        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code)
+        data_type = bio_models.BCDataType.objects.get(data_type_seq=data_type_code).pk
 
     filtered = any(request.POST.get(filter_name) for filter_name in filters)
     if not filtered:
@@ -412,7 +415,7 @@ def update_sample_type(request, mission_sample_type_id):
         queryset = get_samples_queryset(request.POST, sample_type, sample_type.samples.all())
 
         for value in queryset:
-            value.datatype = data_type.pk
+            value.datatype = data_type
 
         core_models.DiscreteSampleValue.objects.bulk_update(queryset, ['datatype'])
 

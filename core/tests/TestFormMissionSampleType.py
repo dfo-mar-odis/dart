@@ -119,10 +119,10 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
         biochem_data_type_form = BioChemDataType(self.mission_sample_type)
 
         self.assertEqual(biochem_data_type_form.fields['data_type_description'].initial,
-                          self.mission_sample_type.datatype.pk)
+                          self.mission_sample_type.datatype)
 
         self.assertEqual(biochem_data_type_form.fields['data_type_code'].initial,
-                          self.mission_sample_type.datatype.pk)
+                          self.mission_sample_type.datatype)
 
     @tag("form_biochem_data_type_test_initial")
     def test_initial(self):
@@ -130,7 +130,7 @@ class TestFormBioChemDataType(AbstractTestMissionSampleType):
         # set the initial values on the form for the biochem data type
 
         initial = {
-            'data_type_code': self.mission_sample_type.datatype.pk
+            'data_type_code': self.mission_sample_type.datatype
         }
         biochem_data_type_form = BioChemDataType(self.mission_sample_type)
 
@@ -227,7 +227,7 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
         response = self.client.post(url, post_vars)
 
         sample_type = core_models.MissionSampleType.objects.get(pk=self.mission_sample_type.pk)
-        self.assertEqual(sample_type.datatype.pk, post_vars['data_type_code'])
+        self.assertEqual(sample_type.datatype, post_vars['data_type_code'])
 
         # the function call itself should return a reloaded sample list
         soup = BeautifulSoup(response.content, 'html.parser')
@@ -261,7 +261,7 @@ class TestGetSamplesQueryset(DartTestCase):
         data_retrieval = bio_factory.BCDataRetrievalFactory.create(minimum_value=10, maximum_value=20)
         datatype = bio_factory.BCDataTypeFactory.create(data_retrieval=data_retrieval)
 
-        self.sample_type = core_factory.MissionSampleTypeFactory.create(name="Test Sample Type", datatype=datatype)
+        self.sample_type = core_factory.MissionSampleTypeFactory.create(name="Test Sample Type", datatype=datatype.pk)
         self.event = core_factory.CTDEventFactory.create(sample_id=1, end_sample_id=5)
         self.samples = [
             core_factory.SampleFactory.create(
