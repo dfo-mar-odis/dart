@@ -344,7 +344,7 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
         'value',
         'limit',
         'flag',
-        'datatype__pk',
+        'datatype',
         'comment',
     )
 
@@ -412,7 +412,7 @@ def update_sample_type(request, mission_sample_type_id):
         queryset = get_samples_queryset(request.POST, sample_type, sample_type.samples.all())
 
         for value in queryset:
-            value.datatype = data_type
+            value.datatype = data_type.pk
 
         core_models.DiscreteSampleValue.objects.bulk_update(queryset, ['datatype'])
 

@@ -204,11 +204,11 @@ class TestFormMissionSampleType(AbstractTestMissionSampleType):
 
         start_sample = core_models.DiscreteSampleValue.objects.get(
             sample__bottle__bottle_id=post_vars['sample_id_start'])
-        self.assertEqual(start_sample.datatype.pk, post_vars['data_type_code'])
+        self.assertEqual(start_sample.datatype, post_vars['data_type_code'])
 
         end_sample = core_models.DiscreteSampleValue.objects.get(
             sample__bottle__bottle_id=post_vars['sample_id_end'])
-        self.assertEqual(end_sample.datatype.pk, post_vars['data_type_code'])
+        self.assertEqual(end_sample.datatype, post_vars['data_type_code'])
 
         # the function call itself should return a reloaded sample list
         soup = BeautifulSoup(response.content, 'html.parser')

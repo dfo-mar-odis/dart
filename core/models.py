@@ -601,8 +601,7 @@ class DiscreteSampleValue(models.Model):
 
     # Individual samples can have different datatype than the general datatype provided by the
     # sample type. If this is blank the sample.type.datatype value should be used for the sample
-    datatype = models.ForeignKey(bio_models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
-                                 blank=True, on_delete=models.SET_NULL)
+    datatype = models.IntegerField(verbose_name=_("BioChem DataType"), null=True, blank=True)
 
     bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
                                            help_text=_("Date of last BioChem upload"))
