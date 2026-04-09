@@ -22,7 +22,6 @@ from core import forms, form_biochem_batch_discrete
 
 from core import models
 from core import views
-from core.form_sample_type_config import process_file
 from core.parsers import SampleParser
 
 from settingsdb import models as settings_models
@@ -201,89 +200,6 @@ def get_file_error_card(request, mission_id):
 
         soup.append(card_div)
     return HttpResponse(soup)
-
-
-def load_samples(request):
-    # Either delete a file configuration or load the samples from the sample file
-
-    if request.method == "GET":
-
-        soup = BeautifulSoup(f'', 'html.parser')
-
-        url = reverse_lazy("core:mission_samples_load_samples")
-        attrs = {
-            'alert_area_id': f'div_id_sample_type_holder',
-            'message': _("Loading"),
-            'logger': SampleParser.logger_notifications.name,
-            'alert_type': 'info',
-            'hx-post': url,
-            'hx-trigger': "load",
-        }
-        alert = forms.websocket_post_request_alert(**attrs)
-        soup.append(alert)
-
-        return HttpResponse(soup)
-
-    elif request.method == "POST":
-        time.sleep(2)  # give the websocket a couple seconds to connect
-        context = {}
-        if 'sample_file' not in request.FILES:
-            context['message'] = _("File is required before adding sample")
-            html = render_to_string("core/partials/form_sample_type.html", context=context)
-            return HttpResponse(html)
-
-        config_ids = request.POST.getlist('sample_config')
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
-
-        config_count = len(config_ids)
-        for index, config_id in enumerate(config_ids):
-            SampleParser.logger_notifications.info(_("Loading file") + f" : {file_name} : %d/%d",
-                                                   index, config_count)
-
-            sample_config = settings_models.SampleTypeConfig.objects.get(pk=config_id)
-            mission = models.Mission.objects.get(pk=request.POST['mission_id'])
-
-            if file_type == 'csv' or file_type == 'dat':
-                io_stream = io.BytesIO(data)
-                dataframe = pd.read_csv(filepath_or_buffer=io_stream, header=sample_config.skip)
-            else:
-                dataframe = SampleParser.get_excel_dataframe(stream=data, sheet_number=sample_config.tab,
-                                                             header_row=sample_config.skip)
-
-            try:
-                # Remove any row that is *all* nan values
-                dataframe.dropna(axis=0, how='all', inplace=True)
-
-                SampleParser.parse_data_frame(mission, sample_config, file_name=file_name, dataframe=dataframe)
-
-                # if the datatypes are valid, then before we upload we should copy any
-                # 'standard' level biochem data types to the mission level
-                user_logger.info(_("Copying Mission Datatypes"))
-
-                # once loaded apply the default sample type as a mission sample type so that if the default type is ever
-                # changed it won't affect the data type for this mission
-                sample_type = sample_config.sample_type
-                if sample_type.datatype and not mission.mission_sample_types.filter(
-                        name=sample_type.short_name).exists():
-                    mst = models.MissionSampleType(mission=mission,
-                                                   name=sample_type.short_name,
-                                                   long_name=sample_type.long_name,
-                                                   priority=sample_type.priority,
-                                                   is_sensor=sample_type.is_sensor,
-                                                   datatype=sample_type.datatype)
-                    mst.save()
-
-            except Exception as ex:
-                logger.error(f"Failed to load file {file_name}")
-                logger.exception(ex)
-
-        soup = BeautifulSoup("", "html.parser")
-        response = HttpResponse(soup)
-
-        # This will trigger the Sample table on the 'core/mission_samples.html' template to update
-        response['HX-Trigger'] = 'update_samples, file_errors_updated, reload_sample_file'
-        return response
 
 
 def soup_split_column(soup: BeautifulSoup, column: bs4.Tag) -> bs4.Tag:
@@ -566,9 +482,6 @@ url_patterns = [
 
     # used to reload elements on the sample form if a GET htmx request
     path(f'sample/file_errors/<int:mission_id>/', get_file_error_card, name="mission_samples_get_file_errors"),
-
-    # load samples using a given sample type configuration file configuration
-    path(f'sample/load/', load_samples, name="mission_samples_load_samples"),
 
     # ###### sample details ###### #
 
