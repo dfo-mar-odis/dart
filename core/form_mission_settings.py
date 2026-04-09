@@ -88,6 +88,7 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['global_geographic_region'].choices += [(gr.id, gr) for gr in region_choices]
         self.fields['global_geographic_region'].choices += [(-2, _('')), (-1, _('New Region'))]
         self.fields['global_geographic_region'].required = False
+        self.fields['geographic_region'].required = False
 
         self.fields['mission_descriptor'].required = False
         self.fields['lead_scientist'].required = False
@@ -274,14 +275,34 @@ class MissionSettingsForm(forms.ModelForm):
         return mission_name
 
     def clean_geographic_region(self):
-        region = self.cleaned_data['geographic_region']
-        if not region:
-            raise forms.ValidationError(_("Mission requires at least one geographic region"))
+        region = None
+        region_str = self.cleaned_data.get('geographic_region', '')
+        selected_region = self.cleaned_data.get('global_geographic_region', None)
 
-        return self.cleaned_data['geographic_region']
+        regions = list(set([region.strip() for region in region_str.replace(', ', ',').split(',') if region])) if region_str else []
+
+        if selected_region:
+            region_name = settings_models.GlobalGeographicRegion.objects.get(pk=int(selected_region)).name
+            if region_name and region_name not in regions:
+                regions.append(region_name)
+
+        if len(regions) > 0:
+            regions.sort()
+            region = ", ".join(regions)
+
+        if region:
+            try:
+                validate_regions(region)
+            except ValueError as e:
+                pass
+
+
+        return region
 
     def clean(self):
         cleaned_data = super().clean()
+        cleaned_data['geographic_region'] = self.clean_geographic_region()
+
         start_sample = cleaned_data.get('start_underway_sample')
         end_sample = cleaned_data.get('end_underway_sample')
 
@@ -293,6 +314,14 @@ class MissionSettingsForm(forms.ModelForm):
             raise forms.ValidationError(
                 _("The 'End Underway Sample' must be greater than or equal to the 'Start Underway Sample'.")
             )
+
+        if not cleaned_data['geographic_region']:
+            raise forms.ValidationError({'global_geographic_region': [_("Mission requires at least one geographic region")]})
+        else:
+            try:
+                validate_regions(cleaned_data['geographic_region'])
+            except ValueError as e:
+                raise forms.ValidationError({'global_geographic_region': [str(e)]})
 
         return cleaned_data
 
@@ -382,6 +411,24 @@ def remove_geographic_region(request, region_id):
     return HttpResponse(form_soup.find(id="div_id_geographic_region_field"))
 
 
+def validate_regions(region_str: str, region_to_add: str = None) -> None:
+    regions = region_str.replace(', ', ',').split(',') if region_str else []
+
+    if region_to_add is not None and region_to_add not in regions:
+        if len(regions) + len(region_to_add.split(',')) > 4:
+            raise ValueError(_("Maximum of four regions"))
+        elif len(region_str + ', ' + region_to_add) > 100:
+            str_len = len(region_str + ', ' + region_to_add)
+            raise ValueError(_("Too many characters in region list") + f" : {str_len}")
+    elif region_to_add is None and regions:
+        if len(regions) > 4:
+            raise ValueError(_("Maximum of four regions"))
+        elif len(region_str) > 100:
+            str_len = len(region_str)
+            raise ValueError(_("Too many characters in region list") + f" : {str_len}")
+
+
+
 def add_geographic_region(request):
 
     soup = BeautifulSoup('', 'html.parser')
@@ -391,20 +438,16 @@ def add_geographic_region(request):
 
     region_id = region.pk if region else int(request.POST.get('global_geographic_region', -1) or -1)
     region_str = request.POST.get('geographic_region', '')
-    regions = list(set([region.strip() for region in region_str.split(',') if region]))
+    regions = list(set([region.strip() for region in region_str.replace(', ', ',').split(',') if region]))
 
     too_many_regions_err = ''
     if region_id > 0:
         region_to_add = settings_models.GlobalGeographicRegion.objects.get(pk=region_id)
-
-        if region_to_add.name not in regions:
-            if len(regions) + len(region_to_add.name.split(',')) > 4:
-                too_many_regions_err = _("Maximum of four regions")
-            elif len(region_str + ', ' + region_to_add.name) > 100:
-                str_len = len(region_str + ', ' + region_to_add.name)
-                too_many_regions_err = _("Too many characters in region list") + f" : {str_len}"
-            else:
-                regions.append(region_to_add.name)
+        try:
+            validate_regions(region_str, region_to_add.name)
+            regions.append(region_to_add.name)
+        except ValueError as ex:
+            too_many_regions_err = str(ex)
 
     regions.sort()
     new_regions = ", ".join(regions)
