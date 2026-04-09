@@ -20,13 +20,13 @@ class FileConfig:
     def get_file_type(self):
         return self.file_type
 
-    def get_xls_tab_names(self, content: BytesIO) -> list:
+    def get_xls_tab_names(self) -> list:
 
         if self.tab_names:
             return self.tab_names
 
         try:
-            workbook = openpyxl.load_workbook(content, read_only=True)
+            workbook = openpyxl.load_workbook(BytesIO(self.content), read_only=True)
             self.tab_names = workbook.sheetnames
             return self.tab_names
         except Exception as e:
@@ -35,7 +35,7 @@ class FileConfig:
 
     def __init__(self, filename, content: BytesIO):
         self.filename = filename
-        self.content = content
+        self.content = content.read()
 
         # Determine file type based on the file extension
         extension = filename.split('.')[-1].lower()
@@ -66,7 +66,7 @@ class FileConfigForm(forms.Form):
         )
 
         if file_config.file_type == 'XLS':
-            tab_names = file_config.get_xls_tab_names(file_config.content)
+            tab_names = file_config.get_xls_tab_names()
             self.fields['file_tab'].choices = [(i, name) for i, name in enumerate(tab_names)]
 
             self.helper.layout.fields.insert(0, Field('file_tab', css_class='form-control'))
