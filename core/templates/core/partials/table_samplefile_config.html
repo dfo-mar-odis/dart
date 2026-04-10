@@ -1,0 +1,35 @@
+{% load i18n %}
+{% load bootstrap_icons %}
+
+<div class="card mt-2">
+    <div class="card-body">
+        <table id="table_id_column_configuration_table" class="table table-sm table-striped table-bordered">
+            <thead>
+                <tr>
+                    <td></td>
+                    <th>{% trans 'Value Column' %}</th>
+                    <th>{% trans 'Column Alias' %}</th>
+                    <th>{% trans 'Datatype ID' %}</th>
+                    <th>{% trans 'Datatype Method' %}</th>
+                    <th>{% trans 'Datatype Description' %}</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for config in configs %}
+                <tr id="config_{{ config.value_id }}" hx-swap="outerHTML" hx-trigger="update_config_{{ config.value_id }} from:body" hx-post="{% url 'core:form_sample_type_update_to_config' %}">
+                    <td><button type="button" class="btn btn-sm btn-primary" hx-swap="innerHTML" hx-post="{% url "core:form_sample_type_get_value_form" config.value_id %}" hx-target="#div_id_sample_value_form_content" hx-indicator="#div_id_indicator_sample_config">{% custom_icon 'pencil-square' %}</button></td>
+                    <input type="hidden" name="config_{{ config.value_id }}" value="{{ config.value_id }}">
+                    <input type="hidden" name="config_{{ config.value_id }}_value_column" value="{{ config.value_column }}">
+                    <input type="hidden" name="config_{{ config.value_id }}_name_column" value="{{ config.name_column }}">
+                    <input type="hidden" name="config_{{ config.value_id }}_datatype" value="{{ config.datatype }}">
+                    <td>{{ config.value_column }}</td>
+                    <td>{{ config.name_column }}</td>
+                    <td>{{ config.datatype }}</td>
+                    <td>{{ config.datatype_method }}</td>
+                    <td>{{ config.datatype_description }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>

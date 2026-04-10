@@ -1,126 +1,88 @@
-import csv
-from io import BytesIO
+from http.client import responses
 
-import openpyxl
 from bs4 import BeautifulSoup
+from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, Row, Column
+from crispy_forms.layout import Layout, Field, Row, Column, Div
 from crispy_forms.utils import render_crispy_form
 from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
 
 from django import forms
+from django.utils.translation import gettext_lazy as _
+
+from bio_tables.models import BCDataType
+from config.utils import load_svg
+from core.parsers.samples.samplefile_config import FileConfig
 
 
-class FileConfig:
-    file_type: str
-    tab: int = -1
-    tab_names: list = None
-    header_line_number: int = 0
+class FileValueForm(forms.Form):
 
-    def get_file_type(self):
-        return self.file_type
+    value_column = forms.ChoiceField(choices=[(-1, '--------')])
+    name_column = forms.CharField(required=False, help_text=_('Data table display name. If blank, uses datatype method as a display name'))
+    datatype = forms.ChoiceField(choices=[(-1, '--------')], required=False)
 
-    def get_xls_tab_names(self) -> list:
+    def __init__(self, column_names: list[tuple[int, str]], *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        if self.tab_names:
-            return self.tab_names
+        self.fields['value_column'].choices = [(-1, '--------')] + column_names
 
-        try:
-            workbook = openpyxl.load_workbook(BytesIO(self.content), read_only=True)
-            self.tab_names = workbook.sheetnames
-            return self.tab_names
-        except Exception as e:
-            raise ValueError(f"Error reading XLS file: {e}")
+        datatype_choices = [(datatype.pk, f'{datatype.pk}: {datatype.method} - {datatype.description}') for datatype in BCDataType.objects.all()]
+        self.fields['datatype'].choices = [(-1, '--------')] + datatype_choices
 
+        attrs = {
+            'title': _("Add to configuration"),
+            'hx-post': reverse_lazy('core:form_sample_type_add_to_config'),
+            'hx-target': f"#table_id_column_configuration_table tbody",
+            'hx-swap': "beforeend"
+        }
 
-    def get_header_line_number(self) -> int:
-        if self.file_type == 'XLS':
-            return self._find_header_in_excel()
-        elif self.file_type in ['CSV', 'DAT']:
-            return self._find_header_in_csv_or_dat()
-        else:
-            raise ValueError("Unsupported file type for header detection")
+        icon = load_svg("plus-square")
+        add_button = StrictButton(icon, **attrs, css_class='btn btn-primary btn-sm')
 
-    def _find_header_in_excel(self) -> int:
-        try:
-            tab_names = self.get_xls_tab_names()
-            workbook = openpyxl.load_workbook(BytesIO(self.content), read_only=True)
-            sheet = workbook[tab_names[self.tab]] if self.tab != -1 else workbook.active
-            for row_idx, row in enumerate(sheet.iter_rows(values_only=True), start=1):
-                if self._is_header_row(row):
-                    return row_idx
-            raise ValueError("No header line found in the Excel file")
-        except Exception as e:
-            raise ValueError(f"Error processing Excel file: {e}")
+        form_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_value_form'),
+            'hx-trigger': 'clear_value_form from:body'
+        }
 
-    def _find_header_in_csv_or_dat(self) -> int:
-        try:
-            content_stream = BytesIO(self.content)
-            content_stream.seek(0)
-            reader = csv.reader(content_stream.read().decode('utf-8').splitlines())
-            for row_idx, row in enumerate(reader, start=1):
-                if self._is_header_row(row):
-                    return row_idx
-            raise ValueError("No header line found in the CSV/DAT file")
-        except Exception as e:
-            raise ValueError(f"Error processing CSV/DAT file: {e}")
-
-    def _is_header_row(self, row) -> bool:
-        # A heuristic to determine if a row is a header row
-        if not row:
-            return False
-        # Check if the row has a significant number of non-empty text cells
-        text_count = sum(1 for cell in row if isinstance(cell, str) and cell.strip())
-        # Check if the row has a reasonable number of columns (e.g., > 3)
-        return text_count > len(row) / 2 and len(row) > 3
-
-
-    def __init__(self, filename, content: BytesIO, tab: int = -1):
-        self.tab = tab
-        self.filename = filename
-        self.content = content.read()
-
-        # Determine file type based on the file extension
-        extension = filename.split('.')[-1].lower()
-        if extension == 'csv':
-            self.file_type = 'CSV'
-        elif extension in ['xls', 'xlsx']:
-            self.file_type = 'XLS'
-        elif extension == 'dat':
-            self.file_type = 'DAT'
-        else:
-            raise TypeError(f'Unsupported file type: {extension}')
-
-
-
-class FileConfigForm(forms.Form):
-
-    file_tab = forms.ChoiceField(choices=[])
-    header_line_number = forms.IntegerField()
-
-    def __init__(self, file_config: FileConfig, *args, **kwargs):
-        initial = kwargs.pop('initial', {})
-        if 'header_line_number' not in initial:
-            initial['header_line_number'] = file_config.get_header_line_number()
-
-        if 'file_tab' not in initial:
-            initial['file_tab'] = file_config.tab
-
-        super().__init__(*args, **kwargs, initial=initial)
-
-        tab_header_row = Row(
-            Column(Field('header_line_number', css_class='form-control'))
-        )
-        self.helper = FormHelper(self)
+        self.helper = FormHelper()
         self.helper.form_tag = False
 
         self.helper.layout = Layout(
-            tab_header_row
+            Div(
+                Div(
+                    Row(
+                        Column(Field('value_column', css_class='form-select form-select-sm')),
+                        Column(Field('name_column', css_class='form-control form-control-sm')),
+                    ),
+                    Row(
+                        Column(Field('datatype', css_class='form-select form-select-sm')),
+                    ),
+                    Row(
+                        Column(add_button),
+                    ),
+                    css_class='card-body',
+                ),
+                css_class='card', css_id="div_id_sample_value_form_content", **form_attrs
+            )
         )
 
-        if file_config.file_type == 'XLS':
-            tab_names = file_config.get_xls_tab_names()
+class FileConfigForm(forms.Form):
+
+    column_names: list[tuple[int, str]] = None
+
+    file_config: FileConfig = None
+    file_tab = forms.ChoiceField(choices=[])
+    header_line_number = forms.IntegerField()
+
+    sample_column = forms.ChoiceField(choices=[(-1, '--------')])
+    comment_column = forms.ChoiceField(choices=[(-1, '--------')], required=False)
+
+    def get_file_tab_column(self):
+        file_tab_column = None
+        if self.file_config.file_type == 'XLS':
+            tab_names = self.file_config.get_tab_names()
             self.fields['file_tab'].choices = [(i, name) for i, name in enumerate(tab_names)]
 
             tab_attrs = {
@@ -129,28 +91,235 @@ class FileConfigForm(forms.Form):
                 'hx-trigger': 'change',
                 'hx-indicator': "#div_id_indicator_sample_config"
             }
-            tab_header_row.insert(0, Column(Field('file_tab', css_class='form-control', **tab_attrs)))
+            file_tab_column = Column(Field('file_tab', css_class='form-select form-select-sm', **tab_attrs))
+
+        return file_tab_column
+
+    def __init__(self, file_config: FileConfig, *args, **kwargs):
+        self.file_config = file_config
+
+        initial = kwargs.pop('initial', {})
+        if 'header_line_number' not in initial:
+            initial['header_line_number'] = file_config.get_header_line_number()
+
+        if 'file_tab' not in initial:
+            initial['file_tab'] = file_config.selected_tab
+
+        if default_sample_column := file_config.get_sample_id_column():
+            if 'sample_column' not in initial:
+                initial['sample_column'] = default_sample_column[0]
+
+        if default_comment_column := file_config.get_comment_column():
+            if 'comment_column' not in initial:
+                initial['comment_column'] = default_comment_column[0]
+
+        super().__init__(*args, **kwargs, initial=initial)
+
+        self.column_names = [(col_index, col_name) for col_index, col_name in enumerate(file_config.get_column_names())]
+        self.fields['sample_column'].choices = [(-1, '--------')] + self.column_names
+        self.fields['comment_column'].choices = [(-1, '--------')] + self.column_names
+
+        update_value_trigger_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_value_form'),
+            'hx-target': '#div_id_sample_value_form_content',
+            'hx-trigger': 'change',
+            'hx-indicator': "#div_id_indicator_sample_config"
+        }
+        ##################### Table Layout #####################
+        tab_header_row = Row(
+            Column(Field('header_line_number', css_class='form-control form-control-sm'))
+        )
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(
+            tab_header_row,
+            Row(
+                Column(Field('sample_column', css_class='form-select form-select-sm', **update_value_trigger_attrs)),
+                Column(Field('comment_column', css_class='form-select form-select-sm', **update_value_trigger_attrs)),
+            ),
+        )
+
+        if file_tab_column := self.get_file_tab_column():
+            tab_header_row.fields.insert(0, file_tab_column)
+
+
+def initialize_file_config(request) -> FileConfig:
+    file = request.FILES.get('sample_file', None)
+
+    initial = {}
+    if header_line_number := request.POST.get('header_line_number', -1):
+        initial['header_line_number'] = int(header_line_number)
+
+    if file_tab := request.POST.get('file_tab', -1):
+        initial['file_tab'] = int(file_tab)
+
+    file_config = FileConfig(file.name, file, tab=initial['file_tab'])
+    file_config.set_header_line_number(initial['header_line_number'])
+
+    if request.session.get('sample_file', None) != file.name:
+        request.session['sample_file'] = file.name
+        if 'sample_file_column_names' in request.session:
+            del request.session['sample_file_column_names']
+
+        request.session['sample_file_column_names'] = [(idx, col) for idx, col in
+                                                       enumerate(file_config.get_column_names())]
+
+    return file_config
+
+
+def get_file_columns(request):
+    if 'sample_file_column_names' not in request.session:
+        initialize_file_config(request)
+
+    columns = request.session.get('sample_file_column_names', []).copy()
+
+    return columns
+
 
 def get_file_config(request):
-
     # only one file can be uploaded here at a time.
     file = request.FILES.get('sample_file', None)
     soup = BeautifulSoup('<div id="div_id_sample_config_form_content"></div>', 'html.parser')
-    if file:
-        initial={}
-        if header_line_number:=request.POST.get('file_tab', -1):
-            initial['header_line_number'] = int(header_line_number)
-
-        file_config = FileConfig(file.name, file, tab=initial['header_line_number'])
-        form = FileConfigForm(file_config)
+    if not file:
+        if 'sample_file' in request.session:
+            del request.session['sample_file']
+        if 'sample_file_column_names' in request.session:
+            del request.session['sample_file_column_names']
+    else:
         form_content = soup.find('div')
-
+        file_config = initialize_file_config(request)
+        form = FileConfigForm(file_config)
         html = render_crispy_form(form)
+
         form_content.append(BeautifulSoup(html, 'html.parser'))
+
+        if file_config.get_header_line_number() is not None:
+            exclude: list[int] = []
+            if sid_col := file_config.get_sample_id_column():
+                exclude.append(sid_col[0])
+            if cid_col := file_config.get_comment_column():
+                exclude.append(cid_col[0])
+
+            column_names = request.session.get('sample_file_column_names', []).copy()
+            exclude.sort(reverse=True)
+            for exclude in exclude:
+                column_names.pop(exclude)
+
+            value_form = FileValueForm(column_names)
+            value_form_html = render_crispy_form(value_form)
+
+            value_form_soup = BeautifulSoup(value_form_html, 'html.parser')
+            form_content.append(value_form_soup)
+
+            config_table_html = render_to_string('core/partials/table_samplefile_config.html', request=request)
+            config_table_soup = BeautifulSoup(config_table_html, 'html.parser')
+            form_content.append(config_table_soup)
 
     return HttpResponse(soup)
 
 
+def update_value_form(request, **kwargs):
+
+    # This is called when the user changes the file tab or header line number. It will return an updated value form with the new column names.
+    exclude = []
+    if (sample_id_index := int(request.POST.get('sample_column', -1))) != -1:
+        exclude.append(sample_id_index)
+
+    if (comment_index := int(request.POST.get('comment_column', -1))) != -1:
+        exclude.append(comment_index)
+
+    column_names = request.session.get('sample_file_column_names', []).copy()
+    exclude.sort(reverse=True)
+    for exclude in exclude:
+        column_names.pop(exclude)
+
+    initial = {}
+    if 'column_id' in kwargs:
+        prefix = f'config_{kwargs["column_id"]}'
+        initial['value_column'] = request.POST.get(prefix, None)
+        initial['name_column'] = request.POST.get(f'{prefix}_name_column', None)
+        initial['datatype'] = request.POST.get(f'{prefix}_datatype', None)
+
+    value_form = FileValueForm(column_names, initial=initial)
+
+    value_form_html = render_crispy_form(value_form)
+    soup = BeautifulSoup(value_form_html, 'html.parser')
+
+    return HttpResponse(soup.find('div'))
+
+
+def get_config_soup(request) -> BeautifulSoup | None:
+    file = request.FILES.get('sample_file', None)
+    if file:
+        value_column_id = int(request.POST.get('value_column', -1))
+
+        columns = get_file_columns(request)
+        value_column_name = columns.pop(value_column_id)
+
+        name_column = request.POST.get('name_column', None)
+        datatype_id = int(request.POST.get('datatype', -1))
+        try:
+            datatype = None
+            if datatype_id != -1:
+                datatype = BCDataType.objects.get(pk=datatype_id)
+        except BCDataType.DoesNotExist:
+            datatype = BCDataType(method="N/A",
+                                  description="Could not find datatype. You're datatype definitions may need to be updated")
+
+        context = {
+            'configs': [{
+                'value_id': value_column_id,
+                'value_column': value_column_name[1],
+                'name_column': name_column,
+                'datatype': datatype_id,
+                'datatype_method': datatype.method if datatype else None,
+                'datatype_description': datatype.description if datatype else None,
+            }]
+        }
+        html = render_to_string('core/partials/table_samplefile_config.html', context=context, request=request)
+        return BeautifulSoup(html, 'html.parser')
+
+    return None
+
+
+def add_to_config(request):
+    file = request.FILES.get('sample_file', None)
+    if file:
+        value_column_id = int(request.POST.get('value_column', -1))
+        if f'config_{value_column_id}' in request.POST:
+            response = HttpResponse()
+            response['HX-Trigger-After-Settle'] = f'update_config_{value_column_id}'
+            return response
+
+        soup = get_config_soup(request)
+
+        row = soup.find('tr', id=f'config_{value_column_id}')
+        response = HttpResponse(row.find_parent())
+        response['HX-Trigger'] = f'clear_value_form'
+        return response
+
+    return HttpResponse()
+
+def update_to_config(request):
+    file = request.FILES.get('sample_file', None)
+    if file:
+        value_column_id = int(request.POST.get('value_column', -1))
+
+        soup = get_config_soup(request)
+
+        row = soup.find('tr', id=f'config_{value_column_id}')
+        response = HttpResponse(row.find_parent())
+        response['HX-Trigger'] = f'clear_value_form'
+        return response
+
+    return HttpResponse()
+
 url_patterns = [
-    path('sample_config/header/', get_file_config, name='form_sample_type_get_headers')
+    path('sample_config/header/', get_file_config, name='form_sample_type_get_headers'),
+    path('sample_config/value/', update_value_form, name='form_sample_type_get_value_form'),
+    path('sample_config/value/<int:column_id>/', update_value_form, name='form_sample_type_get_value_form'),
+    path('sample_config/config/add/', add_to_config, name='form_sample_type_add_to_config'),
+    path('sample_config/config/update/', update_to_config, name='form_sample_type_update_to_config'),
 ]
