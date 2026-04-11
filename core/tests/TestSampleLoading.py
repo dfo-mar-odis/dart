@@ -10,7 +10,7 @@ from config.tests.DartTestCase import DartTestCase
 from core.parsers.samples.samplefile_config import FileConfig
 
 
-@tag('test_file_config_form')
+@tag('test_file_config', 'test_file_config_form')
 class TestConfigForm(DartTestCase):
     def setUp(self):
         self.client = Client()
@@ -137,7 +137,7 @@ class TestConfigForm(DartTestCase):
         assert selected_value_input.attrs['value'] == '2'
 
 
-@tag('test_file_config')
+@tag('test_file_config', 'test_file_config_object')
 class TestFileConfigObject(TestCase):
 
     def setUp(self):

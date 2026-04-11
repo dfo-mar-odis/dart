@@ -17,19 +17,80 @@ from config.utils import load_svg
 from core.parsers.samples.samplefile_config import FileConfig
 
 
+class FileConfigSaveForm(forms.Form):
+    config_name = forms.CharField(required=True)
+    config_description = forms.CharField(required=False)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        attrs = {}
+        icon = load_svg("check-square")
+        save_button = StrictButton(icon, **attrs, css_class='btn btn-primary btn-sm')
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    Row(
+                        Column(Field('config_name', css_class='form-control form-control-sm'), css_class='col-2'),
+                        Column(Field('config_description', css_class='form-control form-control-sm'), css_class='col'),
+                    ),
+                    Row(
+                        Column(save_button)
+                    ),
+                    css_class='card-body'
+                ),
+                css_class='card mt-2'
+            )
+        )
+
 class FileValueForm(forms.Form):
 
     value_column = forms.ChoiceField(choices=[(-1, '--------')])
     name_column = forms.CharField(required=False, help_text=_('Data table display name. If blank, uses datatype method as a display name'))
+
+    datatype_id = forms.IntegerField(required=False)
+    datatype_text_filter = forms.CharField(required=False)
     datatype = forms.ChoiceField(choices=[(-1, '--------')], required=False)
 
-    def __init__(self, column_names: list[tuple[int, str]], *args, **kwargs):
+    def get_datatype_filter_row(self) -> Div:
+
+        datatype_id_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_datatype_method'),
+            'hx-target': "#id_datatype",
+            'hx-trigger': "keyup changed delay:1000ms"
+        }
+
+        row = Div(
+            Row(
+                Column(Field('datatype_id', css_class='form-control form-control-sm', **datatype_id_attrs), css_class='col-2'),
+                Column(Field('datatype_text_filter', css_class='form-control form-control-sm', **datatype_id_attrs), css_class='col'),
+            ),
+            Row(
+                Column(Field('datatype', css_class='form-select form-select-sm')),
+            )
+        )
+
+        return row
+
+    def __init__(self, column_names: list[tuple[int, str]], datatype_text_filter: str = None, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         self.fields['value_column'].choices = [(-1, '--------')] + column_names
 
-        datatype_choices = [(datatype.pk, f'{datatype.pk}: {datatype.method} - {datatype.description}') for datatype in BCDataType.objects.all()]
-        self.fields['datatype'].choices = [(-1, '--------')] + datatype_choices
+        datatypes = BCDataType.objects.all()
+        if datatype_text_filter:
+            tokens = datatype_text_filter.strip().split(' ')
+            for token in tokens:
+                datatypes = datatypes.filter(description__icontains=token)
+            datatype_choices = [(datatype.pk, f'{datatype.pk}: {datatype.method} - {datatype.description}') for datatype
+                                in datatypes]
+        else:
+            datatype_choices = [(-1, '--------')] + [(datatype.pk, f'{datatype.pk}: {datatype.method} - {datatype.description}') for datatype in datatypes]
+
+        self.fields['datatype'].choices = datatype_choices
 
         attrs = {
             'title': _("Add to configuration"),
@@ -46,6 +107,8 @@ class FileValueForm(forms.Form):
             'hx-trigger': 'clear_value_form from:body'
         }
 
+        datatype_filter_row = self.get_datatype_filter_row()
+
         self.helper = FormHelper()
         self.helper.form_tag = False
 
@@ -56,9 +119,7 @@ class FileValueForm(forms.Form):
                         Column(Field('value_column', css_class='form-select form-select-sm')),
                         Column(Field('name_column', css_class='form-control form-control-sm')),
                     ),
-                    Row(
-                        Column(Field('datatype', css_class='form-select form-select-sm')),
-                    ),
+                    datatype_filter_row,
                     Row(
                         Column(add_button),
                     ),
@@ -160,6 +221,7 @@ def initialize_file_config(request) -> FileConfig:
 
     if request.session.get('sample_file', None) != file.name:
         request.session['sample_file'] = file.name
+
         if 'sample_file_column_names' in request.session:
             del request.session['sample_file_column_names']
 
@@ -209,13 +271,17 @@ def get_file_config(request):
 
             value_form = FileValueForm(column_names)
             value_form_html = render_crispy_form(value_form)
-
             value_form_soup = BeautifulSoup(value_form_html, 'html.parser')
             form_content.append(value_form_soup)
 
             config_table_html = render_to_string('core/partials/table_samplefile_config.html', request=request)
             config_table_soup = BeautifulSoup(config_table_html, 'html.parser')
             form_content.append(config_table_soup)
+
+            save_form = FileConfigSaveForm()
+            save_form_html = render_crispy_form(save_form)
+            save_form_soup = BeautifulSoup(save_form_html, 'html.parser')
+            form_content.append(save_form_soup)
 
     return HttpResponse(soup)
 
@@ -230,7 +296,7 @@ def update_value_form(request, **kwargs):
     if (comment_index := int(request.POST.get('comment_column', -1))) != -1:
         exclude.append(comment_index)
 
-    column_names = request.session.get('sample_file_column_names', []).copy()
+    column_names = get_file_columns(request)
     exclude.sort(reverse=True)
     for exclude in exclude:
         column_names.pop(exclude)
@@ -316,10 +382,38 @@ def update_to_config(request):
 
     return HttpResponse()
 
+
+def remove_from_config(request, column_id):
+    return HttpResponse()
+
+
+def update_to_datatype_description_field(request):
+    file = request.FILES.get('sample_file', None)
+    if file:
+        initial = {}
+        column_names = get_file_columns(request)
+        datatype_id = request.POST.get('datatype_id', '')
+        if datatype_id != '':
+            initial['datatype'] = int(datatype_id)
+
+        datatype_text_filter = request.POST.get('datatype_text_filter', None)
+
+        value_form = FileValueForm(column_names, datatype_text_filter=datatype_text_filter, initial=initial)
+        html = render_crispy_form(value_form)
+        soup = BeautifulSoup(html, 'html.parser')
+
+        return HttpResponse(soup.find(id="id_datatype"))
+
+    return HttpResponse()
+
 url_patterns = [
     path('sample_config/header/', get_file_config, name='form_sample_type_get_headers'),
     path('sample_config/value/', update_value_form, name='form_sample_type_get_value_form'),
     path('sample_config/value/<int:column_id>/', update_value_form, name='form_sample_type_get_value_form'),
     path('sample_config/config/add/', add_to_config, name='form_sample_type_add_to_config'),
     path('sample_config/config/update/', update_to_config, name='form_sample_type_update_to_config'),
+    path('sample_config/config/remove/<int:column_id>/', remove_from_config, name='form_sample_type_remove_from_config'),
+
+    path('sample_config/datatype/update/', update_to_datatype_description_field, name='form_sample_type_get_datatype_method'),
+
 ]
