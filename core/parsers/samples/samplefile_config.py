@@ -170,3 +170,31 @@ class FileConfig:
 
         if content is not None:
             self.parser = FILE_PARSER_REGISTER[self.file_type](content)
+
+    def get_column_index_by_name(self, column_name: str) -> int | None:
+        """
+        Find the index of a column by its name.
+
+        :param column_name: The name of the column to find.
+        :return: The index of the column if found, otherwise None.
+        """
+        column_names = [c.upper() for c in self.get_column_names()]
+        column_name_upper = column_name.upper()
+        try:
+            return column_names.index(column_name_upper)
+        except ValueError:
+            return None
+
+    def set_sample_id_column_by_name(self, sample_id_column_name):
+        idx = self.get_column_index_by_name(sample_id_column_name)
+        if idx is None:
+            raise KeyError(f'Sample ID column named {sample_id_column_name} not found.')
+
+        self.set_sample_id_column(idx)
+
+    def set_comment_column_by_name(self, comment_column_name):
+        idx = self.get_column_index_by_name(comment_column_name)
+        if idx is None:
+            raise KeyError(f'Sample ID column named {comment_column_name} not found.')
+
+        self.set_comment_column(idx)

@@ -70,6 +70,27 @@ class GlobalSampleType(models.Model):
         return label
 
 
+class SampleFileConfig(models.Model):
+    name = models.CharField(verbose_name=_("Name"), max_length=50, unique=True)
+    description = models.CharField(verbose_name=_("Description"), max_length=200, blank=True, null=True)
+
+    file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
+                                 help_text=_("file type extension e.g csv, xls, xlsx, dat"))
+    tab = models.IntegerField(verbose_name=_("Tab"), default=0, help_text=_("The tab number in the file"))
+    header_line = models.IntegerField(verbose_name=_("Header Row"), default=0)
+
+    sample_id_column_name = models.CharField(verbose_name=_("Sample ID Column Name"), max_length=20)
+    comment_column_name = models.CharField(verbose_name=_("Comment Column Name"), max_length=20, blank=True, null=True)
+
+
+class SampleFileConfigColumns(models.Model):
+    file_config = models.ForeignKey(SampleFileConfig, verbose_name=_("File Config Columns"), on_delete=models.CASCADE, related_name="config_columns")
+    column_alias = models.CharField(verbose_name=_("Alias Column"), max_length=20)
+    value_column_name = models.CharField(verbose_name=_("Value Column Name"), max_length=50)
+    detection_limit_column_name = models.CharField(verbose_name=_("Detection Limit Column Name"), max_length=50, blank=True, null=True)
+    quality_control_column_name = models.CharField(verbose_name=_("Quality Control Column Name"), max_length=50, blank=True, null=True)
+    datatype_id = models.IntegerField(verbose_name=_("Datatype ID Column Name"), blank=True, null=True)
+
 class SampleTypeConfig(models.Model):
     sample_type = models.ForeignKey(GlobalSampleType, verbose_name=_("Sample Type"),
                                     related_name="configs", on_delete=models.DO_NOTHING,

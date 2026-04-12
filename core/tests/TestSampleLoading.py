@@ -136,6 +136,18 @@ class TestConfigForm(DartTestCase):
         assert selected_value_input is not None, "Missing expected value input"
         assert selected_value_input.attrs['value'] == '2'
 
+    def test_validate_value_form_no_file(self):
+        # if no file is provided and the validate value form is called
+        # a form with an error message should be returned to replace a blank form
+        context = {
+        }
+
+        url = reverse_lazy('core:form_sample_type_validate_value_form')
+        response = self.client.post(url, context)
+        soup = BeautifulSoup(response.content, 'html.parser')
+
+        assert soup is not None, "No content returned from the validate request"
+
 
 @tag('test_file_config', 'test_file_config_object')
 class TestFileConfigObject(TestCase):

@@ -1,6 +1,7 @@
 import re
 
 import time
+from typing import Self
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -9,6 +10,7 @@ from crispy_forms.layout import Layout, LayoutObject, Hidden, Row, Column, Field
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
 
@@ -19,6 +21,24 @@ from . import models
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
 from .consumer import LoggerConsumer
+
+
+class AlertSoup(BeautifulSoup):
+
+    def set_status(self, alert_type) -> Self:
+        self.find(id=f"alert_soup_content_{self.alert_id}").attrs['class'] = f"alert alert-{alert_type}"
+        return self
+
+    def add_message(self, message) -> Self:
+        div = self.new_tag('div')
+        div.string = message
+        self.find(id=f"alert_soup_content_{self.alert_id}").append(div)
+        return self
+
+    def __init__(self, alert_id):
+        self.alert_id = alert_id
+        html = render_to_string("core/components/AlertSoup.html", {"alert_id": alert_id})
+        super().__init__(html, "html.parser")
 
 
 class NoWhiteSpaceCharField(forms.CharField):
