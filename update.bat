@@ -50,7 +50,7 @@ if not exist ".\dart_local.sqlite3" (
 python .\manage.py migrate >> logs/start_dart.log
 python .\manage.py loaddata default_biochem_fixtures >> logs/start_dart.log
 if defined init_settings (
-  if init_settings==0 (
+  if %init_settings%==0 (
     echo "Loading default settings fixtures"
     python .\manage.py loaddata default_settings_fixtures >> logs/start_dart.log
   )
