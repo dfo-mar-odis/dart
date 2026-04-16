@@ -39,7 +39,7 @@ python -m pip install -r .\requirements.txt
 echo "Creating/Updating local database"
 
 REM If the local database already exists we can skip the initial loading of fixtures, this will speed up the update process.
-if exist %LOCAL_DATABASE% (
+if defined %LOCAL_DATABASE% (
   set init_settings=0
 )
 
