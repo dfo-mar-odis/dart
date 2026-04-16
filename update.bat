@@ -29,7 +29,7 @@ Rem If this is not the first run and the dart version matches that in the start_
 if not defined dart_version (
 	if %first_run%==0 goto start_server
 )
-if (%dart_version%==%update_version%) goto start_server
+if %dart_version%==%update_version% goto start_server
 
 echo "Updating Python Libraries, this may take several minutes"
 python -m pip install matplotlib --only-binary :all:
