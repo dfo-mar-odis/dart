@@ -43,13 +43,17 @@ REM If the local database already exists we can skip the initial loading of fixt
 if not exist ".\dart_local.sqlite3" (
   echo "No local settings db"
   set init_settings=0
+) else (
+  set init_settings=1
 )
 
 python .\manage.py migrate >> logs/start_dart.log
 python .\manage.py loaddata default_biochem_fixtures >> logs/start_dart.log
 if defined init_settings (
-  echo "Loading default settings fixtures"
-  python .\manage.py loaddata default_settings_fixtures >> logs/start_dart.log
+  if init_settings==0 (
+    echo "Loading default settings fixtures"
+    python .\manage.py loaddata default_settings_fixtures >> logs/start_dart.log
+  )
 )
 
 echo "Collecting static files, this may take a moment"

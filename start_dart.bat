@@ -31,6 +31,7 @@ if ERRORLEVEL 1 (
     git checkout %master_branch%
     git pull origin %master_branch%
 ) else (
+    del NULL
     call .\update.bat
 )
 
