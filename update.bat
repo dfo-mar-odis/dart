@@ -14,7 +14,8 @@ set first_run=0
 set server_path=.\dart_env\Scripts\activate.bat
 if not exist ".\dart_env\" (
   set first_run=1
-  copy .env_sample .env
+  echo "Creating .env file" >> logs/start_dart.log
+  copy .env_sample .env >> logs/start_dart.log
   python -m venv ".\dart_env" >> logs/start_dart.log
 )
 
@@ -39,13 +40,15 @@ python -m pip install -r .\requirements.txt
 echo "Creating/Updating local database"
 
 REM If the local database already exists we can skip the initial loading of fixtures, this will speed up the update process.
-if exist %LOCAL_DATABASE% (
+if not exist ".\dart_local.sqlite3" (
+  echo "No local settings db"
   set init_settings=0
 )
 
 python .\manage.py migrate >> logs/start_dart.log
 python .\manage.py loaddata default_biochem_fixtures >> logs/start_dart.log
 if defined init_settings (
+  echo "Loading default settings fixtures"
   python .\manage.py loaddata default_settings_fixtures >> logs/start_dart.log
 )
 
