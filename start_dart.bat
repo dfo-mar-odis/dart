@@ -12,7 +12,9 @@ if "%~1"=="" (
   set master_branch=%~1
 )
 
-set /p dart_version=<current_version.txt
+if exists ".\current_version.txt" (
+  set /p dart_version=<current_version.txt
+)
 
 echo ============================================ >> logs/start_dart.log
 echo Version: %dart_version% >> logs/start_dart.log
