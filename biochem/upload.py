@@ -150,9 +150,9 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         m_end_date = mission.end_date
 
         header_slat = bottle.latitude if bottle.latitude else event.start_location[0]
-        header_elat = bottle.latitude if bottle.latitude else event.end_location[1]
+        header_elat = bottle.latitude if bottle.latitude else event.end_location[0]
 
-        header_slon = bottle.longitude if bottle.longitude else event.start_location[0]
+        header_slon = bottle.longitude if bottle.longitude else event.start_location[1]
         header_elon = bottle.longitude if bottle.longitude else event.end_location[1]
 
         bcs_row = models.BcsD(
@@ -269,9 +269,9 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
         bottle_volume = bottle.computed_volume
 
         header_slat = bottle.latitude if bottle.latitude else event.start_location[0]
-        header_slon = bottle.longitude if bottle.longitude else event.start_location[1]
+        header_slon = bottle.longitude if bottle.longitude else event.start_location[0]
 
-        header_elat = bottle.latitude if bottle.latitude else event.end_location[0]
+        header_elat = bottle.latitude if bottle.latitude else event.end_location[1]
         header_elon = bottle.longitude if bottle.longitude else event.end_location[1]
 
         start_pressure = bottle.pressure
