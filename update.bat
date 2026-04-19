@@ -10,36 +10,41 @@ REM migration on the database by changing the update version
 set /p update_version=<version.txt
 echo %update_version%> current_version.txt
 
-set first_run=0
-set server_path=.\dart_env\Scripts\activate.bat
-if not exist ".\dart_env\" (
-  set first_run=1
-  copy .env_sample .env
-  python -m venv ".\dart_env" >> logs/start_dart.log
+REM Install uv if not already present
+where uv >NUL 2>&1
+if ERRORLEVEL 1 (
+  echo Installing uv...
+  powershell -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+  REM Refresh PATH so uv is available in this session
+  set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 )
 
-call %server_path% >> logs/start_dart.log
-
-python -m pip install --upgrade pip
+set first_run=0
+if not exist ".venv\" (
+  set first_run=1
+  if not exist ".env" (
+    copy .env_sample .env
+  )
+)
 
 echo Checking if update required
 echo DART version: '%dart_version%'
 echo Update to version: '%update_version%'
-Rem If this is not the first run and the dart version matches that in the start_dart.bat file skip updating.
-if not defined dart_version (
-	if %first_run%==0 goto start_server
-)
+
+REM If this is not the first run and the dart version matches skip updating packages.
+if not defined dart_version goto do_sync
+if %first_run%==1 goto do_sync
 if (%dart_version%==%update_version%) goto start_server
 
-echo "Updating Python Libraries, this may take several minutes"
-python -m pip install matplotlib --only-binary :all:
-python -m pip install -r .\requirements.txt
+:do_sync
+echo "Installing/updating Python libraries via uv, this may take several minutes"
+uv sync >> logs/start_dart.log 2>&1
 
 :start_server
 echo "Creating/Updating local database"
-python .\manage.py migrate >> logs/start_dart.log
+uv run python .\manage.py migrate >> logs/start_dart.log
 
 echo "Collecting static files, this may take a moment"
-python .\manage.py collectstatic --noinput
+uv run python .\manage.py collectstatic --noinput
 
 call server.bat
