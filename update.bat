@@ -42,7 +42,7 @@ if %dart_version%==%update_version% goto start_server
 
 :do_sync
 echo "Installing/updating Python libraries via uv, this may take several minutes"
-uv sync >> logs/start_dart.log 2>&1
+uv sync
 
 :start_server
 echo "Creating/Updating local database"
