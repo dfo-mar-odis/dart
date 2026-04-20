@@ -43,16 +43,21 @@ uv sync >> logs/start_dart.log 2>&1
 :start_server
 echo "Creating/Updating local database"
 
-REM If the local database already exists we can skip the initial loading of fixtures, this will speed up the update process.
+REM If the local database already exists we can skip the initial loading of user settings fixtures.
+REM We don't want to override any user settings if the user has created, but on a first run we need
+REM to set some defaults.
 if not exist ".\dart_local.sqlite3" (
-  echo "No local settings db"
   set init_settings=0
 ) else (
   set init_settings=1
 )
 
+echo "Running database migrations"
 uv run .\manage.py migrate >> logs/start_dart.log
+
+echo "Updating default biochem fixtures"
 uv run .\manage.py loaddata default_biochem_fixtures >> logs/start_dart.log
+
 if defined init_settings (
   if %init_settings%==0 (
     echo "Loading default settings fixtures"
