@@ -20,7 +20,7 @@ if ERRORLEVEL 1 (
 )
 
 set first_run=0
-if not exist ".venv\" (
+if not exist ".env" (
   set first_run=1
   echo "Creating .env file" >> logs/start_dart.log
   copy .env_sample .env >> logs/start_dart.log
