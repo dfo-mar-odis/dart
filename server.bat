@@ -10,4 +10,4 @@ if not exist ".\logs\" (
 echo "Starting webserver: http://localhost:8000/"
 
 REM Start the webserver using uv run (no need to activate venv manually)
-uv run python manage.py dart
+uv run manage.py dart
