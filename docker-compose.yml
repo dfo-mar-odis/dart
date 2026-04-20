@@ -1,0 +1,60 @@
+# docker-compose.yml
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DJANGO_ENV=dev
+      - POSTGRES_DB=dart
+      - POSTGRES_USER=dart
+      - POSTGRES_PASSWORD=dart
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+
+  web-prod:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    depends_on:
+      - postgres
+      - redis
+    environment:
+      - DJANGO_ENV=prod
+      - POSTGRES_DB=dart
+      - POSTGRES_USER=dart
+      - POSTGRES_PASSWORD=dart
+      - POSTGRES_HOST=postgres
+      - REDIS_HOST=redis
+
+  postgres:
+    image: postgres:16
+    restart: always
+    environment:
+      POSTGRES_DB: dart
+      POSTGRES_USER: dart
+      POSTGRES_PASSWORD: dart
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+volumes:
+  postgres_data:

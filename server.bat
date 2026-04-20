@@ -7,11 +7,7 @@ if not exist ".\logs\" (
   mkdir logs
 )
 
-if "%server_path%"=="" (
-  call dart_env\Scripts\activate.bat
-)
-
 echo "Starting webserver: http://localhost:8000/"
 
-Rem Start the webserver
-python manage.py dart
+REM Start the webserver using uv run (no need to activate venv manually)
+uv run python manage.py dart
