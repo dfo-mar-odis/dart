@@ -8,7 +8,6 @@ REM If this was run from a clone repo we can force an update of the python libra
 REM migration on the database by changing the update version
 
 set /p update_version=<version.txt
-echo %update_version%> current_version.txt
 
 REM Install uv if not already present
 where uv >NUL 2>&1
@@ -27,13 +26,18 @@ if not exist ".env" (
   REM python -m venv ".\dart_env" >> logs/start_dart.log
 )
 
+Rem If the dart version was set in the start_dart.bat and it matches the update_version set here we can skip the
+REM python libray update. Start_dart.bat will load dart_version from the version.txt file, then pulls from git
+REM if there was an update to git the new version is then set in update.bat as 'update_version'. If the two version
+REM numbers are different it means there was an update and the python libs, fixture files, or static content may need
+REM to be updated before the server starts. If the user just calls update.bat then the dart_version won't have been
+REM set and we'll force an update to everything at the user's request.
+
 echo Checking if update required
 echo DART version: '%dart_version%'
 echo Update to version: '%update_version%'
-Rem If this is not the first run and the dart version matches that in the start_dart.bat file skip updating.
-if not defined dart_version (
-	if %first_run%==0 goto start_server
-)
+
+if not defined dart_version goto do_sync
 if %dart_version%==%update_version% goto start_server
 
 :do_sync

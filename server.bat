@@ -1,7 +1,6 @@
 @echo off
 
-set /p dart_version=<current_version.txt
-set /p update_version=<version.txt
+set /p dart_version=<version.txt
 
 if not exist ".\logs\" (
   mkdir logs

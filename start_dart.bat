@@ -12,8 +12,12 @@ if "%~1"=="" (
   set master_branch=%~1
 )
 
-if exist ".\current_version.txt" (
-  set /p dart_version=<current_version.txt
+if exist "version.txt" (
+  if exist ".env" (
+    set /p dart_version=<version.txt
+  ) else (
+    set dart_version=-1
+  )
 ) else (
   set dart_version=-1
 )
