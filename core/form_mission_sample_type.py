@@ -239,7 +239,7 @@ def format_sensor_table(df: pd.DataFrame) -> BeautifulSoup:
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
 
     # start by replacing nan values with '---'
-    df.fillna('---', inplace=True)
+    df = df.fillna('---')
 
     # reformat the Datatype columns, which will be represented as floats, but we want them as integers
     for i in range(1, df['Datatype'].shape[1] + 1):

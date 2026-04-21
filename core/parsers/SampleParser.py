@@ -228,7 +228,7 @@ def split_sample(dataframe: pd.DataFrame, file_settings: settings_models.SampleT
     dataframe = dataframe[dataframe["sid"] != "N/A"]
 
     # Drop rows that that have no data in the value columns
-    dataframe.dropna(subset=[file_settings.value_field], inplace=True)
+    dataframe = dataframe.dropna(subset=[file_settings.value_field])
 
     # set the replicate ids
     if dataframe[rid].isnull().values.any():
