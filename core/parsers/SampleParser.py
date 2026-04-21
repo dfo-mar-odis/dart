@@ -2,7 +2,7 @@ import csv
 import pandas as pd
 import numpy as np
 
-from io import BufferedReader, BytesIO
+from io import BufferedReader, BytesIO, StringIO
 
 from datetime import datetime
 
@@ -136,6 +136,9 @@ def get_excel_dataframe(stream, sheet_number=-1, header_row=-1):
         to find the most likely row to use as a column header row then
         will return the dataframe """
     # iterate over the dataframe until the header column has been found.
+    if isinstance(stream, (bytes, BytesIO)):
+        stream = BytesIO(stream)
+
     if header_row < 0:
         df = pd.read_excel(io=stream, sheet_name=sheet_number)
         df = find_header(df, header_row)
@@ -219,7 +222,7 @@ def split_sample(dataframe: pd.DataFrame, file_settings: settings_models.SampleT
 
     # copy s_ids to nan rows
     if dataframe[sid].isnull().values.any():
-        dataframe[sid].fillna(method='ffill', inplace=True)
+        dataframe[sid] = dataframe[sid].ffill()
 
     # drop and 's_id' row that is not numeric, keeping any nan rows
     dataframe = dataframe[dataframe["sid"] != "N/A"]
