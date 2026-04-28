@@ -12,7 +12,6 @@ logger_notifications = logging.getLogger('dart.user.validation')
 
 
 def validate_mission(mission: core_models.Mission):
-    database = mission._state.db
     events = core_models.Event.objects.filter(mission=mission)
 
     core_models.EventError.objects.filter(event__mission=mission,
@@ -26,9 +25,11 @@ def validate_mission(mission: core_models.Mission):
     core_models.EventError.objects.bulk_create(errors)
 
 
-def validate_event(event: core_models.Event) -> [core_models.EventError]:
+def validate_event(event: core_models.Event) -> list[core_models.EventError]:
 
-    database = event._state.db
+    register = [core_models.InstrumentType.ctd, core_models.InstrumentType.net]
+    if event.instrument.type not in register:
+        return []
 
     # I return the errors rather than just saving them so events can be validated and saved in bulk
     # it's up to the calling function to delete ValidationError objects on an event before validating it

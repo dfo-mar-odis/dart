@@ -45,24 +45,24 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # sys.modules['cx_Oracle'] = oracledb
 # oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
 
+DEBUG = env.bool('DEBUG', default=True)
+
 import oracledb
 try:
     oracledb.init_oracle_client()
 except DatabaseError as e:
-    print("===========================================================================")
-    print("Dart 4.2.0+ requires Oracle Instant Client, which could not be initialized.")
-    print("Oracle Instant Client 12+ can be installed from the DFO software center.")
-    print("===========================================================================")
-    sys.exit(1)
+    if not DEBUG:
+        print("===========================================================================")
+        print("Dart 4.2.0+ requires Oracle Instant Client, which could not be initialized.")
+        print("Oracle Instant Client 12+ can be installed from the DFO software center.")
+        print("===========================================================================")
+        sys.exit(1)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', default=True)
 
 ALLOWED_HOSTS = ['*']
 
