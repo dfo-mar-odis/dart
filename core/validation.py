@@ -4,7 +4,7 @@ from datetime import datetime
 import core.models
 from core import models as core_models
 from django.utils.translation import gettext as _
-from django.db.models import Q
+from django.db.models import Q, QuerySet
 
 import logging
 
@@ -25,25 +25,11 @@ def validate_mission(mission: core_models.Mission):
     core_models.EventError.objects.bulk_create(errors)
 
 
-def validate_event(event: core_models.Event) -> list[core_models.EventError]:
-
-    register = [core_models.InstrumentType.ctd, core_models.InstrumentType.net]
-    if event.instrument.type not in register:
-        return []
-
-    # I return the errors rather than just saving them so events can be validated and saved in bulk
-    # it's up to the calling function to delete ValidationError objects on an event before validating it
+def validate_action_types(event: core_models.Event, actions: QuerySet[core_models.Action]) -> list[core_models.EventError]:
     validation_errors = []
-
-    actions = event.actions.all()
-
-    # Don't validate aborted events
-    if actions.filter(type=core_models.ActionType.aborted).exists():
-        return validation_errors
 
     # Don't validate duplicates of the 'other' action_type
     distinct_actions = actions.exclude(type=core_models.ActionType.other).values_list('type', flat=True)
-
     for action_type in distinct_actions:
         if len(actions.filter(type=action_type)) > 1:
             message = _("Event contains duplicate actions")
@@ -51,18 +37,40 @@ def validate_event(event: core_models.Event) -> list[core_models.EventError]:
             validation_errors.append(err)
             break
 
+    return validation_errors
+
+
+def validate_action_soundings(event: core_models.Event, actions: QuerySet[core_models.Action]) -> list[core_models.EventError]:
+    validation_errors = []
     for action in actions:
         if not action.sounding:
             message = _("Event is missing a depth for action") + f' {action.get_type_display()}'
             err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
+    return validation_errors
 
+
+def validate_standard_action_policies(event: core_models.Event) -> list[core_models.EventError]:
+    validation_errors = []
+    actions = event.actions.all()
+    validation_errors += validate_action_types(event, actions)
+    validation_errors += validate_action_soundings(event, actions)
+    return validation_errors
+
+
+def validate_event_locations(event: core_models.Event) -> list[core_models.EventError]:
+    validation_errors = []
     if event.start_location == [None, None]:
         message = _("Event is missing an action with a valid location") + f' {event.event_id}'
         err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
-    # Validate event does not have duplicate action types
+    return validation_errors
+
+
+def validate_event_dates(event: core_models.Event) -> list[core_models.EventError]:
+
+    validation_errors = []
     mission = event.mission
     if event.start_date is None or event.end_date is None:
         message = _("Event is missing start and/or end date")
@@ -77,6 +85,12 @@ def validate_event(event: core_models.Event) -> list[core_models.EventError]:
         err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
+    return validation_errors
+
+
+def validate_event_duplicates(event: core_models.Event) -> list[core_models.EventError]:
+    validation_errors = []
+
     dup_events = core_models.Event.objects.filter(
         event_id=event.event_id,
         station=event.station,
@@ -89,18 +103,49 @@ def validate_event(event: core_models.Event) -> list[core_models.EventError]:
         err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
         validation_errors.append(err)
 
+    return validation_errors
+
+
+def validate_standard_policies(event: core_models.Event) -> list[core_models.EventError]:
+    validation_errors = []
+
+    validation_errors += validate_standard_action_policies(event)
+    validation_errors += validate_event_locations(event)
+    validation_errors += validate_event_dates(event)
+    validation_errors += validate_event_duplicates(event)
+
+    return validation_errors
+
+def validate_event(event: core_models.Event) -> list[core_models.EventError]:
+
+    # I return the errors rather than just saving them so events can be validated and saved in bulk
+    # it's up to the calling function to delete ValidationError objects on an event before validating it
+    validation_errors = []
+
+    actions = event.actions.all()
+
+    # Don't validate aborted events
+    if actions.filter(type=core_models.ActionType.aborted).exists():
+        return validation_errors
+
     if event.instrument.type == core_models.InstrumentType.ctd:
+        validation_errors += validate_standard_policies(event)
         validation_errors += validate_ctd_event(event)
     elif event.instrument.type == core_models.InstrumentType.net:
+        validation_errors += validate_standard_policies(event)
+        # multinets don't get the same type of validation ordinary nets do
         if 'multinet' not in event.instrument.name.lower():
             validation_errors += validate_net_event(event)
+    else:
+        # we're always going to validate that an event falls within the mission dates.
+        validation_errors += validate_event_dates(event)
 
     return validation_errors
 
 
 # returns a dictionary with keys 'errors' for events not associated with files
 # and 'file_errors' for events that are associated with files
-def validate_ctd_event(event: core_models.Event) -> [core_models.EventError]:
+def validate_ctd_event(event: core_models.Event) -> list[core_models.EventError]:
 
     validation_errors = []
 
@@ -142,7 +187,7 @@ def validate_ctd_event(event: core_models.Event) -> [core_models.EventError]:
     return validation_errors
 
 
-def validate_net_event(event: core_models.Event) -> [core_models.EventError]:
+def validate_net_event(event: core_models.Event) -> list[core_models.EventError]:
     database = event._state.db
     validation_errors = []
 

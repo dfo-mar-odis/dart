@@ -29,8 +29,12 @@ class TestGeneralEventValidation(DartTestCase):
         instrument = core_factory.InstrumentFactory(type=models.InstrumentType.mooring)
         event = core_factory.EventFactory.create(mission=self.mission, instrument=instrument)
 
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+
         errors = validate_event(event)
-        assert errors == [], "event validation should return empty array"
+        assert errors == [], f"event validation should return empty array {errors}"
 
     def test_validate_actions(self):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
