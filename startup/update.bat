@@ -72,4 +72,4 @@ if defined init_settings (
 echo "Collecting static files, this may take a moment"
 uv run .\manage.py collectstatic --noinput
 
-call server.bat
+call .\startup\server.bat
