@@ -19,7 +19,6 @@ from pathlib import Path
 from django.core.cache import caches
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from oracledb import DatabaseError
 
 from . import scripts
 
@@ -44,9 +43,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # oracledb.version = "8.3.0"
 # sys.modules['cx_Oracle'] = oracledb
 # oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
-
 DEBUG = env.bool('DEBUG', default=True)
-
 import oracledb
 try:
     oracledb.init_oracle_client()
@@ -122,6 +119,9 @@ INSTALLED_APPS = [
     # bi-directional communication with user
     'channels',
 
+    # bootstrap for css styling
+    'django_bootstrap5',
+
 ] + REGISTERED_APPS
 
 MIDDLEWARE = [
@@ -131,6 +131,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    # required by django-allauth >= 0.56
+    'allauth.account.middleware.AccountMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # adds htmx attributes to GET/POST requests
     "django_htmx.middleware.HtmxMiddleware",

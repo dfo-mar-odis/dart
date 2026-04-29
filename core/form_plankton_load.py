@@ -373,12 +373,10 @@ def list_plankton(request, mission_id):
 
         dataframe = read_frame(samples)
         dataframe.columns = data_columns
-        dataframe.fillna('---', inplace=True)
+        dataframe = dataframe.fillna('---')
         dataframe['Type'] = dataframe['Type'].map({1: "phyto", 2: "zoo"}, na_action='ignore')
 
-        style = dataframe.style.hide(axis="index")
-
-        table_html = style.to_html()
+        table_html = dataframe.to_html(index=False)
         table_soup = BeautifulSoup(table_html, 'html.parser')
 
         table = table_soup.find('table')

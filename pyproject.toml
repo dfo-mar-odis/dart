@@ -1,0 +1,128 @@
+[project]
+name = "dart"
+version = "4.1.15.9"
+description = "DFO At-sea Reporting Template"
+requires-python = ">=3.13"
+dependencies = [
+    # Starts an application and the web server in a separate thread
+    "pyqt6>=6.11.0",
+
+    # Django 6.0 (latest stable)
+    "Django>=6.0",
+    "asgiref>=3.8.0,<4",
+
+    # used for dynamic Oracle connections for biochem upload and for copying external sqlite dbs
+    "django-dynamic-db-router",
+
+    # useful helper extensions for database fields and admin functions
+    "django-extensions>=4.1",
+
+    # provides authentication/registration out of the box
+    # NOTE: django-allauth had a major API overhaul between 0.x and 64+; review
+    # your allauth configuration (ACCOUNT_* settings, URLs, adapters) before upgrading.
+    # See https://docs.allauth.org/en/latest/release-notes/recent.html
+    "django-allauth>=65.0",
+
+    # tweaking of django forms
+    "django-crispy-forms",
+    "crispy-bootstrap5",
+
+    # django-filters is used for easily creating filter pages
+    "django-filter>=25.1",
+
+    # Icons to make things pretty
+    "django-bootstrap-icons",
+
+    # used for partial page rendering with HTMX
+    "django-render-block",
+
+    # used for updating dynamic forms with HTMX
+    "django-forms-dynamic",
+
+    # used for detecting HTMX calls
+    "django-htmx>=1.27.0",
+
+    # daphne is a standalone python webserver
+    # NOTE: Upgraded from 3.x to 4.x. Add "daphne" to the TOP of INSTALLED_APPS
+    # (before django.contrib.staticfiles) if not already done.
+    "daphne>=4.2.1",
+
+    # Channels allows for more advanced web layer communications
+    # NOTE: Upgraded from 3.x to 4.x alongside daphne.
+    "channels>=4.3.2",
+
+    # Whitenoise for static content serving
+    "whitenoise>=6.12.0",
+
+    # used to read environment variables in settings.py
+    "django-environ>=0.13.0",
+
+    # Bootstrap 5 CSS library for Django.
+    # NOTE: django-bootstrap-v5 (old package) caps at Django<5 and is abandoned.
+    # Replaced with django-bootstrap5 (actively maintained, supports Django 6).
+    # The app name in INSTALLED_APPS changes from "bootstrap5" to "django_bootstrap5"
+    # and template tags change from {% load bootstrap5 %} to {% load django_bootstrap5 %}.
+    # See https://django-bootstrap5.readthedocs.io/
+    "django-bootstrap5>=26.2",
+
+    # factory-boy and Faker for unit Testing
+    "Faker>=40.0",
+    "factory-boy>=3.3.3",
+
+    # CTD is used to process BTL and ROS files
+    "ctd==1.4.7",
+
+    # used for reading and producing xlsx files
+    "openpyxl==3.1.5",
+
+    # Corrects network issues on windows
+    "PySocks==1.7.1",
+
+    # time zone package
+    "pytz>=2022.6",
+
+    # math and data processing packages
+    # NOTE: pandas 3.x drops some deprecated APIs from 2.x; review any code
+    # using Index.is_monotonic, DataFrame.swaplevel or append() if applicable.
+    "pandas>=3.0.2",
+    "jinja2>=3.1.3",
+    "matplotlib>=3.10.0",
+    "django-pandas==0.6.6",
+
+    # cgi was removed for python 3.13, but django running asgi requires it
+    "legacy-cgi",
+
+    # Post pandas to_html table styling
+    "beautifulsoup4",
+
+    # xlrd is for working with legacy excel (.xls) files
+    "xlrd==2.0.1",
+
+    # Connection to oracle database (oracledb is the modern replacement for cx_Oracle)
+    "oracledb>=3.4.2",
+
+    # package handles native UI components like open file dialog.
+    "easygui==0.98.3",
+
+    # used for versioning databases
+    "gitpython>=3.1.46",
+
+    # helps with windows log file locking issues
+    "concurrent_log_handler==0.9.25",
+
+    # used for computing geographic distance
+    "geopy==2.4.1",
+]
+
+[tool.uv]
+# Use a virtual environment managed by uv
+managed = true
+
+[tool.hatch.build.targets.wheel]
+# DART is a Django application, not a distributable library.
+# This tells hatchling which directories to include if it is ever invoked.
+packages = ["core", "bio_tables", "biochem", "config", "settingsdb", "fix_stations", "file_configs"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

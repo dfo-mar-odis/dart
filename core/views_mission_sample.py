@@ -252,7 +252,7 @@ def load_samples(request):
 
             try:
                 # Remove any row that is *all* nan values
-                dataframe.dropna(axis=0, how='all', inplace=True)
+                dataframe = dataframe.dropna(axis=0, how='all')
 
                 SampleParser.parse_data_frame(mission, sample_config, file_name=file_name, dataframe=dataframe)
 
@@ -362,7 +362,7 @@ def list_samples(request, mission_id):
         logger.exception(ex)
 
     # start by replacing nan values with '---'
-    df.fillna('---', inplace=True)
+    df = df.fillna('---')
 
     # Pandas has the ability to render dataframes as HTML and it's super fast, but the default table looks awful.
     # Use BeautifulSoup for html manipulation to post process the HTML table Pandas created
