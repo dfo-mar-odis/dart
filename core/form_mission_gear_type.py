@@ -2,6 +2,7 @@ import io
 import os
 import threading
 import time
+import math
 
 import numpy as np
 
@@ -253,7 +254,7 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
     if instrument_type == core_models.InstrumentType.net:
         bottle_dict = {b.bottle_id: b for b in queryset}
         for i, row in df.iterrows():
-            if row['volume'] is None:
+            if row['volume'] is None or (row['volume'] is not None and math.isnan(row['volume'])):
                 volume = bottle_dict[row['bottle_id']].computed_volume[1]
 
                 df.at[i, 'volume'] = volume if volume else "-----"
