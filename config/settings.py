@@ -120,7 +120,7 @@ INSTALLED_APPS = [
     'channels',
 
     # bootstrap for css styling
-    'django_bootstrap5',
+    # 'django_bootstrap5',
 
 ] + REGISTERED_APPS
 

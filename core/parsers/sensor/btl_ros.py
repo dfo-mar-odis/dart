@@ -713,7 +713,7 @@ class FixStationBulkParser:
         is_fixed_station = self.mission.fixed_station
 
         for index, file in enumerate(self.file_list):
-            logger_notifications.info(_("Updating events") + " : %d/%d", (index + 1), bottle_count)
+            logger_notifications.info(_("checking events") + " : %d/%d", (index + 1), bottle_count)
             file_name = os.path.basename(file)
 
             btl_sample_file = open(file, mode='rb')
