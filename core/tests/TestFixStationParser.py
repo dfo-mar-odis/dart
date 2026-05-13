@@ -32,7 +32,7 @@ class TestFixStationParser(DartTestCase):
 
         self.mission = core_factory.MissionFactory(fixed_station=True)
         self.station = core_factory.StationFactory(name='HL_0')
-        self.event = core_factory.CTDEventFactoryBlank(mission=self.mission, event_id=1, station=self.station,
+        self.event = core_factory.CTDEventFactoryBlank.create(mission=self.mission, event_id=1, station=self.station,
                                                        sample_id=None, end_sample_id=None)
 
     @tag('parsers_fixstation_test_parse')

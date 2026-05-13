@@ -1,4 +1,6 @@
 # This is for parsing bottle files specifically for fix stations
+import threading
+
 import pytz
 import io
 import re
@@ -23,7 +25,7 @@ import logging
 
 logger = logging.getLogger('dart')
 logger_notifications = logging.getLogger('dart.user.fixstationparser')
-
+db_lock = threading.Lock()
 
 def get_btl_mapping() -> dict:
     config_dir = 'file_configs'
@@ -156,11 +158,19 @@ def validate_btl_file(btl_stream, file_properties: dict = None) -> None:
     event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
 
 
+btl_column_mapping = {
+    'pressure': ['prdm', 'prsm'],
+    'latitude': ['latitude'],
+    'longitude': ['longitude'],
+    'bottle_id': ['bottle_']
+}
+
 class FixStationParser:
     field_mappings: dict = None
     file_properties: dict = None
 
     mission_sample_types: dict = None
+    errors_to_create: list[core_models.FileError] = []
 
     def _get_units(self, sensor_description: str) -> tuple[str | Any, str]:
         """given a sensor description, find, remove and return the uom and remaining string"""
@@ -192,89 +202,89 @@ class FixStationParser:
 
         return self.field_mappings
 
+    def _get_bottle_id(self, bottle, column_mapping: dict, row: int) -> int:
+        if 'bottle_id' in column_mapping:
+            return bottle[column_mapping['bottle_id'][0]]
+        elif self.event.sample_id:
+            return self.event.sample_id + (row - 1)
+        else:
+            raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
+
+    def _validate_bottle_id(self, bottle_id):
+        # when looking for existing bottles that overlap with another event exclude bottles from this event
+        # and bottles created for net events
+        existing_bottle = core_models.Bottle.objects.exclude(event=self.event).exclude(
+            event__instrument__type=core_models.InstrumentType.net).filter(bottle_id=bottle_id).first()
+
+        # if the bottle exists for an event other than the current event
+        if existing_bottle and existing_bottle.event == self.event:
+            raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")
+
+    def _update_existing_bottle(self, existing_bottle: core_models.Bottle, closed, pressure, latitude, longitude) -> set:
+        updated_fields = set()
+        updated_fields.add(utils.updated_value(existing_bottle, 'closed', closed))
+        updated_fields.add(utils.updated_value(existing_bottle, 'pressure', pressure))
+        if latitude:
+            updated_fields.add(utils.updated_value(existing_bottle, 'latitude', latitude))
+        if longitude:
+            updated_fields.add(utils.updated_value(existing_bottle, 'longitude', longitude))
+
+        updated_fields.discard('')
+        return updated_fields
+
     def process_bottles(self, dataframe):
         data_frame_avg = dataframe[dataframe['Statistic'] == 'avg']
         data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
-        dataframe_dict = {}
-        if "prdm" in data_frame_avg.columns:
-            dataframe_dict['pressure'] = "prdm"
-        elif "prsm" in data_frame_avg.columns:
-            dataframe_dict['pressure'] = "prsm"
-
-        if "latitude" in data_frame_avg.columns:
-            dataframe_dict['latitude'] = "latitude"
-
-        if "longitude" in data_frame_avg.columns:
-            dataframe_dict['longitude'] = "longitude"
-
-        if "bottle_" in data_frame_avg.columns:
-            # if present this is the Bottle ID to use instead of the event.sample_id + Bottle number
-            dataframe_dict['bottle_id'] = "bottle_"
+        column_mapping = {
+            key: col for key, col in btl_column_mapping.items() if any(c in data_frame_avg.columns for c in col)
+        }
 
         existing_bottles = {bottle.bottle_id: bottle for bottle in self.event.bottles.all()}
 
-        logger_notifications.info(_("Processing Bottles"))
         create_bottles = []
         update_bottles = []
         update_fields = set()
-        for row, bottle in data_frame_avg.iterrows():
-            update_bottle_fields = set('')
-            if 'bottle_id' in dataframe_dict:
-                bottle_id: int = bottle[dataframe_dict['bottle_id']]
-            elif self.event.sample_id:
-                bottle_id: int = self.event.sample_id + (row-1)
-            else:
-                raise ValueError(_("Require either S/N column in BTL file or Start IDs specified for the Event"))
+        bottle_count = data_frame_avg.shape[0]
+        bottles_added = 0
+        for index, (row, bottle) in enumerate(data_frame_avg.iterrows()):
+            logger_notifications.info(_("Processing bottles for event") + f" {self.event.event_id} : %d/%d", (index + 1), bottle_count)
+            try:
+                bottle_id: int = self._get_bottle_id(bottle, column_mapping, bottles_added)
 
-            # when looking for existing bottles that overlap with another event exclude bottles from this event
-            # and bottles created for net events
-            btl = core_models.Bottle.objects.exclude(event=self.event).exclude(
-                event__instrument__type=core_models.InstrumentType.net).filter(bottle_id=bottle_id)
-            if btl.exists():
-                # if the bottle exists for an event other than the current event
-                if not (btl.first().event == self.event):
-                    raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")
+                self._validate_bottle_id(bottle_id)
 
-            closed = pytz.utc.localize(bottle['date'])
-            pressure = bottle.get(dataframe_dict['pressure'], None)
-            latitude = None
-            longitude = None
-            if 'latitude' in dataframe_dict:
-                latitude = bottle.get(dataframe_dict['latitude'], None)
-            if 'longitude' in dataframe_dict:
-                longitude = bottle.get(dataframe_dict['longitude'], None)
+                closed = pytz.utc.localize(bottle['date'])
+                pressure = bottle.get(column_mapping.get('pressure', [None])[0])
+                latitude = bottle.get(column_mapping.get('latitude', [None])[0])
+                longitude = bottle.get(column_mapping.get('longitude', [None])[0])
 
-            if bottle_id in existing_bottles.keys():
-                existing_bottle = existing_bottles[bottle_id]
-                update_bottle_fields.add(utils.updated_value(existing_bottle, 'closed', closed))
-                update_bottle_fields.add(utils.updated_value(existing_bottle, 'pressure', pressure))
-                if latitude:
-                    update_bottle_fields.add(utils.updated_value(existing_bottle, 'latitude', latitude))
-                if longitude:
-                    update_bottle_fields.add(utils.updated_value(existing_bottle, 'longitude', longitude))
+                if bottle_id in existing_bottles:
+                    existing_bottle = existing_bottles[bottle_id]
+                    updated_fields = self._update_existing_bottle(existing_bottle, closed, pressure, latitude, longitude)
 
-                if '' in update_bottle_fields:
-                    update_bottle_fields.remove('')
+                    if updated_fields:
+                        update_bottles.append(existing_bottle)
+                        update_fields.update(updated_fields)
+                else:
+                    new_bottle = core_models.Bottle(event=self.event, bottle_id=bottle_id, bottle_number=row, closed=closed, pressure=pressure)
+                    if latitude:
+                        new_bottle.latitude = latitude
+                    if longitude:
+                        new_bottle.longitude = longitude
+                    create_bottles.append(new_bottle)
 
-                if len(update_bottle_fields) > 0:
-                    update_bottles.append(existing_bottle)
-                    update_fields.update(update_bottle_fields)
-            else:
-                new_bottle = core_models.Bottle(event=self.event, bottle_id=bottle_id)
-                new_bottle.number = row
-                new_bottle.closed = closed
-                new_bottle.pressure = pressure
-                if latitude:
-                    new_bottle.latitude = latitude
-                if longitude:
-                    new_bottle.longitude = longitude
-                create_bottles.append(new_bottle)
+                bottles_added += 1
+            except Exception as e:
+                logger.exception(e)
+                self.errors_to_create.append(core_models.FileError(
+                    mission=self.event.mission, file_name=self.btl_filename, message=str(e), code=101
+                ))
 
-        if len(create_bottles) > 0:
+        if create_bottles:
             core_models.Bottle.objects.bulk_create(create_bottles)
 
-        if len(update_bottles) > 0:
+        if update_bottles:
             core_models.Bottle.objects.bulk_update(update_bottles, update_fields)
 
     def parse_sensor(self, sensor: str) -> tuple[Any, Any, Any, Any]:
@@ -394,6 +404,10 @@ class FixStationParser:
         # convert all column names to lowercase
         data_frame_avg.columns = map(str.lower, data_frame_avg.columns)
 
+        column_mapping = {
+            key: col for key, col in btl_column_mapping.items() if any(c in data_frame_avg.columns for c in col)
+        }
+
         new_samples: List[core_models.Sample] = []
         update_samples: List[core_models.Sample] = []
         new_discrete_samples: List[core_models.DiscreteSampleValue] = []
@@ -422,15 +436,9 @@ class FixStationParser:
 
         sample_types = self.mission_sample_types
         bottles_added = 0
-        for row, data in data_frame_avg.iterrows():
-            # if the Bottle S/N column is present then use that values as the bottle ID
-            if 'bottle_' in data:
-                bottle_id = int(data['bottle_'])
-            elif self.event.sample_id:
-                bottle_id = self.event.sample_id + bottles_added
-            else:
-                raise ValueError(
-                    _("Require either S/N column in BTL file or Start and End Bottle IDs specified for the Event"))
+        for index, (row, data) in enumerate(data_frame_avg.iterrows()):
+            logger_notifications.info(_("Processing data for event") + f" {self.event.event_id} : %d/%d", (index + 1), data_frame_avg.shape[0])
+            bottle_id = self._get_bottle_id(data, column_mapping, bottles_added)
 
             if not bottles.filter(bottle_id=bottle_id).exists():
                 message = _("Bottle does not exist for event")
@@ -440,6 +448,7 @@ class FixStationParser:
                 continue
 
             bottle = bottles.get(bottle_id=bottle_id)
+            bottles_added += 1
             for column in column_headers:
                 sample_type = sample_types[column.lower()]
 
@@ -635,6 +644,10 @@ class FixStationParser:
         col_headers = [instrument.lower() for instrument in data.columns if instrument.lower() not in exclude]
 
         self.process_bottles(data)
+        if self.errors_to_create:
+            core_models.FileError.objects.bulk_create(self.errors_to_create)
+            self.errors_to_create = []
+
         self.process_sensors(column_headers=col_headers)
         self.process_data(self.btl_filename, data, column_headers=col_headers)
 
@@ -680,6 +693,30 @@ class FixStationParser:
 
         self.file_properties: dict = None
 
+
+def process_file(event, btl_file, ros_file, errors_to_create):
+    try:
+        with open(btl_file, 'r', encoding='cp1252') as btl:
+            btl_input = io.StringIO(btl.read())
+
+        ros_input = None
+        if ros_file:
+            with open(ros_file, 'r', encoding='cp1252') as ros:
+                ros_input = io.StringIO(ros.read())
+
+        parser = FixStationParser(event=event, btl_filename=os.path.basename(btl_file),
+                                  btl_stream=btl_input, ros_stream=ros_input)
+
+        with db_lock:
+            parser.parse()
+    except Exception as e:
+        message = _("Error parsing body ") + f": {btl_file}: {e}"
+        logger.error(message)
+        logger.exception(e)
+        err = core_models.FileError(mission=event.mission,
+                                    file_name=os.path.basename(btl_file), message=message,
+                                    type=core_models.ErrorType.validation, code=101)
+        errors_to_create.append(err)
 
 class FixStationBulkParser:
 
@@ -828,36 +865,21 @@ class FixStationBulkParser:
         # - The value is a list of files, where:
         #   - file[0] is the `btl_file`.
         #   - file[1] is the associated `ros_file`.
+        threads = []
         bottle_count = len(parsed_events.keys())
         for index, event_file in enumerate(parsed_events.items()):
             logger_notifications.info(_("Parsing Bottle Data") + " : %d/%d", (index + 1), bottle_count)
             event_id = event_file[0]
             btl_file = event_file[1][0]
             ros_file = event_file[1][1]
-            file_name = os.path.basename(btl_file)
-            try:
-                event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
+            event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
 
-                with open(btl_file, 'r', encoding='cp1252') as btl:
-                    btl_input = io.StringIO(btl.read())
+            thread = threading.Thread(target=process_file, args=(event, btl_file, ros_file, self.errors_to_create))
+            threads.append(thread)
+            thread.start()
 
-                ros_input = None
-                if ros_file:
-                    with open(ros_file, 'r', encoding='cp1252') as ros:
-                        ros_input = io.StringIO(ros.read())
-
-                parser = FixStationParser(event=event, btl_filename=os.path.basename(btl_file),
-                                          btl_stream=btl_input, ros_stream=ros_input)
-                parser.parse()
-            except Exception as e:
-                message = _("Error parsing body ") + f": {btl_file}: {e}"
-                logger.error(message)
-                logger.exception(e)
-                err = core_models.FileError(mission=self.mission,
-                                            file_name=file_name, message=message,
-                                            type=core_models.ErrorType.validation, code=101)
-                self.errors_to_create.append(err)
-
+        for thread in threads:
+            thread.join()
 
     def parse(self):
         self.errors_to_create = []
