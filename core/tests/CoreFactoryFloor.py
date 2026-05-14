@@ -48,7 +48,7 @@ class CTDInstrumentFactory(InstrumentFactory):
     type = models.InstrumentType.ctd
 
 
-class EventFactory(DjangoModelFactory):
+class AEventFactory(DjangoModelFactory):
 
     class Meta:
         model = models.Event
@@ -62,8 +62,10 @@ class EventFactory(DjangoModelFactory):
     station = factory.SubFactory(StationFactory)
     instrument = factory.SubFactory(InstrumentFactory, name="other", instrument_type=models.InstrumentType.other)
 
+class EventFactory(AEventFactory):
+    pass
 
-class CTDEventFactoryBlank(EventFactory):
+class CTDEventFactoryBlank(AEventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     end_sample_id = factory.lazy_attribute(lambda o: (o.sample_id + faker.random.randint(0, 1000)))
     instrument = factory.SubFactory(CTDInstrumentFactory)
@@ -86,7 +88,7 @@ class CTDEventFactory(CTDEventFactoryBlank):
         ActionFactory(event=self, date_time=date_time, type=models.ActionType.recovered)
 
 
-class NetEventFactory(EventFactory):
+class NetEventFactory(AEventFactory):
     sample_id = factory.lazy_attribute(lambda o: faker.random.randint(0, 1000))
     instrument = factory.SubFactory(InstrumentFactory, name="202um", type=models.InstrumentType.net)
 
@@ -190,4 +192,4 @@ class ValidationError(DjangoModelFactory):
     class Meta:
         model = models.EventError
 
-    event = factory.SubFactory(EventFactory)
+    event = factory.SubFactory(AEventFactory)

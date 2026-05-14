@@ -24,11 +24,23 @@ class TestGeneralEventValidation(DartTestCase):
             end_date=self.end_date.date()
         )
 
+    def test_validate_event_ctd_net_only(self):
+        # Only net and ctd events should be validated. We don't want to validate moorings or bouys
+        instrument = core_factory.InstrumentFactory(type=models.InstrumentType.mooring)
+        event = core_factory.EventFactory.create(mission=self.mission, instrument=instrument)
+
+        expected_file = 'test.log'
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+                                   date_time=self.start_date)
+
+        errors = validate_event(event)
+        assert errors == [], f"event validation should return empty array {errors}"
+
     def test_validate_actions(self):
         # Events may not contain actions of the same type, this test has an event with two bottom actions
         # unless the action type is 'other'
 
-        event = core_factory.CTDEventFactory(mission=self.mission, sample_id=501100, end_sample_id=501112)
+        event = core_factory.CTDEventFactory.create(mission=self.mission, sample_id=501100, end_sample_id=501112)
         # events from the CTDEventFactory come with their own actions because a CTD event isn't valid without actions
         event.actions.all().delete()
 

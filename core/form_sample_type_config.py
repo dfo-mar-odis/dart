@@ -465,8 +465,8 @@ def get_config_soup(request) -> BeautifulSoup | None:
 
         columns = get_file_columns(request)
         value_column_name = columns[value_column_id]
-        dl_column_name = columns[dl_column_id]
-        qc_column_name = columns[qc_column_id]
+        dl_column_name = columns[dl_column_id] if dl_column_id > -1 else [-1, ""]
+        qc_column_name = columns[qc_column_id] if qc_column_id > -1 else [-1, ""]
 
         name_column = request.POST.get('name_column', None)
         datatype_id = int(request.POST.get('datatype', -1))

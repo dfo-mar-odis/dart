@@ -88,6 +88,7 @@ class TestConfigForm(DartTestCase):
             'value_column': volume_column_id,
             'name_column': 'oxy',
             'datatype': 90000002,
+            'quality_control_column': "3",
 
             # These are the original values that would have been previously created
             f'{config_prefix}': volume_column_id,
@@ -105,7 +106,8 @@ class TestConfigForm(DartTestCase):
         tds = table_entry.find_all('td')
         tds.pop(0) # first entry is the button column
         td_strings = [td.string for td in tds]
-        assert td_strings == ["O2_Concentration(ml/l)", "oxy", "90000002", "Salinity_CTD", "Salinity / CTD"], f"incorrect table entry {td_strings}"
+        # columns are [ value, detection limit, QC, alias, datatype id, datatype method, datatype description ]
+        assert td_strings == ["O2_Concentration(ml/l)", None, "QC", "oxy", "90000002", "Salinity_CTD", "Salinity / CTD"], f"incorrect table entry {td_strings}"
 
     def test_update_value_form(self):
         # provided a file, the value form should be able to be populated from an existing config table element
