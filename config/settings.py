@@ -19,7 +19,6 @@ from pathlib import Path
 from django.core.cache import caches
 from django.utils.translation import gettext_lazy as _
 from django.conf import settings
-from oracledb import DatabaseError
 
 from . import scripts
 
@@ -44,27 +43,23 @@ environ.Env.read_env(os.path.join(BASE_DIR, '.env'))
 # oracledb.version = "8.3.0"
 # sys.modules['cx_Oracle'] = oracledb
 # oracledb.init_oracle_client(lib_dir=env('ORACLE_INSTANT_CLIENT_PATH'))
-
+DEBUG = env.bool('DEBUG', default=True)
 import oracledb
+try:
+    oracledb.init_oracle_client()
+except DatabaseError as e:
+    if not DEBUG:
+        print("===========================================================================")
+        print("Dart 4.2.0+ requires Oracle Instant Client, which could not be initialized.")
+        print("Oracle Instant Client 12+ can be installed from the DFO software center.")
+        print("===========================================================================")
+        sys.exit(1)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = env('SECRET_KEY')
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env.bool('DEBUG', default=True)
-
-if not DEBUG:
-    try:
-        oracledb.init_oracle_client()
-    except DatabaseError as e:
-        print("===========================================================================")
-        print("Dart 4.2.0+ requires Oracle Instant Client, which could not be initialized.")
-        print("Oracle Instant Client 12+ can be installed from the DFO software center.")
-        print("===========================================================================")
-        sys.exit(1)
 
 ALLOWED_HOSTS = ['*']
 
@@ -133,6 +128,8 @@ MIDDLEWARE = [
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
+    # required by django-allauth >= 0.56
+    'allauth.account.middleware.AccountMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     # adds htmx attributes to GET/POST requests
     "django_htmx.middleware.HtmxMiddleware",
