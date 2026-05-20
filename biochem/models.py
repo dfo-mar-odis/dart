@@ -1,3 +1,5 @@
+from typing import Self
+
 from django.db import models
 
 
@@ -276,6 +278,10 @@ class BcdD(models.Model):
             [f"{attr.name}: {getattr(self, attr.name)}" for attr in BcdD._meta.fields if hasattr(self, attr.name)])
         return bcd_str
 
+    def set_batch(self, batch: Bcbatches) -> Self:
+        self.batch = batch
+        return self
+
 
 class BcsD(models.Model):
 
@@ -354,6 +360,10 @@ class BcsD(models.Model):
         managed = False
         db_table = 'BCDISCRETESTATNEDITS'
 
+    def set_batch(self, batch: Bcbatches) -> Self:
+        self.batch = batch
+        return self
+
     def __str__(self):
         return f"{self.mission_name} - {self.mission_descriptor} - {self.event_collector_stn_name} - {self.event_collector_event_id}"
 
@@ -421,6 +431,10 @@ class BcdP(models.Model):
     class Meta:
         managed = False
         db_table = 'BCPLANKTONDATAEDITS'
+
+    def set_batch(self, batch: Bcbatches) -> Self:
+        self.batch = batch
+        return self
 
 
 class BcsP(models.Model):
@@ -507,6 +521,10 @@ class BcsP(models.Model):
     class Meta:
         managed = False
         db_table = 'BCPLANKTONSTATNEDITS'
+
+    def set_batch(self, batch: Bcbatches) -> Self:
+        self.batch = batch
+        return self
 
 
 # For demonstration purposes

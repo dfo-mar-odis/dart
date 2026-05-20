@@ -16,15 +16,13 @@ from django import forms
 from django.apps import apps
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db import OperationalError, connections, models, DatabaseError, transaction
+from django.db import OperationalError, connections, models, DatabaseError
 
 from django.http import HttpResponse
-from django.template.backends.django import reraise
 from django.template.loader import render_to_string
 from django.urls import path, reverse_lazy
 from django.utils.connection import ConnectionDoesNotExist
 from django.utils.translation import gettext as _
-from pandas.io.sql import table_exists
 
 from config.utils import load_svg
 from core import forms as core_forms
@@ -35,7 +33,7 @@ from biochem import models as biochem_models
 
 import logging
 
-from core.form_biochem_database import get_database_connection_form, get_uploader
+from core.form_biochem_database import get_uploader
 
 logger = logging.getLogger("dart")
 user_logger = logging.getLogger("dart.user")
@@ -509,7 +507,7 @@ def get_mission_batch_id():
     return 1
 
 
-def write_bcs_file(rows, bcs_file, report_model: Type[models.Model]):
+def write_bcs_file(rows, bcs_file: Path, report_model: Type[models.Model]):
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
 
@@ -521,7 +519,7 @@ def write_bcs_file(rows, bcs_file, report_model: Type[models.Model]):
         writer.writerow(bcs_headers)
 
         for idx, bcs_row in enumerate(rows):
-            row = [getattr(bcs_row, header, '') if header != 'batch' else bcs_row.batch_id for header in bcs_headers]
+            row = [getattr(bcs_row, header, '') if header != 'batch' else 0 for header in bcs_headers]
             writer.writerow(row)
 
 
@@ -538,19 +536,47 @@ def write_bcd_file(rows, bcd_file, report_model: Type[models.Model]):
 
         for idx, bcd_row in enumerate(rows):
             row = [str(idx + 1) if header == 'dis_data_num' else
-                   getattr(bcd_row, header, '') if header != 'batch' else bcd_row.batch_id for
+                   getattr(bcd_row, header, '') if header != 'batch' else 0 for
                    header in bcd_headers]
             writer.writerow(row)
+
+
+def validate_file_path(mission: core_models.Mission, output_path: Path, file_postfix: str):
+    file_name = f'{mission.name}{file_postfix}.csv'
+    file = Path(output_path, file_name)
+
+    # check if the files are locked and fail early if they are
+    if is_locked(file):
+        raise IOError(f"Requested file is locked {file}")
+
+    return file
+
+def download_bcs_fun(bcs_file: Path, uploader: str, bcs_model, bottle_rows):
+    user_logger.info(f"Creating BCS files. Using uploader: {uploader}")
+
+    write_bcs_file(bottle_rows, bcs_file, bcs_model)
+
+    # No batch ID is created when downloading a mission's BCS/BCD tables
+    return 0
+
+
+def download_bcd_fun(bcd_file: Path, uploader: str, bcd_model, bottle_rows):
+    user_logger.info(f"Creating BCD files. Using uploader: {uploader}")
+
+    write_bcd_file(bottle_rows, bcd_file, bcd_model)
+
+    # No batch ID is created when downloading a mission's BCS/BCD tables
+    return 0
 
 
 def download_batch_func(mission: core_models.Mission, uploader: str, get_data_func: Callable, file_postfix: str,
                         bcs_model, bcs_upload, bcd_model, bcd_upload) -> int | None:
 
-    bcs_file_name = f'{mission.name}_BCS_{file_postfix}.csv'
-    bcd_file_name = f'{mission.name}_BCD_{file_postfix}.csv'
-
     report_path = os.path.join(settings.BASE_DIR, "reports")
     Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file_name = f'{mission.name}_BCS_{file_postfix}.csv'
+    bcd_file_name = f'{mission.name}_BCD_{file_postfix}.csv'
 
     bcs_file = os.path.join(report_path, bcs_file_name)
     bcd_file = os.path.join(report_path, bcd_file_name)
@@ -561,19 +587,19 @@ def download_batch_func(mission: core_models.Mission, uploader: str, get_data_fu
 
     # check if the files are locked and fail early if they are
     if is_locked(bcd_file):
-        raise IOError(f"Requested file is locked {bcs_file}")
+        raise IOError(f"Requested file is locked {bcd_file}")
 
     user_logger.info(f"Creating BCS/BCD files. Using uploader: {uploader}")
 
     samples, bottles = get_data_func(mission)
 
-    sample_rows = bcs_upload(uploader=uploader, bottles=bottles)
-    write_bcs_file(sample_rows, bcs_file, bcs_model)
+    bottle_rows = bcs_upload(uploader=uploader, bottles=bottles)
+    write_bcs_file(bottle_rows, bcs_file, bcs_model)
 
-    bottle_rows = bcd_upload(uploader=uploader, samples=samples)
-    write_bcd_file(bottle_rows, bcd_file, bcd_model)
+    sample_rows = bcd_upload(uploader=uploader, samples=samples)
+    write_bcd_file(sample_rows, bcd_file, bcd_model)
 
-    # if we're on windows then let's pop the directory where we saved the reports open. Just to annoy the user.
+    # if we're on windows then let's pop the directory where we saved the reports open.
     if os.name == 'nt':
         subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
 
