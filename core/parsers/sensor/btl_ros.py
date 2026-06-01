@@ -157,6 +157,25 @@ def validate_fixed_station_file(btl_stream, file_properties: dict = None) -> Non
 
         return
 
+    file_cruise = file_properties.get('CRUISE', '').strip()
+    if file_cruise:
+        mission = core_models.Mission.objects.first()  # one mission per DB
+        if mission and file_cruise.upper() != mission.name.strip().upper():
+            raise ValueError(
+                _("Cruise mismatch: BTL file is from cruise") + f" '{file_cruise}' " +
+                _("but this database contains mission") + f" '{mission.name}'"
+            )
+
+    # Event exists — validate station name matches
+    file_station_name = file_properties.get(station_label.upper(), '').strip()
+    if event.station and file_station_name:
+        if event.station.name.strip().lower() != file_station_name.lower():
+            raise ValueError(
+                _("Station mismatch: BTL file contains station") + f" '{file_station_name}' " +
+                _("but Event") + f" #{event_id} " +
+                _("is assigned to station") + f" '{event.station.name}'"
+            )
+
     # if the event doesn't have actions, then these fields will be required
     has_actions = event.actions.all().exists()
     if not has_actions:
@@ -171,26 +190,19 @@ def validate_fixed_station_file(btl_stream, file_properties: dict = None) -> Non
 
 
 def validate_btl_file(btl_stream, file_properties: dict = None) -> None:
-    # if this is not a fixed station file, then the only thing we care about is that the event in the BTL
-    # file matches an existing event. Ideally we'll be able to also match the station
     btl_mapping = get_btl_mapping()
 
     if not file_properties:
         data: pd.DataFrame = ctd.read.from_btl(btl_stream)
-
         metadata: dict = data.__getattr__('_metadata')
         header = metadata['header']
-
         header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
         cleaned_lines: list[str] = [re.sub(r'\*\*', '', line).split(":") for line in header_lines]
         file_properties = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
 
-    # required values. Event_id to get an event, station to confirm this BTL file is for the correct station
     event_label = btl_mapping['event_id'].get('label', 'Event_Number')
     event_id = btl_mapping['event_id'].get('default', None)
-
     station_label = btl_mapping['station'].get('label', 'Station_Name')
-    station_name = btl_mapping['station'].get('default', None)
 
     if event_label.upper() not in file_properties.keys():
         raise KeyError(_('Missing header variable') + " : " + event_label.upper())
@@ -198,7 +210,40 @@ def validate_btl_file(btl_stream, file_properties: dict = None) -> None:
     if (event_id := file_properties.get(event_label.upper(), event_id)) is None:
         raise ValueError("Event ID is missing")
 
-    event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
+    if station_label.upper() not in file_properties.keys():
+        raise KeyError(_('Missing header variable') + " : " + station_label.upper())
+
+    file_station_name = file_properties.get(station_label.upper(), '').strip()
+
+    # Event must already exist — it should have been loaded from Elog, ANDES or CSV
+    try:
+        event = core_models.Event.objects.get(
+            event_id=event_id,
+            instrument__type=core_models.InstrumentType.ctd
+        )
+    except core_models.Event.DoesNotExist:
+        raise ValueError(
+            _("Event") + f" #{event_id} " +
+            _("does not exist. Load event data from Elog, ANDES or CSV before loading BTL files.")
+        )
+
+    file_cruise = file_properties.get('CRUISE', '').strip()
+    if file_cruise:
+        mission = core_models.Mission.objects.first()  # one mission per DB
+        if mission and file_cruise.upper() != mission.name.strip().upper():
+            raise ValueError(
+                _("Cruise mismatch: BTL file is from cruise") + f" '{file_cruise}' " +
+                _("but this database contains mission") + f" '{mission.name}'"
+            )
+
+    # Confirm the station in the file matches the event's station
+    if event.station and file_station_name:
+        if event.station.name.strip().lower() != file_station_name.lower():
+            raise ValueError(
+                _("Station mismatch: BTL file contains station") + f" '{file_station_name}' " +
+                _("but Event") + f" #{event_id} " +
+                _("is assigned to station") + f" '{event.station.name}'"
+            )
 
 
 class FixStationParser:
