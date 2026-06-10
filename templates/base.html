@@ -39,7 +39,7 @@
     {% block header_buttons %}
         {% if home_url %}
         <li class="nav-item ms-2">
-            <a class="btn btn-primary" href="{{ home_url }}" title="{% trans "Missions" %}">{% custom_icon 'house' %}</a>
+            <a class="btn btn-primary" href="{{ home_url }}" title="{% trans "Missions" %}">{% custom_icon 'house' %} {% trans "Mission List" %}</a>
         </li>
         {% endif %}
         <li class="nav-item ms-2">

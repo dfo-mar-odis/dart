@@ -40,14 +40,14 @@
                 Dart Version: {{ mission_dict.version }}
                 <button id="btn_id_migrate_{{ mission.name }}" type="button" class="btn btn-danger" title="{% trans "Database requires migrations before it can be read" %}"
                         hx-target="#btn_id_migrate_{{ mission.name }}" hx-swap="outerHTML" hx-get="{% url 'settingsdb:migrate_database' mission.database %}"
-                        hx-confirm="{% trans 'Make sure the database is backed up before running migrations to update the database model' %}">{% custom_icon 'arrow-clockwise' %}</button>
+                        hx-confirm="{% trans 'Make sure the database is backed up before running migrations to update the database model' %}">{% custom_icon 'arrow-clockwise' %} {% trans "Migrate Mission Database" %}</button>
             </td>
             {% else %}
-            <td>
-                <a id="a_id_edit_mission" class="btn btn-primary" href="{% url 'core:mission_edit' database mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %}</a>
-                <a id="a_id_edit_mission_events" class="btn btn-primary" href="{% url 'core:mission_events_details' database mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
-                <a class="btn btn-primary" href="{% url 'core:mission_samples_sample_details' database mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
-                <a class="btn btn-primary" href="{% url 'core:mission_plankton_plankton_details' database mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
+            <td class="text-end">
+                <a id="a_id_edit_mission" class="btn btn-primary" href="{% url 'core:mission_edit' database mission.id %}" title="{% trans 'Mission Details' %}">{% custom_icon 'gear' %} {% trans "Details" %}</a>
+                <a id="a_id_edit_mission_events" class="btn btn-primary" href="{% url 'core:mission_events_details' database mission.id %}" title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %} {% trans "Events" %}</a>
+                <a class="btn btn-primary" href="{% url 'core:mission_samples_sample_details' database mission.id %}" title="{% trans 'Samples' %}">{% custom_icon 'beaker' %} {% trans "Samples" %}</a>
+                <a class="btn btn-primary" href="{% url 'core:mission_plankton_plankton_details' database mission.id %}" title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %} {% trans "Plankton" %}</a>
             </td>
             {% endif %}
         </tr>

@@ -9,12 +9,18 @@
                 <div class="row">
                     <div class="card-title col" title="{% trans 'The event list allows bulk loading of events from various file formats. Once created, events can be selected from this list to show more details about the events on the event details card. When event validation is run events containing issues will be highlighted in the list.' %}">{% custom_icon 'question-circle' %}{% trans "Events" %}</div>
                     <div class="col-auto">
+                        <button type="button" class="btn btn-sm btn-danger"
+                                hx-swap="none" hx-confirm="{% trans "Are you sure you want to delete all events and associated sensor and sample data?" %}"
+                                hx-delete="{% url "core:form_event_delete_event" mission.pk 0 %}"
+                                title="{% trans "Delete all existing events and associated sensor and sample data" %}">{% custom_icon 'x-square' %} {% trans "Delete All" %}</button>
+                    </div>
+                    <div class="col-auto">
 {#                        <a class="btn btn-primary btn-sm" href="{% url 'core:elog_config' mission.pk %}"#}
 {#                           title="{% trans "Elog Config" %}">{% custom_icon 'body-text' %}</a>#}
 
                         <div class="dropdown">
                             <button class="btn btn-primary btn-sm dropdown-toggle" type="button" id="importDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                            {% trans "Import" %} {% custom_icon 'arrow-up-square' %}
+                            {% custom_icon 'arrow-up-square' %} {% trans "Import" %}
                             </button>
                             <ul class="dropdown-menu" aria-labelledby="importDropdown">
                                 <li><label for="andes_event_file_input_id" class="dropdown-item" title="{% trans "Upload events from andes report" %}">Andes</label></li>
