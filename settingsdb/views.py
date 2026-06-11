@@ -73,7 +73,7 @@ class MissionDirForm(forms.Form):
 
         self.fields['directory'].choices = [(db.pk, db.database_location) for db in
                                             setting_models.LocalSetting.objects.using('default').all()] + [(-1, '--- New ---')]
-        self.fields['directory'].help_text = _("The mission database directory is where existing databases are accessed or new ones are created.")
+        self.fields['directory'].help_text = _("The mission database directory is where databases files are saved.")
 
         self.helper = FormHelper(self)
         self.helper.form_tag = False

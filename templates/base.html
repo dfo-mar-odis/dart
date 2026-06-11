@@ -44,9 +44,9 @@
         {% endif %}
         <li class="nav-item ms-2">
             {% if help_text %}
-                <div class="btn btn-primary" title="{{ help_text }}">{% custom_icon 'question-circle' %}</div>
+                <div class="btn btn-primary" title="{{ help_text }}">{% custom_icon 'question-circle' %} {% trans "About" %}</div>
             {% else %}
-            <a class="btn btn-primary" href="{% url 'docs:index' %}" title="{% trans "Help" %}">{% custom_icon 'question-circle' %}</a>
+            <a class="btn btn-primary" href="{% url 'docs:index' %}" title="{% trans "About" %}">{% custom_icon 'question-circle' %} {% trans "About" %}</a>
             {% endif %}
         </li>
     {% endblock %}

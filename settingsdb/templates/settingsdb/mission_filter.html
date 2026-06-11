@@ -24,22 +24,25 @@
   </ul>
 {% endblock %}
 
-{% block title %}
-    {{ block.super }}
-    {% if new_url %}
-        <span class="col-auto"><a class="btn btn-primary" href="{{ new_url }}" title="{% trans 'New Mission' %}">{% custom_icon 'plus-square' %} {% trans "Create New Mission" %}</a></span>
-    {% endif %}
-{% endblock %}
-
 {% block content %}
 <div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
-    <form id="form_id_mission_directory" class="form-control mb-2">
-    {% if dir_select_form %}
-        {% crispy dir_select_form %}
-    {% endif %}
-    </form>
-
     <div class="card">
+    <div class="card-header">
+        <div class="card-title" title="{% trans "Mission directories can be created to organize mission databases on your local machine. By default mission databases will be placed in the 'dart/missions/' directory." %}">{% custom_icon 'question-circle' %} {% trans "Mission Directory" %}</div>
+    </div>
+    <div class="card-body">
+        <form id="form_id_mission_directory">
+        {% if dir_select_form %}
+            {% crispy dir_select_form %}
+        {% endif %}
+        </form>
+        {% if new_url %}
+            <span class="col-auto"><a class="btn btn-primary" href="{{ new_url }}" title="{% trans 'New Mission' %}">{% custom_icon 'plus-square' %} {% trans "Create New Mission" %}</a></span>
+        {% endif %}
+    </div>
+    </div>
+
+    <div class="card mt-2">
         <div class="card-header">
             <div class="card_title" title="{% trans "Filter missions based on the mission dates and limit which missions will be used in the fix station reports" %}">
                 {%  custom_icon 'question-circle' %} {% trans "Mission List" %}
