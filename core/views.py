@@ -33,6 +33,7 @@ reports = {
 class MissionMixin:
     model = models.Mission
     page_title = _("Missions")
+    help_text = _("The Mission Details page is where missions are created or can be updated as new information about the mission is collected")
 
 
 class EventMixin:

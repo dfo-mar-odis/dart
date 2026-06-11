@@ -7,19 +7,19 @@
     {% if object %}
     <li class="nav-item me-2">
         <button disabled class="btn btn-secondary"
-           title="{% trans 'Events' %}">{% custom_icon 'gear' %}</button>
+           title="{% trans 'Details' %}">{% custom_icon 'gear' %} {% trans "Details" %}</button>
     </li>
     <li class="nav-item me-2">
         <a href="{% url 'core:mission_events_details' database object.pk %}" class="btn btn-primary"
-           title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %}</a>
+           title="{% trans 'Events' %}">{% custom_icon 'calendar3-range' %} {% trans "Events" %}</a>
     </li>
     <li class="nav-item me-2">
         <a href="{% url 'core:mission_samples_sample_details' database object.pk %}" class="btn btn-primary"
-           title="{% trans 'Samples' %}">{% custom_icon 'beaker' %}</a>
+           title="{% trans 'Samples' %}">{% custom_icon 'beaker' %} {% trans "Samples" %}</a>
     </li>
     <li class="nav-item me-2">
         <a href="{% url 'core:mission_plankton_plankton_details' database object.pk %}" class="btn btn-primary"
-           title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %}</a>
+           title="{% trans 'Plankton' %}">{% custom_icon 'plankton' %} {% trans "Plankton" %}</a>
     </li>
     {% endif %}
 {% endblock %}
