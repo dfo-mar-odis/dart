@@ -30,8 +30,8 @@ class TestFixStationParser(DartTestCase):
         self.btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
         self.ros_data = io.StringIO(ros_sample_file.read().decode("cp1252"))
 
-        self.mission = core_factory.MissionFactory(fixed_station=True)
-        self.station = core_factory.StationFactory(name='HL_0')
+        self.mission = core_factory.MissionFactory.create(name="BCD2025667", fixed_station=True)
+        self.station = core_factory.StationFactory.create(name='HL_0')
         self.event = core_factory.CTDEventFactoryBlank.create(mission=self.mission, event_id=1, station=self.station,
                                                        sample_id=None, end_sample_id=None)
 
