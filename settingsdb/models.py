@@ -82,6 +82,11 @@ class SampleFileConfig(models.Model):
     sample_id_column_name = models.CharField(verbose_name=_("Sample ID Column Name"), max_length=20)
     comment_column_name = models.CharField(verbose_name=_("Comment Column Name"), max_length=20, blank=True, null=True)
 
+    allow_replicates = models.BooleanField(verbose_name=_("Allow Replicates?"), default=True,
+                                           help_text=_("If false, warnings will be created if Sample IDs appear more than once"))
+    allow_blank_sample_ids = models.BooleanField(verbose_name=_("Allow blank sample IDs?"), default=True,
+                                                 help_text=_("If false, values on lines that do not have sample IDs will be ignored"))
+
 
 class SampleFileConfigColumns(models.Model):
     file_config = models.ForeignKey(SampleFileConfig, verbose_name=_("File Config Columns"), on_delete=models.CASCADE, related_name="config_columns")

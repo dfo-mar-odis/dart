@@ -29,19 +29,11 @@ class ExistingConfigForm(forms.Form):
         super().__init__(*args, **kwargs)
 
         existing_config_attrs = {
-            'hx-post': reverse_lazy('core:from_sample_type_update_existing_config'),
+            'hx-post': reverse_lazy('core:form_sample_type_get_headers'),
             'hx-trigger': 'change',
-            'hx-target': '#div_id_existing_config',
-            'hx-swap': 'outerHTML'
+            'hx-target': '#div_id_config_details',
+            'hx-include': "[existing_config='existing_config']"
         }
-
-        init_attrs = {}
-        if self.initial:
-            init_attrs = {
-                'hx-post': reverse_lazy('core:form_sample_type_get_headers', args=(self.initial['existing_config'],)),
-                'hx-trigger': 'load',
-                'hx-target': '#div_id_config_details',
-            }
 
         config_choices = [(c.pk, f"{c.name} - {c.description if c.description else 'No Description'}") for c in SampleFileConfig.objects.all()]
         self.fields['existing_config'].choices += config_choices
@@ -59,7 +51,7 @@ class ExistingConfigForm(forms.Form):
                     ),
                     css_class='card-body', css_id='div_id_existing_config_content'
                 ),
-                css_class='card', **init_attrs, css_id='div_id_existing_config'
+                css_class='card', css_id='div_id_existing_config'
             )
         )
 
@@ -76,8 +68,14 @@ class FileConfigSaveForm(forms.Form):
             'hx-indicator': "#div_id_indicator_sample_config",
             'hx-swap': 'outerHTML'
         }
+        initial = kwargs.get('initial', {})
+        data = kwargs.get('data', {})
+        if 'config_id' in initial or 'config_id' in data:
+            attrs['name'] = "config_id"
+            attrs['value'] = initial.get('config_id', data.get("config_id"))
+
         icon = load_svg("check-square")
-        save_button = StrictButton(icon, **attrs, css_class='btn btn-primary btn-sm')
+        save_button = StrictButton(f"{icon} {_("Save configuration")}", **attrs, css_class='btn btn-primary btn-sm')
 
         self.helper = FormHelper()
         self.helper.form_tag = False
@@ -162,7 +160,7 @@ class FileValueForm(forms.Form):
         }
 
         icon = load_svg("plus-square")
-        add_button = StrictButton(icon, **attrs, css_class='btn btn-primary btn-sm')
+        add_button = StrictButton(f"{icon} {_("Add to load table")}", **attrs, css_class='btn btn-primary btn-sm')
 
         form_attrs = {
             'hx-post': reverse_lazy('core:form_sample_type_get_value_form'),
@@ -325,9 +323,12 @@ def get_file_config(request, **kwargs):
         if 'sample_file_column_names' in request.session:
             del request.session['sample_file_column_names']
     else:
+        return_whole_form = not 'existing_config' in request.POST
         existing_config = None
         if 'config_id' in kwargs:
             existing_config = SampleFileConfig.objects.get(pk=kwargs['config_id'])
+        elif (config_id:=request.POST.get('existing_config', '-1')) != '-1':
+            existing_config = SampleFileConfig.objects.get(pk=int(config_id))
 
         form_content = soup.find('div')
 
@@ -348,16 +349,13 @@ def get_file_config(request, **kwargs):
 
         if existing_config:
             save_form_init = {
+                'config_id': existing_config.pk,
                 'config_name': existing_config.name,
                 'config_description': existing_config.description
             }
             save_form = FileConfigSaveForm(initial=save_form_init)
         else:
             save_form = FileConfigSaveForm()
-
-        save_form_html = render_crispy_form(save_form)
-        save_form_soup = BeautifulSoup(save_form_html, 'html.parser')
-        content_div.append(save_form_soup)
 
         form = FileConfigForm(file_config)
         html = render_crispy_form(form)
@@ -379,6 +377,10 @@ def get_file_config(request, **kwargs):
             value_form_html = render_crispy_form(value_form)
             value_form_soup = BeautifulSoup(value_form_html, 'html.parser')
             content_div.append(value_form_soup)
+
+            save_form_html = render_crispy_form(save_form)
+            save_form_soup = BeautifulSoup(save_form_html, 'html.parser')
+            content_div.append(save_form_soup)
 
             config_row_context = {}
             if existing_config:
@@ -426,7 +428,7 @@ def get_file_config(request, **kwargs):
             config_table_soup = BeautifulSoup(config_table_html, 'html.parser')
             content_div.append(config_table_soup)
 
-        if existing_config:
+        if not return_whole_form:
             return HttpResponse(content_div)
 
     return HttpResponse(soup)
@@ -610,17 +612,17 @@ def create_sample_config_columns(request, sample_config) -> None:
             'value_column_name': value_col[1]
         }
 
-        if alias_col:
+        if alias_col and alias_col != 'None':
             config_attrs['column_alias'] = alias_col
 
-        if datatype_col:
+        if datatype_col and datatype_col != 'None':
             config_attrs['datatype_id'] = datatype_col
 
-        if dl_col_id:
+        if dl_col_id and dl_col_id != 'None':
             dl_col = column_names[int(dl_col_id)]
             config_attrs['detection_limit_column_name'] = dl_col[1]
 
-        if qc_col_id:
+        if qc_col_id and qc_col_id != 'None':
             qc_col = column_names[int(qc_col_id)]
             config_attrs['quality_control_column_name'] = qc_col[1]
 
@@ -634,6 +636,7 @@ def validate_save_config(request):
     file = request.FILES.get('sample_file', None)
 
     save_form = FileConfigSaveForm(data=request.POST)
+
     alert_soup = None
     if not file:
         crispy_html = render_crispy_form(save_form)
@@ -665,11 +668,13 @@ def validate_save_config(request):
             'sample_id_column_name': sample_column[1],
             'comment_column_name': comment_column[1]
         }
+
         try:
-            if SampleFileConfig.objects.filter(name__iexact=attrs['name']).exists():
+            if (config_id := request.POST.get('config_id', '-1')) != '-1':
                 with transaction.atomic():
-                    config = SampleFileConfig.objects.update(**attrs)
-                    create_sample_config_columns(request, config)
+                    configs = SampleFileConfig.objects.filter(pk=config_id)
+                    configs.update(**attrs)
+                    create_sample_config_columns(request, configs.first())
             else:
                 with transaction.atomic():
                     config = SampleFileConfig.objects.create(**attrs)
@@ -688,17 +693,6 @@ def validate_save_config(request):
     return HttpResponse(crispy_html)
 
 
-def update_existing_config(request):
-    existing = request.POST.get('existing_config', None)
-    if existing:
-        existing_form = ExistingConfigForm(initial={'existing_config': int(existing)})
-    else:
-        existing_form = ExistingConfigForm()
-
-    crispy_html = render_crispy_form(existing_form)
-    soup = BeautifulSoup(crispy_html, 'html.parser')
-    return HttpResponse(soup)
-
 url_patterns = [
     path('sample_config/header/', get_file_config, name='form_sample_type_get_headers'),
     path('sample_config/header/<int:config_id>/', get_file_config, name='form_sample_type_get_headers'),
@@ -710,8 +704,6 @@ url_patterns = [
     path('sample_config/config/add/', add_to_config, name='form_sample_type_add_to_config'),
     path('sample_config/config/update/', update_to_config, name='form_sample_type_update_to_config'),
     path('sample_config/config/remove/<int:column_id>/', remove_from_config, name='form_sample_type_remove_from_config'),
-
-    path('sample_config/existing/config/update/', update_existing_config, name='from_sample_type_update_existing_config'),
 
     path('sample_config/config/save/validate/', validate_save_config, name='form_sample_type_validate_save_config'),
 
