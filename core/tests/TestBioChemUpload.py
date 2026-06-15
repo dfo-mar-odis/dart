@@ -80,9 +80,9 @@ class TestGetBCSPRows(AbstractTestDatabase):
 
         batch_factory = biochem_factory.BcBatchesFactory
         batch_factory._meta.database = 'biochem'
-        batch = batch_factory()
-        create_rows = upload.get_bcs_p_rows("test_user", bottles, batch)
-
+        batch = batch_factory.create()
+        generator = upload.get_bcs_p_rows("test_user", bottles)
+        create_rows = [row.set_batch(batch) for row in generator]
         self.assertEqual(len(create_rows), 1)
 
 

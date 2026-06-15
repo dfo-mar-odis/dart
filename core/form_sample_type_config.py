@@ -385,14 +385,22 @@ def get_file_config(request, **kwargs):
                 config_rows = []
                 col_names_upper = [c[1].upper() for c in column_names]
                 for row in existing_config.config_columns.all():
-                    value_col = column_names[col_names_upper.index(row.value_column_name)]
+                    value_col_name = row.value_column_name.upper()
+                    if value_col_name not in col_names_upper:
+                        continue
+
+                    value_index = col_names_upper.index(value_col_name)
+                    value_col = column_names[value_index]
+
                     dl_col = None
-                    if row.detection_limit_column_name:
-                        dl_col = column_names[col_names_upper.index(row.detection_limit_column_name)]
+                    dl_col_name = row.detection_limit_column_name
+                    if dl_col_name and dl_col_name.upper() in col_names_upper:
+                        dl_col = column_names[col_names_upper.index(dl_col_name.upper())]
 
                     qc_col = None
-                    if row.quality_control_column_name:
-                        qc_col = column_names[col_names_upper.index(row.quality_control_column_name)]
+                    qc_col_name = row.quality_control_column_name
+                    if qc_col_name and qc_col_name.upper() in col_names_upper:
+                        qc_col = column_names[col_names_upper.index(qc_col_name.upper())]
 
                     datatype = None
                     if row.datatype_id:

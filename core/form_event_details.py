@@ -58,7 +58,7 @@ class EventDetails(core_forms.CardForm):
             'id': button_id,
             'name': 'delete_event',
             'title': _("Delete Event"),
-            'hx-post': reverse_lazy("core:form_event_delete_event", args=(self.event.pk,)),
+            'hx-post': reverse_lazy("core:form_event_delete_event", args=(self.event.mission.pk, self.event.pk,)),
             'hx-confirm': _("Are you sure?"),
             'hx-swap': 'none'
         }
@@ -957,14 +957,18 @@ def get_selected_event(request):
     return HttpResponse(soup)
 
 
-def delete_details(request, event_id):
-    event = models.Event.objects.get(pk=event_id)
-    mission = event.mission
+def delete_details(request, mission_id, event_id):
+    if event_id == 0:
+        mission = models.Mission.objects.get(pk=mission_id)
+        mission.events.all().delete()
+    else:
+        event = models.Event.objects.get(pk=event_id)
+        mission = event.mission
 
-    if caches['default'].touch('selected_event'):
-        caches['default'].delete('selected_event')
+        if caches['default'].touch('selected_event'):
+            caches['default'].delete('selected_event')
 
-    event.delete()
+        event.delete()
 
     card = EventDetails(mission=mission)
     html = render_crispy_form(card)
@@ -1455,7 +1459,7 @@ event_detail_urls = [
     path(f'event/new/<int:mission_id>/', add_event, name="form_event_add_event"),
     path(f'event/new/<int:mission_id>/<int:event>/', add_event, name="form_event_add_event"),
     path(f'event/edit/<int:event_id>/', edit_event, name="form_event_edit_event"),
-    path(f'event/delete/<int:event_id>/', delete_details, name="form_event_delete_event"),
+    path(f'event/delete/<int:mission_id>/<int:event_id>/', delete_details, name="form_event_delete_event"),
 
     path(f'event/action/list/<int:event_id>/', list_action, name="form_event_list_action"),
     path(f'event/action/list/<int:event_id>/<str:editable>/', list_action, name="form_event_list_action"),

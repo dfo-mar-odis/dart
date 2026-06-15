@@ -135,7 +135,7 @@ class ValidateEventsCard(forms.CollapsableCardForm):
             'title': _("Re-run event validation")
         }
         icon = load_svg('arrow-clockwise')
-        revalidate = StrictButton(icon, css_class="btn btn-primary btn-sm", **btn_attrs)
+        revalidate = StrictButton(f"{icon} {_("Revalidate Events")}", css_class="btn btn-primary btn-sm", **btn_attrs)
         spacer_col.fields.append(revalidate)
 
         issue_count = models.EventError.objects.filter(event__mission=self.mission).count()

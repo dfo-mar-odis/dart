@@ -114,12 +114,12 @@ class TestMissionEventForm(DartTestCase):
         # provided an event id the delete event url should remove an event from the database, return an empty
         # EventDetail card and contain an Hx-Trigger: event_updated action to notify listening objects they
         # should update their event lists.
-        mission = core_factory.MissionFactory()
-        event = core_factory.CTDEventFactory(mission=mission)
+        mission = core_factory.MissionFactory.create()
+        event = core_factory.CTDEventFactory.create(mission=mission)
 
         self.assertTrue(models.Event.objects.using('default').filter(pk=event.pk).exists())
 
-        url = reverse("core:form_event_delete_event", args=(event.pk,))
+        url = reverse("core:form_event_delete_event", args=(mission.pk, event.pk,))
         response = self.client.post(url)
 
         self.assertFalse(models.Event.objects.using('default').filter(pk=event.pk).exists())

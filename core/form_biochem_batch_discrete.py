@@ -1,10 +1,15 @@
+import os
+import subprocess
+
 from datetime import datetime
+from pathlib import Path
 from typing import Tuple
 
 from django.core.exceptions import ValidationError
 from django.db import DatabaseError, connections
 from django.db.models import QuerySet
 from django.urls import path
+from django.conf import settings
 from django.utils.translation import gettext_lazy as _
 
 from biochem import upload
@@ -95,18 +100,54 @@ def get_discrete_data(mission: core_models.Mission, upload_all=False):
     return samples, bottles
 
 
-def download_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None) -> int | None:
-    bcs = BcsD
-    bcs_upload = upload.get_bcs_d_rows
-    bcd = BcdD
-    bcd_upload = upload.get_bcd_d_rows
-    return form_biochem_batch.download_batch_func(
-        mission, uploader, get_data_func=get_discrete_data, file_postfix='D',
-        bcd_model=bcd, bcd_upload=bcd_upload, bcs_model=bcs, bcs_upload=bcs_upload
-    )
+def download_batch_data(mission: core_models.Mission, bottle_rows, sample_rows):
+    report_path = Path(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCS_D")
+    bcd_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCD_D")
+
+    form_biochem_batch.write_bcs_file(bcs_file, bottle_rows, BcsD)
+    form_biochem_batch.write_bcd_file(bcd_file, sample_rows, BcdD)
+
+    # if we're on windows then let's pop the directory where we saved the reports open.
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
+
+    # No batch_id is created when downloading files.
+    return 0
 
 
-def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+def download_batch_func(mission: core_models.Mission, uploader: str,
+                        batch: biochem_models.Bcbatches = None) -> int | None:
+    user_logger.info(f"Creating BCS/BCD files. Using uploader: {uploader}")
+
+    report_path = Path(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCS_D")
+    bcd_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCD_D")
+
+    samples, bottles = get_discrete_data(mission)
+
+    bottle_rows = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
+    sample_rows = upload.get_bcd_d_rows(uploader=uploader, samples=samples)
+
+    form_biochem_batch.write_bcs_file(bottle_rows, bcs_file, BcsD)
+    form_biochem_batch.write_bcd_file(sample_rows, bcd_file, BcdD)
+
+    # if we're on windows then let's pop the directory where we saved the reports open.
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
+
+    # No batch_id is created when downloading files.
+    return 0
+
+def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None, report_path = None):
+    bcs_file = None
+    if report_path:
+        bcs_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCS_D")
+
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
@@ -116,15 +157,24 @@ def upload_bcs_d_data(mission: core_models.Mission, uploader: str, batch: bioche
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles, batch=batch)
+        create = upload.get_bcs_d_rows(uploader=uploader, bottles=bottles)
+        upload_rows = [row.set_batch(batch) for row in create]
+
+        if bcs_file:
+            form_biochem_batch.write_bcs_file(upload_rows, bcs_file, BcsD)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Discrete rows"))
-        upload.upload_db_rows(biochem_models.BcsD, create)
+        upload.upload_db_rows(biochem_models.BcsD, upload_rows)
         # biochem_models.BcsD.objects.using('biochem').bulk_create(create)
 
 
-def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_models.Bcbatches = None):
+def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_models.Bcbatches = None, report_path=None):
+
+    bcd_file = None
+    if report_path:
+        bcd_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCD_D")
+
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
@@ -137,12 +187,16 @@ def upload_bcd_d_data(mission: core_models.Mission, uploader, batch: biochem_mod
     if samples.exists():
         message = _("Compiling BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
-        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples, batch=batch)
+        create = upload.get_bcd_d_rows(uploader=uploader, samples=samples)
+        upload_rows = [row.set_batch(batch) for row in create]
+
+        if bcd_file:
+            form_biochem_batch.write_bcd_file(upload_rows, bcd_file, BcdD)
 
         message = _("Creating/updating BCD rows for sample type") + " : " + mission.name
         user_logger.info(message)
 
-        upload.upload_db_rows(biochem_models.BcdD, create)
+        upload.upload_db_rows(biochem_models.BcdD, upload_rows)
         # bcd_d.objects.using("biochem").bulk_create(create)
 
         # after uploading the samples we want to update the status of the samples in this mission so we
@@ -179,9 +233,16 @@ def upload_batch_func(mission: core_models.Mission, uploader: str, batch: bioche
         user_logger.info(_("Datatypes missing see errors"))
         core_models.MissionError.objects.bulk_create(errors)
 
+    report_path = Path(settings.BASE_DIR, "reports")
+    report_path.mkdir(parents=True, exist_ok=True)
+
     # create and upload the BCS data if it doesn't already exist
-    upload_bcs_d_data(mission, uploader, batch)
-    upload_bcd_d_data(mission, uploader, batch)
+    upload_bcs_d_data(mission, uploader, batch, report_path)
+    upload_bcd_d_data(mission, uploader, batch, report_path)
+
+    # if we're on windows then let's pop the directory where we saved the reports open.
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
 
 
 def stage1_validation_func(mission_id, batch_id) -> None:

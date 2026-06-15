@@ -1,7 +1,7 @@
 import math
 
 from enum import Enum
-from typing import Type
+from typing import Type, Any, Generator
 from datetime import datetime
 
 from django.conf import settings
@@ -13,6 +13,7 @@ from django.utils.translation import gettext as _
 import bio_tables.models
 from bio_tables.models import BCNatnlTaxonCode
 from biochem import models
+from biochem.models import BcsD, BcsP, BcdD, BcdP
 from core import models as core_models
 
 import logging
@@ -111,9 +112,8 @@ def upload_db_rows(model, rows_to_create: list):
 
 
 # returns the rows to create, rows to update and fields to update
-def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: models.Bcbatches = None) -> list[models.BcsD]:
+def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Generator[BcsD, Any, None]:
     user_logger.info("Creating/updating BCS table")
-    bcs_objects_to_create = []
 
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
@@ -221,19 +221,10 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             created_date = date_now_string
         )
 
-        if batch:
-            bcs_row.batch = batch
-        else:
-            bcs_row.batch_id = 0
-
-        bcs_objects_to_create.append(bcs_row)
-
-    return bcs_objects_to_create
+        yield bcs_row
 
 
-def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: models.Bcbatches = None) -> list[models.BcsP]:
-
-    bcs_objects_to_create = []
+def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Generator[BcsP, Any, None]:
 
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
@@ -336,7 +327,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             event_data_manager_comment = DART_EVENT_COMMENT,
 
             pl_headr_collector_sample_id = bottle.bottle_id,
-            pl_headr_gear_seq = bottle.gear_type,
+            pl_headr_gear_seq = bottle.gear_type.gear_seq,
 
             # This was set to 1 in the existing AZMP Template for phyto
             pl_headr_time_qc_code = 1,
@@ -380,23 +371,13 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle], batch: 
             pl_headr_collector_comment = event.comments,
             pl_headr_data_manager_comment = DART_EVENT_COMMENT,
             pl_headr_responsible_group = mission.protocol,
-            pl_headr_shared_data = shared
+            pl_headr_shared_data = shared,
         )
 
-        if batch:
-            bcs_row.batch = batch
-        else:
-            bcs_row.batch_id = 0
-
-        bcs_objects_to_create.append(bcs_row)
-
-    return bcs_objects_to_create
+        yield bcs_row
 
 
-def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue], batch: models.Bcbatches = None) -> list[models.BcdD]:
-
-    bcd_objects_to_create = []
-    errors = []
+def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleValue]) -> Generator[BcdD, Any, None]:
 
     user_logger.info("Compiling BCD Discrete samples")
 
@@ -434,6 +415,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         collector_id = f'{bottle.bottle_id}'
 
         bcd_row = models.BcdD(
+            dis_data_num=count,
             dis_detail_collector_samp_id=collector_id,
             dis_detail_data_type_seq = bc_data_type.data_type_seq,
             dis_header_start_depth = bottle.pressure,
@@ -457,24 +439,10 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
             dis_sample_key_value = dis_sample_key_value
         )
 
-        if batch:
-            bcd_row.batch = batch
-        else:
-            bcd_row.batch_id = 0
-        # bcd_row.batch = batch.pk
-
-        bcd_objects_to_create.append(bcd_row)
-
-    if len(errors) > 0:
-        core_models.MissionError.objects.bulk_create(errors)
-
-    compress_keys(bcd_objects_to_create, models.BcdD, 'dis_data_num')
-
-    return bcd_objects_to_create
+        yield bcd_row
 
 
-def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
-                   batch: models.Bcbatches = None) -> list[models.BcdP]:
+def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample]) -> Generator[BcdP, Any, None]:
 
     bcd_objects_to_create = []
 
@@ -507,8 +475,10 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
         # and should be set to None when uploaded to biochem
         wet_weight = sample.raw_wet_weight if sample.raw_wet_weight and sample.raw_wet_weight > 0 else None
 
-        bcd_row = models.BcdP(plank_sample_key_value=plankton_key,
-            pl_gen_national_taxonomic_seq = sample.taxa,
+        bcd_row = models.BcdP(
+            plank_data_num=count,
+            plank_sample_key_value=plankton_key,
+            pl_gen_national_taxonomic_seq = sample.taxa.pk,
             pl_gen_collector_taxonomic_id = taxonomic_id,
             pl_gen_life_history_seq = sample.stage,
             pl_gen_trophic_seq = 90000000,
@@ -535,54 +505,4 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample],
             process_flag = 'NR'
         )
 
-        if batch:
-            bcd_row.batch = batch
-        else:
-            bcd_row.batch_id = 0
-
-        bcd_objects_to_create.append(bcd_row)
-
-    compress_keys(bcd_objects_to_create, models.BcdP, 'plank_data_num')
-
-    return bcd_objects_to_create
-
-
-def compress_keys(bcd_objects_to_create, bcd_model, primary_key):
-    if len(bcd_objects_to_create) <= 0:
-        return
-
-    if len(bcd_objects_to_create) % 200 == 1:
-        user_logger.info(_("Indexing Primary Keys") + " :  %d/%d", 0, len(bcd_objects_to_create))
-
-    data_num_seq = []
-    if bcd_model:
-        # to keep data_num (primary key in the Biochem BCD table) a manageable number get all the
-        # currently used dis_data_num/plank_data_num keys in order up to the highest value and create a list of integers
-        data_num_query = bcd_model.objects.using('biochem').order_by(primary_key)
-        data_num_seq = list(data_num_query.values_list(primary_key, flat=True))
-
-    # find the first and last key in the set and use that to create a range, then subtract keys that are
-    # being used from the set. What is left are available keys that can be assigned to new rows being created
-    sort_seq = []
-    end = 0
-    if len(data_num_seq) > 0:
-        start, end = data_num_seq[0], data_num_seq[-1]
-        sort_seq = sorted(set(range(start, end)).difference(data_num_seq))
-
-    data_num = 0
-    total_count = len(bcd_objects_to_create)
-    for index, obj in enumerate(bcd_objects_to_create):
-        if index % 200 == 1:
-            user_logger.info(_("Indexing Primary Keys") + " : %d/%d", (index + 1), total_count)
-
-        if index < len(sort_seq):
-            # the index number is a count of which object in the bcd_objects_to_create array we're on.
-            # If the index is less than the length of our available keys array, get the next available
-            # number in the sequence
-            data_num = sort_seq[index]
-        else:
-            # if we're past the end of the available keys start get the last number in the sequence + 1
-            # then just add one to the sequence for every additional object.
-            data_num = end + 1 if data_num < end else data_num + 1
-
-        setattr(obj, primary_key, data_num)
+        yield bcd_row

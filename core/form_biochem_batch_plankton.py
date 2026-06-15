@@ -1,6 +1,11 @@
+import os
+import subprocess
+from pathlib import Path
+
 from typing import Tuple
 
 from django.db import DatabaseError, connections
+from django.conf import settings
 from django.urls import path
 from django.utils.translation import gettext_lazy as _
 
@@ -87,17 +92,35 @@ def get_plankton_data(mission: core_models.Mission, upload_all=False):
 
 
 def download_batch_func(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None) -> int | None:
-    bcs = BcsP
-    bcs_upload = upload.get_bcs_p_rows
-    bcd = BcdP
-    bcd_upload = upload.get_bcd_p_rows
-    return form_biochem_batch.download_batch_func(
-        mission, uploader, get_data_func=get_plankton_data, file_postfix='P',
-        bcd_model=bcd, bcd_upload=bcd_upload, bcs_model=bcs, bcs_upload=bcs_upload
-    )
+    user_logger.info(f"Creating BCS/BCD files. Using uploader: {uploader}")
+
+    report_path = Path(settings.BASE_DIR, "reports")
+    Path(report_path).mkdir(parents=True, exist_ok=True)
+
+    bcs_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCS_P")
+    bcd_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCD_P")
+
+    samples, bottles = get_plankton_data(mission)
+
+    bottle_rows = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+    sample_rows = upload.get_bcd_p_rows(uploader=uploader, samples=samples)
+
+    form_biochem_batch.write_bcs_file(bottle_rows, bcs_file, BcsP)
+    form_biochem_batch.write_bcd_file(sample_rows, bcd_file, BcdP)
+
+    # if we're on windows then let's pop the directory where we saved the reports open.
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
+
+    # No batch_id is created when downloading files.
+    return 0
 
 
-def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None, report_path = None):
+    bcs_file = None
+    if report_path:
+        bcs_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCS_D")
+
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
@@ -107,15 +130,24 @@ def upload_bcs_p_data(mission: core_models.Mission, uploader: str, batch: bioche
         # 4) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCS rows"))
-        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles, batch=batch)
+        bcs_create = upload.get_bcs_p_rows(uploader=uploader, bottles=bottles)
+        upload_rows = [row.set_batch(batch) for row in bcs_create]
+
+        if bcs_file:
+            form_biochem_batch.write_bcs_file(upload_rows, bcs_file, BcsP)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCS Plankton rows"))
-        upload.upload_db_rows(biochem_models.BcsP, bcs_create)
+        upload.upload_db_rows(biochem_models.BcsP, upload_rows)
         # biochem_models.BcsP.objects.bulk_create(bcs_create)
 
 
-def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None):
+def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: biochem_models.Bcbatches = None, report_path = None):
+
+    bcd_file = None
+    if report_path:
+        bcd_file = form_biochem_batch.validate_file_path(mission, report_path, "_BCD_P")
+
     if not form_biochem_database.is_connected():
         raise DatabaseError(f"No Database Connection")
 
@@ -127,11 +159,15 @@ def upload_bcd_p_data(mission: core_models.Mission, uploader: str, batch: bioche
         # 5) upload only bottles that are new or were modified since the last biochem upload
         # send_user_notification_queue('biochem', _("Compiling BCS rows"))
         user_logger.info(_("Compiling BCD Plankton rows"))
-        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples, batch=batch)
+        bcd_create = upload.get_bcd_p_rows(uploader=uploader, samples=samples)
+        upload_rows = [row.set_batch(batch) for row in bcd_create]
+
+        if bcd_file:
+            form_biochem_batch.write_bcd_file(upload_rows, bcd_file, BcdP)
 
         # send_user_notification_queue('biochem', _("Creating/updating BCS rows"))
         user_logger.info(_("Creating/updating BCD Plankton rows"))
-        upload.upload_db_rows(biochem_models.BcdP, bcd_create)
+        upload.upload_db_rows(biochem_models.BcdP, upload_rows)
         # biochem_models.BcdP.objects.using('biochem').bulk_create(bcd_create)
 
 
@@ -143,9 +179,16 @@ def upload_batch_func(mission: core_models.Mission, uploader: str, batch: bioche
     # send_user_notification_queue('biochem', _("Validating Sensor/Sample Datatypes"))
     user_logger.info(_("Validating Plankton Data"))
 
+    report_path = Path(settings.BASE_DIR, "reports")
+    report_path.mkdir(parents=True, exist_ok=True)
+
     # create and upload the BCS data if it doesn't already exist
-    upload_bcs_p_data(mission, uploader, batch)
-    upload_bcd_p_data(mission, uploader, batch)
+    upload_bcs_p_data(mission, uploader, batch, report_path)
+    upload_bcd_p_data(mission, uploader, batch, report_path)
+
+    # if we're on windows then let's pop the directory where we saved the reports open.
+    if os.name == 'nt':
+        subprocess.Popen(r'explorer {report_path}'.format(report_path=report_path))
 
 
 def stage1_validation_func(mission_id, batch_id) -> None:
