@@ -46,7 +46,6 @@ def _read_stream_to_df(fileobj: io.BytesIO, file_config: SampleFileConfig) -> pd
         df = pd.read_excel(fileobj, sheet_name=file_config.tab, header=header, engine="openpyxl")
     else:
         # default CSV-like
-        # If .dat is whitespace/delimited, user may want a different delimiter - this implementation assumes comma
         fileobj.seek(0)
         # Use header parameter: header=row number to use as column names
         df = pd.read_csv(fileobj, header=header, engine="python", dtype=str)
@@ -79,15 +78,26 @@ def _parse_sample_id(cell_value: Any) -> Optional[Tuple[str, Optional[int]]]:
     return s, None
 
 
+def _get_column_definitions(config_columns:list[SampleFileConfigColumns]) -> list[dict[str, Any]]:
+    col_defs = []
+    for c in config_columns:
+        col_defs.append({
+            "alias": (c.column_alias or "").strip(),
+            "value_col": (c.value_column_name or "").strip().lower(),
+            "limit_col": (c.detection_limit_column_name or "").strip().lower() if c.detection_limit_column_name else None,
+            "qc_col": (c.quality_control_column_name or "").strip().lower() if c.quality_control_column_name else None,
+            "datatype_id": c.datatype_id,
+        })
+
+    return col_defs
+
+
 @transaction.atomic
 def parse_sample_file(
     fileobj: io.BytesIO,
     file_config: SampleFileConfig,
     mission: core_models.Mission,
     file_name: Optional[str] = None,
-    *,
-    allow_replicates: bool = True,
-    treat_blank_as_replicate: bool = True
 ) -> ParseResult:
     """
     Parse a BytesIO stream into core Sample / DiscreteSampleValue records.
@@ -97,8 +107,6 @@ def parse_sample_file(
       - file_config: instance of `settingsdb.models.SampleFileConfig`
       - mission: a `core.models.Mission` instance used to find bottles
       - file_name: optional filename string to store in sample.file
-      - allow_replicates: if False, any replicate detection will be reported as error
-      - treat_blank_as_replicate: when a sample id cell is blank, treat row as replicate for last seen id
 
     Returns:
       ParseResult with counts and errors.
@@ -118,6 +126,8 @@ def parse_sample_file(
         return result
 
     # Lowercase column names expected in the config
+    # Todo: sample column cannot be blank, this should probably throw an error needs unit test in
+    #  TestSampleFileParserFileConfig
     sample_col_name = (file_config.sample_id_column_name or "").strip().lower()
     comment_col_name = (file_config.comment_column_name or "").strip().lower() if file_config.comment_column_name else None
 
@@ -128,15 +138,7 @@ def parse_sample_file(
         return result
 
     # Build column definitions: mapping alias -> dict of column names
-    col_defs = []
-    for c in config_columns:
-        col_defs.append({
-            "alias": (c.column_alias or "").strip(),
-            "value_col": (c.value_column_name or "").strip().lower(),
-            "limit_col": (c.detection_limit_column_name or "").strip().lower() if c.detection_limit_column_name else None,
-            "qc_col": (c.quality_control_column_name or "").strip().lower() if c.quality_control_column_name else None,
-            "datatype_id": c.datatype_id,
-        })
+    col_defs = _get_column_definitions(config_columns)
 
     # Keep counters/tracking for blanks-based replicates:
     # replicate_counters[(bottle_base_id_str, alias)] = last_replicate_int
@@ -145,7 +147,7 @@ def parse_sample_file(
     last_seen_base_id: Optional[str] = None
 
     # Pre-cache BCDataType lookups if datatype_id present
-    bcdatatype_cache: Dict[int, bio_models.BCDataType] = {}
+    bcdatatype_cache: Dict[int, bio_models.BCDataType | None] = {}
     for d in set(cd["datatype_id"] for cd in col_defs if cd.get("datatype_id")):
         try:
             bcdatatype_cache[d] = bio_models.BCDataType.objects.get(pk=d)
@@ -162,7 +164,7 @@ def parse_sample_file(
 
         if parsed is None:
             # blank cell
-            if treat_blank_as_replicate and last_seen_base_id is not None:
+            if file_config.allow_blank_sample_ids and last_seen_base_id is not None:
                 base_id = last_seen_base_id
                 # the replicate index will be computed per column below using replicate_counters
             else:
@@ -218,7 +220,7 @@ def parse_sample_file(
                 replicate_idx = replicate_counters.get(key, 0) + 1
                 replicate_counters[key] = replicate_idx
 
-            if replicate_idx > 1 and not allow_replicates:
+            if replicate_idx > 1 and not file_config.allow_replicates:
                 result.errors.append(f"Row {idx+1} col {value_col}: replicate found for sample '{base_id}' but replicates are disabled")
                 continue
 
@@ -302,7 +304,7 @@ def parse_sample_file(
                 if dtid:
                     dt = bcdatatype_cache.get(dtid)
                     if dt:
-                        ms_type.datatype = dt
+                        ms_type.datatype = dt.pk
                         ms_type.save(update_fields=["datatype"])
 
             # Get/create Sample (one per bottle+type). Samples hold DiscreteSampleValue(s).
@@ -320,18 +322,18 @@ def parse_sample_file(
                 "sample": sample_obj,
                 "replicate": replicate_idx,
                 "flag": flag_val,
+                "value": None,
+                "limit": None,
+                "datatype": None,
+                "comment": None
             }
             # Only set fields that accept None as allowed by model
             if value_num is not None:
                 dsv_kwargs["value"] = value_num
-            else:
-                dsv_kwargs["value"] = None
 
             if limit_num is not None:
                 # DiscreteSampleValue.limit expects DecimalField -> pass Decimal
                 dsv_kwargs["limit"] = Decimal(limit_num) if not isinstance(limit_num, Decimal) else limit_num
-            else:
-                dsv_kwargs["limit"] = None
 
             try:
                 core_models.DiscreteSampleValue.objects.create(**dsv_kwargs)

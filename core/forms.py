@@ -3,7 +3,7 @@ import re
 import time
 from typing import Self
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, LayoutObject, Hidden, Row, Column, Field, Div, HTML, flatatt
@@ -32,8 +32,14 @@ class AlertSoup(BeautifulSoup):
     def add_message(self, message) -> Self:
         div = self.new_tag('div')
         div.string = message
-        self.find(id=f"alert_soup_content_{self.alert_id}").append(div)
+        self.find(id=f"alert_soup_content_{self.alert_id}_msg").append(div)
         return self
+
+    def add_button(self, button: Tag):
+        if button.name != 'button':
+            raise TypeError("The added element is expected to be a button type")
+
+        self.find(id=f"alert_soup_content_{self.alert_id}_buttons").append(button)
 
     def __init__(self, alert_id):
         self.alert_id = alert_id
