@@ -1006,7 +1006,7 @@ class FixStationBulkParser:
                 gear_type_code = 90000215 if bottles.first().pressure < bottles.last().pressure else 90000171
                 gear_type = bio_models.BCGear.objects.get(gear_seq=gear_type_code)
                 for bottle in bottles:
-                    bottle.gear_type = gear_type
+                    bottle.gear_type = gear_type.pk
                 core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 
         if self.errors_to_create:

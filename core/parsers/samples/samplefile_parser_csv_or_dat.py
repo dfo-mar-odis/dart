@@ -13,7 +13,7 @@ class CSVFileParser(AbstractFileParser):
 
     def find_header_line(self, selected_tab: int = -1) -> tuple[int, Sequence[str]]:
         try:
-            content_stream = BytesIO(self.content)
+            content_stream = self.content
             content_stream.seek(0)
             reader = csv.reader(content_stream.read().decode('utf-8').splitlines())
             for row_idx, row in enumerate(reader, start=1):
@@ -24,7 +24,7 @@ class CSVFileParser(AbstractFileParser):
             raise ValueError(f"Error processing CSV/DAT file: {e}")
 
     def get_column_names(self, line: int, selected_tab: int = -1) -> list:
-        content_stream = BytesIO(self.content)
+        content_stream = self.content
         content_stream.seek(0)
         reader = csv.reader(content_stream.read().decode('utf-8').splitlines())
         for current_line, row in enumerate(reader, start=1):

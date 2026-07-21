@@ -3,7 +3,7 @@ from typing import Sequence
 
 
 class AbstractFileParser:
-    content: bytes = None
+    content: BytesIO = None
 
     def get_tab_names(self) -> Sequence[str] | None:
         raise NotImplementedError
@@ -29,5 +29,14 @@ class AbstractFileParser:
         # Check if the row has a reasonable number of columns (e.g., > 3)
         return text_count > len(row) / 2 and len(row) > 3
 
-    def __init__(self, content: BytesIO):
-        self.content = content.read()
+    def __init__(self, content: BytesIO | bytes):
+        # Accept an already open file-like object or raw bytes
+        if hasattr(content, "read"):
+            try:
+                content.seek(0)
+            except Exception:
+                pass
+            self.content = content  # keep stream
+        else:
+            # content is bytes -> keep as bytes (some modules expect bytes)
+            self.content = content

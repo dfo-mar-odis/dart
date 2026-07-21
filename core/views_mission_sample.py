@@ -57,7 +57,7 @@ def get_sensor_table_button(soup: BeautifulSoup, mission: models.Mission, sample
         title += f': {BCDataType.objects.get(pk=datatype)}'
     elif row_datatype:
         # if the datatype is applied at the mission level or row level
-        button_colour = 'btn-warning'
+        button_colour = 'btn-secondary'
     else:
         title += f': ' + _('Missing Biochem datatype')
 

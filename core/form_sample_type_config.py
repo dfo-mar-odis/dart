@@ -1,4 +1,5 @@
-from http.client import responses
+import io
+from io import BytesIO
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -16,8 +17,11 @@ from django.utils.translation import gettext as _
 from settingsdb.models import SampleFileConfig, SampleFileConfigColumns
 from bio_tables.models import BCDataType
 from config.utils import load_svg
-from core.parsers.samples.samplefile_config import FileConfig
+
 from core.forms import AlertSoup
+from core import models as core_models
+from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
+from core.parsers.samples.samplefile_parser_file_config import parse_sample_file
 
 import logging
 logger = logging.getLogger('dart.user')
@@ -71,13 +75,16 @@ class FileConfigSaveForm(forms.Form):
         save_attrs = {
             'hx-post': reverse_lazy('core:form_sample_type_validate_save_config'),
             'hx-target': "#div_id_save_config_card",
-            'hx-indicator': "#div_id_indicator_sample_config",
+            'hx-indicator': ".htmx-indicator",
             'hx-swap': 'outerHTML',
             'title': _("Save the existing or updated configuration")
         }
 
         load_attrs = {
-            'title': _("Load data using the current configuration")
+            'title': _("Load data using the current configuration"),
+            'hx-post': reverse_lazy('core:form_sample_type_load_file'),
+            'hx-swap': 'none',
+            'hx-indicator': ".htmx-indicator",
         }
 
         initial = kwargs.get('initial', {})
@@ -106,6 +113,13 @@ class FileConfigSaveForm(forms.Form):
                             save_button,
                             load_button,
                             css_class="col-auto"
+                        ),
+                        Div(
+                            Div(
+                                css_class="spinner-border text-primary", **{"style": "width: 20px; height: 20px;"}
+                            ),
+                            css_class="col-auto align-self-center htmx-indicator",
+                            css_id="div_id_indicator_sample_config"
                         ),
                     ),
                     css_class='card-body', css_id='div_id_save_config_content'
@@ -247,6 +261,9 @@ class FileConfigForm(forms.Form):
     sample_column = forms.ChoiceField(choices=[(-1, '--------')])
     comment_column = forms.ChoiceField(choices=[(-1, '--------')], required=False)
 
+    allow_replicates = forms.BooleanField(required=False)
+    ignore_blank_sample_ids = forms.BooleanField(required=False)
+
     def get_file_tab_column(self):
         file_tab_column = None
         if self.file_config.file_type == 'XLS':
@@ -281,6 +298,14 @@ class FileConfigForm(forms.Form):
             if 'comment_column' not in initial:
                 initial['comment_column'] = default_comment_column[0]
 
+        if file_config.ignore_blank_sample_ids:
+            if 'ignore_blank_sample_ids' not in initial:
+                initial['ignore_blank_sample_ids'] = file_config.ignore_blank_sample_ids
+
+        if file_config.allow_replicates:
+            if 'allow_replicates' not in initial:
+                initial['allow_replicates'] = file_config.allow_replicates
+
         super().__init__(*args, **kwargs, initial=initial)
 
         self.column_names = [(col_index, col_name) for col_index, col_name in enumerate(file_config.get_column_names())]
@@ -313,6 +338,10 @@ class FileConfigForm(forms.Form):
                         Column(Field('sample_column', css_class='form-select form-select-sm', **update_value_trigger_attrs)),
                         Column(Field('comment_column', css_class='form-select form-select-sm', **update_value_trigger_attrs)),
                     ),
+                    Row(
+                        Column(Field('allow_replicates', css_class='form-control form-control-sm')),
+                        Column(Field('ignore_blank_sample_ids', css_class='form-control form-control-sm')),
+                    ),
                     css_class='card-body',
                 ),
                 css_class='card mt-2'
@@ -332,6 +361,8 @@ def initialize_file_config(file, initial: SampleFileConfig = None) -> FileConfig
     if initial:
         file_config.set_selected_tab(initial.tab)
         file_config.set_header_line_number(initial.header_line)
+        file_config.allow_replicates = initial.allow_replicates
+        file_config.ignore_blank_sample_ids = not initial.allow_blank_sample_ids
         if initial.sample_id_column_name:
             file_config.set_sample_id_column_by_name(initial.sample_id_column_name)
         if initial.comment_column_name:
@@ -385,7 +416,12 @@ def get_file_config(request, **kwargs):
         existing_config = SampleFileConfig.objects.get(pk=int(config_id))
         existing_config_init = {'existing_config': existing_config.pk}
 
-    file_config = initialize_file_config(file, initial=existing_config)
+    try:
+        file_config = initialize_file_config(file, initial=existing_config)
+    except KeyError:
+        existing_config = None
+        file_config = initialize_file_config(file, initial=existing_config)
+
     if existing_config is None:
         if header_line_number := request.POST.get('header_line_number', -1):
             file_config.set_header_line_number(int(header_line_number))
@@ -497,7 +533,7 @@ def get_file_config(request, **kwargs):
         save_form_soup = BeautifulSoup(save_form_html, 'html.parser')
         content_div.append(save_form_soup)
 
-    if 'existing_config' in request.POST:
+    if request.htmx.target == "div_id_config_details":
         return HttpResponse(content_div)
 
     return HttpResponse(soup)
@@ -745,6 +781,8 @@ def validate_save_config(request):
         sample_id_col = int(request.POST.get('sample_column', -1))
         comment_col = int(request.POST.get('comment_column', -1))
         file_type = request.POST.get('file_type', '')
+        allow_replicates = bool(request.POST.get('allow_replicates', True))
+        ignore_blank_samples = bool(request.POST.get('ignore_blank_sample_ids', False))
 
         sample_column = column_names[sample_id_col]
         comment_column = column_names[comment_col]
@@ -754,6 +792,10 @@ def validate_save_config(request):
             'file_type': file_type,
             'tab': int(request.POST.get('file_tab', -1)),
             'header_line': int(request.POST.get('header_line_number', -1)),
+            # The wording on the form is "ignore blank sample ids", the way it's used by the SampleFileConfig
+            # is "allow blank sample ids" so it's flipped from what the user is going to select.
+            'allow_blank_sample_ids': not ignore_blank_samples,
+            'allow_replicates': allow_replicates,
             'sample_id_column_name': sample_column[1],
             'comment_column_name': comment_column[1]
         }
@@ -824,8 +866,14 @@ def get_config_load_button(request):
     # <button type="button" class="btn btn-sm btn-primary">{% custom_icon 'arrow-down-square' %} {% trans 'Load columns' %}</button>
 
     if request.POST.get('value_column', '-1') != '-1':
+        url = reverse_lazy('core:form_sample_type_load_file')
+        load_data_attrs = {
+            'class': 'btn btn-sm btn-primary',
+            'hx-post': url,
+            'hx-swap': "none"
+        }
         icon = load_svg('arrow-down-square')
-        button = soup.new_tag("button", attrs={'class': 'btn btn-sm btn-primary'})
+        button = soup.new_tag("button", attrs=load_data_attrs)
         button.append(icon)
         button.string = _("Load Data")
         soup.append(button)
@@ -844,6 +892,53 @@ def get_existing_config_card(request):
     return HttpResponse(html)
 
 
+def create_file_config(request, file_name, content) -> FileConfig:
+    tab_number = int(request.POST.get('file_tab', -1) or -1)
+    header_line = int(request.POST.get('header_line_number', -1) or -1)
+    sample_id_col = int(request.POST.get('sample_column', -1))
+    comment_col = int(request.POST.get('comment_column', -1))
+    allow_replicates = bool(request.POST.get('allow_replicates', True))
+    ignore_blank_sample_ids = bool(request.POST.get('ignore_blank_sample_ids', False))
+
+    file_config = FileConfig(file_name, content, tab_number)
+    file_config.set_header_line_number(header_line)
+    file_config.set_sample_id_column(sample_id_col)
+    file_config.set_comment_column(comment_col)
+    file_config.allow_replicates = allow_replicates
+    file_config.ignore_blank_sample_ids = ignore_blank_sample_ids
+
+    configs = request.POST.getlist('configs')
+    for config in configs:
+        config_column = FileConfigColumns()
+        config_column.value_column = int(request.POST.get(f'config_{config}', '-1'))
+        if (qc := request.POST.get(f'config_{config}_qc_column', 'None')) != 'None':
+            config_column.quality_control_column = int(qc)
+        if (dl := request.POST.get(f'config_{config}_dl_column', 'None')) != 'None':
+            config_column.detection_limit_column = int(dl)
+        if (dt := request.POST.get(f'config_{config}_datatype', 'None')) != 'None':
+            config_column.datatype_id = int(dt)
+        if (alias := request.POST.get(f'config_{config}_name_column', 'None')) != 'None':
+            config_column.alias = alias
+        file_config.append_config_column(config_column)
+
+    return file_config
+
+
+def load_file(request):
+    mission_id = int(request.POST.get('mission_id', '-1') or "-1")
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    file = request.FILES.get('sample_file', None)
+    file_content = BytesIO(file.read())
+
+    file_config = create_file_config(request, file.name, file_content)
+
+    results = parse_sample_file(mission, file_config)
+
+    response = HttpResponse()
+    response['HX-Trigger'] = "update_samples"
+    return response
+
+
 url_patterns = [
     path('sample_config/header/', get_file_config, name='form_sample_type_get_headers'),
 
@@ -857,6 +952,7 @@ url_patterns = [
 
     path('sample_config/config/save/validate/', validate_save_config, name='form_sample_type_validate_save_config'),
     path('sample_config/config/load_button/', get_config_load_button, name='update_config_load_button'),
+    path('sample_config/config/load_file/', load_file, name='form_sample_type_load_file'),
 
     path('sample_config/datatype/update/', update_to_datatype_description_field, name='form_sample_type_get_datatype_method'),
 

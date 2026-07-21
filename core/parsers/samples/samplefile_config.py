@@ -5,6 +5,7 @@ from core.parsers.samples.samplefile_parser_abstract import AbstractFileParser
 from core.parsers.samples.samplefile_parser_csv_or_dat import CSVFileParser
 from core.parsers.samples.samplefile_parser_xls import XLSFileParser
 
+from settingsdb.models import SampleFileConfig, SampleFileConfigColumns
 
 FILE_PARSER_REGISTER = {
     'XLS': XLSFileParser,
@@ -12,10 +13,43 @@ FILE_PARSER_REGISTER = {
     'DAT': CSVFileParser
 }
 
+
+def file_config_from_db(db_config: SampleFileConfig, file_name: str, file_content: BytesIO):
+    fc = FileConfig(file_name, content=file_content, tab=db_config.tab)
+    fc.set_selected_tab(db_config.tab)
+    fc.set_header_line_number((db_config.header_line or 0) + 1)
+    # set allow_replicates / ignore_blank_sample_ids mapping
+    fc.allow_replicates = db_config.allow_replicates
+    fc.ignore_blank_sample_ids = not db_config.allow_blank_sample_ids
+    # build value_columns from SampleFileConfigColumns rows
+    fc.set_sample_id_column_by_name(db_config.sample_id_column_name)
+    if db_config.comment_column_name:
+        fc.set_comment_column_by_name(db_config.comment_column_name)
+
+    vcs = []
+    for c in db_config.config_columns.all():
+        vc = FileConfigColumns()
+        vc.alias = c.column_alias
+        # find indices by header name
+        vc.value_column = fc.get_column_index_by_name(c.value_column_name) or -1
+        if c.detection_limit_column_name:
+            vc.detection_limit_column = fc.get_column_index_by_name(c.detection_limit_column_name) or -1
+
+        if c.quality_control_column_name:
+            vc.quality_control_column = fc.get_column_index_by_name(c.quality_control_column_name) or -1
+
+        # if your FileConfigColumns doesn't accept alias attribute, extend or store it externally
+        vcs.append(vc)
+    fc.value_columns = vcs
+    return fc
+
+
 class FileConfigColumns:
+    alias: str = None
     value_column: int = -1
     detection_limit_column: int = -1
     quality_control_column: int = -1
+    datatype_id: int = -1
 
 
 class FileConfig:
@@ -113,9 +147,17 @@ class FileConfig:
 
     def set_column_names(self, column_names: Sequence[str] | None) -> Self:
         self.column_names = column_names
-        self.sample_id_column = -1
-        self.comment_column = -1
-        self.value_columns = None
+        if column_names is None:
+            self.sample_id_column = -1
+            self.comment_column = -1
+            self.value_columns = None
+        return self
+
+    def append_config_column(self, config_column: FileConfigColumns) -> Self:
+        if self.value_columns is None:
+            self.value_columns = []
+
+        self.value_columns.append(config_column)
         return self
 
     def get_column_names(self) -> Sequence[str]:
@@ -135,7 +177,7 @@ class FileConfig:
 
     def get_sample_id_column(self) -> tuple[int, str] | None:
         if self.sample_id_column >= 0:
-            return self.sample_id_column, self.column_names[self.sample_id_column]
+            return self.sample_id_column, self.get_column_names()[self.sample_id_column]
 
         # these expected names are in priority order
         expected_sample_column_names = ['BOTTLE LABEL', 'SAMPLE_ID', 'SAMPLE', 'I.D.']
@@ -147,11 +189,14 @@ class FileConfig:
 
     def get_comment_column(self) -> tuple[int, str] | None:
         if self.comment_column >= 0:
-            return self.comment_column, self.column_names[self.comment_column]
+            return self.comment_column, self.get_column_names()[self.comment_column]
 
         # these expected names are in priority order
         expected_sample_column_names = ['COMMENT', 'COMMENTS']
         return self._find_column_index(expected_sample_column_names)
+
+    def get_parser(self):
+        return self.parser
 
     def __init__(self, filename, content: BytesIO = None, tab: int = -1):
         self.selected_tab = tab

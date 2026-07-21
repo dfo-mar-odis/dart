@@ -8,6 +8,7 @@ import pprint
 from config.tests.DartTestCase import DartTestCase
 from core.tests import CoreFactoryFloor
 from core.parsers.samples import samplefile_parser_file_config
+from core.parsers.samples.samplefile_config import file_config_from_db
 from settingsdb.models import SampleFileConfig, SampleFileConfigColumns
 
 from core import models as core_models
@@ -54,7 +55,8 @@ class TestSampleFileParserFileConfig(DartTestCase):
                             "titrant_uncertainty(ml)","analysis_date","data_file","standards(ml)","blanks(ml)","bottle_volume(ml)",
                             "initial_transmittance(%%)","standard_transmittance0(%%)","comments"]
 
-        df = samplefile_parser_file_config._read_stream_to_df(self.oxygen_stream, self.config)
+        f_config = file_config_from_db(self.config, self.file_name, self.oxygen_stream)
+        df = samplefile_parser_file_config._read_stream_to_df(self.oxygen_stream, f_config)
 
         logger.debug(df.head())
         logger.debug(df.columns)
@@ -63,10 +65,12 @@ class TestSampleFileParserFileConfig(DartTestCase):
         for c in expected_columns:
             assert c in df.columns, f"Column '{c}' was not found in df.columns"
 
+    @tag("samplefile_parser_file_config_test_get_column_defs")
     def test_get_column_defs(self):
         # provided a list of column configurations (SampleFileConfigColumns objects) the
         # _get_column_definitions should return a dictionary of column definitions
-        col_def = samplefile_parser_file_config._get_column_definitions([self.config_column])
+        f_config = file_config_from_db(self.config, self.file_name, self.oxygen_stream)
+        col_def = samplefile_parser_file_config._get_column_definitions_from_value_columns(f_config)
         assert col_def is not None, "Expected a column definition, got None"
         logger.debug(pp.pformat(col_def))
 
@@ -75,7 +79,9 @@ class TestSampleFileParserFileConfig(DartTestCase):
         # This emulates the beginning of the samplefile_parser_file_config.parse_sample_file function
         # the point is to see that sample ids and replicates are being properly processed.
         sample_col_name = (self.config.sample_id_column_name or "").strip().lower()
-        df = samplefile_parser_file_config._read_stream_to_df(self.oxygen_stream, self.config)
+
+        f_config = file_config_from_db(self.config, self.file_name, self.oxygen_stream)
+        df = samplefile_parser_file_config._read_stream_to_df(self.oxygen_stream, f_config)
         for idx, row in df.iterrows():
             # extract sample id cell
             sample_cell = row.get(sample_col_name) if sample_col_name else None
@@ -106,11 +112,13 @@ class TestSampleFileParserFileConfig(DartTestCase):
                 qs = original_filter(*f_args, **f_kwargs)
             return qs
 
+        f_config = file_config_from_db(self.config, self.file_name, self.oxygen_stream)
+
         # Patch the filter call inside the parser module so it returns a QS-like object whose .first() returns our bottle
         with patch('core.parsers.samples.samplefile_parser_file_config.core_models.Bottle.objects.filter', new=fake_filter) as mock_filter:
             # call the parser — it will receive the mocked filter result
             result = samplefile_parser_file_config.parse_sample_file(
-                self.oxygen_stream, self.config, sample_mission, self.file_name
+                self.oxygen_stream, f_config, sample_mission, self.file_name
             )
 
         return  result
@@ -131,13 +139,13 @@ class TestSampleFileParserFileConfig(DartTestCase):
     def test_full_parse_no_alias(self):
         # If no alias is provided to the SampleFileConfig object the function should use the
         # datatype method as the alias if it exists.
-        self.config_column.column_alias = None
-        self.config_column.save()
-
         sample_mission = CoreFactoryFloor.MissionFactory.create(name='TST25013')
 
-        result = self.run_parser_create_bottles(sample_mission)
         datatype = bio_tables_models.BCDataType.objects.get(pk=self.config_column.datatype_id)
+        self.config_column.column_alias = datatype.method
+        self.config_column.save()
+
+        result = self.run_parser_create_bottles(sample_mission)
 
         sample_types = sample_mission.mission_sample_types.all()
         assert len(sample_types) == 1, "Expected exactly one sample type, got {}".format(len(sample_types))
