@@ -1,19 +1,20 @@
-# core/parsers/samples/samplefile_parser_file_config.py
-import io
-import re
-from typing import Optional, Dict, Tuple, Any, List
 import pandas as pd
+
+from typing import Optional, Dict, Tuple, Any, List
 from decimal import Decimal
-from io import BytesIO
 
 from django.db import transaction
+from django.utils.translation import gettext as _
 
-from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
 from core import models as core_models
+from core.form_mission_gear_type import user_logger
+from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
+
 from bio_tables import models as bio_models
 
 import logging
 logger = logging.getLogger(__name__)
+user_logger = logging.getLogger('dart.user')
 
 class ParseResult:
     def __init__(self):
@@ -85,10 +86,7 @@ def _parse_sample_id(cell_value: Any) -> Tuple[int | None, int | None]:
         return int(s), None
 
     # otherwise base id only
-    try:
-        return int(float(s) if '.' in s else s), None
-    except Exception as ex:
-        return None, None
+    return int(float(s) if '.' in s else s), None
 
 
 def _get_column_definitions_from_value_columns(file_config: FileConfig) -> List[dict]:
@@ -208,10 +206,17 @@ def parse_sample_file(
     bcdatatype_cache: Dict[int, bio_models.BCDataType | None] = {}
 
     # Iterate rows
+    total_rows = df.shape[0]
     for idx, row in df.iterrows():
+        user_logger.info(_("Processing Sample Row") + ": %d/%d", idx, total_rows)
         sample_cell = row.get(sample_col_name) if sample_col_name else None
-        base_id, r_id = _parse_sample_id(sample_cell)
-        comment = row.get(comment_col_name, None) if comment_col_name else None
+        try:
+            base_id, r_id = _parse_sample_id(sample_cell)
+        except Exception as ex:
+            # if the ID is a string and can't be parsed as an int, skip it, but make note in case the issue
+            # is a typo that makes the sample ID unparseable
+            logger.exception(ex)
+            continue
 
         if base_id is None:
             if not getattr(file_config, "ignore_blank_sample_ids", False) and last_seen_base_id is not None:
@@ -221,6 +226,8 @@ def parse_sample_file(
                 continue
         else:
             last_seen_base_id = base_id
+
+        comment = row.get(comment_col_name, None) if comment_col_name else None
 
         # Look up the Bottle in mission
         bottle_qs = core_models.Bottle.objects.filter(event__mission=mission, bottle_id=base_id)
@@ -315,6 +322,7 @@ def parse_sample_file(
             ms_type, created = core_models.MissionSampleType.objects.get_or_create(
                 mission=mission,
                 name=alias,
+                datatype=datatype.pk if datatype else None,
                 defaults={"long_name": alias, "priority": 1}
             )
             if created:
@@ -335,7 +343,7 @@ def parse_sample_file(
                 "flag": flag_val,
                 "value": value_num if value_num is not None else None,
                 "limit": None,
-                "datatype": datatype.pk if datatype else None,
+                # "datatype": datatype.pk if datatype else None,
                 "comment": comment
             }
 

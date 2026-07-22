@@ -193,7 +193,19 @@ class ValidationFileCard(forms.CardForm):
 
             li.append(div_row := soup.new_tag('div', attrs={'class': "row"}))
             div_row.append(div := soup.new_tag('div', attrs={'class': "col"}))
-            div.string = f"MID: {error.line} - {error.message}"
+            msg = ""
+            if error.file_name.endswith(".log"):
+                msg = f"MID: {error.line} - {error.message}"
+            elif error.message == "Can only use .str accessor with string values!":
+                if error.line:
+                    msg += f"Line: {error.line} - "
+                msg += _("There might be an issue with data column names being too long which has smushed columns headers together.")
+            else:
+                if error.line:
+                    msg += f"Line: {error.line} - "
+                msg += f"{error.message}"
+
+            div.string = msg
 
             button_attrs = {
                 'class': "btn btn-danger btn-sm col-auto",

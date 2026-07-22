@@ -420,6 +420,7 @@ def get_file_config(request, **kwargs):
         file_config = initialize_file_config(file, initial=existing_config)
     except KeyError:
         existing_config = None
+        existing_config_init = None
         file_config = initialize_file_config(file, initial=existing_config)
 
     if existing_config is None:
