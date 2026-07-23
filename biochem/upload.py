@@ -187,7 +187,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
             event_min_lon = min(event.start_location[1], event.end_location[1]),
             event_max_lon = max(event.start_location[1], event.end_location[1]),
 
-            dis_headr_gear_seq = 90000019,  # typically 90000019, not always
+            dis_headr_gear_seq = bottle.gear_type.gear_seq,
             dis_headr_time_qc_code = 1,
             dis_headr_position_qc_code = 1,
 
