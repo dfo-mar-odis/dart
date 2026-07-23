@@ -10,8 +10,7 @@ from django.db import connections, DatabaseError, OperationalError
 from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
-import bio_tables.models
-from bio_tables.models import BCNatnlTaxonCode
+from bio_tables.models import BCNatnlTaxonCode, BCDataType, BCDataCenter
 from biochem import models
 from biochem.models import BcsD, BcsP, BcdD, BcdP
 from core import models as core_models
@@ -124,7 +123,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
 
     total_bottles = len(bottles)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
-    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
+    institutes = {bcdc.pk: bcdc for bcdc in BCDataCenter.objects.all()}
 
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
@@ -189,7 +188,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
             event_min_lon = min(event.start_location[1], event.end_location[1]),
             event_max_lon = max(event.start_location[1], event.end_location[1]),
 
-            dis_headr_gear_seq = 90000019,  # typically 90000019, not always
+            dis_headr_gear_seq = bottle.gear_type,
             dis_headr_time_qc_code = 1,
             dis_headr_position_qc_code = 1,
 
@@ -241,7 +240,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
     total_bottles = len(bottles)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
 
-    institutes = {bcdc.pk: bcdc for bcdc in bio_tables.models.BCDataCenter.objects.all()}
+    institutes = {bcdc.pk: bcdc for bcdc in BCDataCenter.objects.all()}
 
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
@@ -249,7 +248,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
         event = bottle.event
         mission = event.mission
-        institute: bio_tables.models.BCDataCenter = institutes[mission.data_center]
+        institute: BCDataCenter = institutes[mission.data_center]
 
         if event.actions.filter(type=core_models.ActionType.aborted).exists():
             # we don't load aborted events
@@ -384,11 +383,13 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     samples = samples.select_related(
         'sample__bottle__event__mission',
         'sample__bottle__event__station',
-        'sample__type__datatype'
+        'sample__type'
     )
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+
+    cache_datatypes = {}
 
     for count, ds_sample in enumerate(samples):
         # dis_data_num = count + dis_data_num
@@ -400,7 +401,11 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         mission = event.mission
 
         # Use the row level datatype if provided otherwise use the mission level datatype
-        bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
+        ds_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
+        if ds_data_type not in cache_datatypes:
+            cache_datatypes[ds_data_type] = BCDataType.objects.get(pk=ds_data_type)
+        bc_data_type = cache_datatypes[ds_data_type]
+
         limit = ds_sample.limit if ds_sample.limit else None
         location = event.start_location
 
@@ -417,7 +422,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         bcd_row = models.BcdD(
             dis_data_num=count,
             dis_detail_collector_samp_id=collector_id,
-            dis_detail_data_type_seq = bc_data_type.data_type_seq,
+            dis_detail_data_type_seq = bc_data_type.pk,
             dis_header_start_depth = bottle.pressure,
             dis_header_end_depth = bottle.pressure,
             event_collector_event_id = f'{event.event_id:03d}',

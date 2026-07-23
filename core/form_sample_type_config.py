@@ -418,7 +418,7 @@ def get_file_config(request, **kwargs):
 
     try:
         file_config = initialize_file_config(file, initial=existing_config)
-    except KeyError:
+    except (KeyError, AttributeError) as ex:
         existing_config = None
         existing_config_init = None
         file_config = initialize_file_config(file, initial=existing_config)
