@@ -78,7 +78,7 @@ def add_database(database):
     call_command('migrate', database=mission_database, app_label="core")
 
 
-def connect_database(database):
+def connect_database(database, location=None):
     # if database not in settings.DATABASES:
     if database == 'default':
         return
@@ -91,12 +91,13 @@ def connect_database(database):
         else:
             return
 
-    try:
-        location = models.LocalSetting.objects.get(connected=True)
-    except settingsdb.models.LocalSetting.DoesNotExist as ex:
-        location = models.LocalSetting.objects.order_by('id').first()
-        location.connected = True
-        location.save()
+    if location is None:
+        try:
+            location = models.LocalSetting.objects.get(connected=True)
+        except settingsdb.models.LocalSetting.DoesNotExist as ex:
+            location = models.LocalSetting.objects.order_by('id').first()
+            location.connected = True
+            location.save()
 
     # Someone once recommended that Dart databases start with the DART_ prefix to make it clear they are Dart database.
     # This however maks it a pain to work with on the command line. So now we will check for the database with and

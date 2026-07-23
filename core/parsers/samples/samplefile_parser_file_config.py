@@ -7,7 +7,6 @@ from django.db import transaction
 from django.utils.translation import gettext as _
 
 from core import models as core_models
-from core.form_mission_gear_type import user_logger
 from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
 
 from bio_tables import models as bio_models
@@ -243,10 +242,11 @@ def parse_sample_file(
             value_col = cd["value_col"]
             qc_col = cd.get("qc_col")
             limit_col = cd.get("limit_col")
+
             datatype_id = cd.get("datatype_id", None)
-            if (datatype:=bcdatatype_cache.get(datatype_id, None)) is None and datatype_id is not None:
-                datatype = bio_models.BCDataType.objects.get(pk=datatype_id)
-                bcdatatype_cache[datatype_id] = datatype
+            if datatype_id not in bcdatatype_cache:
+                bcdatatype_cache[datatype_id] = bio_models.BCDataType.objects.get(pk=datatype_id)
+            datatype = bcdatatype_cache[datatype_id]
 
             # Determine replicate index:
             if r_id is not None:
@@ -280,7 +280,13 @@ def parse_sample_file(
             value_num = None
             limit_num = None
             try:
-                if raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)) or (isinstance(raw_value, str) and raw_value.strip() == ""):
+                if str(raw_value).upper() in ["", "NA", "N/A"] or pd.isna(raw_value):
+                    if samples:=bottle.samples.filter(type__datatype=datatype.pk):
+                        sample = samples.first()
+                        if ds_value:=sample.discrete_values.filter(replicate=replicate_idx):
+                            ds_value.delete()
+                    continue
+                elif (raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)) or (isinstance(raw_value, str) and raw_value.strip() == "")):
                     value_num = None
                 else:
                     s = str(raw_value).strip()

@@ -10,6 +10,7 @@ from django.http import HttpResponse
 from django.utils.translation import gettext as _
 from django.db.models import Q, QuerySet
 
+from bio_tables.models import BCDataType
 from config.utils import load_svg
 from core import models as core_models
 from core import forms
@@ -90,9 +91,15 @@ def _validate_sample_ranges(mission) -> [core_models.MissionError]:
     logger_notifications.info(_("Validating Data Ranges"))
     errors: [core_models.MissionError] = []
 
+    datatypes = {}
+
     sample_types: QuerySet[core_models.MissionSampleType] = mission.mission_sample_types.filter(Q(uploads__status=core_models.BioChemUploadStatus.uploaded) | Q(uploads__status=core_models.BioChemUploadStatus.upload))
     for mst in sample_types:
-        range = mst.datatype.data_retrieval
+        if mst.datatype not in datatypes:
+            datatypes[mst.datatype] = BCDataType.objects.get(pk=mst.datatype)
+
+        range = datatypes[mst.datatype].data_retrieval
+
         values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).exclude(flag__exact=4).filter(Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
         if values.exists():
             # mst_id allows us to find the mission sample type later when removing or flagging data
@@ -107,12 +114,35 @@ def _validate_sample_ranges(mission) -> [core_models.MissionError]:
 
     return errors
 
+
+def _validate_sample_qc(mission) -> [core_models.MissionError]:
+    logger_notifications.info(_("Validating Sample QC values"))
+    errors: [core_models.MissionError] = []
+
+    sample_types: QuerySet[core_models.MissionSampleType] = mission.mission_sample_types.filter(Q(uploads__status=core_models.BioChemUploadStatus.uploaded) | Q(uploads__status=core_models.BioChemUploadStatus.upload))
+    for mst in sample_types:
+        values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst, flag__gt=4)
+        if values.exists():
+            # mst_id allows us to find the mission sample type later when removing or flagging data
+            message = "MST_ID [" + str(mst.pk) + "]"
+            message += " : " + str(values.count()) + " " + _("Samples have QC values greater than expected range")
+            message += f" [{range.minimum_value}, {range.maximum_value}]"
+            err = core_models.MissionError(mission=mission, type=core_models.ErrorType.biochem,
+                                           code=BIOCHEM_CODES.DATA_BAD_RANGE.value,
+                                           message=message
+                                           )
+            errors.append(err)
+
+    return errors
+
+
 def validate_mission(mission: core_models.Mission) -> [core_models.MissionError]:
     errors = []
     errors += _validation_mission_descriptor(mission)
     errors += _validate_mission_dates(mission)
     errors += _validate_bottles(mission)
     errors += _validate_sample_ranges(mission)
+    errors += _validate_sample_qc(mission)
 
     return errors
 
@@ -270,12 +300,16 @@ def flag_data(request, mission_id, error_id):
 def remove_data(request, mission_id, error_id):
     error = core_models.MissionError.objects.get(mission__id=mission_id, pk=error_id)
     match = re.search(r'MST_ID \[(\d+)\]', error.message)
+    datatypes = {}
     if match:
         mst_id = int(match.group(1))
 
         mission = error.mission
         mst = mission.mission_sample_types.get(pk=mst_id)
-        range = mst.datatype.data_retrieval
+        if mst.datatype not in datatypes:
+            datatypes[mst.datatype] = BCDataType.objects.get(pk=mst.datatype)
+
+        range = datatypes[mst.datatype].data_retrieval
 
         values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).filter(
             Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
