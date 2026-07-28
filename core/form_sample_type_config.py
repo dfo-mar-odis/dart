@@ -1,4 +1,5 @@
 import io
+import re
 from io import BytesIO
 
 from bs4 import BeautifulSoup
@@ -14,17 +15,19 @@ from django.urls import path, reverse_lazy
 from django import forms
 from django.utils.translation import gettext as _
 
+from core.form_biochem_batch import BIOCHEM_BATCH_STATUS_ALERT
 from settingsdb.models import SampleFileConfig, SampleFileConfigColumns
 from bio_tables.models import BCDataType
 from config.utils import load_svg
 
-from core.forms import AlertSoup
+from core.forms import AlertSoup, StatusAlert
 from core import models as core_models
 from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
 from core.parsers.samples.samplefile_parser_file_config import parse_sample_file
 
 import logging
-logger = logging.getLogger('dart.user')
+logger = logging.getLogger('dart')
+user_logger = logging.getLogger('dart.user')
 
 class ExistingConfigForm(forms.Form):
 
@@ -83,8 +86,9 @@ class FileConfigSaveForm(forms.Form):
         load_attrs = {
             'title': _("Load data using the current configuration"),
             'hx-post': reverse_lazy('core:form_sample_type_load_file'),
-            'hx-swap': 'none',
+            'hx-target': '#load_sample_notification',
             'hx-indicator': ".htmx-indicator",
+            'hx-trigger': "click, load_sample_file from:body"
         }
 
         initial = kwargs.get('initial', {})
@@ -455,8 +459,8 @@ def get_file_config(request, **kwargs):
     content_div.append(BeautifulSoup(html, 'html.parser'))
 
     ############### Set up the File Config Row subform ###############
-    # The File Config Row form specifies what column contains values, detection limits, quality control,
-    #  the datatype and adds a label/alias for the the row.
+    # The File Config form specifies what column contains values, detection limits, quality control,
+    # the datatype and adds a label/alias for the row.
     if file_config.get_header_line_number() is not None:
         exclude: list[int] = []
         if sid_col := file_config.get_sample_id_column():
@@ -537,6 +541,8 @@ def get_file_config(request, **kwargs):
     if request.htmx.target == "div_id_config_details":
         return HttpResponse(content_div)
 
+    # add a spot to insert notifications
+    soup.append(soup.new_tag('div', id='load_sample_notification'))
     return HttpResponse(soup)
 
 
@@ -846,7 +852,7 @@ def validate_save_config(request):
             alert_soup.add_button(button)
 
         except Exception as ex:
-            logger.exception(ex)
+            user_logger.exception(ex)
             alert_soup = AlertSoup('validate_config_form')
             alert_soup.set_status('danger').add_message(str(ex))
 
@@ -925,7 +931,29 @@ def create_file_config(request, file_name, content) -> FileConfig:
     return file_config
 
 
+def split_row_error(message: str):
+    match = re.match(r"^Row\s+(\d+)(?:\s+.*)?\s*:\s*(.*)$", message.strip())
+    if not match:
+        return None, message.strip()
+
+    row_number = int(match.group(1))
+    message_body = match.group(2).strip()
+    return row_number, message_body
+
+
 def load_file(request):
+    msg_alert = StatusAlert("load_sample_notification_alert", "Preparing to load...")
+    if not msg_alert.is_socket_connected(user_logger.name):
+        msg_alert.set_socket(user_logger.name)
+        msg_alert.include_progress_bar()
+        response = HttpResponse(msg_alert)
+        response['HX-Trigger-After-Settle'] = "load_sample_file"
+        return response
+
+    msg_alert.include_close_button()
+    msg_alert.set_message("Complete")
+    msg_alert.set_type("success")
+
     mission_id = int(request.POST.get('mission_id', '-1') or "-1")
     mission = core_models.Mission.objects.get(pk=mission_id)
     file = request.FILES.get('sample_file', None)
@@ -934,8 +962,23 @@ def load_file(request):
     file_config = create_file_config(request, file.name, file_content)
 
     results = parse_sample_file(mission, file_config)
+    core_models.FileError.objects.filter(file_name=file.name, type=core_models.ErrorType.sample, code__in=[300]).delete()
+    if hasattr(results, 'errors'):
+        err_list = msg_alert.new_tag("ul")
+        err_list.attrs["class"] = "vertical-scrollbar"
+        for err in results.errors:
+            err_list.append(li:=msg_alert.new_tag("li"))
+            li.string = err
 
-    response = HttpResponse()
+            row, body = split_row_error(err)
+            core_models.FileError.objects.create(mission=mission, file_name=file.name, line=row, message=body, type=core_models.ErrorType.sample, code=300)
+
+        if len(err_list.find_all("li")) > 0:
+            msg_alert.set_message("Errors:")
+            msg_alert.set_type('warning')
+            msg_alert.get_message_container().append(err_list)
+
+    response = HttpResponse(msg_alert)
     response['HX-Trigger'] = "update_samples"
     return response
 

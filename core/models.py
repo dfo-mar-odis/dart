@@ -735,6 +735,7 @@ class AbstractError(models.Model):
     # 1-99 is used by the Plankton Parser
     # 100-199 is used by btl_ros for Parsing BTL files
     # 200-299 is used by event_csv for Parsing CSV event files
+    # 300-399 is used by the Sample parser
     # 1000-1999 is used by core.form_mission_gear_type
     # 2000-2999 is used by core.form_biochem_pre_validation
     # 3000-3999 is used by biochem.upload

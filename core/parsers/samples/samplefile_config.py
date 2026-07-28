@@ -166,7 +166,7 @@ class FileConfig:
 
         line: int = self.get_header_line_number()
         if self.column_names is None and line > 0:
-            self.column_names = self.parser.get_column_names(line)
+            self.column_names = self.parser.get_column_names(line, self.get_selected_tab())
             self._clean_column_names()
 
         return self.column_names

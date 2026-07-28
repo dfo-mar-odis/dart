@@ -13,6 +13,9 @@ class LocalSetting(models.Model):
 
     connected = models.BooleanField(verbose_name="Connected", default=False)
 
+    def __str__(self):
+        return f"{self.database_location} - Connected: {self.connected}"
+
 
 class GlobalSampleTypeCategory(models.Model):
     name = models.CharField(verbose_name="Sample Type Category", max_length=50, unique=True)

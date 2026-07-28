@@ -206,6 +206,7 @@ def parse_sample_file(
 
     # Iterate rows
     total_rows = df.shape[0]
+    skip_lines = file_config.get_header_line_number()
     for idx, row in df.iterrows():
         user_logger.info(_("Processing Sample Row") + ": %d/%d", idx, total_rows)
         sample_cell = row.get(sample_col_name) if sample_col_name else None
@@ -221,7 +222,7 @@ def parse_sample_file(
             if not getattr(file_config, "ignore_blank_sample_ids", False) and last_seen_base_id is not None:
                 base_id = last_seen_base_id
             else:
-                result.errors.append(f"Row {idx+1}: no sample id found and no previous sample to attach as replicate")
+                result.errors.append(f"Row {idx+skip_lines+1}: no sample id found and no previous sample to attach as replicate")
                 continue
         else:
             last_seen_base_id = base_id
@@ -233,7 +234,7 @@ def parse_sample_file(
         bottle = bottle_qs.first()
 
         if not bottle:
-            result.errors.append(f"Row {idx+1}: Bottle not found for sample id '{base_id}' (parsed from '{sample_cell}')")
+            result.errors.append(f"Row {idx+skip_lines+1}: Bottle not found for sample id '{base_id}' (parsed from '{sample_cell}')")
             continue
 
         # For each configured data column, create sample and discrete value
@@ -257,7 +258,7 @@ def parse_sample_file(
                 replicate_counters[key] = replicate_idx
 
             if replicate_idx > 1 and not getattr(file_config, "allow_replicates", True):
-                result.errors.append(f"Row {idx+1} col {value_col}: replicate found for sample '{base_id}' but replicates are disabled")
+                result.errors.append(f"Row {idx+skip_lines+1} col {value_col}: replicate found for sample '{base_id}' but replicates are disabled")
                 continue
 
             # Fetch the value(s) from the row (some columns may not be present)
@@ -265,7 +266,7 @@ def parse_sample_file(
             if value_col in row.index:
                 raw_value = row.get(value_col)
             else:
-                result.errors.append(f"Row {idx+1}: expected value column '{value_col}' not found in file")
+                result.errors.append(f"Row {idx+skip_lines+1}: expected value column '{value_col}' not found in file")
                 continue
 
             raw_limit = None
@@ -364,6 +365,6 @@ def parse_sample_file(
                     core_models.DiscreteSampleValue.objects.create(**dsv_kwargs)
                     result.values_created += 1
             except Exception as e:
-                result.errors.append(f"Row {idx+1} alias '{alias}': failed to create DiscreteSampleValue - {e}")
+                result.errors.append(f"Row {idx+skip_lines+1} alias '{alias}': failed to create DiscreteSampleValue - {e}")
 
     return result
