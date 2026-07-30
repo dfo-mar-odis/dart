@@ -15,7 +15,6 @@ from core import models as core_models
 logger = logging.getLogger(f"dart.{__name__}")
 logger_notifications = logging.getLogger('dart.user.andes')
 
-
 def get_or_create_file_config() -> QuerySet[FileConfiguration]:
     file_type = 'andes_json'
     # These are all things the Elog parser requires, so we should probably figure out how to tackle them when reading
@@ -75,11 +74,15 @@ def parse_instruments(mission: core_models.Mission, file_name: str, instruments:
     errors = []
 
     for instrument in instruments:
-        name = instrument[config.get(required_field='instrument_name').mapped_field]
+        name: str = instrument[config.get(required_field='instrument_name').mapped_field]
         type_name = instrument[config.get(required_field='instrument_type').mapped_field]
 
         if type_name.lower() == 'plankton net':
             type_name = 'net'
+            if "202" in name:
+                name = "202um"
+            elif "76" in name:
+                name = "76um"
 
         if not core_models.Instrument.objects.filter(name=name).exists():
             type = core_models.InstrumentType.other
@@ -147,6 +150,10 @@ def parse_events(mission: core_models.Mission, file_name: str, samples: list[dic
 
             if type_name.lower() == 'plankton net':
                 type_name = 'net'
+                if "202" in instrument_name:
+                    instrument_name = "202um"
+                elif "76" in instrument_name:
+                    instrument_name = "76um"
 
             type = core_models.InstrumentType.other
             if core_models.InstrumentType.has_value(type_name):

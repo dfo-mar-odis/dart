@@ -180,7 +180,7 @@ class FileConfig:
             return self.sample_id_column, self.get_column_names()[self.sample_id_column]
 
         # these expected names are in priority order
-        expected_sample_column_names = ['BOTTLE LABEL', 'SAMPLE_ID', 'SAMPLE', 'I.D.']
+        expected_sample_column_names = ['BOTTLE LABEL', 'DIS_DETAIL_COLLECTOR_SAMPLE_ID', 'SAMPLE_ID', 'SAMPLE', 'I.D.']
         return self._find_column_index(expected_sample_column_names)
 
     def set_comment_column(self, comment_column: int) -> Self:

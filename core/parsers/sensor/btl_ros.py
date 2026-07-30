@@ -699,6 +699,17 @@ class FixStationParser:
             logger_notifications.info(_("Processing data for event") + f" {self.event.event_id} : %d/%d", (index + 1),
                                       data_frame_avg.shape[0])
             bottle_id = self._get_bottle_id(data, column_mapping, bottles_added)
+            if pd.isna(bottle_id):
+                message = _("Bottle ID is null ")
+                message += _("Event") + f" #{self.event.event_id} " + _("Bottle Position") + f" #{(index+2)}"
+
+                logger.warning(message)
+                self.errors_to_create.append(
+                    core_models.FileError(
+                        mission=self.mission, file_name=file_name, line=(index+1),
+                        type=core_models.ErrorType.bottle, code=106, message=message)
+                )
+                continue
 
             if not bottles.filter(bottle_id=bottle_id).exists():
                 message = _("Bottle does not exist for event")
@@ -767,7 +778,14 @@ class FixStationParser:
             self.errors_to_create = []
 
         self.process_sensors(column_headers=parsed.col_headers, sensor_headings=parsed.sensor_headings)
+        if self.errors_to_create:
+            core_models.FileError.objects.bulk_create(self.errors_to_create)
+            self.errors_to_create = []
+
         self.process_data(parsed.btl_filename, parsed.data_df, column_headers=parsed.col_headers)
+        if self.errors_to_create:
+            core_models.FileError.objects.bulk_create(self.errors_to_create)
+            self.errors_to_create = []
 
         is_fixed_station = self.mission.fixed_station
         if is_fixed_station:
@@ -978,7 +996,7 @@ class FixStationBulkParser:
         self.errors_to_create = []
         file_names = [os.path.basename(f) for f in self.file_list]
         core_models.FileError.objects.filter(
-            mission=self.mission, file_name__in=file_names, code__gte=100, code__lte=299
+            mission=self.mission, file_name__in=file_names, code__gte=100, code__lte=199
         ).delete()
 
         parsed_events = self.create_events()
@@ -1000,6 +1018,11 @@ class FixStationBulkParser:
             writer.process_data(parsed.btl_filename, parsed.data_df, column_headers=parsed.col_headers)
             if self.mission.fixed_station:
                 writer.process_actions()
+
+            if writer.errors_to_create:
+                self.errors_to_create += writer.errors_to_create
+                writer.errors_to_create = []
+
             # gear type
             bottles = event.bottles.order_by('closed')
             if bottles.first() and bottles.last():

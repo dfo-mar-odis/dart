@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.utils.translation import gettext as _
+from numpy.ma.extras import row_stack
 
 from core import models as core_models
 from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
@@ -198,8 +199,11 @@ def parse_sample_file(
         return result
 
     # Keep counters/tracking for blanks-based replicates:
-    replicate_counters: Dict[Tuple[str, str], int] = {}
-    last_seen_base_id: Optional[str] = None
+    replicate_counters: Dict[int, int] = {}
+    last_seen_base_id: Optional[int] = None
+
+    mission_sample_types: Dict[(int, int, str), core_models.MissionSampleType] = {}
+    existing_samples: Dict[(int, int), core_models.Sample] = {}
 
     # Pre-cache BCDataType lookups -- FileConfig currently doesn't provide datatype ids, so leave empty
     bcdatatype_cache: Dict[int, bio_models.BCDataType | None] = {}
@@ -208,8 +212,11 @@ def parse_sample_file(
     total_rows = df.shape[0]
     skip_lines = file_config.get_header_line_number()
     for idx, row in df.iterrows():
+        row_index = idx + skip_lines + 1 #  used for debug statements
+
         user_logger.info(_("Processing Sample Row") + ": %d/%d", idx, total_rows)
         sample_cell = row.get(sample_col_name) if sample_col_name else None
+
         try:
             base_id, r_id = _parse_sample_id(sample_cell)
         except Exception as ex:
@@ -219,13 +226,29 @@ def parse_sample_file(
             continue
 
         if base_id is None:
-            if not getattr(file_config, "ignore_blank_sample_ids", False) and last_seen_base_id is not None:
-                base_id = last_seen_base_id
+            if not getattr(file_config, "ignore_blank_sample_ids", False):
+                if last_seen_base_id is not None:
+                    base_id = last_seen_base_id
+                else:
+                    result.errors.append(f"Row {row_index}: no sample id found and no previous sample to attach as replicate")
+                    continue
             else:
-                result.errors.append(f"Row {idx+skip_lines+1}: no sample id found and no previous sample to attach as replicate")
+                # ignore this row.
                 continue
         else:
             last_seen_base_id = base_id
+
+        # Determine replicate index:
+        if r_id is not None:
+            replicate_idx = r_id
+        else:
+            replicate_idx = replicate_counters.get(base_id, 0) + 1
+            replicate_counters[base_id] = replicate_idx
+
+        if replicate_idx > 1 and not getattr(file_config, "allow_replicates", True):
+            result.errors.append(
+                f"Row {row_index}: replicate found for sample '{base_id}' but replicates are disabled")
+            continue
 
         comment = row.get(comment_col_name, None) if comment_col_name else None
 
@@ -234,7 +257,7 @@ def parse_sample_file(
         bottle = bottle_qs.first()
 
         if not bottle:
-            result.errors.append(f"Row {idx+skip_lines+1}: Bottle not found for sample id '{base_id}' (parsed from '{sample_cell}')")
+            result.errors.append(f"Row {row_index}: Bottle not found for sample id '{base_id}' (parsed from '{sample_cell}')")
             continue
 
         # For each configured data column, create sample and discrete value
@@ -249,24 +272,12 @@ def parse_sample_file(
                 bcdatatype_cache[datatype_id] = bio_models.BCDataType.objects.get(pk=datatype_id)
             datatype = bcdatatype_cache[datatype_id]
 
-            # Determine replicate index:
-            if r_id is not None:
-                replicate_idx = r_id
-            else:
-                key = (str(base_id), alias)
-                replicate_idx = replicate_counters.get(key, 0) + 1
-                replicate_counters[key] = replicate_idx
-
-            if replicate_idx > 1 and not getattr(file_config, "allow_replicates", True):
-                result.errors.append(f"Row {idx+skip_lines+1} col {value_col}: replicate found for sample '{base_id}' but replicates are disabled")
-                continue
-
             # Fetch the value(s) from the row (some columns may not be present)
             raw_value = None
             if value_col in row.index:
                 raw_value = row.get(value_col)
             else:
-                result.errors.append(f"Row {idx+skip_lines+1}: expected value column '{value_col}' not found in file")
+                result.errors.append(f"Row {row_index}: expected value column '{value_col}' not found in file")
                 continue
 
             raw_limit = None
@@ -279,7 +290,6 @@ def parse_sample_file(
 
             # Interpret value: handle detection limits like "<0.05"
             value_num = None
-            limit_num = None
             try:
                 if str(raw_value).upper() in ["", "NA", "N/A"] or pd.isna(raw_value):
                     if samples:=bottle.samples.filter(type__datatype=datatype.pk):
@@ -287,36 +297,24 @@ def parse_sample_file(
                         if ds_value:=sample.discrete_values.filter(replicate=replicate_idx):
                             ds_value.delete()
                     continue
-                elif (raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)) or (isinstance(raw_value, str) and raw_value.strip() == "")):
+                elif (raw_value is None or (isinstance(raw_value, float) and pd.isna(raw_value)) or
+                      (isinstance(raw_value, str) and raw_value.strip() == "")):
                     value_num = None
                 else:
-                    s = str(raw_value).strip()
-                    if s.startswith("<"):
-                        value_num = None
-                        try:
-                            limit_num = Decimal(s.lstrip("<").strip())
-                        except Exception:
-                            limit_num = None
-                    else:
-                        try:
-                            value_num = float(s)
-                        except Exception:
-                            value_num = None
-            except Exception:
-                value_num = None
+                    value_num = Decimal(str(raw_value).strip())
 
-            if raw_limit is not None and raw_limit != "" and limit_num is None:
+            except Exception:
+                result.errors.append(f"Row {row_index}: Could not parse value '{raw_value}'")
+                continue
+
+            limit_num = None
+            if raw_limit is not None and raw_limit != "":
                 try:
                     limit_num = Decimal(str(raw_limit).strip())
+                    limit_num = None if pd.isna(limit_num) else limit_num
                 except Exception:
-                    t = str(raw_limit).strip()
-                    if t.startswith("<"):
-                        try:
-                            limit_num = Decimal(t.lstrip("<").strip())
-                        except Exception:
-                            limit_num = None
-                    else:
-                        limit_num = None
+                    result.errors.append(f"Row {row_index}: Could not parse detection limit '{raw_limit}'")
+                    limit_num = None
 
             flag_val = None
             if raw_flag is not None and raw_flag != "":
@@ -325,37 +323,44 @@ def parse_sample_file(
                 except Exception:
                     flag_val = None
 
-            # Get or create mission sample type by alias name
-            ms_type, created = core_models.MissionSampleType.objects.get_or_create(
-                mission=mission,
-                name=alias,
-                datatype=datatype.pk if datatype else None,
-                defaults={"long_name": alias, "priority": 1}
-            )
-            if created:
-                result.samples_created += 1
+            mst_key = (mission.pk, datatype.pk if datatype else None, alias)
+            if mst_key not in mission_sample_types:
+                # Get or create mission sample type by alias name
+                ms_type, created = core_models.MissionSampleType.objects.get_or_create(
+                    mission=mission,
+                    name=alias,
+                    datatype=datatype.pk if datatype else None,
+                    defaults={"long_name": alias, "priority": 1}
+                )
+                mission_sample_types[mst_key] = ms_type
+                if created:
+                    result.samples_created += 1
 
-            sample_obj, screated = core_models.Sample.objects.get_or_create(
-                bottle=bottle,
-                type=ms_type,
-                defaults={"file": file_name}
-            )
-            if screated:
-                result.samples_created += 1
+            ms_type = mission_sample_types[mst_key]
+
+            samp_key = (bottle.pk, ms_type.pk)
+            if samp_key not in existing_samples:
+                sample_obj, screated = core_models.Sample.objects.get_or_create(
+                    bottle=bottle,
+                    type=ms_type,
+                    defaults={"file": file_name}
+                )
+                existing_samples[samp_key] = sample_obj
+                if screated:
+                    result.samples_created += 1
+
+            sample_obj = existing_samples[samp_key]
 
             # Create discrete value row
             dsv_kwargs = {
                 "sample": sample_obj,
                 "replicate": replicate_idx,
                 "flag": flag_val,
-                "value": value_num if value_num is not None else None,
-                "limit": None,
+                "value": value_num,
+                "limit": limit_num,
                 # "datatype": datatype.pk if datatype else None,
                 "comment": comment
             }
-
-            if limit_num is not None:
-                dsv_kwargs["limit"] = Decimal(limit_num) if not isinstance(limit_num, Decimal) else limit_num
 
             try:
                 if (dsv := sample_obj.discrete_values.filter(replicate=replicate_idx)).exists():
@@ -365,6 +370,6 @@ def parse_sample_file(
                     core_models.DiscreteSampleValue.objects.create(**dsv_kwargs)
                     result.values_created += 1
             except Exception as e:
-                result.errors.append(f"Row {idx+skip_lines+1} alias '{alias}': failed to create DiscreteSampleValue - {e}")
+                result.errors.append(f"Row {row_index} alias '{alias}': failed to create DiscreteSampleValue - {e}")
 
     return result

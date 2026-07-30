@@ -196,7 +196,7 @@ def validate_net_event(event: core_models.Event) -> list[core_models.EventError]
         return validation_errors
 
     if not event.attachments.filter(Q(name__iexact='202um') | Q(name__iexact='76um')).exists():
-        if event.instrument.name != ('202um' or '76um'):
+        if event.instrument.name not in ['202um', '76um']:
             message = _("The nets name must be 202um or 76um or the event must have a '202um' or '76um' attachment")
             err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
