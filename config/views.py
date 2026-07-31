@@ -15,7 +15,7 @@ from biochem import models as upload_models
 class GenericViewMixin(ContextMixin):
     page_title = None
     home_url = reverse_lazy('settingsdb:mission_filter')
-    theme = 'light'
+    theme = 'dark'
     settings_url = None
     help_text = None
 

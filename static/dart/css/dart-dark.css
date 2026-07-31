@@ -1,3 +1,7 @@
+body, body *:not(.btn-primary, svg) {
+    color: #cfcfcf;
+}
+
 .selectedBg {
     --bs-table-striped-bg: #3c5943;
     --bs-table-bg: #3c5943;
@@ -13,4 +17,14 @@
     --bs-table-bg: #643665;
 }
 
-nav.nav
+.table:not(caption)>*>* {
+    --bs-table-color-type: #cfcfcf;
+}
+
+.btn-primary {
+    --bs-btn-color: #cfcfcf;
+}
+
+button svg.bi.bi-caret-down path {
+    color: #000;
+}
