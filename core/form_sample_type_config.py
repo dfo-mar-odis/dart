@@ -1,6 +1,8 @@
 import io
 import re
+from http.client import responses
 from io import BytesIO
+from typing import Any
 
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
@@ -15,12 +17,11 @@ from django.urls import path, reverse_lazy
 from django import forms
 from django.utils.translation import gettext as _
 
-from core.form_biochem_batch import BIOCHEM_BATCH_STATUS_ALERT
 from settingsdb.models import SampleFileConfig, SampleFileConfigColumns
 from bio_tables.models import BCDataType
 from config.utils import load_svg
 
-from core.forms import AlertSoup, StatusAlert
+from core.forms import AlertSoup, StatusAlert, CollapsableCardSoup
 from core import models as core_models
 from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
 from core.parsers.samples.samplefile_parser_file_config import parse_sample_file
@@ -40,7 +41,7 @@ class ExistingConfigForm(forms.Form):
             'hx-post': reverse_lazy('core:form_sample_type_get_headers'),
             'hx-trigger': 'change, update_config_table from:body',
             'hx-target': '#div_id_config_details',
-            'hx-include': "[existing_config='existing_config']"
+            #'hx-include': "[existing_config='existing_config']"
         }
 
         config_update_attrs = {
@@ -211,15 +212,22 @@ class FileValueForm(forms.Form):
 
         self.fields['datatype'].choices = datatype_choices
 
+        icon = load_svg("plus-square")
         attrs = {
             'title': _("Add to configuration"),
-            'hx-post': reverse_lazy('core:form_sample_type_validate_value_form'),
-            'hx-target': "#div_id_sample_value_form_content",
-            'hx-swap': "outerHTML"
+            'hx-swap': "outerHTML",
+            'hx-target': "#div_id_sample_value_form_content"
         }
+        if 'config' in self.initial:
+            load_btn_label = _("Update load table")
+            config_label = self.initial.get('config', None)
+            config = config_label.split('_')[1]
+            attrs['hx-post'] = reverse_lazy('core:form_sample_type_validate_value_form', args=[config])
+        else:
+            load_btn_label = _("Add to load table")
+            attrs['hx-post'] = reverse_lazy('core:form_sample_type_validate_value_form')
 
-        icon = load_svg("plus-square")
-        add_button = StrictButton(f"{icon} {_("Add to load table")}", **attrs, css_class='btn btn-primary btn-sm')
+        add_button = StrictButton(f"{icon} {load_btn_label}", **attrs, css_class='btn btn-primary btn-sm')
 
         form_attrs = {
             'hx-post': reverse_lazy('core:form_sample_type_get_value_form'),
@@ -356,6 +364,42 @@ class FileConfigForm(forms.Form):
             tab_header_row.fields.insert(0, file_tab_column)
 
 
+def _get_config_details(config_prefix: str, input_dict: dict[str, str], column_names: dict[str, str]) -> dict[str, Any]:
+    value_col_id = input_dict.get(f'{config_prefix}', -1)
+    dl_col_id = input_dict.get(f'{config_prefix}_dl_column', None)
+    qc_col_id = input_dict.get(f'{config_prefix}_qc_column', None)
+    alias_col = input_dict.get(f'{config_prefix}_name_column', None)
+    datatype_col = input_dict.get(f'{config_prefix}_datatype', None)
+
+    value_col = column_names[int(value_col_id)]
+    config_attrs = {
+        'value_column_name': value_col[1],
+        'column_alias': None,
+        'datatype_id': None,
+        'detection_limit_column_name': None,
+        'quality_control_column_name': None,
+    }
+
+    if alias_col and alias_col != 'None':
+        config_attrs['column_alias'] = alias_col
+
+    if datatype_col and datatype_col != 'None':
+        config_attrs['datatype_id'] = datatype_col
+        if config_attrs['column_alias'] is None:
+            datatype = BCDataType.objects.get(pk=datatype_col)
+            config_attrs['column_alias'] = datatype.method
+
+    if dl_col_id and dl_col_id != 'None':
+        dl_col = column_names[int(dl_col_id)]
+        config_attrs['detection_limit_column_name'] = dl_col[1]
+
+    if qc_col_id and qc_col_id != 'None':
+        qc_col = column_names[int(qc_col_id)]
+        config_attrs['quality_control_column_name'] = qc_col[1]
+
+    return config_attrs
+
+
 def initialize_file_config(file, initial: SampleFileConfig = None) -> FileConfig:
     # Create and populate the FileConfig object that holds all the parsing information. This object is like the
     # settingsdb.models.SampleFileConfig object with the settingsdb.models.SampleFileConfigColumns, but it is a
@@ -452,11 +496,18 @@ def get_file_config(request, **kwargs):
     content_div = soup.new_tag('div', id='div_id_config_details')
     soup.append(content_div)
 
+    # make a collapsable card so the forms to create configs aren't always taking up space.
+    expanded = (request.htmx and request.htmx.trigger not in ["id_input_sample_file", "id_existing_config"])
+    add_config_card = CollapsableCardSoup("config_collapse", _("Add/Update Configuration Details"), expanded=expanded)
+    content_div.append(add_config_card)
+
+    add_config_card_content = soup.find(id=add_config_card.get_body_id())
+
     ############### Set up the File Config subform ###############
 
     form = FileConfigForm(file_config)
     html = render_crispy_form(form)
-    content_div.append(BeautifulSoup(html, 'html.parser'))
+    add_config_card_content.append(BeautifulSoup(html, 'html.parser'))
 
     ############### Set up the File Config Row subform ###############
     # The File Config form specifies what column contains values, detection limits, quality control,
@@ -476,7 +527,7 @@ def get_file_config(request, **kwargs):
         value_form = FileValueForm(column_names)
         value_form_html = render_crispy_form(value_form)
         value_form_soup = BeautifulSoup(value_form_html, 'html.parser')
-        content_div.append(value_form_soup)
+        add_config_card_content.append(value_form_soup)
 
         config_row_context = {}
         if existing_config:
@@ -505,6 +556,7 @@ def get_file_config(request, **kwargs):
                     datatype = BCDataType.objects.get(pk=row.datatype_id)
 
                 config_row = {
+                    'config_id': row.pk,
                     'value_id': value_col[0],
                     'dl_id': dl_col[0] if dl_col else None,
                     'qc_id': qc_col[0] if qc_col else None,
@@ -568,6 +620,7 @@ def update_value_form(request, **kwargs):
     initial = {}
     if 'column_id' in kwargs:
         prefix = f'config_{kwargs["column_id"]}'
+        initial['config'] = f"#{prefix}"
         initial['value_column'] = request.POST.get(prefix, None)
         initial['detection_limit_column'] = request.POST.get(f"{prefix}_dl_column", None)
         initial['quality_control_column'] = request.POST.get(f"{prefix}_qc_column", None)
@@ -627,7 +680,7 @@ def get_config_soup(request) -> BeautifulSoup | None:
     return None
 
 
-def validate_config(request):
+def validate_config(request, **kwargs):
 
     file = request.FILES.get('sample_file', None)
     if not file:
@@ -636,27 +689,37 @@ def validate_config(request):
         return HttpResponse(soup)
 
     column_names = get_file_columns(request)
-    form = FileValueForm(column_names, data=request.POST)
+    if 'column_id' in kwargs:
+        form = FileValueForm(column_names, data=request.POST, initial={'config': f"config_{kwargs['column_id']}"})
+    else:
+        form = FileValueForm(column_names, data=request.POST)
+
     if form.is_valid():
         crispy_html = render_crispy_form(form)
         soup = BeautifulSoup(crispy_html, 'html.parser')
+        if 'column_id' in kwargs:
+            response = HttpResponse(soup)
+            response['HX-Trigger'] = f"update_config_{kwargs['column_id']}"
+            return response
+
         form_div = soup.find(id="div_id_sample_value_form_content").find('div')
         form_div.attrs['hx-trigger'] = "load"
-
         form_div.attrs['hx-post'] = reverse_lazy("core:form_sample_type_update_to_config")
+        form_div.attrs['hx-target'] = "#table_id_column_configuration_table tbody"
+        form_div.attrs['hx-indicator'] = "#div_id_indicator_sample_config"
+
         if request.POST.get(f"config_{form.data['value_column']}", -1) == -1:
             form_div.attrs['hx-swap'] = "beforeend"
             form_div.attrs['hx-post'] = reverse_lazy("core:form_sample_type_add_to_config")
 
-        form_div.attrs['hx-target'] = "#table_id_column_configuration_table tbody"
-        form_div.attrs['hx-indicator'] = "#div_id_indicator_sample_config"
         response = HttpResponse(soup)
+
         # response['HX-Trigger'] = f'clear_value_form'
         return response
 
     return HttpResponse(render_crispy_form(form))
 
-def add_to_config(request):
+def add_to_config(request, **kwargs):
     file = request.FILES.get('sample_file', None)
     if file:
         value_column_id = int(request.POST.get('value_column', -1))
@@ -675,7 +738,7 @@ def add_to_config(request):
     return HttpResponse()
 
 
-def update_to_config(request):
+def update_to_config(request, **kwargs):
     file = request.FILES.get('sample_file', None)
     if file:
         value_column_id = int(request.POST.get('value_column', -1))
@@ -728,38 +791,8 @@ def create_sample_config_columns(request, sample_config) -> None:
         sample_config.config_columns.all().delete()
         for config in configs:
             prefix = f"config_{config}"
-            value_col_id = request.POST.get(f'{prefix}', -1)
-            dl_col_id = request.POST.get(f'{prefix}_dl_column', None)
-            qc_col_id = request.POST.get(f'{prefix}_qc_column', None)
-            alias_col = request.POST.get(f'{prefix}_name_column', None)
-            datatype_col = request.POST.get(f'{prefix}_datatype', None)
-
-            value_col = column_names[int(value_col_id)]
-            config_attrs = {
-                'file_config_id': sample_config.pk,
-                'value_column_name': value_col[1],
-                'column_alias': None,
-                'datatype_id': None,
-                'detection_limit_column_name': None,
-                'quality_control_column_name': None,
-            }
-
-            if alias_col and alias_col != 'None':
-                config_attrs['column_alias'] = alias_col
-
-            if datatype_col and datatype_col != 'None':
-                config_attrs['datatype_id'] = datatype_col
-                if config_attrs['column_alias'] is None:
-                    datatype = BCDataType.objects.get(pk=datatype_col)
-                    config_attrs['column_alias'] = datatype.method
-
-            if dl_col_id and dl_col_id != 'None':
-                dl_col = column_names[int(dl_col_id)]
-                config_attrs['detection_limit_column_name'] = dl_col[1]
-
-            if qc_col_id and qc_col_id != 'None':
-                qc_col = column_names[int(qc_col_id)]
-                config_attrs['quality_control_column_name'] = qc_col[1]
+            config_attrs = _get_config_details(prefix, request.POST, column_names)
+            config_attrs['file_config_id'] = sample_config.pk
 
             SampleFileConfigColumns.objects.create(**config_attrs)
 
@@ -990,6 +1023,7 @@ url_patterns = [
     path('sample_config/value/<int:column_id>/', update_value_form, name='form_sample_type_get_value_form'),
 
     path('sample_config/config/validate/', validate_config, name='form_sample_type_validate_value_form'),
+    path('sample_config/config/validate/<int:column_id>/', validate_config, name='form_sample_type_validate_value_form'),
     path('sample_config/config/add/', add_to_config, name='form_sample_type_add_to_config'),
     path('sample_config/config/update/', update_to_config, name='form_sample_type_update_to_config'),
     path('sample_config/config/remove/<int:column_id>/', remove_from_config, name='form_sample_type_remove_from_config'),

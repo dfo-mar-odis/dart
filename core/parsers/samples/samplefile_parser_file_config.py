@@ -204,6 +204,7 @@ def parse_sample_file(
 
     mission_sample_types: Dict[(int, int, str), core_models.MissionSampleType] = {}
     existing_samples: Dict[(int, int), core_models.Sample] = {}
+    create_discrete_values: List[core_models.DiscreteSampleValue] = []
 
     # Pre-cache BCDataType lookups -- FileConfig currently doesn't provide datatype ids, so leave empty
     bcdatatype_cache: Dict[int, bio_models.BCDataType | None] = {}
@@ -367,9 +368,16 @@ def parse_sample_file(
                     dsv.update(**dsv_kwargs)
                     result.values_updated += 1
                 else:
-                    core_models.DiscreteSampleValue.objects.create(**dsv_kwargs)
-                    result.values_created += 1
+                    create_discrete_values.append(core_models.DiscreteSampleValue(**dsv_kwargs))
+                    if len(create_discrete_values) > 100:
+                        core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values)
+                        result.values_created += len(create_discrete_values)
+                        create_discrete_values = []
             except Exception as e:
                 result.errors.append(f"Row {row_index} alias '{alias}': failed to create DiscreteSampleValue - {e}")
+
+    if len(create_discrete_values) > 0:
+        core_models.DiscreteSampleValue.objects.bulk_create(create_discrete_values)
+        result.values_created += len(create_discrete_values)
 
     return result

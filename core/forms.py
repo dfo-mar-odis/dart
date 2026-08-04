@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
+from scipy.sparse import expand_dims
 
 from config.utils import load_svg
 
@@ -21,6 +22,30 @@ from . import models
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
 from .consumer import LoggerConsumer
+
+
+class CollapsableCardSoup(BeautifulSoup):
+
+    def get_body_collapse_id(self):
+        return "div_id_card_collapse_" + self.alert_id
+
+    def get_body_id(self):
+        return "div_id_card_body_" + self.alert_id
+
+    def __init__(self, card_name: str, card_title: str, expanded: bool = False, css=None):
+        self.alert_id = card_name
+
+        context = {"card_name": card_name, "card_title": card_title}
+        html = render_to_string("core/components/CollapsableCard.html", context)
+
+        super().__init__(html, "html.parser")
+
+        if css:
+            self.find('div').attrs['class'].append(css)
+
+        if expanded:
+            body = self.find(id=self.get_body_collapse_id())
+            body.attrs['class'].append("show")
 
 
 class AlertSoup(BeautifulSoup):
