@@ -139,6 +139,9 @@ class FileConfig:
             return self.header_line_number
 
         header = self.parser.find_header_line(self.selected_tab)
+        if self.selected_tab == -1:
+            self.selected_tab = self.parser.selected_tab
+
         self.header_line_number = header[0]
         self.column_names = header[1]
         self._clean_column_names()

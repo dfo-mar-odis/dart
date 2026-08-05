@@ -49,7 +49,14 @@ class ExistingConfigForm(forms.Form):
             'hx-trigger': 'update_existing_config from:body',
             'hx-include': "#id_form_load_samples"
         }
-        config_choices = [(c.pk, f"{c.name} - {c.description if c.description else 'No Description'}") for c in SampleFileConfig.objects.all()]
+        sample_queryset = SampleFileConfig.objects.all()
+        if tab:=self.initial.get('tab', None):
+            sample_queryset = sample_queryset.filter(tab=tab)
+
+        if header_line:=self.initial.get('header_line', None):
+            sample_queryset = sample_queryset.filter(header_line=header_line)
+
+        config_choices = [(c.pk, f"{c.name} - {c.description if c.description else 'No Description'}") for c in sample_queryset]
         self.fields['existing_config'].choices += config_choices
 
         self.helper = FormHelper()
@@ -433,6 +440,7 @@ def get_file_columns(request):
         if request.session.get('sample_file', None) != file.name:
             cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
             request.session['sample_file'] = file.name
+            request.session['sample_file_tab'] = file_config.get_selected_tab()
             request.session['sample_file_column_names'] = cache_columns
 
     columns = request.session.get('sample_file_column_names', []).copy()
@@ -482,15 +490,10 @@ def get_file_config(request, **kwargs):
     if request.session.get('sample_file', None) != file.name:
         cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
         request.session['sample_file'] = file.name
+        request.session['sample_file_tab'] = file_config.get_selected_tab()
         request.session['sample_file_column_names'] = cache_columns
 
-    # Existing Config Form is a dropdown menu to select from pre-existing configs if a config_id is present
-    # that is the default selection in the dropdown.
-    existing_config_form = ExistingConfigForm(initial=existing_config_init)
-    existing_config_html = render_crispy_form(existing_config_form)
-    existing_config_soup = BeautifulSoup(existing_config_html, 'html.parser')
-
-    soup.append(existing_config_soup)
+    soup.append(config_placeholder:=soup.new_tag("div"))
 
     # create a space for the subforms to add data to a file config
     content_div = soup.new_tag('div', id='div_id_config_details')
@@ -590,13 +593,27 @@ def get_file_config(request, **kwargs):
         save_form_soup = BeautifulSoup(save_form_html, 'html.parser')
         content_div.append(save_form_soup)
 
+    if existing_config_init is None and column_names:
+        existing_config_init = {}
+        existing_config_init['file_type'] = file_config.file_type
+        existing_config_init['selected_tab'] = file_config.selected_tab
+        existing_config_init['header_line'] = file_config.header_line_number
+        existing_config_init['sample_column'] = sid_col[1]
+
+    # Existing Config Form is a dropdown menu to select from pre-existing configs if a config_id is present
+    # that is the default selection in the dropdown.
+    existing_config_form = ExistingConfigForm(initial=existing_config_init)
+    existing_config_html = render_crispy_form(existing_config_form)
+    existing_config_soup = BeautifulSoup(existing_config_html, 'html.parser')
+
+    config_placeholder.append(existing_config_soup)
+
     if request.htmx.target == "div_id_config_details":
         return HttpResponse(content_div)
 
     # add a spot to insert notifications
     soup.append(soup.new_tag('div', id='load_sample_notification'))
     return HttpResponse(soup)
-
 
 
 def update_value_form(request, **kwargs):

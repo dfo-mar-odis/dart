@@ -4,6 +4,7 @@ from typing import Sequence
 
 class AbstractFileParser:
     content: BytesIO = None
+    selected_tab: int = -1  # -1 if this is a plain text file like .dat or .csv
 
     def get_tab_names(self) -> Sequence[str] | None:
         raise NotImplementedError
