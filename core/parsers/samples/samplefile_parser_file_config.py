@@ -239,6 +239,11 @@ def parse_sample_file(
         else:
             last_seen_base_id = base_id
 
+        if (mission.start_underway_sample and mission.end_underway_sample and
+                mission.start_underway_sample < base_id < mission.end_underway_sample):
+            # if the id is in the specified underway sample range then we'll skip over processing it
+            continue
+
         # Determine replicate index:
         if r_id is not None:
             replicate_idx = r_id
