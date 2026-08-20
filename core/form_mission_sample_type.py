@@ -330,7 +330,7 @@ def get_samples_queryset(filter_dict: dict, sample_type: core_models.MissionSamp
 
     if sample_type.datatype and 'out_of_range' in filter_dict:
         bounds = BCDataType.objects.get(pk=sample_type.datatype).data_retrieval
-        queryset = queryset.exclude(value__gte=bounds.minimum_value, value__lte=bounds.maximum_value)
+        queryset = queryset.exclude(flag__lt=4).filter(Q(value__lt=bounds.minimum_value) | Q(value__gt=bounds.maximum_value) | Q(flag__gte=4))
 
     return queryset
 

@@ -96,11 +96,7 @@ def _validate_sample_ranges(mission) -> [core_models.MissionError]:
     datatypes = BCDataType.objects.filter(data_type_seq__in=list(mst_datatypes))
 
     for mst in sample_types:
-        if mst.datatype not in datatypes:
-            datatypes[mst.datatype] = BCDataType.objects.get(pk=mst.datatype)
-
         range = datatypes.get(data_type_seq=mst.datatype).data_retrieval
-
         values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).exclude(flag__exact=4).filter(Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
         if values.exists():
             # mst_id allows us to find the mission sample type later when removing or flagging data
@@ -124,8 +120,8 @@ def _validate_sample_qc(mission) -> [core_models.MissionError]:
     mst_datatypes = sample_types.values_list('datatype', flat=True).distinct()
     datatypes = BCDataType.objects.filter(data_type_seq__in=list(mst_datatypes))
     for mst in sample_types:
-        values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst, flag__gt=4)
         range = datatypes.get(data_type_seq=mst.datatype).data_retrieval
+        values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst, flag__gt=4)
         if values.exists():
             # mst_id allows us to find the mission sample type later when removing or flagging data
             message = "MST_ID [" + str(mst.pk) + "]"
