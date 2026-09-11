@@ -309,9 +309,13 @@ def is_number(s):
 
 def validate_bottle_event(event: core_models.Event, bottle_id: int):
     # Throws an exception if the bottle doesn't validate
+    if event.sample_id is None or event.end_sample_id is None:
+        raise ValueError(_("Event is missing a Starting or Ending sample ID event"))
+
     if bottle_id < event.sample_id:
         raise ValueError(_("Bottle ID doesn't match expected IDs for the event"))
-    elif event.end_sample_id:
+
+    if event.end_sample_id:
         if bottle_id > event.end_sample_id:
             raise ValueError(_("Bottle ID doesn't match expected IDs for the event"))
     elif bottle_id > event.sample_id:

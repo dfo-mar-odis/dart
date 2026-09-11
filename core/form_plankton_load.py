@@ -401,7 +401,11 @@ def list_plankton(request, mission_id):
         table_soup = BeautifulSoup(table_html, 'html.parser')
 
         table = table_soup.find('table')
-        sample_th = table.find('thead').find('tr').find('th')
+        sample_tr = table.find('thead').find('tr')
+        if 'style' in sample_tr.attrs:
+            sample_tr.attrs.pop('style')
+
+        sample_th = sample_tr.find('th')
         sample_th.string = ""
 
         database = settings.DATABASES[mission._state.db]['LOADED']
