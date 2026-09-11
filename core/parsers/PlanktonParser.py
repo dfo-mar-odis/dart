@@ -309,7 +309,7 @@ def is_number(s):
 
 def validate_bottle_event(event: core_models.Event, bottle_id: int):
     # Throws an exception if the bottle doesn't validate
-    if event.sample_id is None or event.end_sample_id is None:
+    if event.sample_id is None or (event.instrument.name.upper() == "MULTINET" and event.end_sample_id is None):
         raise ValueError(_("Event is missing a Starting or Ending sample ID event"))
 
     if bottle_id < event.sample_id:
@@ -365,6 +365,8 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
         # it needs to be created and added to the created bottles dictionary
         try:
             event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.net)
+            if event.actions.filter(type=core_models.ActionType.aborted).exists():
+                raise ValueError(_("Aborted Event"))
         except core_models.Event.DoesNotExist as e:
             message = _("Net event matching ID doesn't exist.")
             raise ValueError(message)
@@ -562,9 +564,14 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         try:
             # Do not create bottles if there are issues with the data.
             if not has_errors:
-                bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
-                                              gear_type=gear_type.pk, mesh_size=mesh_size,
-                                              start_pressure=pressure, end_pressure=end_pressure)
+                try:
+                    bottle = get_or_create_bottle(bottle_id, event_id, create_bottles, ringnet_bottles,
+                                                  gear_type=gear_type.pk, mesh_size=mesh_size,
+                                                  start_pressure=pressure, end_pressure=end_pressure)
+                except ValueError as e:
+                    if "ABORTED EVENT" in str(e).upper():
+                        continue
+                    raise e
         except ValueError as e:
             message = str(e)
             message += " " + _("Bottle ID") + f" : {bottle_id}"

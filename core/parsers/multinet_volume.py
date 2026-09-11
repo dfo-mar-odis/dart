@@ -112,7 +112,7 @@ def update_volume_data(volume_data: VolumeParser, mission: models.Mission):
         bottle.volume = net_volume
         update_bottles.append(bottle)
 
-    models.Bottle.objects.bulk_update(update_bottles, ['gear_type_id', 'volume'])
+    models.Bottle.objects.bulk_update(update_bottles, ['gear_type', 'volume'])
 
     if bad_sample_ids:
         raise models.Bottle.DoesNotExist(f"No bottle found for sample ID {', '.join(bad_sample_ids)} in event '{event}'.")

@@ -326,7 +326,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
             event_data_manager_comment = DART_EVENT_COMMENT,
 
             pl_headr_collector_sample_id = bottle.bottle_id,
-            pl_headr_gear_seq = bottle.gear_type.gear_seq,
+            pl_headr_gear_seq = bottle.gear_type,
 
             # This was set to 1 in the existing AZMP Template for phyto
             pl_headr_time_qc_code = 1,
@@ -472,6 +472,10 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample])
         event = bottle.event
         mission = event.mission
 
+        if event.actions.filter(type=core_models.ActionType.aborted).exists():
+            # we don't load aborted events
+            continue
+
         plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type}'
 
         taxonomic_id = existing_taxa[sample.taxa].taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
@@ -483,7 +487,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample])
         bcd_row = models.BcdP(
             plank_data_num=count,
             plank_sample_key_value=plankton_key,
-            pl_gen_national_taxonomic_seq = sample.taxa.pk,
+            pl_gen_national_taxonomic_seq = sample.taxa,
             pl_gen_collector_taxonomic_id = taxonomic_id,
             pl_gen_life_history_seq = sample.stage,
             pl_gen_trophic_seq = 90000000,

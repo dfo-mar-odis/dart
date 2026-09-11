@@ -123,17 +123,7 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
         }
         icon = load_svg("check-square")
 
-        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
-
-    def get_btn_load_volume(self):
-        attrs = {
-            'id': self.get_id_builder().get_button_volume_id(),
-            'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=[self.mission_id]),
-            'hx-swap': 'none',
-        }
-        icon = load_svg("check-square")
-
-        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
+        return StrictButton(f"{icon} {_("Apply Gear Type")}", css_class='btn btn-sm btn-primary', **attrs)
 
     def get_input_gear_code(self):
         attrs = {
@@ -310,6 +300,8 @@ def list_samples(request, mission_id, instrument_type, **kwargs):
         icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
         button_load_volumes = soup.new_tag('button', attrs=attrs)
         button_load_volumes.append(icon)
+        button_load_volumes.append(btn_label := soup.new_tag('span'))
+        btn_label.string = _(" Load Volume Files")
 
         button_row.insert(0, button_load_volumes)
 
