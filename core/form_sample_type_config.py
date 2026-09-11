@@ -488,10 +488,20 @@ def get_file_config(request, **kwargs):
 
     # cache the configuration details if not set or if the file name changed.
     if request.session.get('sample_file', None) != file.name:
-        cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
-        request.session['sample_file'] = file.name
-        request.session['sample_file_tab'] = file_config.get_selected_tab()
-        request.session['sample_file_column_names'] = cache_columns
+        try:
+            cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
+            request.session['sample_file'] = file.name
+            request.session['sample_file_tab'] = file_config.get_selected_tab()
+            request.session['sample_file_column_names'] = cache_columns
+        except ValueError as ex:
+            if str(ex) == "Error reading XLS file: File is not a zip file":
+                soup.append(config_placeholder := soup.new_tag("div"))
+                config_placeholder.append(alert := soup.new_tag("div"))
+                alert.attrs['class'] = "alert alert-warning"
+                alert.string = _("This file may be in an older excel format that can't be read. Open the file in Excel and try saving it in an newer format.")
+                return HttpResponse(soup)
+            else:
+                raise ex
 
     soup.append(config_placeholder:=soup.new_tag("div"))
 

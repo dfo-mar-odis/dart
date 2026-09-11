@@ -54,18 +54,31 @@ def load_biochem_fixtures(database):
         logger.exception(ex)
 
 
-def get_db_location(database):
-    locations = models.LocalSetting.objects.filter(connected=True)
-    if locations.exists():
-        location = locations.first()
+def get_db_location(database, output_directory: str = None):
+    if output_directory:
+        locations = models.LocalSetting.objects.filter(database_location=output_directory)
+        if locations.exists():
+            location = locations.first()
+        else:
+            location = models.LocalSetting.objects.create(database_location=output_directory, connected=False)
+
+        if not location.connected:
+            models.LocalSetting.objects.filter(connected=True).update(connected=False)
+            location.connected = True
+            location.save()
     else:
-        # pk = 1 should always be the default "./missions/" directory
-        location = models.LocalSetting.objects.get(pk=1)
+        locations = models.LocalSetting.objects.filter(connected=True)
+        if locations.exists():
+            location = locations.first()
+        else:
+            # pk = 1 should always be the default "./missions/" directory
+            location = models.LocalSetting.objects.get(pk=1)
 
-    if not os.path.exists(location.database_location):
-        os.makedirs(location.database_location)
+    database_location = location.database_location
+    if not os.path.exists(database_location):
+        os.makedirs(database_location)
 
-    return os.path.join(location.database_location, f'{database}.sqlite3')
+    return os.path.join(database_location, f'{database}.sqlite3')
 
 
 def add_database(database):
