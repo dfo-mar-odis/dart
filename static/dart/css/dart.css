@@ -69,6 +69,10 @@ table.dataframe thead th {
     background-clip: padding-box;
 }
 
+table.dataframe thead tr {
+    text-align: left;
+}
+
 .vertical-scrollbar {
     position: relative;
     height: 400px;

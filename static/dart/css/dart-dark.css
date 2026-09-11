@@ -28,3 +28,7 @@ body, body *:not(.btn-primary, svg) {
 button svg.bi.bi-caret-down path {
     color: #000;
 }
+
+table.dataframe thead th {
+    background-color: #495057;
+}
