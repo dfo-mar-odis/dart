@@ -1,630 +1,1065 @@
 import io
-from io import BytesIO, StringIO, BufferedReader
-
-import pandas as pd
-import numpy as np
+import re
+from http.client import responses
+from io import BytesIO
+from typing import Any
 
 from bs4 import BeautifulSoup
-
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
-from crispy_forms.layout import Layout, Field, Column, Hidden, Row, Div
+from crispy_forms.layout import Layout, Field, Row, Column, Div
 from crispy_forms.utils import render_crispy_form
+from django.db import transaction, IntegrityError
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from django.urls import path, reverse_lazy
 
 from django import forms
-from django.conf import settings
-from django.http import HttpResponse, Http404
-from django.template.loader import render_to_string
-from django.urls import reverse_lazy, path
 from django.utils.translation import gettext as _
-from render_block import render_block_to_string
 
-from core import forms as core_forms
-from core import models
-from core.parsers import SampleParser
-
+from settingsdb.models import SampleFileConfig, SampleFileConfigColumns
+from bio_tables.models import BCDataType
 from config.utils import load_svg
-from settingsdb import models as settings_models
+
+from core.forms import AlertSoup, StatusAlert, CollapsableCardSoup
+from core import models as core_models
+from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
+from core.parsers.samples.samplefile_parser_file_config import parse_sample_file
 
 import logging
-
 logger = logging.getLogger('dart')
-user_logger = logger.getChild('user')
+user_logger = logging.getLogger('dart.user')
 
+class ExistingConfigForm(forms.Form):
 
-# Form for loading a file, connecting sample, value, flag and replica fields to the SampleType so a user
-# doesn't have to constantly re-enter columns. Ultimately the user will select a file, the file type with the
-# expected headers for sample and value fields will be used to determine what SampleTypes the file contains
-# which will be automatically loaded if they've been previously seen. Otherwise a user will be able to add
-# new configurations for sample types.
-class SampleTypeConfigForm(forms.ModelForm):
-    sample_field = forms.CharField(help_text=_("Column that contains the bottle ids"))
-    value_field = forms.CharField(help_text=_("Column that contains the value data"))
-    limit_field = forms.CharField(required=False, help_text=_("Column that contains the detection limit, if it exists"))
-    flag_field = forms.CharField(required=False, help_text=_("Column that contains quality flags, if it exists"))
-    comment_field = forms.CharField(required=False, help_text=_("Column containing comments, if it exists"))
+    existing_config = forms.ChoiceField(choices=[(-1, '--------')], required=False)
 
-    NONE_CHOICE = [(None, "------")]
-
-    datatype_filter = forms.CharField(label=_("Filter Datatype"), required=False,
-                                      help_text=_("Filter the Datatype field on key terms"))
-
-    class Meta:
-        model = settings_models.SampleTypeConfig
-        fields = "__all__"
-
-    def find_header(self, data, file_type, tab) -> int:
-
-        # if the initial skip isn't set or is -1 then we'll scan the first 30 lines to see if we can
-        # figure out what the header line is. Then the user can adjust it if it's incorrect.
-        if data and file_type and file_type.startswith('xls'):
-            data_frame = pd.read_excel(BytesIO(data), sheet_name=tab, nrows=30, header=None)
-        else:
-            data_frame = pd.read_csv(StringIO(data.decode('utf-8')), nrows=1, header=None)
-
-        column_count = data_frame.shape[1]
-        nan_tolerance = 0.1
-        for line, columns in data_frame.iterrows():
-            if float([c for c in columns].count(np.nan) / column_count) < nan_tolerance:
-                return line + 1
-
-        return 0
-
-
-    def get_column_headers(self, data, file_type, tab=0, skip=-1):
-        if skip == -1:
-            self.initial['skip'] = skip = self.find_header(data, file_type, tab)
-
-        # if the initial['skip'] is set then we only need one line from the file
-        header_index = skip - 1
-        if data and file_type and file_type.startswith('xls'):
-            if isinstance(data, BufferedReader):
-                data_frame = pd.read_excel(data, sheet_name=tab, nrows=1, skiprows=header_index, header=None)
-            else:
-                data_frame = pd.read_excel(BytesIO(data), sheet_name=tab, nrows=1, skiprows=header_index, header=None)
-
-        else:
-            data_frame = pd.read_csv(StringIO(data.decode('utf-8')), nrows=1, skiprows=header_index, header=None)
-
-        header = data_frame.iloc[0]
-        field_choices = [(str(column).lower(), column) for column in header]
-
-        return field_choices
-
-    def populate_field_choices(self, tab=-1, skip=-1):
-        tab = int(self.initial.get('tab', tab) if tab == -1 else tab)
-        skip = int(self.initial.get('skip', skip) if skip == -1 else skip)
-        field_choices = self.get_column_headers(self.file_data, self.file_type, tab, skip)
-        choice_fields = ['sample_field', 'value_field', 'limit_field', 'flag_field', 'comment_field']
-
-        for choice_field in choice_fields:
-            s_field: forms.CharField = self.base_fields[choice_field]
-            self.fields[choice_field] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
-            if not self.fields[choice_field].required:
-                self.fields[choice_field].choices = self.NONE_CHOICE
-            self.fields[choice_field].choices += field_choices
-
-    def is_valid(self, *args, **kwargs):
-        super(SampleTypeConfigForm, self).full_clean()
-        tab = self.cleaned_data['tab']
-        skip = self.cleaned_data['skip'] + 1
-        self.populate_field_choices(tab, skip)
-        return super(SampleTypeConfigForm, self).is_valid()
-
-    def clean_skip(self):
-        return self.cleaned_data['skip']-1
-
-    def __init__(self, file_type=None, *args, **kwargs):
-
-        tabs = None
-        self.file_data = None
-        self.file_type = file_type
-
-        if 'file_data' in kwargs:
-            self.file_data = kwargs.pop('file_data')
-            if file_type and file_type.startswith('xls'):
-                if isinstance(self.file_data, BufferedReader):
-                    tabs = pd.ExcelFile(self.file_data).sheet_names
-                else:
-                    tabs = pd.ExcelFile(BytesIO(self.file_data)).sheet_names
-
-
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if tabs:
-            s_field = self.base_fields['tab']
-            self.fields['tab'] = forms.ChoiceField(help_text=s_field.help_text, required=s_field.required)
-            self.fields['tab'].choices = [(i, tabs[i]) for i in range(0, len(tabs))]
+        existing_config_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_headers'),
+            'hx-trigger': 'change, update_config_table from:body',
+            'hx-target': '#div_id_config_details',
+            #'hx-include': "[existing_config='existing_config']"
+        }
 
-        max_header_rows = 30
-        self.fields['skip'].widget.attrs = {'min': 1, 'max': max_header_rows}
-        if self.file_data:
-            self.initial['tab'] = self.initial.get('tab', 0)
-            if self.instance.pk:
-                self.initial['skip'] = self.initial.get('skip', 0) + 1
+        config_update_attrs = {
+            'hx-get': reverse_lazy('core:form_sample_type_get_existing_config_card'),
+            'hx-trigger': 'update_existing_config from:body',
+            'hx-include': "#id_form_load_samples"
+        }
+        sample_queryset = SampleFileConfig.objects.all()
+        if tab:=self.initial.get('tab', None):
+            sample_queryset = sample_queryset.filter(tab=tab)
 
-            self.populate_field_choices()
+        if header_line:=self.initial.get('header_line', None):
+            sample_queryset = sample_queryset.filter(header_line=header_line)
 
-        self.helper = FormHelper(self)
+        config_choices = [(c.pk, f"{c.name} - {c.description if c.description else 'No Description'}") for c in sample_queryset]
+        self.fields['existing_config'].choices += config_choices
+
+        self.helper = FormHelper()
         self.helper.form_tag = False
-        self.helper.layout = Layout()
 
-        sample_type_choices = [(st.pk, st) for st in settings_models.GlobalSampleType.objects.all().order_by(
-            'short_name')]
-        sample_type_choices.insert(0, (None, ""))
-        sample_type_choices.insert(0, (-1, "New Sample Type"))
-        sample_type_choices.insert(0, (None, '---------'))
-        self.fields['sample_type'].choices = sample_type_choices
-
-        hx_relaod_form_attributes = {
-            'hx-post': reverse_lazy('core:form_sample_config_new'),
-            'hx-select': "#div_id_fields_row",
-            'hx-target': "#div_id_fields_row",
-            'hx-swap': "outerHTML",
-            'hx-trigger': "keyup changed delay:500ms, change"
-        }
-
-        # if the tab field is updated the form should reload looking for headers on the updated tab index
-        if file_type and file_type.startswith('xls'):
-            tab_field = Field('tab')
-            tab_field.attrs = hx_relaod_form_attributes
-            tab_col = Column(tab_field)
-        else:
-            tab_col = Hidden('tab', "0")
-
-        # if the header field is updated the form should reload looking for headers on the updated row
-        header_row_field = Field('skip')
-        header_row_field.attrs = hx_relaod_form_attributes
-
-        config_name_row = Row(
-            tab_col,
-            Column(header_row_field),
-            Column(Field('allow_blank', css_class='checkbox-primary')),
-            Column(Field('allow_replicate', css_class='checkbox-primary')),
-            css_class="flex-fill"
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    Row(
+                        Column(
+                            Field('existing_config', **existing_config_attrs, css_class='form-select form-select-sm'),
+                        )
+                    ),
+                    css_class='card-body', css_id='div_id_existing_config_card_body'
+                ),
+                css_class='card', css_id='div_id_existing_config_card', **config_update_attrs
+            )
         )
 
-        if self.instance.pk:
-            config_name_row.fields.insert(0, Hidden('id', self.instance.pk))
+class FileConfigSaveForm(forms.Form):
+    config_name = forms.CharField(required=True)
+    config_description = forms.CharField(required=False)
 
-        url = reverse_lazy('core:form_sample_config_new')
-        hx_sample_type_attrs = {
-            'hx_get': url,
-            'hx_trigger': 'change',
-            'hx_target': '#div_id_sample_type',
-            'hx_select': '#div_id_sample_type',
-            'hx_swap': 'outerHTML'
-        }
-        sample_type_row = Div(
-            Field('sample_type', **hx_sample_type_attrs, wrapper_class="col-auto"),
-            css_class="row flex-fill mt-2"
-        )
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        div = Div(
-            # file type is hidden because it's taken care of by the form creation and
-            # the type of file a user is loading
-            Hidden('file_type', file_type),
-            config_name_row,
-
-            Row(
-                Column(Field('sample_field')),
-                Column(Field('value_field')),
-                Column(Field('limit_field', )),
-                Column(Field('flag_field', )),
-                Column(Field('comment_field')),
-                css_class="flex-fill", id="div_id_fields_row"
-            ),
-            id="div_id_file_attributes",
-            css_class="form-control input-group mt-2"
-        )
-
-        self.helper[0].layout.fields.append(sample_type_row)
-        self.helper[0].layout.fields.append(div)
-
-        button_row = Row(
-            Column(css_class='col text-end'), css_class="mt-2", id="button_row"
-        )
-
-        attrs = {
-            'css_class': "btn btn-primary btn-sm ms-2",
-            'name': "add_sample_type",
-            'title': _("Add as new configuration"),
-            'hx_get': reverse_lazy("core:form_sample_config_save"),
-            'hx_target': "#button_row",
-            'hx_select': "#div_id_loaded_sample_type_message",
-        }
-
-        button_new = StrictButton(load_svg('plus-square'), **attrs)
-        button_row.fields[0].insert(0, button_new)
-
-        if self.instance.pk:
-            attrs['hx_get'] = reverse_lazy("core:form_sample_config_save", args=(self.instance.pk,))
-            attrs['name'] = "update_sample_type"
-            attrs['title'] = _("Update existing configuration")
-            attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
-            button_update = StrictButton(load_svg('arrow-clockwise'), **attrs)
-            button_row.fields[0].insert(0, button_update)
-
-        attrs['hx_get'] = reverse_lazy("core:form_sample_config_load")
-        attrs['name'] = "reload"
-        attrs['title'] = _("Cancel")
-        attrs['css_class'] = 'btn btn-secondary btn-sm ms-2'
-        button_cancel = StrictButton(load_svg('x-square'), **attrs)
-        button_row.fields[0].insert(0, button_cancel)
-
-        self.helper[0].layout.fields.append(button_row)
-
-
-def get_upload_button():
-    soup = BeautifulSoup("", "html.parser")
-    load_button = soup.new_tag("button", attrs={'id': 'button_id_load_samples', 'class': "btn btn-primary",
-                                                'name': 'upload_samples', 'title': _("Load Selected Samples")})
-    icon = BeautifulSoup(load_svg('check-square'), "html.parser").svg
-    load_button.append(icon)
-    load_button.attrs['hx-get'] = reverse_lazy("core:mission_samples_load_samples")
-    load_button.attrs['hx-swap'] = "none"
-
-    return load_button
-
-
-def get_sample_config_form(sample_type, **kwargs):
-    if sample_type == -1:
-        config_form = render_crispy_form(SampleTypeConfigForm())
-        soup = BeautifulSoup(config_form, 'html.parser')
-
-        # Drop the current existing dropdown from the form and replace it with a new sample type form
-        sample_drop_div = soup.find(id='div_id_sample_type')
-        sample_drop_div.attrs['class'] = 'col'
-
-        children = sample_drop_div.findChildren()
-        for child in children:
-            child.decompose()
-
-        sample_type_form = kwargs['sample_type_form'] if 'sample_type_form' in kwargs else core_forms.SampleTypeForm
-        context = {'sample_type_form': sample_type_form, "expanded": True}
-        new_sample_form = render_to_string('core/partials/form_sample_type.html', context=context)
-
-        new_form_div = BeautifulSoup(new_sample_form, 'html.parser')
-        sample_drop_div.append(new_form_div)
-
-        # add a back button to the forms button_row/button_column
-        url = reverse_lazy('core:form_sample_config_new') + "?sample_type="
-        back_button = soup.new_tag('button')
-        back_button.attrs = {
-            'id': 'id_new_sample_back',
-            'class': 'btn btn-primary btn-sm ms-2',
-            'name': 'back_sample',
-            'hx-target': '#div_id_sample_type',
-            'hx-select': '#div_id_sample_type',
+        save_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_validate_save_config'),
+            'hx-target': "#div_id_save_config_card",
+            'hx-indicator': ".htmx-indicator",
             'hx-swap': 'outerHTML',
-            'hx-get': url
+            'title': _("Save the existing or updated configuration")
         }
-        icon = BeautifulSoup(load_svg('arrow-left-square'), 'html.parser').svg
-        back_button.append(icon)
-        sample_drop_div.find(id="div_id_sample_type_button_col").insert(0, back_button)
 
-        # redirect the submit button to this forms save function
-        submit_button = sample_drop_div.find(id="button_id_new_sample_type_submit")
+        load_attrs = {
+            'title': _("Load data using the current configuration"),
+            'hx-post': reverse_lazy('core:form_sample_type_load_file'),
+            'hx-target': '#load_sample_notification',
+            'hx-indicator': ".htmx-indicator",
+            'hx-trigger': "click, load_sample_file from:body"
+        }
 
-        url = reverse_lazy('core:form_sample_config_save')
-        submit_button.attrs['hx-target'] = '#div_id_sample_type'
-        submit_button.attrs['hx-select'] = '#div_id_sample_type'
-        submit_button.attrs['hx-swap'] = 'outerHTML'
-        submit_button.attrs['hx-post'] = url
-    else:
-        config_form = render_crispy_form(SampleTypeConfigForm(file_type="", initial={'sample_type': sample_type}))
-        soup = BeautifulSoup(config_form, 'html.parser')
+        initial = kwargs.get('initial', {})
+        data = kwargs.get('data', {})
+        if 'config_id' in initial or 'config_id' in data:
+            save_attrs['name'] = "config_id"
+            save_attrs['value'] = initial.get('config_id', data.get("config_id"))
 
-    return soup
+        icon = load_svg("check-square")
+        save_button = StrictButton(f"{icon} {_("Save configuration")}", **save_attrs, css_class='btn btn-primary btn-sm')
 
+        icon = load_svg("arrow-down-square")
+        load_button = StrictButton(f"{icon} {_("Load Data")}", **load_attrs, css_class='btn btn-primary btn-sm ms-2')
 
-def save_sample_config(request, **kwargs):
-    # Validate and save the mission form once the user has filled out the details
-    #
-    # Template: 'core/partials/form_sample_type.html template
-    #
-    # return the sample_type_block if the sample_type or the file configuration forms fail
-    # returns the loaded_samples_block if the forms validate and the objects are created
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    Row(
+                        Column(Field('config_name', css_class='form-control form-control-sm'), css_class='col-2'),
+                        Column(Field('config_description', css_class='form-control form-control-sm'), css_class='col'),
+                    ),
+                    Row(
+                        Div(
+                            save_button,
+                            load_button,
+                            css_class="col-auto"
+                        ),
+                        Div(
+                            Div(
+                                css_class="spinner-border text-primary", **{"style": "width: 20px; height: 20px;"}
+                            ),
+                            css_class="col-auto align-self-center htmx-indicator",
+                            css_id="div_id_indicator_sample_config"
+                        ),
+                    ),
+                    css_class='card-body', css_id='div_id_save_config_content'
+                ),
+                css_class='card mt-2', css_id='div_id_save_config_card'
+            )
+        )
 
-    if request.method == "GET":
-        if 'config_id' in kwargs and 'update_sample_type' in request.GET:
-            sample_type = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            url = reverse_lazy("core:form_sample_config_save", args=(sample_type.pk,))
-            oob_select = f"#div_id_sample_type_holder"
+class FileValueForm(forms.Form):
+
+    name_column = forms.CharField(required=False, label=_("Label"), help_text=_('Label. If blank, uses datatype method as a display name'))
+    value_column = forms.ChoiceField(label=_("Value Column"), choices=[(-1, '--------')])
+    detection_limit_column = forms.ChoiceField(label=_("Detection Limit"), choices=[(-1, '--------')])
+    quality_control_column = forms.ChoiceField(label=_("Quality Control"), choices=[(-1, '--------')])
+
+    datatype_id = forms.IntegerField(required=False)
+    datatype_text_filter = forms.CharField(required=False)
+    datatype = forms.ChoiceField(choices=[(-1, '--------')], required=False)
+
+    def clean_value_column(self):
+        value_column = self.cleaned_data['value_column']
+
+        if value_column == '-1':
+            raise forms.ValidationError(_('At least one column must be selected to be added to the configuration'))
+        return value_column
+
+    def check_name_and_datatype(self):
+        name = self.cleaned_data.get('name_column', '').strip()
+
+        datatype = self.cleaned_data.get('datatype', None)
+        # If cleaned_data doesn't have datatype yet, check raw incoming data (strings from POST)
+        if datatype is None:
+            datatype = self.data.get('datatype', None)
+
+        if not name:
+            if str(datatype) == '-1' or datatype in (None, '',):
+                raise forms.ValidationError(_('Either a label must be provided or a datatype must be set'))
+
+        return name
+
+    def clean_datatype(self):
+        datatype = self.cleaned_data['datatype']
+        self.check_name_and_datatype()
+        return datatype
+
+    def clean_name_column(self):
+        name_column = self.cleaned_data['name_column']
+        self.check_name_and_datatype()
+        return name_column
+
+    def get_datatype_filter_row(self) -> Div:
+
+        datatype_id_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_datatype_method'),
+            'hx-target': "#id_datatype",
+            'hx-trigger': "keyup changed delay:1000ms"
+        }
+
+        row = Div(
+            Row(
+                Column(Field('datatype_id', css_class='form-control form-control-sm', **datatype_id_attrs), css_class='col-1'),
+                Column(Field('datatype_text_filter', css_class='form-control form-control-sm', **datatype_id_attrs), css_class='col-2'),
+                Column(Field('datatype', css_class='form-select form-select-sm')),
+            ),
+        )
+
+        return row
+
+    def __init__(self, column_names: list[tuple[int, str]], datatype_text_filter: str = None, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        self.fields['value_column'].choices = [(-1, '--------')] + column_names
+        self.fields['detection_limit_column'].choices = [(-1, '--------')] + column_names
+        self.fields['quality_control_column'].choices = [(-1, '--------')] + column_names
+
+        datatypes = BCDataType.objects.all()
+        if datatype_text_filter:
+            tokens = datatype_text_filter.strip().split(' ')
+            for token in tokens:
+                datatypes = datatypes.filter(description__icontains=token)
+            datatype_choices = [(datatype.pk, f'{datatype.pk}: {datatype.method} - {datatype.description}') for datatype
+                                in datatypes]
         else:
-            url = reverse_lazy("core:form_sample_config_save")
-            oob_select = "#div_id_sample_type_holder, #div_id_loaded_samples_list:beforeend"
+            datatype_choices = [(-1, '--------')] + [(datatype.pk, f'{datatype.pk}: {datatype.method} - {datatype.description}') for datatype in datatypes]
 
+        self.fields['datatype'].choices = datatype_choices
+
+        icon = load_svg("plus-square")
         attrs = {
-            'component_id': "div_id_loaded_sample_type_message",
-            'message': _('Saving'),
-            'alert_type': 'info',
-            'hx-trigger': "load",
-            'hx-target': "#div_id_sample_type_holder",
-            'hx-post': url,
-            'hx-select-oob': oob_select
+            'title': _("Add to configuration"),
+            'hx-swap': "outerHTML",
+            'hx-target': "#div_id_sample_value_form_content"
         }
-        soup = core_forms.save_load_component(**attrs)
+        if 'config' in self.initial:
+            load_btn_label = _("Update load table")
+            config_label = self.initial.get('config', None)
+            config = config_label.split('_')[1]
+            attrs['hx-post'] = reverse_lazy('core:form_sample_type_validate_value_form', args=[config])
+        else:
+            load_btn_label = _("Add to load table")
+            attrs['hx-post'] = reverse_lazy('core:form_sample_type_validate_value_form')
+
+        add_button = StrictButton(f"{icon} {load_btn_label}", **attrs, css_class='btn btn-primary btn-sm')
+
+        form_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_value_form'),
+            'hx-trigger': 'clear_value_form from:body',
+            'hx-indicator': "#div_id_indicator_sample_config"
+        }
+
+        datatype_filter_row = self.get_datatype_filter_row()
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    Row(
+                        Column(Field('value_column', css_class='form-select form-select-sm')),
+                        Column(Field('detection_limit_column', css_class='form-select form-select-sm')),
+                        Column(Field('quality_control_column', css_class='form-select form-select-sm')),
+                    ),
+                    datatype_filter_row,
+                    Row(
+                        Column(Field('name_column', css_class='form-control form-control-sm')),
+                    ),
+                    Row(
+                        Column(add_button),
+                    ),
+                    css_class='card-body',
+                ),
+                css_class='card mt-2', css_id="div_id_sample_value_form_content", **form_attrs
+            )
+        )
+
+
+class FileConfigForm(forms.Form):
+
+    column_names: list[tuple[int, str]] = None
+
+    file_config: FileConfig = None
+    file_tab = forms.ChoiceField(choices=[])
+    header_line_number = forms.IntegerField()
+
+    sample_column = forms.ChoiceField(choices=[(-1, '--------')])
+    comment_column = forms.ChoiceField(choices=[(-1, '--------')], required=False)
+
+    allow_replicates = forms.BooleanField(required=False)
+    ignore_blank_sample_ids = forms.BooleanField(required=False)
+
+    def get_file_tab_column(self):
+        file_tab_column = None
+        if self.file_config.file_type == 'XLS':
+            tab_names = self.file_config.get_tab_names()
+            self.fields['file_tab'].choices = [(i, name) for i, name in enumerate(tab_names)]
+
+            tab_attrs = {
+                'hx-post': reverse_lazy('core:form_sample_type_get_headers'),
+                'hx-target': '#div_id_sample_config_form_content',
+                'hx-trigger': 'change',
+                'hx-indicator': "#div_id_indicator_sample_config"
+            }
+            file_tab_column = Column(Field('file_tab', css_class='form-select form-select-sm', **tab_attrs))
+
+        return file_tab_column
+
+    def __init__(self, file_config: FileConfig = None, *args, **kwargs):
+
+        initial = kwargs.pop('initial', {})
+        self.file_config = file_config
+        if 'header_line_number' not in initial:
+            initial['header_line_number'] = file_config.get_header_line_number()
+
+        if 'file_tab' not in initial:
+            initial['file_tab'] = file_config.selected_tab
+
+        if default_sample_column := file_config.get_sample_id_column():
+            if 'sample_column' not in initial:
+                initial['sample_column'] = default_sample_column[0]
+
+        if default_comment_column := file_config.get_comment_column():
+            if 'comment_column' not in initial:
+                initial['comment_column'] = default_comment_column[0]
+
+        if file_config.ignore_blank_sample_ids:
+            if 'ignore_blank_sample_ids' not in initial:
+                initial['ignore_blank_sample_ids'] = file_config.ignore_blank_sample_ids
+
+        if file_config.allow_replicates:
+            if 'allow_replicates' not in initial:
+                initial['allow_replicates'] = file_config.allow_replicates
+
+        super().__init__(*args, **kwargs, initial=initial)
+
+        self.column_names = [(col_index, col_name) for col_index, col_name in enumerate(file_config.get_column_names())]
+        self.fields['sample_column'].choices = [(-1, '--------')] + self.column_names
+        self.fields['comment_column'].choices = [(-1, '--------')] + self.column_names
+
+        # when the sample and comment columns change, the available value, detection, quality columns change as well
+        update_value_trigger_attrs = {
+            'hx-post': reverse_lazy('core:form_sample_type_get_value_form'),
+            'hx-target': '#div_id_sample_value_form_content',
+            'hx-trigger': 'change',
+            'hx-indicator': "#div_id_indicator_sample_config"
+        }
+
+        # When the file tab or header line number changes everything on div_id_config_details needs to update
+
+        ##################### Table Layout #####################
+        tab_header_row = Row(
+            Column(Field('header_line_number', css_class='form-control form-control-sm'))
+        )
+
+        self.helper = FormHelper()
+        self.helper.form_tag = False
+
+        self.helper.layout = Layout(
+            Div(
+                Div(
+                    tab_header_row,
+                    Row(
+                        Column(Field('sample_column', css_class='form-select form-select-sm', **update_value_trigger_attrs)),
+                        Column(Field('comment_column', css_class='form-select form-select-sm', **update_value_trigger_attrs)),
+                    ),
+                    Row(
+                        Column(Field('allow_replicates', css_class='form-control form-control-sm')),
+                        Column(Field('ignore_blank_sample_ids', css_class='form-control form-control-sm')),
+                    ),
+                    css_class='card-body',
+                ),
+                css_class='card mt-2'
+            )
+        )
+
+        if file_tab_column := self.get_file_tab_column():
+            tab_header_row.fields.insert(0, file_tab_column)
+
+
+def _get_config_details(config_prefix: str, input_dict: dict[str, str], column_names: dict[str, str]) -> dict[str, Any]:
+    value_col_id = input_dict.get(f'{config_prefix}', -1)
+    dl_col_id = input_dict.get(f'{config_prefix}_dl_column', None)
+    qc_col_id = input_dict.get(f'{config_prefix}_qc_column', None)
+    alias_col = input_dict.get(f'{config_prefix}_name_column', None)
+    datatype_col = input_dict.get(f'{config_prefix}_datatype', None)
+
+    value_col = column_names[int(value_col_id)]
+    config_attrs = {
+        'value_column_name': value_col[1],
+        'column_alias': None,
+        'datatype_id': None,
+        'detection_limit_column_name': None,
+        'quality_control_column_name': None,
+    }
+
+    if alias_col and alias_col != 'None':
+        config_attrs['column_alias'] = alias_col
+
+    if datatype_col and datatype_col != 'None':
+        config_attrs['datatype_id'] = datatype_col
+        if config_attrs['column_alias'] is None:
+            datatype = BCDataType.objects.get(pk=datatype_col)
+            config_attrs['column_alias'] = datatype.method
+
+    if dl_col_id and dl_col_id != 'None':
+        dl_col = column_names[int(dl_col_id)]
+        config_attrs['detection_limit_column_name'] = dl_col[1]
+
+    if qc_col_id and qc_col_id != 'None':
+        qc_col = column_names[int(qc_col_id)]
+        config_attrs['quality_control_column_name'] = qc_col[1]
+
+    return config_attrs
+
+
+def initialize_file_config(file, initial: SampleFileConfig = None) -> FileConfig:
+    # Create and populate the FileConfig object that holds all the parsing information. This object is like the
+    # settingsdb.models.SampleFileConfig object with the settingsdb.models.SampleFileConfigColumns, but it is a
+    # transient object that doesn't get saved.
+    file_config = FileConfig(file.name, file)
+
+    if initial:
+        file_config.set_selected_tab(initial.tab)
+        file_config.set_header_line_number(initial.header_line)
+        file_config.allow_replicates = initial.allow_replicates
+        file_config.ignore_blank_sample_ids = not initial.allow_blank_sample_ids
+        if initial.sample_id_column_name:
+            file_config.set_sample_id_column_by_name(initial.sample_id_column_name)
+        if initial.comment_column_name:
+            file_config.set_comment_column_by_name(initial.comment_column_name)
+
+    return file_config
+
+
+def get_file_columns(request):
+    if 'sample_file_column_names' not in request.session:
+        file = request.FILES.get('sample_file', None)
+        file_config = initialize_file_config(file)
+        if header_line_number := request.POST.get('header_line_number', -1):
+            file_config.set_header_line_number(int(header_line_number))
+
+        if file_tab := request.POST.get('file_tab', -1):
+            file_config.set_selected_tab(int(file_tab))
+
+        # cache the configuration details if not set or if the file name changed.
+        if request.session.get('sample_file', None) != file.name:
+            cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
+            request.session['sample_file'] = file.name
+            request.session['sample_file_tab'] = file_config.get_selected_tab()
+            request.session['sample_file_column_names'] = cache_columns
+
+    columns = request.session.get('sample_file_column_names', []).copy()
+
+    return columns
+
+
+def get_file_config(request, **kwargs):
+    # only one file can be uploaded here at a time.
+    file = request.FILES.get('sample_file', None)
+    soup = BeautifulSoup('', 'html.parser')
+    if not file:
+        # if there's no file we'll clear the session cache so cached headers
+        # don't interfere with other files loaded later
+        if 'sample_file' in request.session:
+            del request.session['sample_file']
+        if 'sample_file_column_names' in request.session:
+            del request.session['sample_file_column_names']
 
         return HttpResponse(soup)
-    elif request.method == "POST":
 
-        if 'new_sample' in request.POST:
-            # if the new_sample_config method requires the user to create a new sample type we'll
-            # save the sample_type form here and return the whole sample_config_form with either the
-            # new sample type or the config form with the invalid sample_type_form
-            sample_form = core_forms.SampleTypeForm(request.POST)
-            if sample_form.is_valid():
-                sample_type = sample_form.save()
-                soup = get_sample_config_form(sample_type=sample_type.pk)
+    ############### Set up the Existing Config dropdown ###############
+
+    existing_config = None
+    existing_config_init = None
+    if (config_id:=request.POST.get('existing_config', '-1')) != '-1':
+        # If the function is called without a config_id, but has an "existing_config" vlue in the POST variables
+        # we should load the currently selected configuration
+        existing_config = SampleFileConfig.objects.get(pk=int(config_id))
+        existing_config_init = {'existing_config': existing_config.pk}
+
+    try:
+        file_config = initialize_file_config(file, initial=existing_config)
+    except (KeyError, AttributeError) as ex:
+        existing_config = None
+        existing_config_init = None
+        file_config = initialize_file_config(file, initial=existing_config)
+
+    if existing_config is None:
+        if header_line_number := request.POST.get('header_line_number', -1):
+            file_config.set_header_line_number(int(header_line_number))
+
+        if file_tab := request.POST.get('file_tab', -1):
+            file_config.set_selected_tab(int(file_tab))
+
+    # cache the configuration details if not set or if the file name changed.
+    if request.session.get('sample_file', None) != file.name:
+        try:
+            cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
+            request.session['sample_file'] = file.name
+            request.session['sample_file_tab'] = file_config.get_selected_tab()
+            request.session['sample_file_column_names'] = cache_columns
+        except ValueError as ex:
+            if str(ex) == "Error reading XLS file: File is not a zip file":
+                soup.append(config_placeholder := soup.new_tag("div"))
+                config_placeholder.append(alert := soup.new_tag("div"))
+                alert.attrs['class'] = "alert alert-warning"
+                alert.string = _("This file may be in an older excel format that can't be read. Open the file in Excel and try saving it in an newer format.")
                 return HttpResponse(soup)
-
-            soup = get_sample_config_form(sample_type=-1, sample_type_form=sample_form)
-            return HttpResponse(soup)
-
-        # mission_id is a hidden field in the 'core/partials/form_sample_type.html' template, if it's needed
-        # mission_id = request.POST['mission_id']
-
-        # I don't know how to tell the user what is going on here if no sample_file has been chosen
-        # They shouldn't even be able to view the rest of the form without it.
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
-
-        tab = int(request.POST.get('tab', 0) or 0)
-        skip = int(request.POST.get('skip', 0) or 0)
-
-        initial = {'tab': tab, 'skip': skip}
-        if 'config_id' in kwargs:
-            config = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            sample_type_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data,
-                                                           data=request.POST, instance=config)
-        else:
-            sample_type_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data,
-                                                           data=request.POST, initial=initial)
-
-        if sample_type_config_form.is_valid():
-            sample_config: settings_models.SampleTypeConfig = sample_type_config_form.save()
-            # the load form is immutable to the user it just allows them the delete, send for edit or load the
-            # sample into the mission
-            html = render_to_string('core/partials/card_sample_config.html',
-                                    context={'sample_config': sample_config})
-            soup = BeautifulSoup(html, 'html.parser')
-
-            div_id = f"div_id_sample_config_card_{sample_config.id}"
-            div = soup.find(id=div_id)
-            if 'config_id' in kwargs:
-                div.attrs['hx-swap-oob'] = f"#{div_id}"
             else:
-                new_root = soup.new_tag('div')
-                new_root.attrs['id'] = "div_id_loaded_samples_list"
-                new_root.attrs['hx-swap-oob'] = 'true'
-                new_root.append(div)
-                soup.append(new_root)
+                raise ex
 
-                upload_btn = get_upload_button()
-                upload_btn.attrs['hx-swap-oob'] = 'true'
-                soup.append(upload_btn)
+    soup.append(config_placeholder:=soup.new_tag("div"))
 
-            return HttpResponse(soup)
+    # create a space for the subforms to add data to a file config
+    content_div = soup.new_tag('div', id='div_id_config_details')
+    soup.append(content_div)
 
-        html = render_crispy_form(sample_type_config_form)
-        return HttpResponse(html)
+    # make a collapsable card so the forms to create configs aren't always taking up space.
+    expanded = (request.htmx and request.htmx.trigger not in ["id_input_sample_file", "id_existing_config"])
+    add_config_card = CollapsableCardSoup("config_collapse", _("Add/Update Configuration Details"), expanded=expanded)
+    content_div.append(add_config_card)
 
+    add_config_card_content = soup.find(id=add_config_card.get_body_id())
 
-def new_sample_config(request, **kwargs):
-    if request.method == "GET":
+    ############### Set up the File Config subform ###############
 
-        if 'sample_type' in request.GET:
-            sample_type = int(request.GET.get('sample_type', 0) or 0)
-            soup = get_sample_config_form(sample_type, **kwargs)
-            return HttpResponse(soup)
+    form = FileConfigForm(file_config)
+    html = render_crispy_form(form)
+    add_config_card_content.append(BeautifulSoup(html, 'html.parser'))
 
-        # return a loading alert that calls this methods post request
-        # Let's make some soup
-        url = reverse_lazy("core:form_sample_config_new")
+    ############### Set up the File Config Row subform ###############
+    # The File Config form specifies what column contains values, detection limits, quality control,
+    # the datatype and adds a label/alias for the row.
+    if file_config.get_header_line_number() is not None:
+        exclude: list[int] = []
+        if sid_col := file_config.get_sample_id_column():
+            exclude.append(sid_col[0])
+        if cid_col := file_config.get_comment_column():
+            exclude.append(cid_col[0])
 
-        attrs = {
-            'component_id': "div_id_loaded_sample_type_message",
-            'message': _("Loading"),
-            'alert_type': 'info',
-            'hx-post': url,
-            'hx-target': "#div_id_sample_type_holder",
-            'hx-trigger': "load"
-        }
-        soup = core_forms.save_load_component(**attrs)
+        column_names = request.session.get('sample_file_column_names', []).copy()
+        exclude.sort(reverse=True)
+        for exclude in exclude:
+            column_names.pop(exclude)
 
-        return HttpResponse(soup)
-    elif request.method == "POST":
+        value_form = FileValueForm(column_names)
+        value_form_html = render_crispy_form(value_form)
+        value_form_soup = BeautifulSoup(value_form_html, 'html.parser')
+        add_config_card_content.append(value_form_soup)
 
-        if 'sample_file' not in request.FILES:
-            soup = BeautifulSoup('<div id="div_id_sample_type_holder"></div>', 'html.parser')
+        config_row_context = {}
+        if existing_config:
+            config_rows = []
+            col_names_upper = [c[1].upper() for c in column_names]
+            for row in existing_config.config_columns.all():
+                value_col_name = row.value_column_name.upper()
+                if value_col_name not in col_names_upper:
+                    continue
 
-            div = soup.new_tag('div')
-            div.attrs['class'] = 'alert alert-warning mt-2'
-            div.string = _("File is required before adding sample")
-            soup.find(id="div_id_sample_type_holder").append(div)
-            return HttpResponse(soup)
+                value_index = col_names_upper.index(value_col_name)
+                value_col = column_names[value_index]
 
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
+                dl_col = None
+                dl_col_name = row.detection_limit_column_name
+                if dl_col_name and dl_col_name.upper() in col_names_upper:
+                    dl_col = column_names[col_names_upper.index(dl_col_name.upper())]
 
-        if 'config_id' in kwargs:
-            config = settings_models.SampleTypeConfig.objects.get(pk=kwargs['config_id'])
-            sample_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data, instance=config)
+                qc_col = None
+                qc_col_name = row.quality_control_column_name
+                if qc_col_name and qc_col_name.upper() in col_names_upper:
+                    qc_col = column_names[col_names_upper.index(qc_col_name.upper())]
+
+                datatype = None
+                if row.datatype_id:
+                    datatype = BCDataType.objects.get(pk=row.datatype_id)
+
+                config_row = {
+                    'config_id': row.pk,
+                    'value_id': value_col[0],
+                    'dl_id': dl_col[0] if dl_col else None,
+                    'qc_id': qc_col[0] if qc_col else None,
+                    'value_column': value_col[1],
+                    'dl_column': dl_col[1] if dl_col else None,
+                    'qc_column': qc_col[1] if qc_col else None,
+                    'name_column': row.column_alias if row.column_alias else None,
+                    'datatype': datatype.pk if datatype else "",
+                    'datatype_method': datatype.method if datatype else "",
+                    'datatype_description': datatype.description if datatype else "",
+                }
+                config_rows.append(config_row)
+            config_row_context['configs'] = config_rows
+            config_table_html = render_to_string('core/partials/table_samplefile_config.html', context=config_row_context, request=request)
         else:
-            tab = int(request.POST.get('tab', 0) or 0)
-            skip = int(request.POST.get('skip', 0) or -1)  # -1 means the header row needs to be auto-located
-            file_initial = {"skip": skip, "tab": tab}
+            config_table_html = render_to_string('core/partials/table_samplefile_config.html', request=request)
 
-            if 'sample_type' in kwargs:
-                file_initial['sample_type'] = kwargs['sample_type']
-            sample_config_form = SampleTypeConfigForm(file_type=file_type, file_data=data,
-                                                      initial=file_initial)
+        config_table_soup = BeautifulSoup(config_table_html, 'html.parser')
+        content_div.append(config_table_soup)
 
-        html = render_crispy_form(sample_config_form)
-        return HttpResponse(html)
+        save_form_init = {}
+        if existing_config:
+            save_form_init = {
+                'config_id': existing_config.pk if existing_config.pk else '-1',
+                'config_name': existing_config.name,
+                'config_description': existing_config.description
+            }
+
+        save_form = FileConfigSaveForm(initial=save_form_init)
+        save_form_html = render_crispy_form(save_form)
+        save_form_soup = BeautifulSoup(save_form_html, 'html.parser')
+        content_div.append(save_form_soup)
+
+    if existing_config_init is None and column_names:
+        existing_config_init = {}
+        existing_config_init['file_type'] = file_config.file_type
+        existing_config_init['selected_tab'] = file_config.selected_tab
+        existing_config_init['header_line'] = file_config.header_line_number
+        existing_config_init['sample_column'] = sid_col[1]
+
+    # Existing Config Form is a dropdown menu to select from pre-existing configs if a config_id is present
+    # that is the default selection in the dropdown.
+    existing_config_form = ExistingConfigForm(initial=existing_config_init)
+    existing_config_html = render_crispy_form(existing_config_form)
+    existing_config_soup = BeautifulSoup(existing_config_html, 'html.parser')
+
+    config_placeholder.append(existing_config_soup)
+
+    if request.htmx.target == "div_id_config_details":
+        return HttpResponse(content_div)
+
+    # add a spot to insert notifications
+    soup.append(soup.new_tag('div', id='load_sample_notification'))
+    return HttpResponse(soup)
 
 
-def delete_sample_config(request, **kwargs):
-    config_id = kwargs['config_id']
-    if request.method == "POST":
-        settings_models.SampleTypeConfig.objects.get(pk=config_id).delete()
+def update_value_form(request, **kwargs):
+
+    # This is called when the user changes the file tab or header line number. It will return an updated value form with the new column names.
+    exclude = []
+    if (sample_id_index := int(request.POST.get('sample_column', -1))) != -1:
+        exclude.append(sample_id_index)
+
+    if (comment_index := int(request.POST.get('comment_column', -1))) != -1:
+        if comment_index not in exclude:
+            exclude.append(comment_index)
+
+    column_names = get_file_columns(request)
+
+    # we don't want the user to pick the column being used for either the sample or comment columns
+    exclude.sort(reverse=True)
+    for exclude in exclude:
+        column_names.pop(exclude)
+
+    initial = {}
+    if 'column_id' in kwargs:
+        prefix = f'config_{kwargs["column_id"]}'
+        initial['config'] = f"#{prefix}"
+        initial['value_column'] = request.POST.get(prefix, None)
+        initial['detection_limit_column'] = request.POST.get(f"{prefix}_dl_column", None)
+        initial['quality_control_column'] = request.POST.get(f"{prefix}_qc_column", None)
+        initial['name_column'] = request.POST.get(f'{prefix}_name_column', None)
+        initial['datatype'] = request.POST.get(f'{prefix}_datatype', None)
+
+    value_form = FileValueForm(column_names, initial=initial)
+
+    value_form_html = render_crispy_form(value_form)
+    soup = BeautifulSoup(value_form_html, 'html.parser')
+
+    return HttpResponse(soup.find('div'))
+
+
+def get_config_soup(request) -> BeautifulSoup | None:
+    file = request.FILES.get('sample_file', None)
+    if file:
+        value_column_id = int(request.POST.get('value_column', -1))
+        dl_column_id = int(request.POST.get('detection_limit_column', -1))
+        qc_column_id = int(request.POST.get('quality_control_column', -1))
+
+        columns = get_file_columns(request)
+        value_column_name = columns[value_column_id]
+        dl_column_name = columns[dl_column_id] if dl_column_id > -1 else [-1, ""]
+        qc_column_name = columns[qc_column_id] if qc_column_id > -1 else [-1, ""]
+
+        datatype_id = int(request.POST.get('datatype', -1))
+        try:
+            datatype = None
+            if datatype_id != -1:
+                datatype = BCDataType.objects.get(pk=datatype_id)
+        except BCDataType.DoesNotExist:
+            datatype = BCDataType(method="N/A",
+                                  description="Could not find datatype. You're datatype definitions may need to be updated")
+
+        name_column = request.POST.get('name_column', None)
+        if not name_column and datatype:
+            name_column = datatype.method
+
+        context = {
+            'configs': [{
+                'value_id': value_column_id,
+                'dl_id': dl_column_id,
+                'qc_id': qc_column_id,
+                'value_column': value_column_name[1],
+                'dl_column': dl_column_name[1],
+                'qc_column': qc_column_name[1],
+                'name_column': name_column,
+                'datatype': datatype_id if datatype_id != -1 else "",
+                'datatype_method': datatype.method if datatype else "",
+                'datatype_description': datatype.description if datatype else "",
+            }]
+        }
+        html = render_to_string('core/partials/table_samplefile_config.html', context=context, request=request)
+        return BeautifulSoup(html, 'html.parser')
+
+    return None
+
+
+def validate_config(request, **kwargs):
+
+    file = request.FILES.get('sample_file', None)
+    if not file:
+        soup = AlertSoup('validate_config_form')
+        soup.set_status('danger').add_message(_("No file was selected."))
+        return HttpResponse(soup)
+
+    column_names = get_file_columns(request)
+    if 'column_id' in kwargs:
+        form = FileValueForm(column_names, data=request.POST, initial={'config': f"config_{kwargs['column_id']}"})
+    else:
+        form = FileValueForm(column_names, data=request.POST)
+
+    if form.is_valid():
+        crispy_html = render_crispy_form(form)
+        soup = BeautifulSoup(crispy_html, 'html.parser')
+        if 'column_id' in kwargs:
+            response = HttpResponse(soup)
+            response['HX-Trigger'] = f"update_config_{kwargs['column_id']}"
+            return response
+
+        form_div = soup.find(id="div_id_sample_value_form_content").find('div')
+        form_div.attrs['hx-trigger'] = "load"
+        form_div.attrs['hx-post'] = reverse_lazy("core:form_sample_type_update_to_config")
+        form_div.attrs['hx-target'] = "#table_id_column_configuration_table tbody"
+        form_div.attrs['hx-indicator'] = "#div_id_indicator_sample_config"
+
+        if request.POST.get(f"config_{form.data['value_column']}", -1) == -1:
+            form_div.attrs['hx-swap'] = "beforeend"
+            form_div.attrs['hx-post'] = reverse_lazy("core:form_sample_type_add_to_config")
+
+        response = HttpResponse(soup)
+
+        # response['HX-Trigger'] = f'clear_value_form'
+        return response
+
+    return HttpResponse(render_crispy_form(form))
+
+def add_to_config(request, **kwargs):
+    file = request.FILES.get('sample_file', None)
+    if file:
+        value_column_id = int(request.POST.get('value_column', -1))
+        if f'config_{value_column_id}' in request.POST:
+            response = HttpResponse()
+            response['HX-Trigger-After-Settle'] = f'update_config_{value_column_id}, update_config_button'
+            return response
+
+        soup = get_config_soup(request)
+
+        row = soup.find('tr', id=f'config_{value_column_id}')
+        response = HttpResponse(row.find_parent())
+        response['HX-Trigger'] = f'clear_value_form, update_config_button'
+        return response
 
     return HttpResponse()
 
 
-def process_file(file) -> [str, str, str]:
-    file_name = file.name
-    file_type = file_name.split('.')[-1].lower()
+def update_to_config(request, **kwargs):
+    file = request.FILES.get('sample_file', None)
+    if file:
+        value_column_id = int(request.POST.get('value_column', -1))
 
-    # the file can only be read once per request
-    data = file.read()
+        soup = get_config_soup(request)
 
-    return file_name, file_type, data
+        row = soup.find('tr', id=f'config_{value_column_id}')
+        response = HttpResponse(row.find_parent())
+        response['HX-Trigger'] = f'clear_value_form, update_config_button'
+        return response
+
+    return HttpResponse()
 
 
-def load_sample_config(request, **kwargs):
-    context = { }
+def remove_from_config(request, column_id):
+    config_col = SampleFileConfigColumns.objects.filter(id=column_id)
+    if config_col.exists():
+        config_col.first().delete()
 
-    if request.method == "GET":
-        if 'reload' in request.GET:
-            response = HttpResponse()
-            response['HX-Trigger'] = 'reload_sample_file'
-            return response
+    response = HttpResponse()
+    response['HX-Trigger'] = f'update_config_button'
+    return response
 
-        mission_id = request.GET['mission'] if 'mission' in request.GET else None
-        loading = 'sample_file' in request.GET
 
-        if loading:
-            # Let's make some soup
-            url = reverse_lazy("core:form_sample_config_load")
+def update_to_datatype_description_field(request):
+    file = request.FILES.get('sample_file', None)
+    if file:
+        initial = {}
+        column_names = get_file_columns(request)
+        datatype_id = request.POST.get('datatype_id', '')
+        if datatype_id != '':
+            initial['datatype'] = int(datatype_id)
 
-            soup = BeautifulSoup('', "html.parser")
+        datatype_text_filter = request.POST.get('datatype_text_filter', None)
 
-            div_sampletype_holder = soup.new_tag("div")
-            div_sampletype_holder.attrs['id'] = "div_id_sample_type_holder"
-            div_sampletype_holder.attrs['hx-swap-oob'] = "true"
+        value_form = FileValueForm(column_names, datatype_text_filter=datatype_text_filter, initial=initial)
+        html = render_crispy_form(value_form)
+        soup = BeautifulSoup(html, 'html.parser')
 
-            div_loaded_sample_types = soup.new_tag("div")
-            div_loaded_sample_types.attrs['id'] = "div_id_loaded_samples_list"
-            div_loaded_sample_types.attrs['hx-swap-oob'] = "true"
+        return HttpResponse(soup.find(id="id_datatype"))
 
-            attrs = {
-                'component_id': "div_id_loaded_sample_type_message",
-                'message': _("Loading"),
-                'alert_type': 'info',
-                'hx-post': url,
-                'hx-trigger': "load",
-                'hx-swap-oob': "#div_id_sample_type_holder",
-            }
-            dialog_soup = core_forms.save_load_component(**attrs)
+    return HttpResponse()
 
-            div_sampletype_holder.append(dialog_soup)
 
-            soup.append(div_sampletype_holder)
-            soup.append(div_loaded_sample_types)
+def create_sample_config_columns(request, sample_config) -> None:
+    column_names = get_file_columns(request)
 
-            return HttpResponse(soup)
+    with transaction.atomic():
+        configs = request.POST.getlist('configs', [])
+        sample_config.config_columns.all().delete()
+        for config in configs:
+            prefix = f"config_{config}"
+            config_attrs = _get_config_details(prefix, request.POST, column_names)
+            config_attrs['file_config_id'] = sample_config.pk
 
-        if request.htmx:
-            # if this is an htmx request it's to grab an updated element from the form, like the BioChem Datatype
-            # field after the Datatype_filter has been triggered.
-            sample_config_form = SampleTypeConfigForm(file_type="", initial=request.GET)
-            html = render_crispy_form(sample_config_form)
-            soup = BeautifulSoup(html, "html.parser")
-            form_html = render_to_string('core/partials/form_sample_config.html', context={})
-            form_soup = BeautifulSoup(form_html, "html.parser")
-            clear_div = form_soup.find("div", id="div_id_loaded_sample_type")
-            clear_div.attrs['hx-swap-oob'] = "true"
-            soup.append(clear_div)
-            return HttpResponse(soup)
+            SampleFileConfigColumns.objects.create(**config_attrs)
 
-        if mission_id is None:
-            raise Http404(_("Mission does not exist"))
 
-        mission = models.Mission.objects.get(pk=mission_id)
-        context['mission'] = mission
-        context['database'] = settings.DATABASES[mission._state.db]['LOADED'] if (
-                'LOADED' in settings.DATABASES[mission._state.db]) else 'default'
-        html = render_to_string("core/mission_samples.html", request=request, context=context)
-        return HttpResponse(html)
-    elif request.method == "POST":
+def validate_save_config(request):
+    file = request.FILES.get('sample_file', None)
 
-        if 'sample_file' not in request.FILES:
-            context['message'] = _("File is required before adding sample")
-            html = render_block_to_string("core/partials/form_sample_type.html", "sample_type_block", context=context)
-            return HttpResponse(html)
+    save_form = FileConfigSaveForm(data=request.POST)
+    update_table = False
+    alert_soup = None
+    if not file:
+        crispy_html = render_crispy_form(save_form)
+        soup = BeautifulSoup(crispy_html, 'html.parser')
 
-        if 'config' in kwargs:
-            return new_sample_config(request, config=kwargs['config'])
-
-        mission_id = request.POST['mission_id']
-        file = request.FILES['sample_file']
-        file_name, file_type, data = process_file(file)
-
-        # If mission ID is present this is an initial page load from the sample_file input
-        # We want to locate file configurations that match this file_type
-        file_configs = SampleParser.get_file_configs(data, file_type)
-
-        soup = BeautifulSoup("", 'html.parser')
-        div_sample_type_holder = soup.new_tag("div")
-        div_sample_type_holder.attrs['id'] = "div_id_sample_type_holder"
-        div_sample_type_holder.attrs['hx-swap-oob'] = 'true'
-
-        soup.append(div_sample_type_holder)
-
-        soup.append(div_sample_type := soup.new_tag("div", id='div_id_loaded_sample_type'))
-        div_sample_type.attrs['hx-swap-oob'] = "true"
-
-        file_error_url = reverse_lazy("core:mission_samples_get_file_errors", args=(mission_id,))
-        file_error_url += f"?file_name={file_name}"
-        div_error_list = soup.new_tag('div')
-        div_error_list.attrs['id'] = "div_id_error_list"
-        div_error_list.attrs['hx-get'] = file_error_url
-        div_error_list.attrs['hx-trigger'] = "load, file_errors_updated from:body"
-        div_error_list.attrs['class'] = "mt-2"
-        div_sample_type.append(div_error_list)
-
-        div_sample_type_list = soup.new_tag("div")
-        div_sample_type_list.attrs['id'] = "div_id_loaded_samples_list"
-        div_sample_type_list.attrs['class'] = "mt-2"
-        div_sample_type.append(div_sample_type_list)
-
-        div_sample_type.append(button_row := soup.new_tag("div", attrs={'class': "row"}))
-        button_row.append(soup.new_tag("div", attrs={'class': "col"}))
-        button_row.append(button_col := soup.new_tag("div", attrs={'class': "col-auto"}))
-        button_col.append(load_button := get_upload_button())
-
-        if file_configs:
-
-            for config in file_configs:
-                html = render_to_string('core/partials/card_sample_config.html', context={'sample_config': config})
-                sample_type = BeautifulSoup(html, 'html.parser')
-                div_sample_type_list.append(sample_type.find("div"))
-        else:
-            load_button.attrs['disabled'] = "disabled"
-            attrs = {
-                'component_id': "div_id_loaded_samples_alert",
-                'message': _("No File Configurations Found"),
-                'type': 'info'
-            }
-            alert_div = core_forms.blank_alert(**attrs)
-            soup.find(id="div_id_sample_type_holder").append(alert_div)
+        alert_soup = AlertSoup('validate_config_form')
+        alert_soup.set_status('danger').add_message(_("No file was selected."))
+        soup.find(id='div_id_save_config_content').insert(0, alert_soup)
 
         return HttpResponse(soup)
- 
-    
-url_prefix = "sample_config"
-sample_type_config_urls = [
-    path(f'{url_prefix}/', load_sample_config, name="form_sample_config_load"),
-    path(f'{url_prefix}/<int:config>/', load_sample_config, name="form_sample_config_load"),
 
-    # show the create a sample config form
-    path(f'{url_prefix}/new/', new_sample_config, name="form_sample_config_new"),
-    path(f'{url_prefix}/new/<int:config_id>/', new_sample_config, name="form_sample_config_new"),
+    if save_form.is_valid():
+        # Validate the config name is unique and isn't already in settingsdb.models.SampleFileConfig
+        # Validate file type (required), header line (required), sample ID column (required), comment column (optional)
+        column_names = get_file_columns(request)
 
-    # save the sample config
-    path(f'{url_prefix}/save/', save_sample_config, name="form_sample_config_save"),
-    path(f'{url_prefix}/update/<int:config_id>/', save_sample_config, name="form_sample_config_save"),
-    path('sample_config/delete/<int:config_id>/', delete_sample_config, name="form_sample_config_delete"),
+        sample_id_col = int(request.POST.get('sample_column', -1))
+        comment_col = int(request.POST.get('comment_column', -1))
+        file_type = request.POST.get('file_type', '')
+        allow_replicates = bool(request.POST.get('allow_replicates', True))
+        ignore_blank_samples = bool(request.POST.get('ignore_blank_sample_ids', False))
+
+        sample_column = column_names[sample_id_col]
+        comment_column = column_names[comment_col]
+        attrs = {
+            'name': save_form.cleaned_data['config_name'],
+            'description': save_form.cleaned_data['config_description'],
+            'file_type': file_type,
+            'tab': int(request.POST.get('file_tab', -1)),
+            'header_line': int(request.POST.get('header_line_number', -1)),
+            # The wording on the form is "ignore blank sample ids", the way it's used by the SampleFileConfig
+            # is "allow blank sample ids" so it's flipped from what the user is going to select.
+            'allow_blank_sample_ids': not ignore_blank_samples,
+            'allow_replicates': allow_replicates,
+            'sample_id_column_name': sample_column[1],
+            'comment_column_name': comment_column[1]
+        }
+
+        try:
+            config = None
+            if (config_id := request.POST.get('config_id', '-1')) != '-1':
+                config = SampleFileConfig.objects.get(pk=config_id)
+
+            if config is None:
+                with transaction.atomic():
+                    config = SampleFileConfig.objects.create(**attrs)
+                    create_sample_config_columns(request, config)
+            else:
+                with transaction.atomic():
+                    configs = SampleFileConfig.objects.filter(pk=config.pk)
+                    configs.update(**attrs)
+                    create_sample_config_columns(request, configs.first())
+                    update_table = True
+        except IntegrityError as ex:
+            message = "A configuration with this name already exists. Save over it?"
+            alert_soup = AlertSoup('validate_config_form')
+            config = SampleFileConfig.objects.get(name=attrs['name'])
+            icon = BeautifulSoup(load_svg('exclamation-triangle'), 'html.parser')
+            title = _("This will replace the existing config with the same config name with the new version")
+            alert_text = _("Are you sure?")
+            url = request.path
+
+            button = alert_soup.new_tag("button",
+                                        attrs={
+                                            'title': title,
+                                            'type': 'button',
+                                            'class': 'btn btn-sm btn-warning',
+                                            'hx-confirm': alert_text,
+                                            'hx-post': url,
+                                            'name': 'config_id',
+                                            'value': config.pk,
+                                            'hx-target': "#div_id_save_config_card",
+                                            'hx-indicator': "#div_id_indicator_sample_config",
+                                            'hx-swap': 'outerHTML',
+                                        })
+            button.append(icon)
+            button.append(span:=alert_soup.new_tag("span"))
+            span.string = _("Replace Existing Config")
+
+            alert_soup.set_status('danger').add_message(message)
+            alert_soup.add_button(button)
+
+        except Exception as ex:
+            user_logger.exception(ex)
+            alert_soup = AlertSoup('validate_config_form')
+            alert_soup.set_status('danger').add_message(str(ex))
+
+    crispy_html = render_crispy_form(save_form)
+    if alert_soup:
+        soup = BeautifulSoup(crispy_html, 'html.parser')
+        soup.find(id='div_id_save_config_content').insert(0, alert_soup)
+        return HttpResponse(soup)
+
+    response = HttpResponse(crispy_html)
+    if update_table:
+        response['HX-Trigger'] = 'update_existing_config'
+    return response
+
+
+def get_config_load_button(request):
+    soup = BeautifulSoup("", 'html.parser')
+    # <button type="button" class="btn btn-sm btn-primary">{% custom_icon 'arrow-down-square' %} {% trans 'Load columns' %}</button>
+
+    if request.POST.get('value_column', '-1') != '-1':
+        url = reverse_lazy('core:form_sample_type_load_file')
+        load_data_attrs = {
+            'class': 'btn btn-sm btn-primary',
+            'hx-post': url,
+            'hx-swap': "none"
+        }
+        icon = load_svg('arrow-down-square')
+        button = soup.new_tag("button", attrs=load_data_attrs)
+        button.append(icon)
+        button.string = _("Load Data")
+        soup.append(button)
+
+    return HttpResponse(soup)
+
+
+def get_existing_config_card(request):
+    existing_config_init = None
+    if (config_name := request.GET.get('config_name', '')) != '':
+        existing_config = SampleFileConfig.objects.get(name=config_name)
+        existing_config_init = {'existing_config': existing_config.pk}
+
+    existing_configs = ExistingConfigForm(initial=existing_config_init)
+    html = render_crispy_form(existing_configs)
+    return HttpResponse(html)
+
+
+def create_file_config(request, file_name, content) -> FileConfig:
+    tab_number = int(request.POST.get('file_tab', -1) or -1)
+    header_line = int(request.POST.get('header_line_number', -1) or -1)
+    sample_id_col = int(request.POST.get('sample_column', -1))
+    comment_col = int(request.POST.get('comment_column', -1))
+    allow_replicates = bool(request.POST.get('allow_replicates', True))
+    ignore_blank_sample_ids = bool(request.POST.get('ignore_blank_sample_ids', False))
+
+    file_config = FileConfig(file_name, content, tab_number)
+    file_config.set_header_line_number(header_line)
+    file_config.set_sample_id_column(sample_id_col)
+    file_config.set_comment_column(comment_col)
+    file_config.allow_replicates = allow_replicates
+    file_config.ignore_blank_sample_ids = ignore_blank_sample_ids
+
+    configs = request.POST.getlist('configs')
+    for config in configs:
+        config_column = FileConfigColumns()
+        config_column.value_column = int(request.POST.get(f'config_{config}', '-1'))
+        if (qc := request.POST.get(f'config_{config}_qc_column', 'None')) != 'None':
+            config_column.quality_control_column = int(qc)
+        if (dl := request.POST.get(f'config_{config}_dl_column', 'None')) != 'None':
+            config_column.detection_limit_column = int(dl)
+        if (dt := request.POST.get(f'config_{config}_datatype', 'None')) != 'None':
+            config_column.datatype_id = int(dt)
+        if (alias := request.POST.get(f'config_{config}_name_column', 'None')) != 'None':
+            config_column.alias = alias
+        file_config.append_config_column(config_column)
+
+    return file_config
+
+
+def split_row_error(message: str):
+    match = re.match(r"^Row\s+(\d+)(?:\s+.*)?\s*:\s*(.*)$", message.strip())
+    if not match:
+        return None, message.strip()
+
+    row_number = int(match.group(1))
+    message_body = match.group(2).strip()
+    return row_number, message_body
+
+
+def load_file(request):
+    msg_alert = StatusAlert("load_sample_notification_alert", "Preparing to load...")
+    if not msg_alert.is_socket_connected(user_logger.name):
+        msg_alert.set_socket(user_logger.name)
+        msg_alert.include_progress_bar()
+        response = HttpResponse(msg_alert)
+        response['HX-Trigger-After-Settle'] = "load_sample_file"
+        return response
+
+    msg_alert.include_close_button()
+    msg_alert.set_message("Complete")
+    msg_alert.set_type("success")
+
+    mission_id = int(request.POST.get('mission_id', '-1') or "-1")
+    mission = core_models.Mission.objects.get(pk=mission_id)
+    file = request.FILES.get('sample_file', None)
+    file_content = BytesIO(file.read())
+
+    file_config = create_file_config(request, file.name, file_content)
+
+    results = parse_sample_file(mission, file_config)
+    core_models.FileError.objects.filter(file_name=file.name, type=core_models.ErrorType.sample, code__in=[300]).delete()
+    if hasattr(results, 'errors'):
+        err_list = msg_alert.new_tag("ul")
+        err_list.attrs["class"] = "vertical-scrollbar"
+        for err in results.errors:
+            err_list.append(li:=msg_alert.new_tag("li"))
+            li.string = err
+
+            row, body = split_row_error(err)
+            core_models.FileError.objects.create(mission=mission, file_name=file.name, line=row, message=body, type=core_models.ErrorType.sample, code=300)
+
+        if len(err_list.find_all("li")) > 0:
+            msg_alert.set_message("Errors:")
+            msg_alert.set_type('warning')
+            msg_alert.get_message_container().append(err_list)
+
+    response = HttpResponse(msg_alert)
+    response['HX-Trigger'] = "update_samples"
+    return response
+
+
+url_patterns = [
+    path('sample_config/header/', get_file_config, name='form_sample_type_get_headers'),
+
+    path('sample_config/value/', update_value_form, name='form_sample_type_get_value_form'),
+    path('sample_config/value/<int:column_id>/', update_value_form, name='form_sample_type_get_value_form'),
+
+    path('sample_config/config/validate/', validate_config, name='form_sample_type_validate_value_form'),
+    path('sample_config/config/validate/<int:column_id>/', validate_config, name='form_sample_type_validate_value_form'),
+    path('sample_config/config/add/', add_to_config, name='form_sample_type_add_to_config'),
+    path('sample_config/config/update/', update_to_config, name='form_sample_type_update_to_config'),
+    path('sample_config/config/remove/<int:column_id>/', remove_from_config, name='form_sample_type_remove_from_config'),
+
+    path('sample_config/config/save/validate/', validate_save_config, name='form_sample_type_validate_save_config'),
+    path('sample_config/config/load_button/', get_config_load_button, name='update_config_load_button'),
+    path('sample_config/config/load_file/', load_file, name='form_sample_type_load_file'),
+
+    path('sample_config/datatype/update/', update_to_datatype_description_field, name='form_sample_type_get_datatype_method'),
+
+    path('sample_config/get/existing_config_card/', get_existing_config_card, name='form_sample_type_get_existing_config_card'),
 ]

@@ -73,7 +73,7 @@ class TestGetBCSPRows(AbstractTestDatabase):
     @tag('test_get_bcs_p_rows')
     def test_get_bcs_p_rows(self):
         core_factory.BottleFactory.start_bottle_seq = 400000
-        bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=self.mission), gear_type_id=90000102)
+        bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=self.mission), gear_type=90000102)
         core_factory.PhytoplanktonSampleFactory.create_batch(10, bottle=bottle)
 
         bottles = core_models.Bottle.objects.all()
@@ -219,7 +219,7 @@ class TestFakeBioChemDBDeleteUpdate(AbstractTestDatabase):
 
         # create some Oxygen sensor values for the Mission (self.mission)
         self.oxy_data_type = bio_tables_models.BCDataType.objects.get(data_type_seq=oxy_seq)
-        self.oxy_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=self.oxy_data_type)
+        self.oxy_sample_type = core_factory.MissionSampleTypeFactory(mission=self.mission, datatype=self.oxy_data_type.pk)
 
         # bottles are attached to an event
         event = core_factory.CTDEventFactory(mission=self.mission)

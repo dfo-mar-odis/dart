@@ -2,6 +2,7 @@ from django.db import models
 from django.db.models.functions import Lower
 from django.utils.translation import gettext_lazy as _
 
+from bio_tables.models import BCDataType
 from core import models as core_models
 from bio_tables import models as bio_models
 
@@ -11,6 +12,9 @@ class LocalSetting(models.Model):
                                              help_text=_("Location of individual mission databases"))
 
     connected = models.BooleanField(verbose_name="Connected", default=False)
+
+    def __str__(self):
+        return f"{self.database_location} - Connected: {self.connected}"
 
 
 class GlobalSampleTypeCategory(models.Model):
@@ -54,7 +58,7 @@ class GlobalSampleType(models.Model):
                                                                 long_name=self.long_name,
                                                                 priority=self.priority,
                                                                 is_sensor=self.is_sensor,
-                                                                datatype=self.datatype)
+                                                                datatype=self.datatype.pk)
             mission_sample_type.save(using=database)
         else:
             mission_sample_type = mission_sample_type.first()
@@ -68,6 +72,32 @@ class GlobalSampleType(models.Model):
 
         return label
 
+
+class SampleFileConfig(models.Model):
+    name = models.CharField(verbose_name=_("Name"), max_length=50, unique=True)
+    description = models.CharField(verbose_name=_("Description"), max_length=200, blank=True, null=True)
+
+    file_type = models.CharField(verbose_name=_("File Type"), max_length=5,
+                                 help_text=_("file type extension e.g csv, xls, xlsx, dat"))
+    tab = models.IntegerField(verbose_name=_("Tab"), default=0, help_text=_("The tab number in the file"))
+    header_line = models.IntegerField(verbose_name=_("Header Row"), default=0)
+
+    sample_id_column_name = models.CharField(verbose_name=_("Sample ID Column Name"), max_length=20)
+    comment_column_name = models.CharField(verbose_name=_("Comment Column Name"), max_length=20, blank=True, null=True)
+
+    allow_replicates = models.BooleanField(verbose_name=_("Allow Replicates?"), default=True,
+                                           help_text=_("If false, warnings will be created if Sample IDs appear more than once"))
+    allow_blank_sample_ids = models.BooleanField(verbose_name=_("Allow blank sample IDs?"), default=True,
+                                                 help_text=_("If false, values on lines that do not have sample IDs will be ignored"))
+
+
+class SampleFileConfigColumns(models.Model):
+    file_config = models.ForeignKey(SampleFileConfig, verbose_name=_("File Config Columns"), on_delete=models.CASCADE, related_name="config_columns")
+    column_alias = models.CharField(verbose_name=_("Alias Column"), max_length=20)
+    value_column_name = models.CharField(verbose_name=_("Value Column Name"), max_length=50)
+    detection_limit_column_name = models.CharField(verbose_name=_("Detection Limit Column Name"), max_length=50, blank=True, null=True)
+    quality_control_column_name = models.CharField(verbose_name=_("Quality Control Column Name"), max_length=50, blank=True, null=True)
+    datatype_id = models.IntegerField(verbose_name=_("Datatype ID Column Name"), blank=True, null=True)
 
 class SampleTypeConfig(models.Model):
     sample_type = models.ForeignKey(GlobalSampleType, verbose_name=_("Sample Type"),

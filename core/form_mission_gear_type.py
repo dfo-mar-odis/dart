@@ -16,7 +16,7 @@ from crispy_forms.layout import Column, Field, Div, Row
 from crispy_forms.utils import render_crispy_form
 
 from django.conf import settings
-from django.db.models import QuerySet
+from django.db.models import QuerySet, Subquery, OuterRef
 
 from django import forms
 from django.http import HttpResponse
@@ -123,17 +123,7 @@ class GearTypeSelectionForm(core_forms.CollapsableCardForm):
         }
         icon = load_svg("check-square")
 
-        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
-
-    def get_btn_load_volume(self):
-        attrs = {
-            'id': self.get_id_builder().get_button_volume_id(),
-            'hx-get': reverse_lazy('core:form_gear_type_load_volume', args=[self.mission_id]),
-            'hx-swap': 'none',
-        }
-        icon = load_svg("check-square")
-
-        return StrictButton(icon, css_class='btn btn-sm btn-primary', **attrs)
+        return StrictButton(f"{icon} {_("Apply Gear Type")}", css_class='btn btn-sm btn-primary', **attrs)
 
     def get_input_gear_code(self):
         attrs = {
@@ -210,12 +200,10 @@ def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> Quer
 
     event_id = int(filter_dict.get('event', 0) or 0)
     if event_id > 0:
-        event = core_models.Event.objects.get(pk=event_id)
-        sample_id_start = event.sample_id
-        sample_id_end = event.end_sample_id
-    else:
-        sample_id_start = int(filter_dict.get('sample_id_start', 0) or 0)
-        sample_id_end = int(filter_dict.get('sample_id_end', 0) or 0)
+        queryset = queryset.filter(event__event_id=event_id)
+
+    sample_id_start = int(filter_dict.get('sample_id_start', 0) or 0)
+    sample_id_end = int(filter_dict.get('sample_id_end', 0) or 0)
 
     if bool(sample_id_start) and not bool(sample_id_end):
         queryset = queryset.filter(bottle_id=sample_id_start)
@@ -226,31 +214,55 @@ def get_samples_queryset(filter_dict: dict, mission_id, instrument_type) -> Quer
         filter_dict.get('filter_gear_type_code', 0) or filter_dict.get('filter_gear_type_description', 0) or 0)
 
     if gear_code:
-        queryset = queryset.filter(gear_type_id=gear_code)
+        queryset = queryset.filter(gear_type=gear_code)
 
     return queryset
 
 
 def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
+
+    # I was doing this with the django annotate function to add a gear type/description bottles in the queryset
+    # but that seems to have stopped working at some point and I think it's because the bio_table.models.BCGears is no
+    # longer related to the core.models.Bottle model. So, instead of using annotate, I'm creating two dataframes
+    # and then merging the queryset dataframe with the BCGears dataframe.
     instrument_type = kwargs['instrument_type']
 
-    headers = [
-        ('bottle_id', _("Sample")),
-        ('event__event_id', _("Event")),
-        ('mesh_size', _("Mesh")),
-        ('gear_type__gear_seq', _("Gear Type ID")),
-        ('gear_type__description', _("Gear Type Description"))
-    ]
-    if instrument_type == core_models.InstrumentType.net:
-        headers.insert(3, ('volume', _("Volume")))
+    # get a list of BCGears the queryset uses. We can't use .distinct on the queryset.values_list because
+    # the queryset has been sliced so we'll use a python set to get distinct values
+    gear_type_ids = list(set(queryset.values_list('gear_type', flat=True)))
+    gear_types = biochem_models.BCGear.objects.filter(pk__in=gear_type_ids)
 
-    value_headers = [h[0] for h in headers]
-    table_headers = [h[1] for h in headers]
+    # The value_headers is the column in the queryset, which should match the core.models.Bottle model.
+    value_headers = ['bottle_id', 'event__event_id', 'mesh_size', 'gear_type']
+
+    # The table header is what labels we want to give to the HTML table we're creating.
+    table_headers = [_("Sample"), _("Event"), _("Mesh"), _("Gear Type ID"), _("Gear Description")]
+
+    # if we're using a net, then we'll also want to display the volume of the bottle
+    if instrument_type == core_models.InstrumentType.net:
+        value_headers.insert(3, 'volume')
+        table_headers.insert(3, _("Volume"))
 
     bottle_list = queryset.values(*value_headers)
 
+    # create two dataframes, one for the Bottle queryset and one for the BCGear queryset. Merge them together
+    # where the queryset.gear_type matches the gear.gear_seq
     df = read_frame(bottle_list)
+    bc_gear_df = pd.DataFrame(
+       gear_types.values('gear_seq', 'description')
+    )
+    df = df.merge(
+        bc_gear_df,
+        left_on='gear_type',
+        right_on='gear_seq',
+        how='left'
+    )
+    # drop the queryset.gear_type column so the dimensions will match the table_headers list
+    df = df.drop('gear_type', axis=1)
 
+    # I'm sure there's a way to use a map function to do this, but if the volume column is empty or NaN then
+    # we want to use the core.models.Bottle computed volume value. If volumes have been loaded from a multinet
+    # volume file then the volume column in the dataframe won't be None.
     if instrument_type == core_models.InstrumentType.net:
         bottle_dict = {b.bottle_id: b for b in queryset}
         for i, row in df.iterrows():
@@ -259,6 +271,7 @@ def process_samples_func(queryset, **kwargs) -> BeautifulSoup:
 
                 df.at[i, 'volume'] = volume if volume else "-----"
 
+    # change the column names to use the labels we want to show the user.
     df.columns = table_headers
 
     html = df.to_html(index=False)
@@ -287,6 +300,8 @@ def list_samples(request, mission_id, instrument_type, **kwargs):
         icon = BeautifulSoup(load_svg('plus-square'), 'html.parser').svg
         button_load_volumes = soup.new_tag('button', attrs=attrs)
         button_load_volumes.append(icon)
+        button_load_volumes.append(btn_label := soup.new_tag('span'))
+        btn_label.string = _(" Load Volume Files")
 
         button_row.insert(0, button_load_volumes)
 
@@ -472,7 +487,7 @@ def update_gear_type_samples(request, mission_id, instrument_type=None, **kwargs
     gear_type = request.POST.get('gear_type_code', None)
 
     for bottle in bottles:
-        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)) if utils.is_number(
+        bottle.gear_type = biochem_models.BCGear.objects.get(gear_seq=int(gear_type)).pk if utils.is_number(
             gear_type) else gear_type
 
     core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])

@@ -20,6 +20,7 @@ from core.forms import NoWhiteSpaceCharField
 from config.utils import load_svg
 from settingsdb import models as settings_models, utils as settings_utils
 
+from bio_tables import models as bio_models
 
 class MissionSettingsForm(forms.ModelForm):
 
@@ -76,7 +77,11 @@ class MissionSettingsForm(forms.ModelForm):
         return button
 
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+        initial = kwargs.pop('initial', {})
+        if 'data_center' not in initial:
+            initial['data_center'] = 20
+
+        super().__init__(*args, **kwargs, initial=initial)
         self.helper = FormHelper()
         self.helper.form_show_labels = True
         self.fields['global_geographic_region'].widget.attrs["hx-swap"] = 'outerHTML'
@@ -89,6 +94,13 @@ class MissionSettingsForm(forms.ModelForm):
         self.fields['global_geographic_region'].choices += [(-2, _('')), (-1, _('New Region'))]
         self.fields['global_geographic_region'].required = False
         self.fields['geographic_region'].required = False
+
+        # New data_center field configuration
+        self.fields['data_center'] = forms.ChoiceField(
+            label=_("Data Center"),
+            choices=[(None, '------')] + [(dc.pk, f'{dc.name} - {dc.description}') for dc in bio_models.BCDataCenter.objects.all()],
+            required=False,
+        )
 
         self.fields['mission_descriptor'].required = False
         self.fields['lead_scientist'].required = False

@@ -1,16 +1,19 @@
 import re
 
 import time
+from typing import Self
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, LayoutObject, Hidden, Row, Column, Field, Div, HTML, flatatt
 
 from django import forms
 from django.core.exceptions import ValidationError
+from django.template.loader import render_to_string
 from django.urls import reverse_lazy
 from django.utils.translation import gettext as _
+from scipy.sparse import expand_dims
 
 from config.utils import load_svg
 
@@ -19,6 +22,54 @@ from . import models
 from bio_tables import models as bio_models
 from settingsdb import models as settings_models
 from .consumer import LoggerConsumer
+
+
+class CollapsableCardSoup(BeautifulSoup):
+
+    def get_body_collapse_id(self):
+        return "div_id_card_collapse_" + self.alert_id
+
+    def get_body_id(self):
+        return "div_id_card_body_" + self.alert_id
+
+    def __init__(self, card_name: str, card_title: str, expanded: bool = False, css=None):
+        self.alert_id = card_name
+
+        context = {"card_name": card_name, "card_title": card_title}
+        html = render_to_string("core/components/CollapsableCard.html", context)
+
+        super().__init__(html, "html.parser")
+
+        if css:
+            self.find('div').attrs['class'].append(css)
+
+        if expanded:
+            body = self.find(id=self.get_body_collapse_id())
+            body.attrs['class'].append("show")
+
+
+class AlertSoup(BeautifulSoup):
+
+    def set_status(self, alert_type) -> Self:
+        self.find(id=f"alert_soup_content_{self.alert_id}").attrs['class'] = f"alert alert-{alert_type}"
+        return self
+
+    def add_message(self, message) -> Self:
+        div = self.new_tag('div')
+        div.string = message
+        self.find(id=f"alert_soup_content_{self.alert_id}_msg").append(div)
+        return self
+
+    def add_button(self, button: Tag):
+        if button.name != 'button':
+            raise TypeError("The added element is expected to be a button type")
+
+        self.find(id=f"alert_soup_content_{self.alert_id}_buttons").append(button)
+
+    def __init__(self, alert_id):
+        self.alert_id = alert_id
+        html = render_to_string("core/components/AlertSoup.html", {"alert_id": alert_id})
+        super().__init__(html, "html.parser")
 
 
 class NoWhiteSpaceCharField(forms.CharField):

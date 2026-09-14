@@ -66,8 +66,7 @@ class Mission(models.Model):
                                                      "the mission took place"))
 
     # default=20 is BIO
-    data_center = models.ForeignKey(bio_models.BCDataCenter, verbose_name=_("Data Center"), default=20,
-                                    on_delete=models.DO_NOTHING)
+    data_center = models.IntegerField(verbose_name=_("Data Center"), default=20)
 
     # this is provided for convince so the user won't have to re-enter the directory repeatedly. It may differ based
     # on being 'At-sea' where data is collected or on land where collected data is loaded to BioChem
@@ -461,8 +460,7 @@ class Bottle(models.Model):
     #
     # in the AZMP template, Robert uses 90000102 (0.75 m) if the net is a 202um mesh and
     # 90000105 (0.5 m) if it's a 76um or 70um mesh for Zooplankton
-    gear_type = models.ForeignKey(bio_models.BCGear, verbose_name="Gear Type", related_name="bottles",
-                                  on_delete=models.DO_NOTHING, default=90000171)
+    gear_type = models.IntegerField(verbose_name="Gear Type", default=90000171)
 
     # Phytoplankton normally comes from CTD bottles, but there are 76um and 70um nets used normally on 0.5m rings.
     # The mesh can normally be used to determine the gear_type, but if the gear type is set to
@@ -481,11 +479,11 @@ class Bottle(models.Model):
             return [90000001, self.volume]
 
         # if no volume has been provided then we have to compute the volume.
-        if self.gear_type.pk == 90000102 or self.gear_type.pk == 90000105:
+        if self.gear_type == 90000102 or self.gear_type == 90000105:
             diameter = None
-            if self.gear_type.pk == 90000102: # this is a 3/4 meter diameter ringnet
+            if self.gear_type == 90000102: # this is a 3/4 meter diameter ringnet
                 diameter = 0.75
-            elif self.gear_type.pk == 90000105: # this is a 1/2 meter diameter ringnet
+            elif self.gear_type == 90000105: # this is a 1/2 meter diameter ringnet
                 diameter = 0.5
 
             area = np.pi * np.power(float(diameter / 2), 2)
@@ -534,12 +532,11 @@ class MissionSampleType(models.Model):
     is_sensor = models.BooleanField(verbose_name=_("Is Sensor"), default=False,
                                     help_text=_("Identify this sample type as a type of sensor"))
 
-    datatype = models.ForeignKey(bio_models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
-                                 blank=True, related_name='mission_sample_types', on_delete=models.SET_NULL)
+    datatype = models.IntegerField(verbose_name=_("BioChem DataType"), null=True, blank=True)
 
     def __str__(self):
         label = self.name + (f" - {self.long_name}" if self.long_name else "")
-        label += f" {self.datatype.data_type_seq} : {self.datatype.description}" if self.datatype else ""
+        label += f" {self.datatype}"
 
         return label
 
@@ -603,8 +600,7 @@ class DiscreteSampleValue(models.Model):
 
     # Individual samples can have different datatype than the general datatype provided by the
     # sample type. If this is blank the sample.type.datatype value should be used for the sample
-    datatype = models.ForeignKey(bio_models.BCDataType, verbose_name=_("BioChem DataType"), null=True,
-                                 blank=True, on_delete=models.SET_NULL)
+    datatype = models.IntegerField(verbose_name=_("BioChem DataType"), null=True, blank=True)
 
     bio_upload_date = models.DateTimeField(verbose_name=_("BioChem Uploaded"), blank=True, null=True,
                                            help_text=_("Date of last BioChem upload"))
@@ -627,16 +623,13 @@ class PlanktonSample(models.Model):
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
     bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)
 
-    taxa = models.ForeignKey(bio_models.BCNatnlTaxonCode, verbose_name=_("Taxonomy"),
-                             related_name="plankton_data", on_delete=models.DO_NOTHING)
+    taxa = models.IntegerField(verbose_name=_("Taxonomy"))
 
     # default unassigned BCLIFEHISTORIES 90000000
-    stage = models.ForeignKey(bio_models.BCLifeHistory, verbose_name=_("Stage of Life"), default=90000000,
-                              on_delete=models.DO_NOTHING)
+    stage = models.IntegerField(verbose_name=_("Stage of Life"), default=90000000)
 
     # default unassigned BCSEXES 90000000
-    sex = models.ForeignKey(bio_models.BCSex, verbose_name=_("Sex"), default=90000000,
-                            on_delete=models.DO_NOTHING)
+    sex = models.IntegerField(verbose_name=_("Sex"), default=90000000)
 
     # 1 for phytoplankton, more complicated for zooplankton
     split_fraction = models.FloatField(verbose_name=_("Split Fraction"), default=1)
@@ -742,6 +735,7 @@ class AbstractError(models.Model):
     # 1-99 is used by the Plankton Parser
     # 100-199 is used by btl_ros for Parsing BTL files
     # 200-299 is used by event_csv for Parsing CSV event files
+    # 300-399 is used by the Sample parser
     # 1000-1999 is used by core.form_mission_gear_type
     # 2000-2999 is used by core.form_biochem_pre_validation
     # 3000-3999 is used by biochem.upload

@@ -92,7 +92,7 @@ class TestGearTypeForm(DartTestCase):
         self.mission = core_factory.MissionFactory.create(name='Test Mission')
 
         self.event = core_factory.CTDEventFactory(mission=self.mission)
-        core_factory.BottleFactory.create_batch(10, event=self.event)
+        core_factory.BottleFactory.create_batch(10, event=self.event, gear_type=90000002)
         self.instrument_type = self.event.instrument.type
 
         self.expected_update_url = reverse('core:form_mission_gear_type_update_gear_type', args=[self.mission.pk, self.instrument_type])
@@ -152,7 +152,7 @@ class TestGearTypeForm(DartTestCase):
     def test_update_gear_type_function_no_filter(self):
         bottles = core_models.Bottle.objects.filter(event=self.event)
         for bottle in bottles:
-            self.assertEqual(bottle.gear_type.pk, 90000002)
+            self.assertEqual(bottle.gear_type, 90000002)
 
         # 9000001 is a pressure gear type
         new_gear = 90000001
@@ -166,13 +166,13 @@ class TestGearTypeForm(DartTestCase):
 
         bottles = core_models.Bottle.objects.filter(event=self.event)
         for bottle in bottles:
-            self.assertEqual(bottle.gear_type.pk, new_gear)
+            self.assertEqual(bottle.gear_type, new_gear)
 
     def test_update_gear_type_function_filter_sample_id(self):
         bottles = core_models.Bottle.objects.filter(event=self.event)
         first_bottle_id = bottles[0].bottle_id
         for bottle in bottles:
-            self.assertEqual(bottle.gear_type.pk, 90000002)
+            self.assertEqual(bottle.gear_type, 90000002)
 
         # 9000001 is a pressure gear type
         new_gear = 90000001
@@ -185,11 +185,11 @@ class TestGearTypeForm(DartTestCase):
         self.assertEqual(response.headers['HX-Trigger'], 'reload_samples')
 
         first_bottle = core_models.Bottle.objects.get(bottle_id=first_bottle_id)
-        self.assertEqual(first_bottle.gear_type.pk, new_gear)
+        self.assertEqual(first_bottle.gear_type, new_gear)
 
         bottles = core_models.Bottle.objects.filter(event=self.event).exclude(bottle_id=first_bottle_id)
         for bottle in bottles:
-            self.assertEqual(bottle.gear_type.pk, 90000002)
+            self.assertEqual(bottle.gear_type, 90000002)
 
 
 @tag("forms", "mission_gear_type", "mission_gear_type_functions")

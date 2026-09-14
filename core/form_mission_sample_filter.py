@@ -95,7 +95,7 @@ class SampleFilterForm(core_forms.CollapsableCardForm):
             'hx-get': self.get_clear_filters_url()
         }
         button = StrictButton(
-            load_svg('eraser'),
+            f"{load_svg('eraser')} {_("Clear")}",
             css_class='btn btn-sm btn-secondary',
             id=self.get_button_clear_filters_id(),
             **attrs
@@ -312,6 +312,8 @@ def list_samples(request, queryset, card_title, delete_samples_url, process_samp
 
     icon = BeautifulSoup(load_svg('dash-square'), 'html.parser').svg
     btn_delete.append(icon)
+    btn_delete.append(btn_label:=card_soup.new_tag('span'))
+    btn_label.string = _(" Delete Samples")
 
     return card_soup
 

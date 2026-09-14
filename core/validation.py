@@ -136,6 +136,8 @@ def validate_event(event: core_models.Event) -> list[core_models.EventError]:
         # multinets don't get the same type of validation ordinary nets do
         if 'multinet' not in event.instrument.name.lower():
             validation_errors += validate_net_event(event)
+        else:
+            validation_errors += validate_multinet_event(event)
     else:
         # we're always going to validate that an event falls within the mission dates.
         validation_errors += validate_event_dates(event)
@@ -188,7 +190,6 @@ def validate_ctd_event(event: core_models.Event) -> list[core_models.EventError]
 
 
 def validate_net_event(event: core_models.Event) -> list[core_models.EventError]:
-    database = event._state.db
     validation_errors = []
 
     # Don't validate aborted events
@@ -196,7 +197,7 @@ def validate_net_event(event: core_models.Event) -> list[core_models.EventError]
         return validation_errors
 
     if not event.attachments.filter(Q(name__iexact='202um') | Q(name__iexact='76um')).exists():
-        if event.instrument.name != ('202um' or '76um'):
+        if event.instrument.name not in ['202um', '76um']:
             message = _("The nets name must be 202um or 76um or the event must have a '202um' or '76um' attachment")
             err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
             validation_errors.append(err)
@@ -268,6 +269,46 @@ def validate_net_event(event: core_models.Event) -> list[core_models.EventError]
 
                 err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
                 validation_errors.append(err)
+
+    return validation_errors
+
+
+def validate_multinet_event(event: core_models.Event) -> list[core_models.EventError]:
+    validation_errors = []
+
+    # Don't validate aborted events
+    if event.actions.filter(type=core_models.ActionType.aborted).exists():
+        return validation_errors
+
+    if not event.actions.filter(type=core_models.ActionType.deployed).exists():
+        message = _("Missing a deployed action")
+        err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.actions.filter(type=core_models.ActionType.bottom).exists():
+        message = _("Missing a bottom action")
+        err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.actions.filter(type=core_models.ActionType.recovered).exists():
+        message = _("Missing a recovered action")
+        err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.sample_id:
+        message = _("Missing a starting sample ID")
+        err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if not event.end_sample_id:
+        message = _("Missing an end sample ID")
+        err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
+
+    if event.sample_id and event.end_sample_id and event.sample_id > event.end_sample_id:
+        message = _("Starting sample ID is greater than end sample ID")
+        err = core_models.EventError(event=event, message=message, type=core_models.ErrorType.validation)
+        validation_errors.append(err)
 
     return validation_errors
 

@@ -1,5 +1,6 @@
 from datetime import timezone, timedelta
 
+from django.db import IntegrityError
 from django.db.models import QuerySet
 from django.utils.translation import gettext as _
 
@@ -11,20 +12,47 @@ from bio_tables import models as biotable_model
 from core import models as core_models
 from settingsdb import utils
 
+import os
 import logging
 
 user_logger = logging.getLogger('dart.user')
 logger = logging.getLogger('dart')
 
+class Listener:
 
-class DatabaseDownloader:
+    def notify(self, message, *args):
+        pass
+
+
+class Notifier:
+    listeners: list[Listener] = []
+
+    def add_listener(self, listener: Listener):
+        self.listeners.append(listener)
+
+    def remove_listener(self, listener: Listener):
+        self.listeners.remove(listener)
+
+    def get_listeners(self) -> list[Listener]:
+        return self.listeners
+
+    def clear_listeners(self):
+        self.listeners.clear()
+
+    def notify(self, message, *args):
+        for listener in self.listeners:
+            listener.notify(message, *args)
+
+
+class DatabaseDownloader(Notifier):
+
     def __init__(self, mission_seq):
         self.bio_mission = biochem_models.Bcmissions.objects.using('biochem').get(mission_seq=mission_seq)
 
         bio_mission_name = self.bio_mission.name
         self.db_name = "DART_" + bio_mission_name.upper()
 
-        user_logger.info("Creating Local Mission DB for " + bio_mission_name)
+        self.notify("Creating Local Mission DB for " + bio_mission_name)
 
     def _parse_date_time(self, start_date, start_time, utc_offset=0):
         from datetime import datetime
@@ -56,7 +84,7 @@ class DatabaseDownloader:
             "end_date": bio_mission.end_date,
             "platform": bio_mission.platform,
             "protocol": bio_mission.protocol,
-            "data_center": biotable_model.BCDataCenter(pk=bio_mission.data_center.pk),
+            "data_center": bio_mission.data_center.pk,
             "collector_comments": bio_mission.collector_comment,
             "data_manager_comments": bio_mission.data_manager_comment,
         }
@@ -64,7 +92,7 @@ class DatabaseDownloader:
         return mission
 
     def copy_stations(self):
-        user_logger.info("Copying station data")
+        self.notify("Copying station data")
 
         events = self.bio_mission.events.all()
         stations = {
@@ -76,7 +104,7 @@ class DatabaseDownloader:
         if create_stations:
             core_models.Station.objects.bulk_create(create_stations)
 
-        user_logger.info(f"Created {len(create_stations)} stations")
+        self.notify(f"Created {len(create_stations)} stations")
 
     def copy_discrete_actions(self, headers, core_event: core_models.Event):
 
@@ -133,7 +161,7 @@ class DatabaseDownloader:
         total_rows = len(headers)
         for row, header in enumerate(headers):
             if (row % 10) == 0:
-                user_logger.info(_("Creating Bottles") + ": %d/%d", (row+1), total_rows)
+                self.notify(_("Creating Bottles") + ": %d/%d", (row+1), total_rows)
 
             bottle_id = header.collector_sample_id
             bottle = core_models.Bottle(event=core_event, bottle_id=bottle_id, bottle_number=(row+1))
@@ -142,7 +170,7 @@ class DatabaseDownloader:
             bottle.end_pressure = header.end_depth
             bottle.latitude = header.start_lat
             bottle.longitude = header.start_lon
-            bottle.gear_type = biotable_model.BCGear(gear_seq=header.gear_seq)
+            bottle.gear_type = header.gear_seq
             create_bottles.append(bottle)
 
         return create_bottles
@@ -153,7 +181,7 @@ class DatabaseDownloader:
         total_rows = len(data_types)
         for row, data_type_seq in enumerate(data_types):
             if (row % 10) == 0:
-                user_logger.info(_("Loading Data Types") + ": %d/%d", (row+1), total_rows)
+                self.notify(_("Loading Data Types") + ": %d/%d", (row+1), total_rows)
 
             datatype = biotable_model.BCDataType.objects.get(data_type_seq=data_type_seq)
             is_sensor = "CTD" in datatype.method.upper()
@@ -162,7 +190,7 @@ class DatabaseDownloader:
                 is_sensor=is_sensor,
                 name=datatype.method,
                 long_name=datatype.description,
-                datatype=datatype,
+                datatype=datatype.pk,
             )
             create_data_types.append(mission_sample_type)
 
@@ -170,7 +198,7 @@ class DatabaseDownloader:
 
     def copy_discrete_sample_values(self, values: QuerySet[biochem_models.Bcdiscretedtails]):
         bottles = dict(core_models.Bottle.objects.values_list('bottle_id', 'id'))
-        data_types = dict(core_models.MissionSampleType.objects.values_list('datatype_id', "id"))
+        data_types = dict(core_models.MissionSampleType.objects.values_list('datatype', "id"))
 
         existing_samples = dict()
 
@@ -180,7 +208,7 @@ class DatabaseDownloader:
 
         for row, value in enumerate(values.iterator(chunk_size=500)):
             if (row % 10) == 0:
-                user_logger.info(_("Loading Discrete Values") + ": %d/%d", (row+1), total_rows)
+                self.notify(_("Loading Discrete Values") + ": %d/%d", (row+1), total_rows)
 
             try:
                 bottle_id = int(value.discrete.collector_sample_id)
@@ -241,7 +269,7 @@ class DatabaseDownloader:
         total_rows = len(events)
         for row, event in enumerate(events.iterator(chunk_size=500)):
             if (row % 10) == 0:
-                user_logger.info(_("Loading Events") + ": %d/%d", (row+1), total_rows)
+                self.notify(_("Loading Events") + ": %d/%d", (row+1), total_rows)
 
             station = None
             instrument = None
@@ -261,7 +289,7 @@ class DatabaseDownloader:
                 # we'll get more complex here later. We should be able to get the netdata from the plankton headers
                 raise NotImplementedError("Need to create plankton net")
             else:
-                raise ValueError("Unknown Instrument that is not a CTD or a Ring Net")
+                raise ValueError("Unknown Mission type that is not Discrete or Plankton")
 
             core_event = core_models.Event()
             core_event.mission = self.core_mission
@@ -287,7 +315,13 @@ class DatabaseDownloader:
                 create_actions.extend(self.copy_discrete_actions(headers, core_event))
                 create_bottles.extend(self.copy_bottles(headers, core_event))
 
-        core_models.Event.objects.bulk_create(create_events)
+        try:
+            core_models.Event.objects.bulk_create(create_events)
+        except IntegrityError as ex:
+            logger.error("Duplicate event in Batch")
+            for event in create_events:
+                logger.error(f"Event: {event.event_id} Instrument: {event.instrument.name}")
+            raise ex
         core_models.Action.objects.bulk_create(create_actions)
         core_models.Bottle.objects.bulk_create(create_bottles)
 
@@ -303,28 +337,35 @@ class DatabaseDownloader:
         self.copy_mission_data_types(data_types)
         self.copy_discrete_sample_values(values)
 
-        user_logger.info(_("Complete"))
+        self.notify(_("Complete"))
 
-def test(mission_seq):
+def download_mission(mission_seq, user: str = None, password: str = None, tns: str = None, output_directory: str = None):
 
     utils.close_connections()
 
-    import environ
-    import os
-    logger.level = logging.DEBUG
+    if user is None:
+        raise EnvironmentError("Missing BIOCHEM_DB_USER")
+    if password is None:
+        raise EnvironmentError("Missing BIOCHEM_DB_PASS")
+    if tns is None:
+        raise EnvironmentError("Missing BIOCHEM_DB_NAME")
 
-    env = environ.Env()
-    user = env('BIOCHEM_DB_USER')
-    password = env('BIOCHEM_DB_PASS')
-    tns = env('BIOCHEM_DB_NAME')
     sync_tables.connect_tns(user, password, tns)
 
     # BiochemT test
     # downloader = DatabaseDownloader(20000000010872)
 
     # BiochemP test
+    class LogListener(Listener):
+        def notify(self, message, *args):
+            user_logger.info(message, *args)
+    listener = LogListener()
+
     downloader = DatabaseDownloader(mission_seq)
-    location = utils.get_db_location(downloader.db_name)
+    downloader.add_listener(listener)
+
+    location = utils.get_db_location(downloader.db_name, output_directory)
+    logger.info(f"Location: {location}")
     if os.path.exists(location):
         os.remove(location)
 

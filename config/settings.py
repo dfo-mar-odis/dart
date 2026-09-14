@@ -257,6 +257,10 @@ HANDLERS = {
 
 LOGGERS = (
     {
+        "root": {
+            "handlers": ["console"],
+            "level": "DEBUG" if DEBUG else "WARNING",
+        },
         "django": {
             "handlers": ["console"],
             "level": "INFO",

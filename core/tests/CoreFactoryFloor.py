@@ -24,7 +24,7 @@ class MissionFactory(DjangoModelFactory):
 
     name = factory.lazy_attribute(lambda o: faker.word())
     geographic_region = factory.lazy_attribute(lambda o: faker.word())
-    data_center = factory.SubFactory(BioFactory.BCDataCenterFactory)
+    data_center = 20
 
 
 class StationFactory(DjangoModelFactory):
@@ -136,7 +136,7 @@ class MissionSampleTypeFactory(DjangoModelFactory):
     name = factory.lazy_attribute(lambda o: faker.word())
     long_name = factory.lazy_attribute(lambda o: faker.name())
 
-    datatype = factory.lazy_attribute(lambda o: faker.random.choice(bio_tables.models.BCDataType.objects.all()))
+    datatype = 90000001
 
 
 class BottleFactory(DjangoModelFactory):
@@ -147,7 +147,7 @@ class BottleFactory(DjangoModelFactory):
     closed = factory.lazy_attribute(lambda o: faker.date_time(tzinfo=timezone.get_current_timezone()))
     bottle_id = factory.sequence(lambda n: n)
     pressure = factory.lazy_attribute(lambda o: faker.pyfloat(left_digits=4, right_digits=3))
-    gear_type = factory.lazy_attribute(lambda o: bio_tables.models.BCGear.objects.get(pk=90000002))
+    gear_type = 90000002
     mesh_size = 0
 
 
@@ -176,7 +176,7 @@ class PhytoplanktonSampleFactory(DjangoModelFactory):
 
     file = factory.lazy_attribute(lambda o: faker.word() + ".xlsx")
     bottle = factory.SubFactory(BottleFactory)
-    taxa = factory.lazy_attribute(lambda o: random.choice(bio_tables.models.BCNatnlTaxonCode.objects.all()))
+    taxa = 90000001
     count = factory.lazy_attribute(lambda o: faker.random.randint(0, 10000))
 
 

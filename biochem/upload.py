@@ -10,7 +10,7 @@ from django.db import connections, DatabaseError, OperationalError
 from django.db.models import QuerySet, Min, Max
 from django.utils.translation import gettext as _
 
-import bio_tables.models
+from bio_tables.models import BCNatnlTaxonCode, BCDataType, BCDataCenter
 from biochem import models
 from biochem.models import BcsD, BcsP, BcdD, BcdP
 from core import models as core_models
@@ -117,12 +117,13 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
     DART_EVENT_COMMENT = "Created using the DFO at-sea Reporting Template"
 
     bottles = bottles.select_related(
-        'event__mission__data_center',
+        'event__mission',
         'event__station'
     )
 
     total_bottles = len(bottles)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+    institutes = {bcdc.pk: bcdc for bcdc in BCDataCenter.objects.all()}
 
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
@@ -130,7 +131,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
 
         event = bottle.event
         mission = event.mission
-        primary_data_center = mission.data_center
+        primary_data_center = institutes[mission.data_center]
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
@@ -187,7 +188,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
             event_min_lon = min(event.start_location[1], event.end_location[1]),
             event_max_lon = max(event.start_location[1], event.end_location[1]),
 
-            dis_headr_gear_seq = bottle.gear_type.gear_seq,
+            dis_headr_gear_seq = bottle.gear_type,
             dis_headr_time_qc_code = 1,
             dis_headr_position_qc_code = 1,
 
@@ -231,14 +232,15 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
     # institute: bio_tables.models.BCDataCenter = mission.data_center
 
     bottles = bottles.select_related(
-        'event__mission__data_center',
+        'event__mission',
         'event__station',
         'event__instrument',
-        'gear_type'
     )
 
     total_bottles = len(bottles)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+
+    institutes = {bcdc.pk: bcdc for bcdc in BCDataCenter.objects.all()}
 
     for count, bottle in enumerate(bottles):
         if count % 10 == 9:
@@ -246,13 +248,13 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
         # plankton samples may share bottle_ids, a BCS entry is per bottle, per gear type
         event = bottle.event
         mission = event.mission
-        institute: bio_tables.models.BCDataCenter = mission.data_center
+        institute: BCDataCenter = institutes[mission.data_center]
 
         if event.actions.filter(type=core_models.ActionType.aborted).exists():
             # we don't load aborted events
             continue
 
-        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type}'
 
         m_start_date = mission.start_date
         m_end_date = mission.end_date
@@ -324,7 +326,7 @@ def get_bcs_p_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
             event_data_manager_comment = DART_EVENT_COMMENT,
 
             pl_headr_collector_sample_id = bottle.bottle_id,
-            pl_headr_gear_seq = bottle.gear_type.gear_seq,
+            pl_headr_gear_seq = bottle.gear_type,
 
             # This was set to 1 in the existing AZMP Template for phyto
             pl_headr_time_qc_code = 1,
@@ -379,13 +381,16 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
     user_logger.info("Compiling BCD Discrete samples")
 
     samples = samples.select_related(
-        'sample__bottle__event__mission__data_center',
+        'sample__bottle__event__mission',
         'sample__bottle__event__station',
-        'sample__type__datatype'
+        'sample__type'
     )
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
+
+    cache_datatypes = {}
+
     for count, ds_sample in enumerate(samples):
         # dis_data_num = count + dis_data_num
         if count % 10 == 9:
@@ -396,7 +401,11 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         mission = event.mission
 
         # Use the row level datatype if provided otherwise use the mission level datatype
-        bc_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
+        ds_data_type = ds_sample.datatype if ds_sample.datatype else sample.type.datatype
+        if ds_data_type not in cache_datatypes:
+            cache_datatypes[ds_data_type] = BCDataType.objects.get(pk=ds_data_type)
+        bc_data_type = cache_datatypes[ds_data_type]
+
         limit = ds_sample.limit if ds_sample.limit else None
         location = event.start_location
 
@@ -404,8 +413,6 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
 
         header_location_lat = bottle.latitude if bottle.latitude else location[0]
         header_location_lon = bottle.longitude if bottle.longitude else location[1]
-
-        primary_data_center = mission.data_center
 
         dis_sample_key_value = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}'
 
@@ -415,7 +422,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
         bcd_row = models.BcdD(
             dis_data_num=count,
             dis_detail_collector_samp_id=collector_id,
-            dis_detail_data_type_seq = bc_data_type.data_type_seq,
+            dis_detail_data_type_seq = bc_data_type.pk,
             dis_header_start_depth = bottle.pressure,
             dis_header_end_depth = bottle.pressure,
             event_collector_event_id = f'{event.event_id:03d}',
@@ -430,7 +437,7 @@ def get_bcd_d_rows(uploader: str, samples: QuerySet[core_models.DiscreteSampleVa
             dis_detail_detection_limit = limit,
             process_flag = 'NR',
             created_by = uploader,
-            data_center_code = primary_data_center.data_center_code,
+            data_center_code = mission.data_center,
             data_type_method = bc_data_type.method,
             dis_detail_data_value = ds_sample.value,
             created_date = date_now_string,
@@ -448,13 +455,11 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample])
 
     # Prefetch all related objects in a single query to avoid N+1
     samples = samples.select_related(
-        'bottle__event__mission__data_center',
+        'bottle__event__mission',
         'bottle__event__station',
-        'bottle__gear_type',
-        'taxa',
-        'stage',
-        'sex',
     )
+
+    existing_taxa = {bc.pk: bc for bc in BCNatnlTaxonCode.objects.all()}
 
     total_samples = len(samples)
     date_now_string = datetime.now().strftime("%Y-%m-%d")
@@ -467,9 +472,13 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample])
         event = bottle.event
         mission = event.mission
 
-        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type.gear_seq}'
+        if event.actions.filter(type=core_models.ActionType.aborted).exists():
+            # we don't load aborted events
+            continue
 
-        taxonomic_id = sample.taxa.taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
+        plankton_key = f'{mission.mission_descriptor}_{event.event_id:03d}_{bottle.bottle_id}_{bottle.gear_type}'
+
+        taxonomic_id = existing_taxa[sample.taxa].taxonomic_name[0:20]  # The collector taxonomic id field is only 20 characters
 
         # if the wet weight is less than zero then it's being used as a code to generate a collector comment
         # and should be set to None when uploaded to biochem
@@ -478,14 +487,14 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample])
         bcd_row = models.BcdP(
             plank_data_num=count,
             plank_sample_key_value=plankton_key,
-            pl_gen_national_taxonomic_seq = sample.taxa.pk,
+            pl_gen_national_taxonomic_seq = sample.taxa,
             pl_gen_collector_taxonomic_id = taxonomic_id,
-            pl_gen_life_history_seq = sample.stage.pk,
+            pl_gen_life_history_seq = sample.stage,
             pl_gen_trophic_seq = 90000000,
             pl_gen_min_sieve = sample.min_sieve,
             pl_gen_max_sieve = sample.max_sieve,
             pl_gen_split_fraction = sample.split_fraction,
-            pl_gen_sex_seq = sample.sex.pk,
+            pl_gen_sex_seq = sample.sex,
             pl_gen_counts = sample.count,
             pl_gen_count_pct = sample.percent,
             pl_gen_wet_weight = wet_weight,
@@ -500,7 +509,7 @@ def get_bcd_p_rows(uploader: str, samples: QuerySet[core_models.PlanktonSample])
             event_collector_stn_name = event.station.name,
             mission_descriptor = mission.mission_descriptor,
             created_by = uploader,
-            data_center_code = mission.data_center.data_center_code,
+            data_center_code = mission.data_center,
             created_date = date_now_string,
             process_flag = 'NR'
         )

@@ -54,18 +54,31 @@ def load_biochem_fixtures(database):
         logger.exception(ex)
 
 
-def get_db_location(database):
-    locations = models.LocalSetting.objects.filter(connected=True)
-    if locations.exists():
-        location = locations.first()
+def get_db_location(database, output_directory: str = None):
+    if output_directory:
+        locations = models.LocalSetting.objects.filter(database_location=output_directory)
+        if locations.exists():
+            location = locations.first()
+        else:
+            location = models.LocalSetting.objects.create(database_location=output_directory, connected=False)
+
+        if not location.connected:
+            models.LocalSetting.objects.filter(connected=True).update(connected=False)
+            location.connected = True
+            location.save()
     else:
-        # pk = 1 should always be the default "./missions/" directory
-        location = models.LocalSetting.objects.get(pk=1)
+        locations = models.LocalSetting.objects.filter(connected=True)
+        if locations.exists():
+            location = locations.first()
+        else:
+            # pk = 1 should always be the default "./missions/" directory
+            location = models.LocalSetting.objects.get(pk=1)
 
-    if not os.path.exists(location.database_location):
-        os.makedirs(location.database_location)
+    database_location = location.database_location
+    if not os.path.exists(database_location):
+        os.makedirs(database_location)
 
-    return os.path.join(location.database_location, f'{database}.sqlite3')
+    return os.path.join(database_location, f'{database}.sqlite3')
 
 
 def add_database(database):
@@ -76,11 +89,9 @@ def add_database(database):
     databases[mission_database]['NAME'] = get_db_location(database)
 
     call_command('migrate', database=mission_database, app_label="core")
-    call_command('migrate', database=mission_database, app_label="bio_tables")
-    load_biochem_fixtures(mission_database)
 
 
-def connect_database(database):
+def connect_database(database, location=None):
     # if database not in settings.DATABASES:
     if database == 'default':
         return
@@ -93,12 +104,13 @@ def connect_database(database):
         else:
             return
 
-    try:
-        location = models.LocalSetting.objects.get(connected=True)
-    except settingsdb.models.LocalSetting.DoesNotExist as ex:
-        location = models.LocalSetting.objects.order_by('id').first()
-        location.connected = True
-        location.save()
+    if location is None:
+        try:
+            location = models.LocalSetting.objects.get(connected=True)
+        except settingsdb.models.LocalSetting.DoesNotExist as ex:
+            location = models.LocalSetting.objects.order_by('id').first()
+            location.connected = True
+            location.save()
 
     # Someone once recommended that Dart databases start with the DART_ prefix to make it clear they are Dart database.
     # This however maks it a pain to work with on the command line. So now we will check for the database with and
