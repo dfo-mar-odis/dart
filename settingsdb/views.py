@@ -3,8 +3,10 @@ import os
 from os import listdir
 
 from bs4 import BeautifulSoup
+from crispy_forms.bootstrap import StrictButton
 from crispy_forms.helper import FormHelper
 from crispy_forms.layout import Layout, Div, Field, Column, Row, Hidden
+from crispy_forms.templatetags.crispy_forms_field import css_class
 from crispy_forms.utils import render_crispy_form
 
 from git import Repo
@@ -54,7 +56,7 @@ class MissionFilterForm(forms.Form):
 
         url = reverse_lazy('settingsdb:mission_filter_list_missions')
         attrs = {'hx-trigger': "keyup delay:500ms, change", 'hx-post': url, 'hx-target': "#mission_table"}
-        hidden_attrs = {'hx-trigger': "db_dir_changed from:body", 'hx-post': url, 'hx-target': "#mission_table"}
+        hidden_attrs = {'hx-trigger': "db_dir_changed from:body", 'hx-post': url, 'hx-target': "#mission_table", 'hx-indicator': '.htmx-indicator'}
 
         self.helper.layout = Layout(
             Row(
@@ -81,10 +83,26 @@ class MissionDirForm(forms.Form):
         selection_attrs = {
             'hx-trigger': 'change',
             'hx-get': reverse_lazy("settingsdb:update_mission_directory"),
-            'hx-swap': "outerHTML"
+            "hx-target": "#select_id_mission_directory",
+            'hx-swap': "outerHTML",
         }
+
+        attrs = {
+            "title": _("Unlink directory"),
+            "hx-target": "#select_id_mission_directory",
+            "hx-post": reverse_lazy("settingsdb:remove_mission_directory"),
+        }
+        delete_btn_css = "btn btn-sm btn-danger" + (" disabled" if kwargs.get('initial', {}).get('directory', 0) <= 1 else "")
+
+        icon = load_svg('dash-square')
+        delete_btn = StrictButton(icon, css_class=delete_btn_css, **attrs)
+
         self.helper.layout = Layout(
-            Div(Field('directory', css_class="form-select-sm", id="select_id_mission_directory", **selection_attrs))
+            Row(
+                Column(Field('directory', css_class="form-select-sm", **selection_attrs)),
+                Column(delete_btn, css_class="col-auto align-self-center mb-2"),
+                css_id="select_id_mission_directory"
+            )
         )
 
 
@@ -281,13 +299,31 @@ def reset_connection(location_id):
     connection.save()
 
 
+def remove_mission_dir(request):
+    location_id = int(request.POST['directory'])
+
+    if location_id > 1:
+        setting_models.LocalSetting.objects.filter(id=location_id).delete()
+        location_id = 1
+        reset_connection(location_id)
+
+    mission_form = MissionDirForm(initial={"directory": location_id})
+    mission_html = render_crispy_form(mission_form)
+    select_soup = BeautifulSoup(mission_html, "html.parser")
+
+    response = HttpResponse(select_soup.find(id="select_id_mission_directory"))
+    response['Hx-Trigger'] = "db_dir_changed"
+    return response
+
+
 def add_mission_dir(request):
     soup = BeautifulSoup()
 
     if request.method == "GET" and 'directory' in request.GET:
         if request.GET['directory'] == '-1':
             row = soup.new_tag('div')
-            row.attrs['class'] = 'container-fluid row'
+            row.attrs['class'] = 'container-fluid row mb-2'
+            row.attrs['id'] = 'select_id_mission_directory'
 
             station_input = soup.new_tag('input')
             station_input.attrs['name'] = 'directory'
@@ -299,8 +335,7 @@ def add_mission_dir(request):
             submit.attrs['class'] = 'btn btn-primary btn-sm ms-2 col-auto'
             submit.attrs['name'] = "update_mission_directory"
             submit.attrs['hx-post'] = request.path
-            submit.attrs['hx-target'] = '#div_id_directory'
-            submit.attrs['hx-select'] = '#div_id_directory'
+            submit.attrs['hx-target'] = '#select_id_mission_directory'
             submit.attrs['hx-swap'] = 'outerHTML'
             submit.attrs['title'] = _('Add directory')
             submit.append(BeautifulSoup(load_svg('plus-square'), 'html.parser').svg)
@@ -309,8 +344,7 @@ def add_mission_dir(request):
             cancel.attrs['class'] = 'btn btn-danger btn-sm ms-2 col-auto'
             cancel.attrs['name'] = "cancel"
             cancel.attrs['hx-post'] = request.path
-            cancel.attrs['hx-target'] = '#div_id_directory'
-            cancel.attrs['hx-select'] = '#div_id_directory'
+            cancel.attrs['hx-target'] = '#select_id_mission_directory'
             cancel.attrs['hx-swap'] = 'outerHTML'
             cancel.attrs['title'] = _('Cancel')
             cancel.append(BeautifulSoup(load_svg('x-square'), 'html.parser').svg)

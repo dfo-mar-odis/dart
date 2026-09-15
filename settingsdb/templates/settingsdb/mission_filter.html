@@ -28,7 +28,11 @@
 <div hx-headers='{"X-CSRFToken": "{{ csrf_token }}"}'>
     <div class="card">
     <div class="card-header">
-        <div class="card-title" title="{% trans "Mission directories can be created to organize mission databases on your local machine. By default mission databases will be placed in the 'dart/missions/' directory." %}">{% custom_icon 'question-circle' %} {% trans "Mission Directory" %}</div>
+        <div class="card-title" title="{% trans "Mission directories can be created to organize mission databases on your local machine. By default mission databases will be placed in the 'dart/missions/' directory." %}">{% custom_icon 'question-circle' %} {% trans "Mission Directory" %}
+            <span class="col-auto align-self-center htmx-indicator" id="div_id_indicator_sample_config">
+                <div class="spinner-border text-primary" style="width: 20px; height: 20px;"> </div>
+            </span>
+        </div>
     </div>
     <div class="card-body">
         <form id="form_id_mission_directory">
