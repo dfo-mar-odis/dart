@@ -16,6 +16,9 @@ class LocalSetting(models.Model):
     def __str__(self):
         return f"{self.database_location} - Connected: {self.connected}"
 
+    class Meta:
+        ordering = ("database_location",)
+
 
 class GlobalSampleTypeCategory(models.Model):
     name = models.CharField(verbose_name="Sample Type Category", max_length=50, unique=True)
