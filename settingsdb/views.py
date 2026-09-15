@@ -97,10 +97,26 @@ class MissionDirForm(forms.Form):
         icon = load_svg('dash-square')
         delete_btn = StrictButton(icon, css_class=delete_btn_css, **attrs)
 
+        attrs = {
+            "name": "directory",
+            "value": '-1',
+            "title": _("Add directory"),
+            'hx-swap': "outerHTML",
+            "hx-target": "#select_id_mission_directory",
+            "hx-get": reverse_lazy("settingsdb:update_mission_directory"),
+        }
+        add_btn_css = "btn btn-sm btn-primary"
+
+        icon = load_svg('plus-square')
+        add_btn = StrictButton(icon, css_class=add_btn_css, **attrs)
+
         self.helper.layout = Layout(
             Row(
                 Column(Field('directory', css_class="form-select-sm", **selection_attrs)),
-                Column(delete_btn, css_class="col-auto align-self-center mb-2"),
+                Column(
+                    Div(add_btn, delete_btn),
+                    css_class="col-auto align-self-center mb-2"
+                ),
                 css_id="select_id_mission_directory"
             )
         )
