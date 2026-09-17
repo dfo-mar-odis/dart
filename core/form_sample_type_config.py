@@ -494,11 +494,17 @@ def get_file_config(request, **kwargs):
             request.session['sample_file_tab'] = file_config.get_selected_tab()
             request.session['sample_file_column_names'] = cache_columns
         except ValueError as ex:
-            if str(ex) == "Error reading XLS file: File is not a zip file":
+            if "ERROR READING XLS FILE: FILE IS NOT A ZIP FILE" in str(ex).upper():
                 soup.append(config_placeholder := soup.new_tag("div"))
                 config_placeholder.append(alert := soup.new_tag("div"))
                 alert.attrs['class'] = "alert alert-warning"
                 alert.string = _("This file may be in an older excel format that can't be read. Open the file in Excel and try saving it in an newer format.")
+                return HttpResponse(soup)
+            elif "NO HEADER LINE FOUND IN THE CSV/DAT FILE" in str(ex).upper():
+                soup.append(config_placeholder := soup.new_tag("div"))
+                config_placeholder.append(alert := soup.new_tag("div"))
+                alert.attrs['class'] = "alert alert-warning"
+                alert.string = _("The header or the data may not be correctly formatted in this file")
                 return HttpResponse(soup)
             else:
                 raise ex
