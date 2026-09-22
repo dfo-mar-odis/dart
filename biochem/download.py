@@ -68,7 +68,7 @@ class DatabaseDownloader(Notifier):
         start_datetime = datetime.combine(start_date, datetime.min.time()).replace(hour=hours, minute=minutes)
 
         # Set the UTC offset as the timezone without adjusting the time
-        utc_offset_timedelta = timedelta(hours=int(utc_offset))
+        utc_offset_timedelta = timedelta(hours=int(utc_offset if utc_offset else 0))
         start_datetime = start_datetime.astimezone(timezone(utc_offset_timedelta))
         return start_datetime
 
