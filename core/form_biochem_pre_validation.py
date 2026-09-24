@@ -282,10 +282,11 @@ def flag_data(request, mission_id, error_id):
 
         mission = error.mission
         mst = mission.mission_sample_types.get(pk=mst_id)
-        range = mst.datatype.data_retrieval
+        datatype = BCDataType.objects.get(pk=mst.datatype)
+        datatype_range = datatype.data_retrieval
 
         values = core_models.DiscreteSampleValue.objects.filter(sample__type=mst).filter(
-            Q(value__lt=range.minimum_value) | Q(value__gt=range.maximum_value))
+            Q(value__lt=datatype_range.minimum_value) | Q(value__gt=datatype_range.maximum_value))
         for v in values:
             v.flag = 4
 
