@@ -80,8 +80,11 @@ def _parse_sample_id(cell_value: Any) -> Tuple[int | None, int | None]:
     # underscore replicate: last underscore splits replicate if numeric
     if "_" in s:
         base, repl = s.rsplit("_", 1)
-        if repl.isdigit():
-            return int(base), int(repl)
+        if repl:
+            if repl.isdigit():
+                return int(base), int(repl)
+            else:
+                raise ValueError("Replicate value is not numerical")
         # if not numeric, keep as base name
         return int(s), None
 
@@ -220,6 +223,14 @@ def parse_sample_file(
 
         try:
             base_id, r_id = _parse_sample_id(sample_cell)
+        except ValueError as ex:
+            if "Replicate value is not numerical" in str(ex):
+                # if the replicate is formatted like 500676_2a, the replicate number is 2a, which is not recognized
+                # as a replicate. This format is used with newer titration flourometers to denote an interim step in
+                # data processing.
+                continue
+            logger.exception(ex)
+            continue
         except Exception as ex:
             # if the ID is a string and can't be parsed as an int, skip it, but make note in case the issue
             # is a typo that makes the sample ID unparseable

@@ -91,7 +91,7 @@ class FileConfig:
             column_names.pop()
 
         # Trim column names to remove white spaces at the start and end of the column name
-        self.set_column_names([column_name.strip() for column_name in column_names])
+        self.set_column_names([str(column_name if column_name else "").strip() for column_name in column_names])
 
 
     def _find_column_index(self, column_name_priority_list: Sequence[str]) -> tuple[int, str] | None:

@@ -27,6 +27,12 @@ class AbstractFileParser:
             return False
         # Check if the row has a significant number of non-empty text cells
         text_count = sum(1 for cell in row if isinstance(cell, str) and cell.strip())
+
+        # To be a header all columns must be instances of text, even if they're just blank. If the cell count is
+        # less than the text_count then the row may contain floats, ints, or formulas.
+        if text_count < len(row):
+            return False
+
         # Check if the row has a reasonable number of columns (e.g., > 3)
         return text_count > len(row) / 2 and len(row) > 3
 
