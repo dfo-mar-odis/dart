@@ -28,8 +28,13 @@ def validate_mission(mission: core_models.Mission):
 def validate_action_types(event: core_models.Event, actions: QuerySet[core_models.Action]) -> list[core_models.EventError]:
     validation_errors = []
 
-    # Don't validate duplicates of the 'other' action_type
-    distinct_actions = actions.exclude(type=core_models.ActionType.other).values_list('type', flat=True)
+    # We only care about validating actions for net and CTD events so, deployed, bottom and recovered.
+    action_list = [
+        core_models.ActionType.deployed,
+        core_models.ActionType.bottom,
+        core_models.ActionType.recovered
+    ]
+    distinct_actions = actions.filter(type__in=action_list).values_list('type', flat=True)
     for action_type in distinct_actions:
         if len(actions.filter(type=action_type)) > 1:
             message = _("Event contains duplicate actions")

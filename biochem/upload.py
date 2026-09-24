@@ -176,6 +176,7 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
 
             event_collector_event_id = f'{event.event_id:03d}',
             event_collector_comment1 = event.comments,
+            event_collector_comment2 = event_collector_comment,
             event_data_manager_comment = DART_EVENT_COMMENT,
             event_collector_stn_name = event.station.name,
             event_sdate = datetime.strftime(event.start_date, "%Y-%m-%d"),
@@ -194,7 +195,8 @@ def get_bcs_d_rows(uploader: str, bottles: QuerySet[core_models.Bottle]) -> Gene
 
             dis_headr_sounding = header_sounding,
             dis_headr_collector = header_comment,
-            event_collector_comment2 = event_collector_comment,
+            dis_headr_collector_comment1 = bottle.collector_comment,
+            dis_headr_data_manager_comment = bottle.data_manager_comment,
 
             dis_headr_responsible_group = mission.protocol,
 

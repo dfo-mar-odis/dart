@@ -196,6 +196,9 @@ class Event(models.Model):
     flow_end = models.IntegerField(verbose_name=_("Flow Meter End"), null=True, blank=True)
     flowmeter_constant = models.FloatField(verbose_name=_("Flow Meter Constant"), null=True, blank=True)
 
+    # If blank then the action comments will be concatenated and used as an event comment
+    event_comment = models.TextField(verbose_name=_("Event Comment"), null=True, blank=True)
+
     @property
     def files(self):
         files = set()
@@ -271,6 +274,9 @@ class Event(models.Model):
 
     @property
     def comments(self):
+        if self.event_comment:
+            return self.event_comment
+
         comments = []
         for action in self.actions.all():
             if action.comment and action.comment not in comments:
@@ -469,6 +475,10 @@ class Bottle(models.Model):
     mesh_size = models.IntegerField(verbose_name=_("Mesh Size"), help_text=_("Mesh size of the net material in um"),
                                     blank=True, null=True, default=0)
 
+    # This is only used for downloading existing Biochem missions that might have data level comments made by a datamanager.
+    data_manager_comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
+    collector_comment = models.TextField(verbose_name=_("Sample Comments"), null=True, blank=True)
+
     # returnes the volume method sequence number and the computed or provided volume -> (volume_method_seq, volume)
     @property
     def computed_volume(self):
@@ -551,6 +561,7 @@ class BioChemUploadStatus(models.IntegerChoices):
 # track the data per-mission and let the user know if a sample has been uploaded, was modified and needs
 # to be re-uploaded, or hasn't been loaded yet.
 class BioChemUpload(models.Model):
+    # TODO: This should be a one to one field, unless we're planning on keeping track of every time a sample was uploaded
     type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE,
                              related_name='uploads')
 

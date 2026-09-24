@@ -126,6 +126,37 @@ def station_report(request, mission_id):
     return response
 
 
+def event_summary(request, mission_id):
+    mission = core_models.Mission.objects.get(pk=mission_id)
+
+    header = ['MISSION', 'EVENT_ID', 'STATION', 'INSTRUMENT_TYPE', 'INSTRUMENT_NAME', 'STARTING_ID', 'ENDING_ID',
+              'WIRE_OUT', 'WIRE_ANGLE', 'FLOW_DEPLOY', 'FLOW_RECOVER', 'ACTION', 'DATE_TIME',
+              'LATITUDE', 'LONGITUDE', 'SOUNDING', 'DATA_COLLECTOR', 'COMMENT']
+
+    events = mission.events.annotate(start=Min("actions__date_time")).order_by('start')
+
+    data = ",".join(header) + "\n"
+    for event in events:
+        for action in event.actions.all():
+            vals = [mission.name, event.event_id, event.station.name, core_models.InstrumentType(event.instrument.type).name,
+                   event.instrument.name, event.sample_id, event.end_sample_id, event.wire_out,
+                   event.wire_angle, event.flow_start, event.flow_end, core_models.ActionType(action.type).name,
+                   action.date_time, action.latitude, action.longitude, action.sounding,
+                   action.data_collector, ""]
+
+            row = [str(val) if val else "" for val in vals]
+
+            data += ",".join(row) + "\n"
+
+    file_to_send = ContentFile(data)
+
+    response = HttpResponse(file_to_send, content_type="text/csv")
+    response['Content-Length'] = file_to_send.size
+    response['Content-Disposition'] = 'attachment; filename="' + mission.name + f'_Event_summary.csv"'
+
+    return response
+
+
 def elog(request, mission_id):
     mission = core_models.Mission.objects.get(pk=mission_id)
 
@@ -363,6 +394,7 @@ report_urls = [
     path(f'report/elog/<int:mission_id>/', elog, name="hx_report_elog"),
     path(f'report/error/<int:mission_id>/', error_report, name="hx_report_error"),
     path(f'report/profile_sumamry/<int:mission_id>/', profile_summary, name="hx_report_profile"),
+    path(f'report/event_sumamry/<int:mission_id>/', event_summary, name="hx_report_event"),
     path(f'report/oxygen/<int:mission_id>/', oxygen_report, name="hx_report_oxygen"),
     path(f'report/salinity/<int:mission_id>/', salt_report, name="hx_report_salt"),
     path(f'report/chl/<int:mission_id>/', chl_report, name="hx_report_chl"),

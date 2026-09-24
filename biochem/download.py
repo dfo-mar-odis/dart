@@ -54,7 +54,7 @@ class DatabaseDownloader(Notifier):
 
         self.notify("Creating Local Mission DB for " + bio_mission_name)
 
-    def _parse_date_time(self, start_date, start_time, utc_offset=0):
+    def _parse_date_time(self, start_date, start_time, utc_offset: int|None = None):
         from datetime import datetime
 
         # Assuming bio_event.start_date is a DateField and bio_event.start_time is an integer
@@ -68,8 +68,9 @@ class DatabaseDownloader(Notifier):
         start_datetime = datetime.combine(start_date, datetime.min.time()).replace(hour=hours, minute=minutes)
 
         # Set the UTC offset as the timezone without adjusting the time
-        utc_offset_timedelta = timedelta(hours=int(utc_offset if utc_offset else 0))
-        start_datetime = start_datetime.astimezone(timezone(utc_offset_timedelta))
+        if utc_offset:
+            utc_offset_timedelta = timedelta(hours=utc_offset)
+            start_datetime = start_datetime.astimezone(timezone(utc_offset_timedelta))
         return start_datetime
 
     def copy_mission(self):
@@ -110,8 +111,10 @@ class DatabaseDownloader(Notifier):
 
         # if this is a discrete mission we can use the BCEvents start_date, start_time, for the deploy action
         # and the end_date, end_time for the recovered action, but the event min/max lat/lon doesn't tell us
-        # Where the events started or ended. Presumably though, the deployed start_location will be the furtherest
-        # from the recovery location.
+        # where the events started or ended, it's just a bounding box around the event area.
+        #
+        # Presumably though, the deployed start_location will be the furtherest from the recovery location,
+        # represented by the last bottle's location when it was closed.
         #
         # BCDiscreteHedrs start_date, start_time, start_lat, start_lon are the times and locations of where
         # bottles were closed and can give us specifics on bottom and recovery actions.
@@ -126,8 +129,11 @@ class DatabaseDownloader(Notifier):
 
         first_bottle = headers.first()
         last_bottle = headers.last()
+
+        bottle_event = first_bottle.event
+
         deployed = core_models.Action(event=core_event, type=ActionType.deployed)
-        deployed.date_time = self._parse_date_time(first_bottle.event.start_date, first_bottle.event.start_time, first_bottle.event.utc_offset)
+        deployed.date_time = self._parse_date_time(bottle_event.start_date, bottle_event.start_time, bottle_event.utc_offset)
         deployed.data_collector = collector
         deployed.comment = comment
 
@@ -137,22 +143,22 @@ class DatabaseDownloader(Notifier):
         # Presumably, the event has a min/max lat/lon making it a square. If we assumed a ship drifts in a strength
         # line, then the recovery point will be one corner of this square and the deployment would be the opposite
         # corner. For now I'll just assume the bottom and deployed have the same coordinates
-        deployed.latitude = first_bottle.start_lat
-        deployed.longitude = first_bottle.start_lon
+        deployed.latitude = bottle_event.min_lat
+        deployed.longitude = bottle_event.min_lon
 
         bottom = core_models.Action(event=core_event, type=ActionType.bottom)
-        bottom.date_time = self._parse_date_time(first_bottle.start_date, first_bottle.start_time, first_bottle.event.utc_offset)
+        bottom.date_time = self._parse_date_time(first_bottle.start_date, first_bottle.start_time, bottle_event.utc_offset)
         bottom.data_collector = collector
         bottom.sounding = first_bottle.sounding
         bottom.latitude = first_bottle.start_lat
         bottom.longitude = first_bottle.start_lon
 
         recovered = core_models.Action(event=core_event, type=ActionType.recovered)
-        recovered.date_time = self._parse_date_time(last_bottle.start_date, last_bottle.start_time, last_bottle.event.utc_offset)
+        recovered.date_time = self._parse_date_time(bottle_event.end_date, bottle_event.end_time, bottle_event.utc_offset)
         recovered.data_collector = collector
         recovered.sounding = last_bottle.sounding
-        recovered.latitude = last_bottle.start_lat
-        recovered.longitude = last_bottle.start_lon
+        recovered.latitude = bottle_event.max_lat
+        recovered.longitude = bottle_event.max_lon
 
         return [deployed, bottom, recovered]
 
@@ -164,13 +170,17 @@ class DatabaseDownloader(Notifier):
                 self.notify(_("Creating Bottles") + ": %d/%d", (row+1), total_rows)
 
             bottle_id = header.collector_sample_id
+            utc_offset = int(header.event.utc_offset) if header.event.utc_offset else None
             bottle = core_models.Bottle(event=core_event, bottle_id=bottle_id, bottle_number=(row+1))
-            bottle.closed = self._parse_date_time(header.start_date, header.start_time, int(header.event.utc_offset))
+            bottle.closed = self._parse_date_time(header.start_date, header.start_time, utc_offset)
             bottle.pressure = header.start_depth
             bottle.end_pressure = header.end_depth
             bottle.latitude = header.start_lat
             bottle.longitude = header.start_lon
             bottle.gear_type = header.gear_seq
+            bottle.data_manager_comment = header.data_manager_comment
+            bottle.collector_comment = header.collector_comment
+
             create_bottles.append(bottle)
 
         return create_bottles
@@ -195,6 +205,18 @@ class DatabaseDownloader(Notifier):
             create_data_types.append(mission_sample_type)
 
         core_models.MissionSampleType.objects.bulk_create(create_data_types)
+
+        # Likely we'll want to reupload anything that was downloaded, so let's just mark them for upload so the user
+        # doesn't have to click like 30 'upload' checkboxes.
+        create_upload_status = []
+        for mst in core_models.MissionSampleType.objects.all():
+            upload_status = core_models.BioChemUpload(
+                type=mst,
+                status=core_models.BioChemUploadStatus.upload
+            )
+            create_upload_status.append(upload_status)
+
+        core_models.BioChemUpload.objects.bulk_create(create_upload_status)
 
     def copy_discrete_sample_values(self, values: QuerySet[biochem_models.Bcdiscretedtails]):
         bottles = dict(core_models.Bottle.objects.values_list('bottle_id', 'id'))
@@ -308,6 +330,8 @@ class DatabaseDownloader(Notifier):
             core_event.wire_out = None
             core_event.flow_start = None
             core_event.flow_end = None
+
+            core_event.event_comment = event.collector_comment
 
             create_events.append(core_event)
             if has_discrete:

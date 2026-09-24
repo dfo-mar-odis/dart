@@ -24,6 +24,7 @@ reports = {
     "Oxygen Summary": "core:hx_report_oxygen",
     "Salinity Summary": "core:hx_report_salt",
     "Profile Summary": "core:hx_report_profile",
+    "Event Summary": "core:hx_report_event",
     "Elog Report": "core:hx_report_elog",
     "Error Report": "core:hx_report_error",
     "Station Report": "core:hx_report_station",

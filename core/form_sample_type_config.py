@@ -427,7 +427,15 @@ def initialize_file_config(file, initial: SampleFileConfig = None) -> FileConfig
 
 
 def get_file_columns(request):
-    if 'sample_file_column_names' not in request.session:
+    recache = False
+    if 'sample_file_column_names' not in request.session or 'sample_file' not in request.session or 'sample_file_tab' not in request.session:
+        recache = True
+    elif request.FILES.get('sample_file', None) is not None:
+        file = request.FILES.get('sample_file', None)
+        if request.session.get('sample_file', None) != file.name or request.session.get('sample_file_tab', None) != int(request.POST.get('file_tab', -1)):
+            recache = True
+
+    if recache:
         file = request.FILES.get('sample_file', None)
         file_config = initialize_file_config(file)
         if header_line_number := request.POST.get('header_line_number', -1):
@@ -437,11 +445,10 @@ def get_file_columns(request):
             file_config.set_selected_tab(int(file_tab))
 
         # cache the configuration details if not set or if the file name changed.
-        if request.session.get('sample_file', None) != file.name:
-            cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
-            request.session['sample_file'] = file.name
-            request.session['sample_file_tab'] = file_config.get_selected_tab()
-            request.session['sample_file_column_names'] = cache_columns
+        cache_columns = [(idx, col) for idx, col in enumerate(file_config.get_column_names())]
+        request.session['sample_file'] = file.name
+        request.session['sample_file_tab'] = file_config.get_selected_tab()
+        request.session['sample_file_column_names'] = cache_columns
 
     columns = request.session.get('sample_file_column_names', []).copy()
 
@@ -480,11 +487,11 @@ def get_file_config(request, **kwargs):
         file_config = initialize_file_config(file, initial=existing_config)
 
     if existing_config is None:
-        if header_line_number := request.POST.get('header_line_number', -1):
-            file_config.set_header_line_number(int(header_line_number))
-
         if file_tab := request.POST.get('file_tab', -1):
             file_config.set_selected_tab(int(file_tab))
+
+        if header_line_number := request.POST.get('header_line_number', -1):
+            file_config.set_header_line_number(int(header_line_number))
 
     # cache the configuration details if not set or if the file name changed.
     if request.session.get('sample_file', None) != file.name:

@@ -293,6 +293,14 @@ def parse_actions(mission: core_models.Mission, file_name: str, samples: list[di
                 action_lon = float(action_lon_string) if action_lon_string else None
                 action_type = core_models.ActionType.get(action_type_string)
 
+                if (action_lat > 90.0 or action_lat < -90.0) or (action_lon > 180.0 or action_lon < -180.0):
+                    message = _("Bad Latitude or Longitude for Event : ") + str(event_id) + " " + _("Latitude : ") + str(action_lat_string) + " " + _("Longitude : ") + str(action_lon_string)
+                    err = core_models.FileError(mission=mission, file_name=file_name,
+                                                message=message, type=core_models.ErrorType.event)
+                    errors.append(err)
+                    logger.error(message)
+                    continue
+
                 action = core_models.Action(event=mission_event, date_time=action_date, type=action_type,
                                             latitude=action_lat, longitude=action_lon, data_collector=action_operator,
                                             comment=action_comment, sounding=action_sounding, file=file_name)
