@@ -351,6 +351,10 @@ class FixStationParser:
         existing_bottle = core_models.Bottle.objects.exclude(event=self.event).exclude(
             event__instrument__type=core_models.InstrumentType.net).filter(bottle_id=bottle_id).first()
 
+        # make sure the bottle_id belongs in this event.
+        if bottle_id < self.event.sample_id or bottle_id > self.event.end_sample_id:
+            raise ValueError(_("Bottle ID is out of the expected range of IDs for event.") + " " + _("Event")+ f" {self.event.event_id} " + _("Sample ID") + f" {bottle_id}")
+
         # if the bottle exists for an event other than the current event
         if existing_bottle and existing_bottle.event == self.event:
             raise KeyError(_("Bottle with provided ID already exists") + f" {int(bottle_id)}")
