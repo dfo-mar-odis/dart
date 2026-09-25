@@ -47,7 +47,8 @@ class ExistingConfigForm(forms.Form):
         config_update_attrs = {
             'hx-get': reverse_lazy('core:form_sample_type_get_existing_config_card'),
             'hx-trigger': 'update_existing_config from:body',
-            'hx-include': "#id_form_load_samples"
+            'hx-include': "#id_form_load_samples",
+            'hx-indicator': ".htmx-indicator",
         }
         sample_queryset = SampleFileConfig.objects.all()
         if tab:=self.initial.get('tab', None):
@@ -91,6 +92,17 @@ class FileConfigSaveForm(forms.Form):
             'title': _("Save the existing or updated configuration")
         }
 
+        delete_attrs = {
+            'title': _("Delete the selected configuration"),
+            'hx-post': reverse_lazy('core:form_sample_type_delete_config'),
+            'hx-target': '#div_id_existing_config_card',
+            'hx-swap': 'outerHTML',
+            'hx-indicator': ".htmx-indicator",
+            'hx-trigger': "click, load_sample_file from:body",
+            'hx-confirm': _("Are you sure?"),
+            'disabled': 'true'
+        }
+
         load_attrs = {
             'title': _("Load data using the current configuration"),
             'hx-post': reverse_lazy('core:form_sample_type_load_file'),
@@ -99,17 +111,22 @@ class FileConfigSaveForm(forms.Form):
             'hx-trigger': "click, load_sample_file from:body"
         }
 
+
         initial = kwargs.get('initial', {})
         data = kwargs.get('data', {})
         if 'config_id' in initial or 'config_id' in data:
             save_attrs['name'] = "config_id"
             save_attrs['value'] = initial.get('config_id', data.get("config_id"))
+            delete_attrs.pop('disabled')
 
-        icon = load_svg("check-square")
-        save_button = StrictButton(f"{icon} {_("Save configuration")}", **save_attrs, css_class='btn btn-primary btn-sm')
+        sicon = load_svg("check-square")
+        save_button = StrictButton(f"{sicon} {_("Save configuration")}", **save_attrs, css_class='btn btn-primary btn-sm ms-2')
 
-        icon = load_svg("arrow-down-square")
-        load_button = StrictButton(f"{icon} {_("Load Data")}", **load_attrs, css_class='btn btn-primary btn-sm ms-2')
+        dicon = load_svg("dash-square")
+        delete_button = StrictButton(f"{dicon} {_("Delete configuration")}", **delete_attrs, css_class='btn btn-danger btn-sm ms-2')
+
+        licon = load_svg("arrow-down-square")
+        load_button = StrictButton(f"{licon} {_("Load Data")}", **load_attrs, css_class='btn btn-primary btn-sm')
 
         self.helper = FormHelper()
         self.helper.form_tag = False
@@ -122,8 +139,9 @@ class FileConfigSaveForm(forms.Form):
                     ),
                     Row(
                         Div(
-                            save_button,
                             load_button,
+                            save_button,
+                            delete_button,
                             css_class="col-auto"
                         ),
                         Div(
@@ -837,6 +855,22 @@ def create_sample_config_columns(request, sample_config) -> None:
             SampleFileConfigColumns.objects.create(**config_attrs)
 
 
+def validate_delete_config(request):
+
+    existing_config = request.POST.get('existing_config', None)
+
+    config = SampleFileConfig.objects.filter(pk=int(existing_config))
+    config.delete()
+
+    existing_config_form = ExistingConfigForm()
+    existing_config_html = render_crispy_form(existing_config_form)
+    existing_config_soup = BeautifulSoup(existing_config_html, 'html.parser')
+
+    response = HttpResponse(existing_config_soup)
+    response['HX-Trigger-After-Settle'] = "reload_sample_file"
+    return response
+
+
 def validate_save_config(request):
     file = request.FILES.get('sample_file', None)
 
@@ -908,7 +942,7 @@ def validate_save_config(request):
                                         attrs={
                                             'title': title,
                                             'type': 'button',
-                                            'class': 'btn btn-sm btn-warning',
+                                            'class': 'btn btn-sm btn-warning text-dark',
                                             'hx-confirm': alert_text,
                                             'hx-post': url,
                                             'name': 'config_id',
@@ -1069,6 +1103,7 @@ url_patterns = [
     path('sample_config/config/remove/<int:column_id>/', remove_from_config, name='form_sample_type_remove_from_config'),
 
     path('sample_config/config/save/validate/', validate_save_config, name='form_sample_type_validate_save_config'),
+    path('sample_config/config/delete/', validate_delete_config, name='form_sample_type_delete_config'),
     path('sample_config/config/load_button/', get_config_load_button, name='update_config_load_button'),
     path('sample_config/config/load_file/', load_file, name='form_sample_type_load_file'),
 
