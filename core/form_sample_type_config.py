@@ -396,11 +396,11 @@ def _get_config_details(config_prefix: str, input_dict: dict[str, str], column_n
             datatype = BCDataType.objects.get(pk=datatype_col)
             config_attrs['column_alias'] = datatype.method
 
-    if dl_col_id and dl_col_id != 'None':
+    if dl_col_id and dl_col_id != 'None' and dl_col_id != '-1':
         dl_col = column_names[int(dl_col_id)]
         config_attrs['detection_limit_column_name'] = dl_col[1]
 
-    if qc_col_id and qc_col_id != 'None':
+    if qc_col_id and qc_col_id != 'None' and qc_col_id != '-1':
         qc_col = column_names[int(qc_col_id)]
         config_attrs['quality_control_column_name'] = qc_col[1]
 
@@ -865,7 +865,7 @@ def validate_save_config(request):
         ignore_blank_samples = bool(request.POST.get('ignore_blank_sample_ids', False))
 
         sample_column = column_names[sample_id_col]
-        comment_column = column_names[comment_col]
+        comment_column = column_names[comment_col] if comment_col > -1 else None
         attrs = {
             'name': save_form.cleaned_data['config_name'],
             'description': save_form.cleaned_data['config_description'],
@@ -877,7 +877,7 @@ def validate_save_config(request):
             'allow_blank_sample_ids': not ignore_blank_samples,
             'allow_replicates': allow_replicates,
             'sample_id_column_name': sample_column[1],
-            'comment_column_name': comment_column[1]
+            'comment_column_name': None if comment_column is None else comment_column[1]
         }
 
         try:
