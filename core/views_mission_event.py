@@ -1,6 +1,6 @@
 from bs4 import BeautifulSoup
 from crispy_forms.bootstrap import StrictButton
-from crispy_forms.layout import Div, HTML, Column
+from crispy_forms.layout import Div, HTML, Column, Row
 from crispy_forms.utils import render_crispy_form
 
 from django.core.cache import caches
@@ -55,7 +55,24 @@ class ValidationEventCard(forms.CardForm):
         return "card mb-2"
 
     def get_card_header(self) -> Div:
-        header = super().get_card_header()
+        title = _("Event") + f" {self.event.event_id}"
+        if self.event.station:
+            title += f": {self.event.station}"
+
+        event_btn_attrs = {
+            "title": _("Select Event"),
+            "hx-swap": "none",
+            "hx-get": reverse_lazy("core:mission_select_event", args=(self.event.pk,))
+        }
+
+        event_btn = StrictButton(title, css_class="btn btn-secondary btn-sm", **event_btn_attrs)
+
+        header_row = Row(
+            Column(
+                event_btn, css_class="col-auto"
+            ),
+        )
+        header = Div(header_row, id=self.get_card_header_id(), css_class=self.get_card_header_class())
 
         spacer_col = Column(css_class="col")
         header.fields[0].fields.append(spacer_col)
@@ -443,6 +460,12 @@ def delete_event_error(request, error_id):
     return response
 
 
+def select_event(request, event_id):
+    response = HttpResponse()
+    response['HX-Trigger'] = f'select-event-{event_id}'
+    return response
+
+
 path_prefix = '<str:database>/mission'
 mission_event_urls = [
     path(f'{path_prefix}/event/<int:pk>/', EventDetails.as_view(), name="mission_events_details"),
@@ -458,6 +481,7 @@ mission_event_urls = [
     path(f'mission/event/log/error/<int:error_id>/<int:uuid>/', delete_log_file_error, name="mission_event_delete_log_file_error"),
     path(f'mission/event/event/<int:event_id>/', delete_event_errors, name="mission_event_delete_event_errors"),
     path(f'mission/event/error/<int:error_id>/', delete_event_error, name="mission_event_delete_event_error"),
+    path(f'mission/event/select/<int:event_id>/', select_event, name="mission_select_event"),
 ]
 
 mission_event_urls += form_event_details.event_detail_urls
