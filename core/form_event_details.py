@@ -98,6 +98,22 @@ class EventDetails(core_forms.CardForm):
 
         return button
 
+    def get_delete_button(self) -> StrictButton:
+        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
+        button_icon = load_svg('dash-square')
+        button_id = f'btn_id_add_{self.card_name}'
+        button_attrs = {
+            'id': button_id,
+            'name': 'delete_event',
+            'title': _("Delete Event"),
+            'hx-get': reverse_lazy("core:form_event_delete_event", args=(self.mission.pk, self.event.pk,)),
+            'hx-swap': 'none',
+            'hx-confirm': _("Are you sure?")
+        }
+        button = StrictButton(button_icon, css_class='btn btn-sm btn-danger', **button_attrs)
+
+        return button
+
     def get_copy_button(self) -> StrictButton:
         # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('copy')
@@ -166,7 +182,8 @@ class EventDetails(core_forms.CardForm):
         if add_btn and self.mission:
             if self.event:
                 start_row_spacer.fields.append(self.get_copy_button())
-            start_row_spacer.fields.append(add_btn)
+                start_row_spacer.fields.append(self.get_delete_button())
+            start_row_spacer.fields.insert(1, add_btn)
 
         end_row_spacer.fields.append(button_column)
         input_column = Column(end_row_spacer, css_class="col-auto")
@@ -907,7 +924,7 @@ def get_selected_event(request):
     soup = BeautifulSoup('', 'html.parser')
     event_id = caches['default'].get('selected_event', -1)
     if event_id == -1:
-        card_details = EventDetails()
+        card_details = EventDetails(mission=models.Mission.objects.get(pk=1))
         card_details_html = render_crispy_form(card_details)
         card_details_soup = BeautifulSoup(card_details_html, 'html.parser')
         card = card_details_soup.find(id=card_details.get_card_id())
@@ -970,22 +987,7 @@ def delete_details(request, mission_id, event_id):
 
         event.delete()
 
-    card = EventDetails(mission=mission)
-    html = render_crispy_form(card)
-
-    soup = BeautifulSoup(html, 'html.parser')
-
-    card_soup = soup.find(id=card.get_card_id())
-    card_soup.attrs['hx-swap-oob'] = "true"
-
-    div_reload_event = soup.new_tag("tr")
-    div_reload_event.attrs['id'] = f"event-{event_id}"
-    div_reload_event.attrs['hx-target'] = f"#event-{event_id}"
-    div_reload_event.attrs['hx-swap'] = "delete"
-
-    soup.append(div_reload_event)
-
-    response = HttpResponse(soup)
+    response = HttpResponse()
     response['HX-Trigger'] = "event_updated"
     return response
 
@@ -1387,7 +1389,9 @@ def list_events(request, mission_id, **kwargs):
 
     tr_html = render_to_string('core/partials/table_event.html', context={'mission': mission})
 
-    return HttpResponse(tr_html)
+    response = HttpResponse(tr_html)
+    response['HX-Trigger'] = 'event_selected'
+    return response
 
 
 def list_bottles(request, event_id):
