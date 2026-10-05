@@ -98,7 +98,6 @@ class FileConfigSaveForm(forms.Form):
             'hx-target': '#div_id_existing_config_card',
             'hx-swap': 'outerHTML',
             'hx-indicator': ".htmx-indicator",
-            'hx-trigger': "click, load_sample_file from:body",
             'hx-confirm': _("Are you sure?"),
             'disabled': 'true'
         }
