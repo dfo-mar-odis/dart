@@ -431,8 +431,19 @@ def initialize_file_config(file, initial: SampleFileConfig = None) -> FileConfig
     file_config = FileConfig(file.name, file)
 
     if initial:
+        # check if the file has a tab specified by the initial sample config
+        tabs = file_config.get_tab_names()
+        if (initial.tab == -1 and tabs is not None) or (tabs and initial.tab > len(tabs)):
+            raise AttributeError(f'Initial tab {initial.tab} does not exist')
+
+        # check if header line the parser thinks should be the header line matches the input header_line
         file_config.set_selected_tab(initial.tab)
+
+        if file_config.get_parser().find_header_line()[0] != initial.header_line:
+            raise AttributeError(f'Initial header line {initial.header_line} does not match expected header')
+
         file_config.set_header_line_number(initial.header_line)
+
         file_config.allow_replicates = initial.allow_replicates
         file_config.ignore_blank_sample_ids = not initial.allow_blank_sample_ids
         if initial.sample_id_column_name:
@@ -498,17 +509,18 @@ def get_file_config(request, **kwargs):
 
     try:
         file_config = initialize_file_config(file, initial=existing_config)
+
+        if existing_config is None:
+            if file_tab := request.POST.get('file_tab', -1):
+                file_config.set_selected_tab(int(file_tab))
+
+            if header_line_number := request.POST.get('header_line_number', -1):
+                file_config.set_header_line_number(int(header_line_number))
     except (KeyError, AttributeError) as ex:
         existing_config = None
         existing_config_init = None
+        request.session['sample_file'] = None # recache file config details later.
         file_config = initialize_file_config(file, initial=existing_config)
-
-    if existing_config is None:
-        if file_tab := request.POST.get('file_tab', -1):
-            file_config.set_selected_tab(int(file_tab))
-
-        if header_line_number := request.POST.get('header_line_number', -1):
-            file_config.set_header_line_number(int(header_line_number))
 
     # cache the configuration details if not set or if the file name changed.
     if request.session.get('sample_file', None) != file.name:
@@ -638,7 +650,7 @@ def get_file_config(request, **kwargs):
         existing_config_init['file_type'] = file_config.file_type
         existing_config_init['selected_tab'] = file_config.selected_tab
         existing_config_init['header_line'] = file_config.header_line_number
-        existing_config_init['sample_column'] = sid_col[1]
+        existing_config_init['sample_column'] = file_config.get_sample_id_column()[1]
 
     # Existing Config Form is a dropdown menu to select from pre-existing configs if a config_id is present
     # that is the default selection in the dropdown.
