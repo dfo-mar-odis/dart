@@ -786,8 +786,7 @@ def deselect_event(soup):
     if caches['default'].touch("selected_event"):
         old_event_id = caches['default'].get('selected_event')
         old_event = models.Event.objects.get(pk=old_event_id)
-        tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
-                                         context={"event": old_event})
+        tr_html = render_to_string('core/partials/table_event_row.html', context={"event": old_event})
         table = create_replace_table(soup, tr_html)
         soup.append(table)
 
@@ -827,8 +826,7 @@ def add_event(request, mission_id, **kwargs):
             caches['default'].set("selected_event", event.pk, 3600)
 
             # create an out of band swap for the newly added event to put it in the page's event selection table
-            tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
-                                             context={'event': event, 'selected': 'true'})
+            tr_html = render_to_string('core/partials/table_event_row.html', context={'event': event, 'selected': 'true'})
             table = create_append_table(soup, 'event_table_body', tr_html)
             soup.append(table)
 
@@ -911,8 +909,7 @@ def selected_details(request, event_id):
     caches['default'].set('selected_event', event_id, 3600)
 
     event = models.Event.objects.get(pk=event_id)
-    tr_html = render_block_to_string('core/partials/table_event.html', 'event_table_row',
-                                     context={"event": event, 'selected': 'true'})
+    tr_html = render_to_string('core/partials/table_event_row.html', context={"event": event, 'selected': 'true'})
     # table = create_replace_table(soup, tr_html)
     soup.append(BeautifulSoup("<table><tbody>" + tr_html + "</tbody></table>", 'html.parser'))
     response = HttpResponse(soup)
@@ -1387,7 +1384,29 @@ def import_btl_events(request, mission_id, **kwargs):
 def list_events(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
-    tr_html = render_to_string('core/partials/table_event.html', context={'mission': mission})
+    context = {'mission': mission}
+    events = mission.events.all()
+    if errors := request.GET.get("filter_show_errors", 'off') == 'on':
+        event_ids = models.EventError.objects.values_list('event__event_id', flat=True)
+        events = mission.events.filter(event_id__in=event_ids)
+
+    if station_id := request.GET.get("filter_event_station", None):
+        events = events.filter(station__pk=station_id)
+
+    if instrument_type := request.GET.get("filter_event_instrument_type", None):
+        events = events.filter(instrument__type=instrument_type)
+
+    if event_id := request.GET.get("filter_event_id", None):
+        events = events.filter(event_id=event_id)
+    elif start_id := request.GET.get("filter_start_sample_id", None):
+        events = events.filter(sample_id__gte=start_id)
+        if end_id := request.GET.get("filter_end_sample_id", None):
+            events = events.filter(sample_id__lt=end_id)
+        else:
+            events = events.filter(end_sample_id__lte=start_id)
+
+    context['events'] = events
+    tr_html = render_to_string('core/partials/table_event.html', context=context)
 
     response = HttpResponse(tr_html)
     response['HX-Trigger'] = 'event_selected'
@@ -1449,6 +1468,18 @@ def delete_bottle(request, bottle_pk):
     response['HX-Trigger'] = 'update_bottles'
     return response
 
+def clear_filter(request):
+    mission = models.Mission.objects.first()
+    stations = [{'id': s.pk, 'name': s.name} for s in models.Station.objects.all()]
+    instruments = [it for it in models.InstrumentType]
+    context = {"mission": mission, "stations": stations, "instruments": instruments}
+
+    html = render_to_string("core/partials/card_event_row.html", context=context)
+    soup = BeautifulSoup(html, 'html.parser')
+    form = soup.find('form')
+    card = soup.find(id="div_id_card_collapse_event_filter")
+    card.attrs['class'].append('show')
+    return HttpResponse(form)
 
 event_detail_urls = [
     path(f'event/selected/<int:event_id>/', selected_details, name="form_event_selected_event"),
@@ -1466,6 +1497,7 @@ event_detail_urls = [
     path(f'event/delete/<int:mission_id>/<int:event_id>/', delete_details, name="form_event_delete_event"),
 
     path(f'event/action/list/<int:event_id>/', list_action, name="form_event_list_action"),
+    path(f'event/clear/filter/', clear_filter, name="form_event_clear_filter"),
     path(f'event/action/list/<int:event_id>/<str:editable>/', list_action, name="form_event_list_action"),
     path(f'event/action/new/<int:event_id>/', add_action, name="form_event_add_action"),
     path(f'event/action/edit/<int:action_id>/', edit_action, name="form_event_edit_action"),

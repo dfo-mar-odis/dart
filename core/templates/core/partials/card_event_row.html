@@ -2,6 +2,78 @@
 {% load bootstrap_icons %}
 {% load crispy_forms_tags %}
 
+<div class="row mb-2">
+    <div class="col">
+        <div class="card mb-2" id="div_id_card_event_filter">
+            <form id="event_filter_form">
+                <div class="card-header" id="div_id_card_header_event_filter">
+                    <div class="row">
+                        <button aria-expanded="false" class="btn btn btn-light btn-sm collapsed col-auto" data-bs-toggle="collapse" href="#div_id_card_collapse_event_filter" id="button_id_collapse_event_filter" type="button">
+                            <svg class="bi bi-caret-down" fill="currentColor" height="16" viewBox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg"> <path d="M3.204 5h9.592L8 10.481 3.204 5zm-.753.659 4.796 5.48a1 1 0 0 0 1.506 0l4.796-5.48c.566-.647.106-1.659-.753-1.659H3.204a1 1 0 0 0-.753 1.659z"></path></svg>
+                        </button>
+                        <div class="col-auto align-self-end">
+                            <div class="card-title">
+                                <div class="card-title" title="{% trans 'The filter allows filtering events based on status, numbers, sample id ranges' %}">{% custom_icon 'question-circle' %}<span class="h6" id="div_id_card_title_event_filter">{% trans "Event Filter" %}</span></div>
+                            </div>
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-primary btn-sm" hx-trigger="load, click" hx-include="#event_filter_form" hx-target="#event_table" hx-swap="outerHTML" hx-get="{% url 'core:form_event_get_events' mission.pk %}">{% custom_icon 'check-square' %}</button>
+                            <button type="button" class="btn btn-secondary btn-sm" hx-get="{% url "core:form_event_clear_filter" %}" hx-target="#event_filter_form">{% custom_icon 'eraser' %}</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="collapse" id="div_id_card_collapse_event_filter">
+                    <div class="card-body" id="div_id_card_body_event_filter">
+                        <div class="row mb-2">
+                            <div class="col-auto">
+                                <label for="filter_show_errors" >{% trans "Errors Only" %}</label>
+                                <input class="form-check" type="checkbox" id="filter_show_errors" name="filter_show_errors" />
+                            </div>
+
+                            <div class="col-auto">
+                                <label for="filter_event_station">{% trans "Station" %}</label>
+                                <select class="form-select form-select-sm" id="filter_event_station" name="filter_event_station">
+                                    <option value="">{% trans "-------------" %}</option>
+                                    {% for station in stations %}
+                                        <option value="{{ station.id }}">{{ station.name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-auto">
+                                <label for="filter_event_instrument_type">{% trans "Instrument Type" %}</label>
+                                <select class="form-select form-select-sm" id="filter_event_instrument_type" name="filter_event_instrument_type">
+                                    <option value="">{% trans "-------------" %}</option>
+                                    {% for instrument in instruments %}
+                                        <option value="{{ instrument }}">{{ instrument.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+
+                            <div class="col-auto">
+                                <label for="filter_event_id">{% trans "Event ID" %}</label>
+                                <input type="number" class="form-control form-control-sm" id="filter_event_id" name="filter_event_id" />
+                            </div>
+                            <div class="col-auto">
+                                {% trans "or" %}
+                            </div>
+                            <div class="col-auto">
+                                <label for="filter_start_sample_id" >{% trans "Start ID" %}</label>
+                                <input type="number" class="form-control form-control-sm" id="filter_start_sample_id" name="filter_start_sample_id" />
+                            </div>
+
+                            <div class="col-auto">
+                                <label for="filter_end_sample_id" >{% trans "End ID" %}</label>
+                                <input type="number" class="form-control form-control-sm" id="filter_end_sample_id" name="filter_end_sample_id" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="row">
     <div id="div_events_id" class="col-3">
         <div class="card">
