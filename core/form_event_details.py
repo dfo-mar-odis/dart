@@ -98,22 +98,6 @@ class EventDetails(core_forms.CardForm):
 
         return button
 
-    def get_delete_button(self) -> StrictButton:
-        # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
-        button_icon = load_svg('dash-square')
-        button_id = f'btn_id_add_{self.card_name}'
-        button_attrs = {
-            'id': button_id,
-            'name': 'delete_event',
-            'title': _("Delete Event"),
-            'hx-get': reverse_lazy("core:form_event_delete_event", args=(self.mission.pk, self.event.pk,)),
-            'hx-swap': 'none',
-            'hx-confirm': _("Are you sure?")
-        }
-        button = StrictButton(button_icon, css_class='btn btn-sm btn-danger', **button_attrs)
-
-        return button
-
     def get_copy_button(self) -> StrictButton:
         # url = reverse_lazy('core:mission_samples_upload_biochem', args=(self.mission_id,))
         button_icon = load_svg('copy')
@@ -165,12 +149,9 @@ class EventDetails(core_forms.CardForm):
         end_row_spacer = Row(css_class="align-self-end")
 
         button_column = Column()
-        if self.event and not self.event.files:
-            del_btn = self.get_delete_button()
+        if self.event:
             edit_btn = self.get_edit_button()
             bottle_btn = self.get_bottle_file_button()
-            if del_btn:
-                button_column.fields.append(del_btn)
 
             if bottle_btn:
                 start_row_spacer.fields.append(bottle_btn)

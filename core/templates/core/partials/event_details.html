@@ -4,9 +4,30 @@
 <div id="div_event_content_id">
 {% block event_content %}
 
-{% if event %}
+<div class="card mb-2" id="div_id_card_event_details_files">
+    <div class="card-header" id="div_id_card_header_event_details_files">
+        <div class="row">
+            <button aria-expanded="true" class="btn btn btn-light btn-sm collapsed col-auto" data-bs-toggle="collapse" href="#div_id_card_collapse_event_details_files" id="button_id_collapse_event_details_files" type="button"><svg class="bi bi-caret-down" fill="currentColor" height="16" viewBox="0 0 16 16" width="16" xmlns="http://www.w3.org/2000/svg"> <path d="M3.204 5h9.592L8 10.481 3.204 5zm-.753.659 4.796 5.48a1 1 0 0 0 1.506 0l4.796-5.48c.566-.647.106-1.659-.753-1.659H3.204a1 1 0 0 0-.753 1.659z"></path></svg></button>
+            <div class="col-auto align-self-end">
+                <div class="card-title" id="div_id_card_title_event_details_files"> <h6>Event Files</h6></div>
+            </div>
+        </div>
+    </div>
+    <div class="collapse" id="div_id_card_collapse_event_details_files">
+        <div class="card-body">
+        {% if event %}
+    <p><b>{% trans 'Event File(s): ' %}</b><span>{{ event.event_files }}</span></p>
+        {% if event.instrument.type == 1 %}
+    <p><b>{% trans 'Sensor File(s): ' %}</b><span>{{ event.sensor_files }}</span></p>
+    <p><b>{% trans 'Sample File(s): ' %}</b><span>{{ event.sample_files }}</span></p>
+        {% elif event.instrument.type == 2%}
+    <p><b>{% trans 'Plankton File(s): ' %}</b><span>{{ event.plankton_files }}</span></p>
+        {% endif %}
+        </div>
+    </div>
+</div>
+
 <p><b>{% trans 'Instrument: ' %}</b><span>{{ event.instrument }}</span></p>
-{% if event.files %}<p><b>{% trans 'File: ' %}</b><span>{% for file in event.files.all %}{{ file.file_name }}{% if not forloop.last %}, {% endif %}{% endfor %}</span></p>{% endif %}
 
 {% for error in event.validation_errors.all %}
     <div class="alert alert-danger" role="alert">
