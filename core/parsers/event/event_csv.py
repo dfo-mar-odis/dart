@@ -1,7 +1,10 @@
 import pandas as pd
 import io
 
+from django.utils import timezone
+
 from core import models
+from core.models import MissionFileType
 from settingsdb import models as settings_models
 from django.utils.translation import gettext_lazy as _
 
@@ -66,7 +69,7 @@ def create_events(mission: models.Mission, data_frame: pd.DataFrame) -> dict:
     return events_map
 
 
-def create_actions(file_name: str, data_frame: pd.DataFrame, events_map: dict):
+def create_actions(mission_file: models.MissionFile, data_frame: pd.DataFrame, events_map: dict):
     total_rows = data_frame.shape[0]
     processed = 1
     for index, row in data_frame.iterrows():
@@ -89,7 +92,7 @@ def create_actions(file_name: str, data_frame: pd.DataFrame, events_map: dict):
                 'sounding': row['SOUNDING'] if row['SOUNDING'] else None,
                 'comment': row['COMMENT'] if 'COMMENT' in data_frame.columns and row['COMMENT'] else None,
                 'data_collector': row['DATA_COLLECTOR'] if row['DATA_COLLECTOR'] else None,
-                'file': file_name,
+                'file': mission_file,
                 'action_type_other': action_type_other,
             }
         )
@@ -120,6 +123,10 @@ def normalize_date_format(data_frame: pd.DataFrame):
 
 
 def normal_csv_parser(mission: models.Mission, file_name: str, data_frame: pd.DataFrame):
+    mission_file = mission.mission_files.get_or_create(filename=file_name, type=MissionFileType.Event)[0]
+    mission_file.last_loaded=timezone.now()
+    mission_file.save()
+
     # Step 2: Create or Update events
     event_columns = ['EVENT_ID', 'STATION', 'STARTING_ID', 'ENDING_ID', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE',
                      'WIRE_ANGLE', 'WIRE_OUT', 'FLOW_DEPLOY', 'FLOW_RECOVER']
@@ -134,7 +141,7 @@ def normal_csv_parser(mission: models.Mission, file_name: str, data_frame: pd.Da
 
     actions_df = data_frame[action_columns]
 
-    create_actions(file_name, actions_df, events_map)
+    create_actions(mission_file, actions_df, events_map)
 
 
 def fixed_station_csv_parser(mission: models.Mission, file_name: str, data_frame: pd.DataFrame):
@@ -151,6 +158,10 @@ def fixed_station_csv_parser(mission: models.Mission, file_name: str, data_frame
 
     # if this is a fixed station csv, these columns will likely be missing from the dataframe
     # location_columns = ['LATITUDE', 'LONGITUDE', 'SOUNDING', 'DATA_COLLECTOR']
+
+    mission_file = mission.mission_files.get_or_create(filename=file_name, type=MissionFileType.Event)[0]
+    mission_file.last_loaded = timezone.now()
+    mission_file.save()
 
     action_columns = ['EVENT_ID', 'ACTION', 'INSTRUMENT_NAME', 'INSTRUMENT_TYPE', 'DATE_TIME']
     # comments is an optional column
@@ -205,7 +216,7 @@ def fixed_station_csv_parser(mission: models.Mission, file_name: str, data_frame
             actions_df.at[index, 'SOUNDING'] = first_action.sounding
             actions_df.at[index, 'DATA_COLLECTOR'] = first_action.data_collector
 
-    create_actions(file_name, actions_df, events_map)
+    create_actions(mission_file, actions_df, events_map)
 
 
 def parse(mission: models.Mission, file_name: str, data: io.StringIO):

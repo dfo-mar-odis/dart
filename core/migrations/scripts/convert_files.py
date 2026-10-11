@@ -11,7 +11,7 @@ def convert_files(apps, mission, files, file_type: Callable):
     file_name_set = set()
 
     for f in files:
-        if f in file_name_set:
+        if f is None or f in file_name_set:
             continue
 
         mission_file = MissionFile(
@@ -62,7 +62,11 @@ def link_files(apps, FileObject, file_filter: list, get_file_name: Callable = la
     event_files = { ef.filename: ef for ef in MissionFile.objects.filter(type__in=file_filter) }
     updated = []
     for a in FileObject.objects.all():
-        a.file = event_files[get_file_name(a)]
+        file_name = get_file_name(a)
+        if file_name is None:
+            continue
+
+        a.file = event_files[file_name]
         updated.append(a)
 
         if len(updated) > 1000:

@@ -27,7 +27,7 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('filename', models.CharField(help_text='Just the name of the file, does not include the file path.', max_length=100, verbose_name='File Name')),
                 ('type', models.IntegerField(choices=[(1, 'event'), (2, 'sensor'), (3, 'sample'), (4, 'plankton'), (999, 'other')], verbose_name='File Type')),
-                ('last_loaded', models.DateTimeField(verbose_name='Last Loaded')),
+                ('last_loaded', models.DateTimeField(auto_now=True, verbose_name='Last Loaded')),
                 ('mission', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='mission_files', to='core.mission', verbose_name='Mission')),
             ],
         ),

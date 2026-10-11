@@ -142,7 +142,7 @@ class MissionFile(models.Model):
     filename = models.CharField(max_length=100, verbose_name=_("File Name"),
                                  help_text=_("Just the name of the file, does not include the file path."))
     type = models.IntegerField(verbose_name=_("File Type"), choices=MissionFileType.choices)
-    last_loaded = models.DateTimeField(verbose_name=_("Last Loaded"))
+    last_loaded = models.DateTimeField(auto_now=True, verbose_name=_("Last Loaded"))
 
     def __str__(self):
         return f"{self.get_type_display()}, {self.filename}, {self.last_loaded.strftime("%Y/%m/%d, %H:%M:%S")}"
@@ -222,7 +222,7 @@ class Event(models.Model):
 
     @property
     def event_files(self):
-        files = set(self.actions.values_list("file__filename", flat=True))
+        files = set(self.actions.exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
 
         if len(files) > 0:
             return ",".join(files)
@@ -234,7 +234,7 @@ class Event(models.Model):
         files = set(DiscreteSampleValue.objects.filter(
             sample__bottle__event=self,
             file__type=MissionFileType.Sensor
-        ).values_list("file__filename", flat=True))
+        ).exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
 
         if len(files) > 0:
             return ",".join(files)
@@ -246,7 +246,7 @@ class Event(models.Model):
         files = set(DiscreteSampleValue.objects.filter(
             sample__bottle__event=self,
             file__type=MissionFileType.Sample
-        ).values_list("file__filename", flat=True))
+        ).exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
 
         if len(files) > 0:
             return ",".join(files)
@@ -258,7 +258,7 @@ class Event(models.Model):
         files = set(PlanktonSample.objects.filter(
             bottle__event=self,
             file__type=MissionFileType.Plankton
-        ).values_list("file__filename", flat=True))
+        ).exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
 
         if len(files) > 0:
             return ",".join(files)
