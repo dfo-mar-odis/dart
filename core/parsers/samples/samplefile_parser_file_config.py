@@ -4,6 +4,7 @@ from typing import Optional, Dict, Tuple, Any, List
 from decimal import Decimal
 
 from django.db import transaction
+from django.utils import timezone
 from django.utils.translation import gettext as _
 from numpy.ma.extras import row_stack
 
@@ -183,6 +184,16 @@ def parse_sample_file(
         return result
 
     file_name = file_config.filename
+    mission_file = core_models.MissionFile.objects.get_or_create(
+        mission=mission,
+        filename=file_name,
+        type=core_models.MissionFileType.Sample
+    )
+    if mission_file[1]:
+        mission_file[0].last_loaded = timezone.now()
+        mission_file[0].save()
+
+    mission_file = mission_file[0]
 
     # Determine sample id / comment column names via FileConfig methods
     sample_col_tuple = file_config.get_sample_id_column() if hasattr(file_config, "get_sample_id_column") else None
@@ -359,8 +370,7 @@ def parse_sample_file(
             if samp_key not in existing_samples:
                 sample_obj, screated = core_models.Sample.objects.get_or_create(
                     bottle=bottle,
-                    type=ms_type,
-                    defaults={"file": file_name}
+                    type=ms_type
                 )
                 existing_samples[samp_key] = sample_obj
                 if screated:
@@ -376,7 +386,8 @@ def parse_sample_file(
                 "value": value_num,
                 "limit": limit_num,
                 # "datatype": datatype.pk if datatype else None,
-                "comment": comment
+                "comment": comment,
+                "file_id": mission_file.pk
             }
 
             try:

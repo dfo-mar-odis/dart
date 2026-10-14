@@ -128,6 +128,27 @@ class Mission(models.Model):
         return f'{self.name}'
 
 
+class MissionFileType(models.IntegerChoices):
+    Event = 1, "event"
+    Sensor = 2, "sensor"
+    Sample = 3, "sample"
+    Plankton = 4, "plankton"
+    Other = 999, "other"
+
+
+class MissionFile(models.Model):
+
+    mission = models.ForeignKey(Mission, verbose_name=_("Mission"), related_name="mission_files", on_delete=models.CASCADE)
+    filename = models.CharField(max_length=100, verbose_name=_("File Name"),
+                                 help_text=_("Just the name of the file, does not include the file path."))
+    type = models.IntegerField(verbose_name=_("File Type"), choices=MissionFileType.choices)
+    last_loaded = models.DateTimeField(auto_now=True, verbose_name=_("Last Loaded"))
+
+    def __str__(self):
+        return f"{self.get_type_display()}, {self.filename}, {self.last_loaded.strftime("%Y/%m/%d, %H:%M:%S")}"
+
+
+
 class InstrumentType(models.IntegerChoices):
     ctd = 1, "CTD"
     net = 2, "Net"
@@ -200,16 +221,32 @@ class Event(models.Model):
     event_comment = models.TextField(verbose_name=_("Event Comment"), null=True, blank=True)
 
     @property
-    def files(self):
-        files = set()
-        for action in self.actions.all():
-            if action.file:
-                files.add(action.file)
+    def event_files(self):
+        files = MissionFile.objects.filter(event_files__event=self).distinct()
+        return files
 
-        if len(files) > 0:
-            return ",".join(files)
+    @property
+    def sensor_files(self):
+        files = MissionFile.objects.filter(
+            discrete_files__sample__bottle__event=self,
+            type = MissionFileType.Sensor
+        ).distinct()
+        return files
 
-        return ''
+    @property
+    def sample_files(self):
+        files = MissionFile.objects.filter(
+            discrete_files__sample__bottle__event=self,
+            type = MissionFileType.Sample
+        ).distinct()
+        return files
+
+    @property
+    def plankton_files(self):
+        files = MissionFile.objects.filter(
+            plankton_files__bottle__event=self,
+        ).distinct()
+        return files
 
     @property
     def total_samples(self):
@@ -354,7 +391,7 @@ class Action(models.Model):
     # The file this action was loaded from. Events can span different files, but they can also be entered
     # manually so this allows us to track an action back to the file it comes from, if it comes
     # from a file.
-    file = models.CharField(verbose_name=_("File Name"), max_length=100, null=True, blank=True)
+    file = models.ForeignKey(MissionFile, verbose_name=_("File"), related_name="event_files", blank=True, null=True, on_delete=models.SET_NULL)
 
     # mid helps us track issues, but in the event that this was a manually entered action this will be null
     mid = models.IntegerField(verbose_name="$@MID@$", null=True, blank=True)
@@ -580,7 +617,9 @@ class Sample(models.Model):
     type = models.ForeignKey(MissionSampleType, verbose_name=_("Type"), on_delete=models.CASCADE,
                              related_name='samples')
 
-    file = models.CharField(verbose_name=_("File Name"), max_length=50, null=True, blank=True)
+    # We use to track sample loading at the sample level, but some samples (like cholorophyll) can be loaded
+    # from multiple files, so we pushed the file reference down to the DiscreteSampleValue model.
+    # file = models.ForeignKey(MissionFile, verbose_name=_("File"), null=True, blank=True, on_delete=models.SET_NULL)
 
     last_modified = models.DateTimeField(verbose_name=_("Sample Modified"),
                                          help_text=_("Date sample was last updated"), auto_now=True)
@@ -624,12 +663,15 @@ class DiscreteSampleValue(models.Model):
     dis_data_num = models.IntegerField(verbose_name=_("BioChem Data Number"), null=True, blank=True,
                                        help_text=_("The BCD unique ID provided once a sample has been uploaded"))
 
+    # File that a discrete sample was loaded from.
+    file = models.ForeignKey(MissionFile, verbose_name=_("File"), related_name="discrete_files", blank=True, null=True, on_delete=models.SET_NULL)
+
     def __str__(self):
         return f'{self.sample}: {self.value}'
 
 
 class PlanktonSample(models.Model):
-    file = models.FileField(verbose_name=_("File"))
+    file = models.ForeignKey(MissionFile, verbose_name=_("File"), related_name="plankton_files", blank=True, null=True, on_delete=models.SET_NULL)
 
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
     bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)
@@ -699,18 +741,9 @@ class FileType(models.Model):
     name = models.CharField(max_length=30, verbose_name=_("File Type Name"),
                             help_text=_("Human readable name of a file that people will refer to such as a "
                                         "\"Bottle File\" or \"Andes Report\" or \"QAT File\""))
-    extension = models.CharField(max_length=10, verbose_name=_("File Extension"),
-                                 help_text=_("The extension used for this file, excluding the dot "
-                                             "\"BTL\", not \".BTL\""))
+
     description = models.CharField(verbose_name=_("File Description"), max_length=100,
-                                   help_text=_("Short description of what this file type will contain."))
-
-
-class EventFile(models.Model):
-    file_type = models.ForeignKey(FileType, verbose_name=_("File Type"), related_name="files", on_delete=models.CASCADE)
-    event = models.ForeignKey(Event, verbose_name=_("Event"), related_name="files", on_delete=models.CASCADE)
-    file_name = models.CharField(max_length=100, verbose_name=_("File Name"),
-                                 help_text=_("Just the name of the file, does not include the file path."))
+                                   help_text=_("Short description of what this file type will contain. (e.g Event, Sensor, Sample)"))
 
 
 # These are some of the common errors that occur when processing data and allow us to sort various errors depending

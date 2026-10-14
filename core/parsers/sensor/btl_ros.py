@@ -8,6 +8,7 @@ from typing import Any, List
 import ctd
 import pandas as pd
 import pytz
+from django.utils import timezone
 
 from geopy.distance import geodesic
 
@@ -27,7 +28,7 @@ logger_notifications = logging.getLogger('dart.user.fixstationparser')
 @dataclass
 class ParsedBtlFile:
     event_id: str
-    btl_filename: str
+    btl_file: str
     file_properties: dict
     col_headers: list[str]
     bottles_df: pd.DataFrame       # the 'avg' rows for bottle creation
@@ -68,7 +69,7 @@ def parse_file_to_intermediate(btl_file, ros_file, results: list, errors_to_crea
         # FixStationParser.__init__ currently requires an event — we need a lightweight
         # version that only holds streams and filename for parse_to_intermediate
         parser = FixStationParser.from_streams(
-            btl_filename=os.path.basename(btl_file),
+            btl_file=btl_file,
             btl_stream=btl_input,
             ros_stream=ros_input
         )
@@ -249,10 +250,11 @@ def validate_btl_file(btl_stream, file_properties: dict = None) -> None:
 class FixStationParser:
 
     @classmethod
-    def from_streams(cls, btl_filename: str, btl_stream: io.StringIO, ros_stream: io.StringIO | None):
+    def from_streams(cls, btl_file: str, btl_stream: io.StringIO, ros_stream: io.StringIO | None):
         """Lightweight constructor for pure parsing — no event or DB references needed."""
         instance = cls.__new__(cls)
-        instance.btl_filename = btl_filename
+        instance.mission_file = None
+        instance.btl_file = btl_file
         instance.btl_stream = btl_stream
         instance.ros_stream = ros_stream
         instance.field_mappings = None
@@ -304,11 +306,12 @@ class FixStationParser:
     def _create_update_action(self, action_type: core_models.ActionType, bottle, sounding, latitude, longitude):
         bottom_action = self.event.actions.filter(type=action_type)
         if not bottom_action.exists():
-            self.event.actions.create(type=action_type,
+            self.event.actions.create(file=self.mission_file, type=action_type,
                                       date_time=bottle.closed, sounding=sounding,
                                       latitude=latitude, longitude=longitude)
         else:
             action = bottom_action.first()
+            action.file = self.mission_file
             action.date_time = bottle.closed
             action.sounding = sounding
             action.latitude = latitude
@@ -436,7 +439,7 @@ class FixStationParser:
 
         return ParsedBtlFile(
             event_id=event_id,
-            btl_filename=self.btl_filename,
+            btl_file=os.path.basename(self.btl_file),
             file_properties=file_properties,
             col_headers=col_headers,
             bottles_df=data,        # process_bottles filters to 'avg' itself
@@ -657,7 +660,7 @@ class FixStationParser:
 
         self.event.save()
 
-    def process_data(self, file_name: str, data_frame: pd.DataFrame, column_headers: list[str]):
+    def process_data(self, data_frame: pd.DataFrame, column_headers: list[str]):
         # we only want to use rows in the BTL file marked as 'avg' in the statistics column
         skipped_rows = getattr(data_frame, "_metadata")["skiprows"]
 
@@ -710,7 +713,7 @@ class FixStationParser:
                 logger.warning(message)
                 self.errors_to_create.append(
                     core_models.FileError(
-                        mission=self.mission, file_name=file_name, line=(index+1),
+                        mission=self.mission, file_name=self.sensor_file.filename, line=(index+1),
                         type=core_models.ErrorType.bottle, code=106, message=message)
                 )
                 continue
@@ -729,9 +732,6 @@ class FixStationParser:
 
                 if (sample := core_models.Sample.objects.filter(bottle=bottle, type=sample_type)).exists():
                     sample = sample.first()
-                    if utils.updated_value(sample, 'file', file_name):
-                        update_samples.append(sample)
-
                     # sensor data doesn't have replicates, so we're always just dealing with the first discrete value
                     discrete_value = sample.discrete_values.first()
                     if discrete_value:
@@ -741,36 +741,38 @@ class FixStationParser:
                         # discrete_value will be None and utils.updated_value will raise a NoneType exception
                         new_value = data[column.lower()]
                         if utils.updated_value(discrete_value, 'value', new_value):
+                            discrete_value.file_id = mission_file.pk
                             update_discrete_samples.append(discrete_value)
                     else:
-                        discrete_value = core_models.DiscreteSampleValue(sample=sample, value=data[column.lower()])
+                        discrete_value = core_models.DiscreteSampleValue(sample=sample, value=data[column.lower()], file=self.sensor_file)
                         new_discrete_samples.append(discrete_value)
                 else:
-                    sample = core_models.Sample(bottle=bottle, type=sample_types[column], file=file_name)
+                    sample = core_models.Sample(bottle=bottle, type=sample_types[column])
                     new_samples.append(sample)
-                    discrete_value = core_models.DiscreteSampleValue(sample=sample, value=data[column.lower()])
+                    discrete_value = core_models.DiscreteSampleValue(sample=sample, value=data[column.lower()], file=self.sensor_file)
                     new_discrete_samples.append(discrete_value)
 
         if len(new_samples) > 0:
-            logger.info("Creating CTD samples for file" + f" : {file_name}")
+            logger.info("Creating CTD samples for file" + f" : {self.sensor_file.filename}")
             core_models.Sample.objects.bulk_create(new_samples)
 
         if len(update_samples) > 0:
-            logger.info("Creating CTD samples for file" + f" : {file_name}")
+            logger.info("Creating CTD samples for file" + f" : {self.sensor_file.filename}")
             core_models.Sample.objects.bulk_update(update_samples, ['file'])
 
         if len(new_discrete_samples) > 0:
-            logger.info("Adding values to samples" + f" : {file_name}")
+            logger.info("Adding values to samples" + f" : {self.sensor_file.filename}")
             core_models.DiscreteSampleValue.objects.bulk_create(new_discrete_samples)
 
         if len(update_discrete_samples) > 0:
-            logger.info("Updating sample values" + f" : {file_name}")
-            core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value'])
+            logger.info("Updating sample values" + f" : {self.sensor_file.filename}")
+            core_models.DiscreteSampleValue.objects.bulk_update(update_discrete_samples, ['value', 'file'])
 
     def parse(self):
-        self.mission.file_errors.filter(file_name=self.btl_filename).delete()
+        self.mission.file_errors.filter(file_name=self.mission_file.filename).delete()
         self.event.validation_errors.all().delete()
 
+        # This creates the events
         parsed = self.parse_to_intermediate()
 
         # propagate file_properties so process_actions can access it
@@ -786,7 +788,7 @@ class FixStationParser:
             core_models.FileError.objects.bulk_create(self.errors_to_create)
             self.errors_to_create = []
 
-        self.process_data(parsed.btl_filename, parsed.data_df, column_headers=parsed.col_headers)
+        self.process_data(parsed.data_df, column_headers=parsed.col_headers)
         if self.errors_to_create:
             core_models.FileError.objects.bulk_create(self.errors_to_create)
             self.errors_to_create = []
@@ -807,7 +809,7 @@ class FixStationParser:
 
         core_models.Bottle.objects.bulk_update(bottles, ['gear_type'])
 
-    def __init__(self, event: core_models.Event, btl_filename: str, btl_stream: io.StringIO, ros_stream: io.StringIO | None):
+    def __init__(self, event: core_models.Event, btl_file: str, btl_stream: io.StringIO, ros_stream: io.StringIO | None):
         self.field_mappings = None
         self.errors_to_create = []
         self.event = event
@@ -817,7 +819,28 @@ class FixStationParser:
         }
         self.database = event._state.db
 
-        self.btl_filename = btl_filename
+        self.btl_file = btl_file
+        mission_file = core_models.MissionFile.objects.get_or_create(
+            mission=self.mission,
+            filename=btl_file,
+            type=core_models.MissionFileType.Event
+        )
+        if mission_file[1]:
+            mission_file[0].last_loaded = timezone.now()
+            mission_file[0].save()
+        self.mission_file = mission_file[0]
+
+        # this loads the sensors
+        sensor_file = core_models.MissionFile.objects.get_or_create(
+            mission=self.mission,
+            filename=self.mission_file.filename,
+            type=core_models.MissionFileType.Sensor
+        )
+        if sensor_file[1]:
+            sensor_file[0].last_loaded = timezone.now()
+            sensor_file[0].save()
+
+        self.sensor_file = sensor_file[0]
         self.btl_stream: io.StringIO = btl_stream
         self.ros_stream: io.StringIO|None = ros_stream
 
@@ -855,11 +878,11 @@ class FixStationBulkParser:
         # if CTD events were loaded from a CSV, ANDES or Elog file, this is not a fixed station
         is_fixed_station = self.mission.fixed_station
 
-        for index, file in enumerate(self.file_list):
+        for index, btl_file in enumerate(self.file_list):
             logger_notifications.info(_("checking events") + " : %d/%d", (index + 1), bottle_count)
-            file_name = os.path.basename(file)
+            btl_file_name = os.path.basename(btl_file)
 
-            btl_sample_file = open(file, mode='rb')
+            btl_sample_file = open(btl_file, mode='rb')
             btl_data = io.StringIO(btl_sample_file.read().decode("cp1252"))
             try:
                 if is_fixed_station:
@@ -868,26 +891,26 @@ class FixStationBulkParser:
                     validate_btl_file(btl_data)
             except KeyError as e:
                 logger.exception(e)
-                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=104))
+                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=btl_file_name, message=str(e), code=104))
                 continue
             except ValueError as e:
                 logger.exception(e)
-                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=103))
+                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=btl_file_name, message=str(e), code=103))
                 continue
             except Exception as e:
                 logger.exception(e)
-                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=file_name, message=str(e), code=105))
+                self.errors_to_create.append(core_models.FileError(mission=self.mission, file_name=btl_file_name, message=str(e), code=105))
                 continue
 
             try:
                 # Construct the expected .ros file path
-                ros_file = os.path.splitext(file)[0] + ".ros"
+                ros_file = os.path.splitext(btl_file)[0] + ".ros"
                 if not os.path.exists(ros_file):
-                    logger.warning(f"No matching .ros file found for: {file}")
+                    logger.warning(f"No matching .ros file found for: {btl_file}")
                     ros_file = None
                     # raise FileNotFoundError(f"No matching .ros file found for: {file}")
 
-                data = ctd.read.from_btl(file)
+                data = ctd.read.from_btl(btl_file)
 
                 header: str = data._metadata['header']
                 header_lines: str = re.findall(r'\*\*.*', header, re.MULTILINE)
@@ -895,7 +918,7 @@ class FixStationBulkParser:
                 event_properties: dict = {cl[0].strip().upper(): cl[1].strip() for cl in cleaned_lines if len(cl) >= 2}
 
                 event_id = event_properties.get(label_event)
-                parsed_events[event_id] = [file, ros_file]
+                parsed_events[event_id] = [btl_file, ros_file]
 
                 if int(event_id) not in existing_events:
                     if station is None:
@@ -927,12 +950,12 @@ class FixStationBulkParser:
 
                     create_events.append(event)
             except Exception as e:
-                message = _("Error parsing Header ") + f": {file}: {e}"
+                message = _("Error parsing Header ") + f": {btl_file}: {e}"
                 logger.error(message)
                 logger.exception(e)
                 error = core_models.FileError(
                     mission=self.mission,
-                    file_name=file_name,
+                    file_name=btl_file_name,
                     message=message,
                     type=core_models.ErrorType.validation,
                     code=100
@@ -941,27 +964,6 @@ class FixStationBulkParser:
 
         if create_events:
             core_models.Event.objects.bulk_create(create_events)
-
-        # we're going to attach the event files to the event.
-        new_files = []
-        btl_file_type = core_models.FileType.objects.get_or_create(name='BTL', extension='BTL',
-                                                                   description='Bottle files')[0]
-
-        ros_file_type = core_models.FileType.objects.get_or_create(name='ROS', extension='ROS',
-                                                                   description='Rosette files')[0]
-        for event_id in parsed_events:
-            btl_file = os.path.basename(parsed_events[event_id][0])
-            event = core_models.Event.objects.get(event_id=event_id, instrument__type=core_models.InstrumentType.ctd)
-            event.files.filter(file_type__in=[btl_file_type, ros_file_type]).delete()
-
-            new_files.append(core_models.EventFile(event=event, file_name=btl_file, file_type=btl_file_type))
-
-            if len(parsed_events) > 1:
-                ros_file = os.path.basename(parsed_events[event_id][1])
-                new_files.append(core_models.EventFile(event=event, file_name=ros_file, file_type=ros_file_type))
-
-        if new_files:
-            core_models.EventFile.objects.bulk_create(new_files)
 
         return parsed_events
 
@@ -1014,12 +1016,13 @@ class FixStationBulkParser:
                 event_id=parsed.event_id,
                 instrument__type=core_models.InstrumentType.ctd
             )
-            writer = FixStationParser(event=event, btl_filename=parsed.btl_filename,
+
+            writer = FixStationParser(event=event, btl_file=parsed.btl_file,
                                       btl_stream=None, ros_stream=None)
             writer.file_properties = parsed.file_properties
             writer.process_bottles(parsed.bottles_df)
             writer.process_sensors(column_headers=parsed.col_headers, sensor_headings=parsed.sensor_headings)
-            writer.process_data(parsed.btl_filename, parsed.data_df, column_headers=parsed.col_headers)
+            writer.process_data(parsed.data_df, column_headers=parsed.col_headers)
             if self.mission.fixed_station:
                 writer.process_actions()
 

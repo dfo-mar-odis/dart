@@ -3,11 +3,10 @@ import json
 import logging
 
 from datetime import datetime
-
 from django.db.models import QuerySet
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
-import core.models
 from settingsdb.models import FileConfiguration
 
 from core import models as core_models
@@ -247,9 +246,11 @@ def parse_events(mission: core_models.Mission, file_name: str, samples: list[dic
 
 def parse_actions(mission: core_models.Mission, file_name: str, samples: list[dict]) -> list[core_models.FileError]:
     config: QuerySet[FileConfiguration] = get_or_create_file_config()
-    database = mission._state.db
 
     errors = []
+    mission_file = core_models.MissionFile.objects.get_or_create(mission=mission, filename=file_name)[0]
+    mission_file.last_loaded = timezone.now()
+    mission_file.save()
 
     mission_events = {event.event_id: event for event in mission.events.all()}
     create_actions = []
@@ -303,7 +304,7 @@ def parse_actions(mission: core_models.Mission, file_name: str, samples: list[di
 
                 action = core_models.Action(event=mission_event, date_time=action_date, type=action_type,
                                             latitude=action_lat, longitude=action_lon, data_collector=action_operator,
-                                            comment=action_comment, sounding=action_sounding, file=file_name)
+                                            comment=action_comment, sounding=action_sounding, file=mission_file)
                 create_actions.append(action)
 
     core_models.Action.objects.bulk_create(create_actions)

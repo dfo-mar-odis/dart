@@ -40,6 +40,8 @@ class EventDetails(MissionMixin, GenericDetailView):
         context['details_form'] = form_event_details.EventDetails(mission=self.object)
 
         context['mission_id'] = self.object.pk
+        context['stations'] = [{"id": s.pk, "name": s.name} for s in models.Station.objects.all()]
+        context['instruments'] = [it for it in models.InstrumentType]
 
         context['reports'] = {key: reverse_lazy(reports[key], args=(self.object.pk,))
                               for key in reports.keys()}
