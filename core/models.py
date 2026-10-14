@@ -222,48 +222,31 @@ class Event(models.Model):
 
     @property
     def event_files(self):
-        files = set(self.actions.exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
-
-        if len(files) > 0:
-            return ",".join(files)
-
-        return ''
+        files = MissionFile.objects.filter(event_files__event=self).distinct()
+        return files
 
     @property
     def sensor_files(self):
-        files = set(DiscreteSampleValue.objects.filter(
-            sample__bottle__event=self,
-            file__type=MissionFileType.Sensor
-        ).exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
-
-        if len(files) > 0:
-            return ",".join(files)
-
-        return ''
+        files = MissionFile.objects.filter(
+            discrete_files__sample__bottle__event=self,
+            type = MissionFileType.Sensor
+        ).distinct()
+        return files
 
     @property
     def sample_files(self):
-        files = set(DiscreteSampleValue.objects.filter(
-            sample__bottle__event=self,
-            file__type=MissionFileType.Sample
-        ).exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
-
-        if len(files) > 0:
-            return ",".join(files)
-
-        return ''
+        files = MissionFile.objects.filter(
+            discrete_files__sample__bottle__event=self,
+            type = MissionFileType.Sample
+        ).distinct()
+        return files
 
     @property
     def plankton_files(self):
-        files = set(PlanktonSample.objects.filter(
-            bottle__event=self,
-            file__type=MissionFileType.Plankton
-        ).exclude(file__filename__isnull=True).values_list("file__filename", flat=True))
-
-        if len(files) > 0:
-            return ",".join(files)
-
-        return ''
+        files = MissionFile.objects.filter(
+            plankton_files__bottle__event=self,
+        ).distinct()
+        return files
 
     @property
     def total_samples(self):
@@ -408,7 +391,7 @@ class Action(models.Model):
     # The file this action was loaded from. Events can span different files, but they can also be entered
     # manually so this allows us to track an action back to the file it comes from, if it comes
     # from a file.
-    file = models.ForeignKey(MissionFile, verbose_name=_("File"), blank=True, null=True, on_delete=models.SET_NULL)
+    file = models.ForeignKey(MissionFile, verbose_name=_("File"), related_name="event_files", blank=True, null=True, on_delete=models.SET_NULL)
 
     # mid helps us track issues, but in the event that this was a manually entered action this will be null
     mid = models.IntegerField(verbose_name="$@MID@$", null=True, blank=True)
@@ -681,14 +664,14 @@ class DiscreteSampleValue(models.Model):
                                        help_text=_("The BCD unique ID provided once a sample has been uploaded"))
 
     # File that a discrete sample was loaded from.
-    file = models.ForeignKey(MissionFile, verbose_name=_("File"), blank=True, null=True, on_delete=models.SET_NULL)
+    file = models.ForeignKey(MissionFile, verbose_name=_("File"), related_name="discrete_files", blank=True, null=True, on_delete=models.SET_NULL)
 
     def __str__(self):
         return f'{self.sample}: {self.value}'
 
 
 class PlanktonSample(models.Model):
-    file = models.ForeignKey(MissionFile, verbose_name=_("File"), blank=True, null=True, on_delete=models.SET_NULL)
+    file = models.ForeignKey(MissionFile, verbose_name=_("File"), related_name="plankton_files", blank=True, null=True, on_delete=models.SET_NULL)
 
     # Zooplankton will come from bottles linked to net events. Phytoplankton will come from bottles linked to CTD events
     bottle = models.ForeignKey(Bottle, verbose_name="Bottle", related_name="plankton_data", on_delete=models.CASCADE)

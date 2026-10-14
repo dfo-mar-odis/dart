@@ -16,12 +16,36 @@
     <div class="collapse" id="div_id_card_collapse_event_details_files">
         <div class="card-body">
         {% if event %}
-    <p><b>{% trans 'Event File(s): ' %}</b><span>{{ event.event_files }}</span></p>
+    <p><b>{% trans 'Event File(s): ' %}</b>
+        <ul>
+        {% for file in event.event_files %}
+            <li>{{ file.last_loaded }}: {{ file.filename }} </li>
+        {% endfor %}
+        </ul>
+    </p>
         {% if event.instrument.type == 1 %}
-    <p><b>{% trans 'Sensor File(s): ' %}</b><span>{{ event.sensor_files }}</span></p>
-    <p><b>{% trans 'Sample File(s): ' %}</b><span>{{ event.sample_files }}</span></p>
+    <p><b>{% trans 'Sensor File(s): ' %}</b>
+        <ul>
+        {% for file in event.sensor_files %}
+            <li>{{ file.last_loaded }}: {{ file.filename }}</li>
+        {% endfor %}
+        </ul>
+    </p>
+    <p><b>{% trans 'Sample File(s): ' %}</b>
+        <ul>
+        {% for file in event.sample_files %}
+            <li>{{ file.last_loaded }}: {{ file.filename }}</li>
+        {% endfor %}
+        </ul>
+    </p>
         {% elif event.instrument.type == 2%}
-    <p><b>{% trans 'Plankton File(s): ' %}</b><span>{{ event.plankton_files }}</span></p>
+    <p><b>{% trans 'Plankton File(s): ' %}</b>
+        <ul>
+        {% for file in event.plankton_files %}
+            <li>{{ file.last_loaded }}: {{ file.filename }}</li>
+        {% endfor %}
+        </ul>
+    </p>
         {% endif %}
         </div>
     </div>
