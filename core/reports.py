@@ -335,7 +335,7 @@ def std_sample_report(request, mission_id, **kwargs):
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def oxygen_report(request, mission_id):
     sensors = ['Sbeox0ML/L', 'Sbeox1ML/L']
-    samples = ['oxy']
+    samples = ['O2_Winkler']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Oxy_CTD_P', 'Oxy_CTD_S', 'Oxy_W_Rep1', 'Oxy_W_Rep2']
 
     return std_sample_report(request, mission_id=mission_id, report_name='Oxygen_Rpt',
@@ -346,7 +346,7 @@ def oxygen_report(request, mission_id):
 # if they user has named it anything else, this report won't contain loaded oxygen samples
 def salt_report(request, mission_id):
     sensors = ['t090C', 't190C', 'c0S/m', 'c1S/m', 'Sal00', 'Sal11']
-    samples = ['salts']
+    samples = ['Salinity_Sal_PSS']
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID", 'Temp_CTD_P', 'Temp_CTD_S', 'Cond_CTD_P', 'Cond_CTD_S',
               'Sal_CTD_P', 'Sal_CTD_S', 'Sal_Rep1', 'Sal_Rep2']
 
@@ -363,7 +363,7 @@ def chl_report(request, mission_id):
     header = ["STATION", "EVENT", 'PRESSURE', "SAMPLE_ID"]
     header += sensors
     header += ['Chl_Rep1', 'Chl_Rep2']
-    samples = ['chl']
+    samples = ['Chl_a_Holm-Hansen_F']
 
     return std_sample_report(request, mission_id=mission_id, report_name='Chl_Summary', headers=header,
                              sensors=sensors, samples=samples)
