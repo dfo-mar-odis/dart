@@ -589,7 +589,9 @@ def process_attachments_actions(mission: core_models.Mission, dictionary_buffer:
         file_name = None
         for file in file_buffer.keys():
             if mid in file_buffer[file]:
-                file_name = core_models.MissionFile.objects.get_or_create(filename=file, type=MissionFileType.Event)[0]
+                file_name = core_models.MissionFile.objects.get_or_create(
+                    mission=mission, filename=file, type=MissionFileType.Event
+                )[0]
                 file_name.last_loaded = timezone.now()
                 file_name.save()
                 break
