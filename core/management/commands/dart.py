@@ -38,7 +38,7 @@ class Command(BaseCommand):
     help = "Runs Dart as a standalone application with log console"
 
     def add_arguments(self, parser):
-        parser.add_argument('--host', type=str, default='127.0.0.1', help='Host to bind the Django webserver to')
+        parser.add_argument('--host', type=str, default='0.0.0.0', help='Host to bind the Django webserver to')
         parser.add_argument('-p', '--port', type=int, default=8000, help='Port to bind the server to')
 
     def handle(self, *args, **options):
