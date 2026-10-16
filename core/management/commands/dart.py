@@ -19,7 +19,7 @@ class ServerThread(threading.Thread):
     host = None
     port = None
 
-    def __init__(self, host='127.0.0.1', port=8000):
+    def __init__(self, host='0.0.0.0', port=8000):
         self.host = host
         self.port = port
 
