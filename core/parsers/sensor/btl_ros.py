@@ -569,7 +569,7 @@ class FixStationParser:
             except Exception as e:
                 logger.exception(e)
                 self.errors_to_create.append(core_models.FileError(
-                    mission=self.event.mission, file_name=self.btl_filename, message=str(e), code=101
+                    mission=self.event.mission, file_name=self.btl_file, message=str(e), code=101
                 ))
 
         if create_bottles:
