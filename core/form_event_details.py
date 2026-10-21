@@ -1224,30 +1224,27 @@ def import_elog_events(request, mission_id, **kwargs):
     mission = models.Mission.objects.get(pk=mission_id)
 
     if request.method == 'GET':
-        request_vars = request.GET.copy()
-    else:
-        request_vars = request.POST.copy()
+        if 'csv_event' in request.GET:
+            logger = event_csv.logger_notifications.name
+            message = _("Processing CSV Report")
+        elif 'andes_event' in request.GET:
+            logger = andes.logger_notifications.name
+            message = _("Processing Andes Report")
+        elif 'btl_event' in request.GET:
+            logger = andes.logger_notifications.name
+            message = _("Processing BTL")
+        else:
+            logger = elog.logger_notifications.name
+            message = _("Processing Elog")
 
-    if 'csv_event' in request_vars:
-        logger = event_csv.logger_notifications.name
-        message = _("Processing CSV Report")
-    elif 'andes_event' in request_vars:
-        logger = andes.logger_notifications.name
-        message = _("Processing Andes Report")
-    elif 'btl_event' in request_vars:
-        logger = andes.logger_notifications.name
-        message = _("Processing BTL")
-    else:
-        logger = elog.logger_notifications.name
-        message = _("Processing Elog")
-
-    msg_alert = core_forms.StatusAlert("div_id_event_alert", message)
-    if not msg_alert.is_socket_connected(logger):
-        msg_alert.set_socket(logger)
-        msg_alert.include_progress_bar()
-        response = HttpResponse(msg_alert)
-        response['HX-Trigger-After-Settle'] = trigger
-        return response
+        attrs = {
+            'alert_area_id': "div_id_event_alert",
+            'logger': logger,
+            'hx-post': request.path,
+            'hx-trigger': 'load',
+            'message': message,
+        }
+        return HttpResponse(core_forms.websocket_post_request_alert(**attrs))
 
     if 'csv_event' in request.FILES:
         file = request.FILES.get('csv_event')
