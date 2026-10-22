@@ -248,7 +248,9 @@ def parse_actions(mission: core_models.Mission, file_name: str, samples: list[di
     config: QuerySet[FileConfiguration] = get_or_create_file_config()
 
     errors = []
-    mission_file = core_models.MissionFile.objects.get_or_create(mission=mission, filename=file_name)[0]
+    mission_file = core_models.MissionFile.objects.get_or_create(
+        mission=mission, filename=file_name, type=core_models.MissionFileType.Event
+    )[0]
     mission_file.last_loaded = timezone.now()
     mission_file.save()
 

@@ -296,9 +296,12 @@ def parse_sample_file(
             limit_col = cd.get("limit_col")
 
             datatype_id = cd.get("datatype_id", None)
-            if datatype_id not in bcdatatype_cache:
-                bcdatatype_cache[datatype_id] = bio_models.BCDataType.objects.get(pk=datatype_id)
-            datatype = bcdatatype_cache[datatype_id]
+            datatype = None
+            if datatype_id:
+                if datatype_id not in bcdatatype_cache:
+                    bcdatatype_cache[datatype_id] = bio_models.BCDataType.objects.get(pk=datatype_id)
+
+                datatype = bcdatatype_cache[datatype_id]
 
             # Fetch the value(s) from the row (some columns may not be present)
             raw_value = None

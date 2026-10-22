@@ -56,7 +56,7 @@ class TestSampleFileParserFileConfig(DartTestCase):
                             "initial_transmittance(%%)","standard_transmittance0(%%)","comments"]
 
         f_config = file_config_from_db(self.config, self.file_name, self.oxygen_stream)
-        df = samplefile_parser_file_config._read_stream_to_df(self.oxygen_stream, f_config)
+        df = samplefile_parser_file_config._read_stream_to_df(f_config)
 
         logger.debug(df.head())
         logger.debug(df.columns)
@@ -81,7 +81,7 @@ class TestSampleFileParserFileConfig(DartTestCase):
         sample_col_name = (self.config.sample_id_column_name or "").strip().lower()
 
         f_config = file_config_from_db(self.config, self.file_name, self.oxygen_stream)
-        df = samplefile_parser_file_config._read_stream_to_df(self.oxygen_stream, f_config)
+        df = samplefile_parser_file_config._read_stream_to_df(f_config)
         for idx, row in df.iterrows():
             # extract sample id cell
             sample_cell = row.get(sample_col_name) if sample_col_name else None
@@ -118,7 +118,7 @@ class TestSampleFileParserFileConfig(DartTestCase):
         with patch('core.parsers.samples.samplefile_parser_file_config.core_models.Bottle.objects.filter', new=fake_filter) as mock_filter:
             # call the parser — it will receive the mocked filter result
             result = samplefile_parser_file_config.parse_sample_file(
-                self.oxygen_stream, f_config, sample_mission, self.file_name
+                sample_mission, f_config
             )
 
         return  result

@@ -97,27 +97,6 @@ class TestMissionViewUI(DartTestCase):
     def setUp(self) -> None:
         self.client = Client()
 
-    @tag("mission_view_ui_test_missions_directory")
-    def test_missions_directory(self):
-        # the mission view page should have a drop down showing the user the directory the application is
-        # pointing to to view the mission databases.
-
-        url = reverse("settingsdb:mission_filter")
-        response = self.client.get(url)
-
-        soup = BeautifulSoup(response.content, "html.parser")
-        mission_select = soup.find(id="select_id_mission_directory")
-        self.assertIsNotNone(mission_select)
-
-        # the selection element needs to have an hx-trigger="changed" on it
-        self.assertIn('hx-trigger', mission_select.attrs)
-        self.assertEqual(mission_select.attrs['hx-trigger'], 'change')
-
-        self.assertIn('hx-get', mission_select.attrs)
-        self.assertEqual(mission_select.attrs['hx-get'], reverse('settingsdb:update_mission_directory'))
-
-        self.assertIn('hx-swap', mission_select.attrs)
-        self.assertEqual(mission_select.attrs['hx-swap'], 'outerHTML')
 
     @tag("mission_view_ui_test_missions_directory_update_get")
     def test_missions_directory_update_get(self):

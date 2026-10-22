@@ -331,6 +331,9 @@ def get_instrument_name(instrument_name: str) -> core_models.InstrumentType:
         if instrument_name.upper() == "VIKING BUOY":
             return core_models.InstrumentType.buoy
 
+        if 'MOORING' in instrument_name.upper():
+            return core_models.InstrumentType.mooring
+
     return core_models.InstrumentType.other
 
 

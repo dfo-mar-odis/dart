@@ -442,7 +442,7 @@ class TestAndesParser(DartTestCase):
 
     def setUp(self):
         andes.logger = logger
-        self.mission = core_factory.MissionFactory(
+        self.mission = core_factory.MissionFactory.create(
             name='CAR-2024-924',
             start_date=datetime.strptime("2024-05-23 09:00:00", '%Y-%m-%d %H:%M:%S'),
             end_date=datetime.strptime("2024-06-18 18:00:00", '%Y-%m-%d %H:%M:%S')
@@ -487,12 +487,12 @@ class TestAndesParser(DartTestCase):
         ctd = mission_instruments.get(name__iexact='CTD AZOMP 2024')
         self.assertEqual(core_models.InstrumentType.ctd, ctd.type)
 
-        self.assertIsNotNone(mission_instruments.get(name__iexact='Plankton net (202um)'))
-        net = mission_instruments.get(name__iexact='Plankton net (202um)')
+        self.assertIsNotNone(mission_instruments.get(name__iexact='202um'))
+        net = mission_instruments.get(name__iexact='202um')
         self.assertEqual(core_models.InstrumentType.net, net.type)
 
-        self.assertIsNotNone(mission_instruments.get(name__iexact='Plankton net (76um)'))
-        net = mission_instruments.get(name__iexact='Plankton net (76um)')
+        self.assertIsNotNone(mission_instruments.get(name__iexact='76um'))
+        net = mission_instruments.get(name__iexact='76um')
         self.assertEqual(core_models.InstrumentType.net, net.type)
 
         self.assertIsNotNone(mission_instruments.get(name__iexact='Argo (BIO AZOMP)'))
@@ -665,7 +665,7 @@ class TestAndesParser(DartTestCase):
         self.assertEqual(expected_operator, deployed.data_collector)
         self.assertEqual(expected_comment, deployed.comment)
         self.assertEqual(expected_sounding, deployed.sounding)
-        self.assertEqual(self.test_file_name, deployed.file)
+        self.assertEqual(self.test_file_name, deployed.file.filename)
 
 
 @tag('parsers', 'event_parsers', 'csv_parser')

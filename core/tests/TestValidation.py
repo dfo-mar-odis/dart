@@ -30,7 +30,9 @@ class TestGeneralEventValidation(DartTestCase):
         event = core_factory.EventFactory.create(mission=self.mission, instrument=instrument)
 
         expected_file = 'test.log'
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+        mission_file = core_factory.MissionFileFactory.create(mission=self.mission, filename=expected_file,
+                                                              type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_event(event)
@@ -45,11 +47,13 @@ class TestGeneralEventValidation(DartTestCase):
         event.actions.all().delete()
 
         expected_file = 'test.log'
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+        mission_file = core_factory.MissionFileFactory.create(mission=self.mission, filename=expected_file,
+                                                              type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=3, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_event(event)
@@ -65,11 +69,13 @@ class TestGeneralEventValidation(DartTestCase):
         event.actions.all().delete()
 
         expected_file = 'test.log'
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.other, file=expected_file,
+        mission_file = core_factory.MissionFileFactory.create(mission=self.mission, filename=expected_file,
+                                                              type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.other, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=2, type=action_types.other, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.other, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=3, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_event(event)
@@ -171,14 +177,16 @@ class TestCTDEventValidation(DartTestCase):
         expected_file = 'test.log'
 
         core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=None)
+        event = core_factory.NetEventFactory.create(mission=self.mission, sample_id=None)
         core_factory.AttachmentFactory(event=event, name='76um')
 
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+        mission_file = core_factory.MissionFileFactory(mission=self.mission, filename=expected_file,
+                                                       type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_net_event(event)
@@ -190,14 +198,16 @@ class TestCTDEventValidation(DartTestCase):
 
         instrument = core_factory.InstrumentFactory(type=models.InstrumentType.net)
 
-        core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
+        core_factory.CTDEventFactory.create(mission=self.mission, sample_id=40000, end_sample_id=40012)
         event = core_factory.NetEventFactory(mission=self.mission, sample_id=30000, instrument=instrument)
 
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+        mission_file = core_factory.MissionFileFactory(mission=self.mission, filename=expected_file,
+                                                       type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_net_event(event)
@@ -208,14 +218,15 @@ class TestCTDEventValidation(DartTestCase):
         expected_file = 'test.log'
 
         core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=40011)
+        event = core_factory.NetEventFactory.create(mission=self.mission, sample_id=40011)
         core_factory.AttachmentFactory(event=event, name='76um')
 
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+        mission_file = core_factory.MissionFileFactory(mission=self.mission, filename=expected_file, type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_net_event(event)
@@ -226,14 +237,15 @@ class TestCTDEventValidation(DartTestCase):
         expected_file = 'test.log'
 
         core_factory.CTDEventFactory(mission=self.mission, sample_id=40000, end_sample_id=40012)
-        event = core_factory.NetEventFactory(mission=self.mission, sample_id=40001)
+        event = core_factory.NetEventFactory.create(mission=self.mission, sample_id=40001)
         core_factory.AttachmentFactory(event=event, name='202um')
 
-        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=expected_file,
+        mission_file = core_factory.MissionFileFactory(mission=self.mission, filename=expected_file, type=models.MissionFileType.Event)
+        core_factory.ActionFactory(event=event, mid=1, type=action_types.deployed, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=2, type=action_types.bottom, file=mission_file,
                                    date_time=self.start_date)
-        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=expected_file,
+        core_factory.ActionFactory(event=event, mid=3, type=action_types.recovered, file=mission_file,
                                    date_time=self.start_date)
 
         errors = validate_net_event(event)

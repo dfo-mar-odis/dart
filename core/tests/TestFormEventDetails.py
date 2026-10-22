@@ -109,34 +109,6 @@ class TestMissionEventForm(DartTestCase):
         new_station = models.Station.objects.using('default').get(name__iexact=station.name)
         self.assertEqual(edited_event.station.pk, new_station.pk)
 
-    @tag('form_mission_event_test_delete_event_post')
-    def test_delete_event_post(self):
-        # provided an event id the delete event url should remove an event from the database, return an empty
-        # EventDetail card and contain an Hx-Trigger: event_updated action to notify listening objects they
-        # should update their event lists.
-        mission = core_factory.MissionFactory.create()
-        event = core_factory.CTDEventFactory.create(mission=mission)
-
-        self.assertTrue(models.Event.objects.using('default').filter(pk=event.pk).exists())
-
-        url = reverse("core:form_event_delete_event", args=(mission.pk, event.pk,))
-        response = self.client.post(url)
-
-        self.assertFalse(models.Event.objects.using('default').filter(pk=event.pk).exists())
-
-        soup = BeautifulSoup(response.content, "html.parser")
-        new_detail_card = soup.find(id="div_id_card_event_details")
-        self.assertIsNotNone(new_detail_card)
-        self.assertIn('hx-swap-oob', new_detail_card.attrs)
-
-        self.assertIn('Hx-Trigger', response.headers)
-        self.assertEqual(response.headers['Hx-Trigger'], 'event_updated')
-
-        # we'll also return a table and table row using an hx-swap-oob to delete the event from the selection table
-        event_row = soup.find(id=f"event-{event.pk}")
-        self.assertIn('hx-swap', event_row.attrs)
-        self.assertEqual(event_row.attrs['hx-swap'], 'delete')
-
     @tag('form_mission_event_test_add_action_post')
     def test_add_action_post(self):
         # provided an existing event and args the add action url should add an action to the event

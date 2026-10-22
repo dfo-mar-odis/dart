@@ -91,7 +91,7 @@ def get_or_create_bioness_file_config() -> QuerySet[FileConfiguration]:
     return parser_utils._get_or_create_file_config(file_type, fields)
 
 
-def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: DataFrame):
+def parse_phytoplankton(mission: core_models.Mission, file: core_models.MissionFile, dataframe: DataFrame):
     config = get_or_create_phyto_file_config()
 
     total_rows = dataframe.shape[0]
@@ -100,15 +100,15 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
     dataframe.columns = map(str.upper, dataframe.columns)
 
     # test to make sure the column names we're looking for are in the file, report the errors if they aren't
-    core_models.FileError.objects.filter(file_name=filename,
+    core_models.FileError.objects.filter(file_name=file.filename,
                                                          type=core_models.ErrorType.plankton).delete()
     for key in [f.mapped_field for f in config.all()]:
         if key.upper() not in dataframe.columns:
             msg = _("Missing or misspelled column name : ") + key
-            core_models.FileError.objects.create(mission=mission, file_name=filename, message=msg,
+            core_models.FileError.objects.create(mission=mission, file_name=file.filename, message=msg,
                                                                  line=0, type=core_models.ErrorType.plankton, code=1)
 
-    if core_models.FileError.objects.filter(file_name=filename, type=core_models.ErrorType.plankton):
+    if core_models.FileError.objects.filter(file_name=file.filename, type=core_models.ErrorType.plankton):
         raise KeyError("Header Column(s) not found")
 
     # for phytoplankton bottles are associated with a CTD bottle
@@ -116,7 +116,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
     events = events.exclude(actions__type=core_models.ActionType.aborted)
     bottles = core_models.Bottle.objects.filter(event__in=events)
 
-    mission.file_errors.filter(file_name=filename).delete()
+    mission.file_errors.filter(file_name=file.filename).delete()
 
     create_plankton = []
     update_plankton = {'objects': [], 'fields': set()}
@@ -131,7 +131,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
         logger.debug(bottle_id)
 
         if not bottles.filter(bottle_id=bottle_id).exists():
-            err = core_models.FileError(mission=mission, file_name=filename, line=line_number,
+            err = core_models.FileError(mission=mission, file_name=file.filename, line=line_number,
                                         type=core_models.ErrorType.plankton,
                                         message=_("Bottle does not exist for sample") + f" : {bottle_id}")
             errors.append(err)
@@ -159,7 +159,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
             taxa = taxa.first().pk
             logger.debug(taxa)
         else:
-            err = core_models.FileError(mission=mission, file_name=filename, line=line_number,
+            err = core_models.FileError(mission=mission, file_name=file.filename, line=line_number,
                                         type=core_models.ErrorType.plankton,
                                         message=_("Could not get taxonomic name for sample") + f" : {bottle_id}"
                                         )
@@ -168,7 +168,7 @@ def parse_phytoplankton(mission: core_models.Mission, filename: str, dataframe: 
             continue
 
         if not bottle.plankton_data.filter(taxa=taxa).exists():
-            plankton = core_models.PlanktonSample(file=filename, bottle=bottle)
+            plankton = core_models.PlanktonSample(file=file, bottle=bottle)
 
             plankton.count = count
             plankton.modifier = modifier
@@ -389,7 +389,7 @@ def get_or_create_bottle(bottle_id: int, event_id: int, create_bottles: dict, ex
 
     return bottle
 
-def write_plankton_data(filename, errors, create_plankton, update_plankton):
+def write_plankton_data(file: core_models.MissionFile, errors, create_plankton, update_plankton):
     if len(create_plankton) > 0:
         logger.info(_("Creating Zooplankton Samples"))
         try:
@@ -405,14 +405,14 @@ def write_plankton_data(filename, errors, create_plankton, update_plankton):
                     message += " " + _("Bottle ID") + f" : {plankton.bottle.bottle_id}"
                     message += " " + _("Event") + f" : {plankton.bottle.event.event_id}"
 
-                    err = core_models.FileError(mission=plankton.bottle.event.mission, file_name=filename, line=-1,
+                    err = core_models.FileError(mission=plankton.bottle.event.mission, file_name=file.filename, line=-1,
                                             message=message, type=core_models.ErrorType.plankton)
                     err.save()
                     user_logger.error(message)
                     logger.error(_("Issue with plankton: ") + f"{plankton.bottle_id} - {plankton.taxa}")
 
     logger.info("Setting collector comments")
-    for plankton in core_models.PlanktonSample.objects.filter(file=filename):
+    for plankton in core_models.PlanktonSample.objects.filter(file=file):
         new_comment = plankton.comments
         if plankton.raw_wet_weight == -1 or plankton.raw_dry_weight == -1:
             new_comment = 'TOO MUCH PHYTOPLANKTON TO WEIGH'
@@ -437,7 +437,7 @@ def write_plankton_data(filename, errors, create_plankton, update_plankton):
         core_models.PlanktonSample.objects.bulk_update(update_plankton['objects'], fields)
 
 
-def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: DataFrame, row_mapping=None):
+def parse_zooplankton(mission: core_models.Mission, file: core_models.MissionFile, dataframe: DataFrame, row_mapping=None):
     config = get_or_create_zoo_file_config()
 
     total_rows = dataframe.shape[0]
@@ -454,7 +454,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     events = {e.event_id: e.instrument for e in mission.events.filter(instrument__type=core_models.InstrumentType.net).exclude(actions__type=core_models.ActionType.aborted)}
     ringnet_bottles: QuerySet = core_models.Bottle.objects.filter(event__instrument__type=core_models.InstrumentType.net)
 
-    mission.file_errors.filter(file_name=filename).delete()
+    mission.file_errors.filter(file_name=file.filename).delete()
 
     create_plankton = {}
     create_bottles = {}
@@ -519,7 +519,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         if gear_type is None:
             error_message = _("Could not identify gear type for mesh size ") + str(mesh_size)
             message = (_("Line ") + str(line) + " " + error_message)
-            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+            error = core_models.FileError(mission=mission, file_name=file.filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             errors.append(error)
 
@@ -535,7 +535,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             taxa = get_taxonomic_code(taxa_id, taxa_name)
         except ValueError as e:
             message = (_("Line ") + str(line) + " " + str(e) + f" '{taxa_id}' - '{taxa_name}'")
-            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+            error = core_models.FileError(mission=mission, file_name=file.filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             error.save()
             has_errors = True
@@ -543,7 +543,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         if not bio_models.BCSex.objects.filter(pk=sex).exists():
             error_message = _("Could not identify Biochem Sex code ") + str(sex)
             message = (_("Line ") + str(line) + " " + error_message)
-            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+            error = core_models.FileError(mission=mission, file_name=file.filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             errors.append(error)
 
@@ -554,7 +554,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
         if not bio_models.BCLifeHistory.objects.filter(pk=stage).exists():
             error_message = _("Could not identify Biochem Life History code ") + str(stage)
             message = (_("Line ") + str(line) + " " + error_message)
-            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+            error = core_models.FileError(mission=mission, file_name=file.filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             errors.append(error)
             user_logger.error(message)
@@ -578,7 +578,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             message += " " + _("Event") + f" : {row[config.get(required_field='event').mapped_field]}"
             message += " " + _("Line") + f" : {line_number}"
 
-            err = core_models.FileError(mission=mission, file_name=filename, line=line_number, message=message,
+            err = core_models.FileError(mission=mission, file_name=file.filename, line=line_number, message=message,
                                         type=core_models.ErrorType.plankton)
             errors.append(err)
 
@@ -603,7 +603,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
             updated_fields.add(updated_value(plankton, 'min_sieve', min_sieve))
             updated_fields.add(updated_value(plankton, 'max_sieve', max_sieve))
             updated_fields.add(updated_value(plankton, 'split_fraction', split_fraction))
-            updated_fields.add(updated_value(plankton, 'file', filename))
+            updated_fields.add(updated_value(plankton, 'file', file))
 
             set_data_column(plankton, what_was_it, value, updated_fields)
 
@@ -618,7 +618,7 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, min_sieve=min_sieve, max_sieve=max_sieve,
                     split_fraction=split_fraction, stage=stage, sex=sex,
-                    file=filename, proc_code=proc_code,
+                    file=file, proc_code=proc_code,
                 )
                 create_plankton[plankton_key] = plankton
 
@@ -628,10 +628,10 @@ def parse_zooplankton(mission: core_models.Mission, filename: str, dataframe: Da
     if len(errors) > 0:
         core_models.FileError.objects.bulk_create(errors)
     else:
-        write_plankton_data(filename, errors, create_plankton, update_plankton)
+        write_plankton_data(file, errors, create_plankton, update_plankton)
 
 
-def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataframe: DataFrame, row_mapping=None):
+def parse_zooplankton_bioness(mission: core_models.Mission, file: core_models.MissionFile, dataframe: DataFrame, row_mapping=None):
     config = get_or_create_bioness_file_config()
 
     total_rows = dataframe.shape[0]
@@ -647,7 +647,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
     # events = events.exclude(actions__type=core_models.ActionType.aborted)
     ringnet_bottles = core_models.Bottle.objects.filter(event__in=events)
 
-    mission.file_errors.filter(file_name=filename).delete()
+    mission.file_errors.filter(file_name=file.filename).delete()
 
     create_plankton = {}
     create_bottles = {}
@@ -697,7 +697,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             taxa = get_taxonomic_code(taxa_id, taxa_name)
         except ValueError as e:
             message = (_("Line ") + str(line) + " " + str(e) + f" '{taxa_id}' - '{taxa_name}'")
-            error = core_models.FileError(mission=mission, file_name=filename, message=message, line=line_number,
+            error = core_models.FileError(mission=mission, file_name=file.filename, message=message, line=line_number,
                                           type=core_models.ErrorType.plankton)
             error.save()
             continue
@@ -712,7 +712,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             message += " " + _("Event") + f" : {row[config.get(required_field='event').mapped_field]}"
             message += " " + _("Line") + f" : {line_number}"
 
-            err = core_models.FileError(mission=mission, file_name=filename, line=line_number, message=message,
+            err = core_models.FileError(mission=mission, file_name=file.filename, line=line_number, message=message,
                                         type=core_models.ErrorType.plankton)
             errors.append(err)
 
@@ -732,7 +732,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             updated_fields.add(updated_value(plankton, 'min_sieve', min_sieve))
             updated_fields.add(updated_value(plankton, 'max_sieve', max_sieve))
             updated_fields.add(updated_value(plankton, 'split_fraction', split_fraction))
-            updated_fields.add(updated_value(plankton, 'file', filename))
+            updated_fields.add(updated_value(plankton, 'file', file))
             updated_fields.add(updated_value(plankton, 'flag', qc_flag))
 
             set_data_column(plankton, what_was_it, value, updated_fields)
@@ -747,7 +747,7 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             if plankton_key not in create_plankton.keys():
                 plankton = core_models.PlanktonSample(
                     taxa=taxa, bottle=bottle, min_sieve=min_sieve, max_sieve=max_sieve,
-                    split_fraction=split_fraction, stage=stage, sex=sex, file=filename, proc_code=proc_code
+                    split_fraction=split_fraction, stage=stage, sex=sex, file=file, proc_code=proc_code
                 )
                 if qc_flag:
                     plankton.flag = qc_flag
@@ -757,4 +757,4 @@ def parse_zooplankton_bioness(mission: core_models.Mission, filename: str, dataf
             plankton = create_plankton[plankton_key]
             set_plankton_values(plankton, what_was_it, value)
 
-    write_plankton_data(filename, errors, create_plankton, update_plankton)
+    write_plankton_data(file, errors, create_plankton, update_plankton)

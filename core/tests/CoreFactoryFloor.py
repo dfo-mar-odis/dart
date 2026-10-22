@@ -158,7 +158,6 @@ class SampleFactory(DjangoModelFactory):
 
     bottle = factory.SubFactory(BottleFactory)
     type = factory.SubFactory(MissionSampleTypeFactory)
-    file = factory.lazy_attribute(lambda o: faker.word() + ".csv")
 
 
 class DiscreteValueFactory(DjangoModelFactory):
@@ -170,11 +169,18 @@ class DiscreteValueFactory(DjangoModelFactory):
     value = factory.lazy_attribute(lambda o: faker.pyfloat())
 
 
+class MissionFileFactory(DjangoModelFactory):
+    class Meta:
+        model = models.MissionFile
+
+    mission = factory.SubFactory(MissionFactory)
+    filename = factory.lazy_attribute(lambda o: faker.word() + ".xlsx")
+    type = factory.lazy_attribute(lambda o: faker.random.choice(models.MissionFileType.choices)[0])
+
 class PhytoplanktonSampleFactory(DjangoModelFactory):
     class Meta:
         model = models.PlanktonSample
 
-    file = factory.lazy_attribute(lambda o: faker.word() + ".xlsx")
     bottle = factory.SubFactory(BottleFactory)
     taxa = 90000001
     count = factory.lazy_attribute(lambda o: faker.random.randint(0, 10000))

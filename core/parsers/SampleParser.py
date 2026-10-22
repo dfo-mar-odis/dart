@@ -246,11 +246,11 @@ def split_sample(dataframe: pd.DataFrame, file_settings: settings_models.SampleT
 # once all the options are figured out (e.g what tab, what's the sample row, what's the value column)
 # this function will convert the dataframe into a sample
 def parse_data_frame(mission: core_models.Mission, sample_config: settings_models.SampleTypeConfig,
-                     file_name: str, dataframe: pd.DataFrame):
+                     file: core_models.MissionFile, dataframe: pd.DataFrame):
     database = mission._state.db
 
     # clear errors for this file
-    mission.file_errors.filter(file_name=file_name).delete()
+    mission.file_errors.filter(file_name=file.filename).delete()
 
     create_samples = {}
     update_samples = {'fields': set(), 'models': []}
@@ -295,7 +295,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             # +1 for the header line
             # +1 because index starts at zero
             line = index + sample_config.skip + 2
-            logger_notifications.info(f"{file_name} : " + _("Processing row") + " %d/%d", index, rows)
+            logger_notifications.info(f"{file.filename} : " + _("Processing row") + " %d/%d", index, rows)
             sample_id = int(row[sample_id_field])
             replicate = row[replicate_id_field]
 
@@ -330,7 +330,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                         if action.comment:
                             message += f"\n{action.get_type_display()} : {action.comment}"
 
-                error = core_models.FileError(mission=mission, file_name=file_name, line=line,
+                error = core_models.FileError(mission=mission, file_name=file.filename, line=line,
                                               message=message, type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
@@ -341,7 +341,6 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             if (existing_sample := existing_samples.filter(bottle=bottle, type=mission_sample_type)).exists():
                 # if the sample exists then we want to update it. Not create a new one
                 db_sample = existing_sample[0]
-                update_samples['fields'].add(updated_value(db_sample, 'file', file_name))
 
                 if '' in update_samples['fields']:
                     update_samples['fields'].remove('')
@@ -349,7 +348,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 if len(update_samples['fields']) > 0:
                     update_samples['models'].append(db_sample)
             elif bottle.bottle_id not in create_samples:
-                db_sample = core_models.Sample(bottle=bottle, type=mission_sample_type, file=file_name)
+                db_sample = core_models.Sample(bottle=bottle, type=mission_sample_type)
                 create_samples[bottle.bottle_id] = db_sample
             else:
                 db_sample = create_samples[bottle.bottle_id]
@@ -362,7 +361,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
             if not sample_config.allow_replicate and replicate > 1:
                 message = _("File configuration doesn't allow for replicates. Replicates found for sample with ID")
                 message += " : " + str(sample_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=line, message=message,
+                error = core_models.FileError(mission=mission, file_name=file.filename, line=line, message=message,
                                               type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
@@ -382,7 +381,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
 
             if replicate in replicate_counter[db_sample.bottle_id]:
                 message = _("Duplicate replicate id found for sample ") + str(db_sample.bottle.bottle_id)
-                error = core_models.FileError(mission=mission, file_name=file_name, line=line, message=message,
+                error = core_models.FileError(mission=mission, file_name=file.filename, line=line, message=message,
                                               type=core_models.ErrorType.sample)
                 errors.append(error)
                 logger.warning(message)
@@ -393,6 +392,7 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
                 discrete_sample.comment = comment
                 discrete_sample.limit = limit
                 discrete_sample.flag = flag
+                discrete_sample.file = file
                 create_discrete_values.append(discrete_sample)
 
                 replicate_counter[db_sample.bottle_id].append(replicate)
@@ -416,14 +416,14 @@ def parse_data_frame(mission: core_models.Mission, sample_config: settings_model
         message += " - " + str(ex)
         logger.error(message)
         logger.exception(ex)
-        error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message,
+        error = core_models.FileError(mission=mission, file_name=file.filename, line=-1, message=message,
                                       type=core_models.ErrorType.sample)
         errors.append(error)
     except Exception as ex:
         message = f"Unknown issue {ex}: see error log"
         logger.error(message)
         logger.exception(ex)
-        error = core_models.FileError(mission=mission, file_name=file_name, line=-1, message=message,
+        error = core_models.FileError(mission=mission, file_name=file.filename, line=-1, message=message,
                                       type=core_models.ErrorType.sample)
         errors.append(error)
 

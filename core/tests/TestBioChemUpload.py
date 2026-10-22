@@ -74,7 +74,8 @@ class TestGetBCSPRows(AbstractTestDatabase):
     def test_get_bcs_p_rows(self):
         core_factory.BottleFactory.start_bottle_seq = 400000
         bottle = core_factory.BottleFactory(event=core_factory.NetEventFactory(mission=self.mission), gear_type=90000102)
-        core_factory.PhytoplanktonSampleFactory.create_batch(10, bottle=bottle)
+        mission_file = core_factory.MissionFileFactory(mission=self.mission, type=core_models.MissionFileType.Plankton)
+        core_factory.PhytoplanktonSampleFactory.create_batch(10, bottle=bottle, file=mission_file)
 
         bottles = core_models.Bottle.objects.all()
 

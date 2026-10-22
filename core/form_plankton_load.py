@@ -269,13 +269,16 @@ def import_plankton(request, mission_id):
         dataframe.columns = map(str.upper, dataframe.columns)
 
         try:
+            mission_file = core_models.MissionFile.objects.get_or_create(
+                mission=mission, filename=file.name, type=core_models.MissionFileType.Plankton
+            )[0]
             if 'WHAT_WAS_IT' in dataframe.columns:
                 if 'START_DEPTH' and 'END_DEPTH' in dataframe.columns:
-                    parse_zooplankton_bioness(mission, file.name, dataframe)
+                    parse_zooplankton_bioness(mission, mission_file, dataframe)
                 else:
-                    parse_zooplankton(mission, file.name, dataframe)
+                    parse_zooplankton(mission, mission_file, dataframe)
             else:
-                parse_phytoplankton(mission, file.name, dataframe)
+                parse_phytoplankton(mission, mission_file, dataframe)
 
             if (errs := mission.file_errors.filter(file_name__iexact=file.name)).exists():
                 # might as well add the list of issues while loading the file to the response so the
