@@ -212,6 +212,17 @@ def parse_sample_file(
         result.errors.append("No value columns configured on FileConfig")
         return result
 
+    # =========== validate dataframe ====================
+    active_mask = pd.Series(False, index=df.index)
+    for col in col_defs:
+        active_mask |= df[col['value_col']].notna()
+
+    dups = df[active_mask][df[sample_col_name].duplicated()]
+    if not dups.empty:
+        sample_ids = dups[sample_col_name].astype(str).tolist()
+        result.errors.append(f"Duplicated sample ID {', '.join(sample_ids)} found in file")
+    # ===================================================
+
     # Keep counters/tracking for blanks-based replicates:
     replicate_counters: Dict[int, int] = {}
     last_seen_base_id: Optional[int] = None
