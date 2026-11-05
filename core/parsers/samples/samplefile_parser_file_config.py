@@ -246,7 +246,6 @@ def parse_sample_file(
     df2 = df
     dups = df.drop_duplicates(sample_col_name)
     if not dups.empty:
-<<<<<<< HEAD
         def get_dup_index(df_vals, dup_indexes, df_row):
             dups_r = dup_indexes[(dup_indexes[sample_col_name] == df_row[sample_col_name])]
             df_sample = df_vals[(df_vals[sample_col_name] == df_row[sample_col_name])]
@@ -255,15 +254,6 @@ def parse_sample_file(
             return (1 + df_row.name - dups_r.index.values[0]) >  df_sample.shape[0]
 
         df2['out_of_seq_id'] = df.apply(lambda row: get_dup_index(df, dups, row), axis=1)
-=======
-        def get_dup_index(dup_indexes, df_row):
-            dups_r = dup_indexes[(dup_indexes[sample_col_name] == df_row[sample_col_name])]
-            if len(dups_r.index) <= 0:
-                raise IndexError("There's something wrong in the sample ID column")
-            return 1 + df_row.name - dups_r.index.values[0] >  dups_r.shape[0]
-
-        df2['out_of_seq_id'] = df.apply(lambda row: get_dup_index(dups, row), axis=1)
->>>>>>> 259b3c559757e06f05a4ae94095d6c7c109a9b87
 
         if not (question_ids:=df2.query('out_of_seq_id == True')).empty:
             sample_ids = question_ids.drop_duplicates(sample_col_name)[sample_col_name].astype(str).tolist()
