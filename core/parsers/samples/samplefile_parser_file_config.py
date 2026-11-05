@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from typing import Optional, Dict, Tuple, Any, List
 from decimal import Decimal
@@ -6,7 +7,6 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 from django.utils.translation import gettext as _
-from numpy.ma.extras import row_stack
 
 from core import models as core_models
 from core.parsers.samples.samplefile_config import FileConfig, FileConfigColumns
@@ -213,14 +213,51 @@ def parse_sample_file(
         return result
 
     # =========== validate dataframe ====================
-    active_mask = pd.Series(False, index=df.index)
-    for col in col_defs:
-        active_mask |= df[col['value_col']].notna()
+    # Locate duplicated sample IDs in a data frame where the sample IDs appear massively out of row sequence.
+    # This may be and indication there's something wrong with one of the IDs in the file.
+    #
+    # Assumptions:
+    # 1. Every sample file has a sample ID column.
+    # 2. This column might be:
+    #   a. sample IDs In order without samples without replicates (526140, 526141, 526142, etc.) or
+    #   b. sample IDs where order represents replicates (526140, 526140, 526141, 526141, 526142, 526142, etc.) or
+    #   c. sample IDs where blanks are replicates (526140, nan, 526141, nan, 526142, nan, etc.) or
+    #   d. sample labels with replicate (526140_1, 526140_2, 526141_1, 526141_2, 526142_1, 526142_2, etc.)
+    # 3. The file config object should say if a file *can* have replicates.
+    #   a. If false, case 2.a - the file shouldn't have duplicates sample IDs at all. (e.g Salinity)
+    #   b. If true, cases 2.b to 2.d - replicates are allowed, duplicated IDs/labels are not,
+    #
+    # Algorithm:
+    # 1. Make a dataframe (dups) removing duplicate ID labels giving us just the first row a sample ID/label appears on.
+    # 2. If dups is empty, there are no duplicate IDs. We're done.
+    # 3. Iterate over each row in a dataframe:
+    #    a. Get the sample label for that row, does it exist in the dups table:
+    #       i. Yes, then (row.index - dup.index) is the row_distances from where the ID was first seen in the dataframe
+    #       ii. Is row_distance > df.count(label):
+    #           1. No, Good, the row_distance in the sequence (526140, 526140, 526141, 526141) is essentially the
+    #                   replicate ID (526140 replicate 0, 526140 replicate 1, 526141 replicate 0, 526141 replicate 1)
+    #           2. Yes, this is a problem, row distance is greater than the number of times the ID is in dataframe.
+    #                   This shouldn't be possible, but it means
+    #                   (526140, 526140, 526141, 526141, 526142, 526142, 526140, 526140)
+    #                   * First time 526140 appears the row_distance is 0.
+    #                   * Second time the row_distance is 1.
+    #                   * Third time the row_distance is 6. <- the ID only appears 4 times, there can't be 6 replicates.
 
-    dups = df[active_mask][df[sample_col_name].duplicated()]
+    df2 = df
+    dups = df.drop_duplicates(sample_col_name)
     if not dups.empty:
-        sample_ids = dups[sample_col_name].astype(str).tolist()
-        result.errors.append(f"Duplicated sample ID {', '.join(sample_ids)} found in file")
+        def get_dup_index(df_vals, dup_indexes, df_row):
+            dups_r = dup_indexes[(dup_indexes[sample_col_name] == df_row[sample_col_name])]
+            df_sample = df_vals[(df_vals[sample_col_name] == df_row[sample_col_name])]
+            if len(dups_r.index) <= 0:
+                raise IndexError("There's something wrong in the sample ID column")
+            return (1 + df_row.name - dups_r.index.values[0]) >  df_sample.shape[0]
+
+        df2['out_of_seq_id'] = df.apply(lambda row: get_dup_index(df, dups, row), axis=1)
+
+        if not (question_ids:=df2.query('out_of_seq_id == True')).empty:
+            sample_ids = question_ids.drop_duplicates(sample_col_name)[sample_col_name].astype(str).tolist()
+            result.errors.append(f"Duplicated sample ID {', '.join(sample_ids)} found in file")
     # ===================================================
 
     # Keep counters/tracking for blanks-based replicates:

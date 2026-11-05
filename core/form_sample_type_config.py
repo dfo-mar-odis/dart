@@ -646,11 +646,12 @@ def get_file_config(request, **kwargs):
         content_div.append(save_form_soup)
 
     if existing_config_init is None and column_names:
+        sample_id_col = file_config.get_sample_id_column()
         existing_config_init = {}
         existing_config_init['file_type'] = file_config.file_type
         existing_config_init['selected_tab'] = file_config.selected_tab
         existing_config_init['header_line'] = file_config.header_line_number
-        existing_config_init['sample_column'] = file_config.get_sample_id_column()[1]
+        existing_config_init['sample_column'] = sample_id_col[1] if sample_id_col else ""
 
     # Existing Config Form is a dropdown menu to select from pre-existing configs if a config_id is present
     # that is the default selection in the dropdown.
