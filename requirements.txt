@@ -1,3 +1,6 @@
+# used for terminal progress bar
+tqdm==4.70.1
+
 # Starts an application and the web server in a separate thread
 pyqt6==6.8.0
 

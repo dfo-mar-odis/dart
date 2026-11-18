@@ -511,12 +511,13 @@ def write_bcs_file(rows, bcs_file: Path, report_model: Type[models.Model]):
     # because we're not passing in a link to a database for the bcs_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
 
+    headers = [(field.db_column if field.db_column else field.name).upper() for field in report_model._meta.fields]
     bcs_headers = [field.name for field in report_model._meta.fields]
 
     with open(bcs_file, 'w', newline='', encoding="UTF8") as f:
 
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-        writer.writerow(bcs_headers)
+        writer.writerow(headers)
 
         for idx, bcs_row in enumerate(rows):
             row = [getattr(bcs_row, header, '') if header != 'batch' else 0 for header in bcs_headers]
@@ -527,12 +528,13 @@ def write_bcd_file(rows, bcd_file, report_model: Type[models.Model]):
     # because we're not passing in a link to a database for the bcd_d_model there will be no updated rows or fields
     # only the objects being created will be returned.
 
+    headers = [(field.db_column if field.db_column else field.name).upper() for field in report_model._meta.fields]
     bcd_headers = [field.name for field in report_model._meta.fields]
 
     with open(bcd_file, 'w', newline='', encoding="UTF8") as f:
 
         writer = csv.writer(f, quoting=csv.QUOTE_ALL)
-        writer.writerow(bcd_headers)
+        writer.writerow(headers)
 
         for idx, bcd_row in enumerate(rows):
             row = [str(idx + 1) if header == 'dis_data_num' else

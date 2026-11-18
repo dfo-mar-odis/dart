@@ -286,7 +286,6 @@ class BcdD(models.Model):
 class BcsD(models.Model):
 
     dis_sample_key_value = models.CharField(primary_key=True, max_length=50)
-    dis_headr_collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
 
     mission_descriptor = models.CharField(max_length=50, blank=True, null=True)
     event_collector_event_id = models.CharField(max_length=50, blank=True, null=True)
@@ -336,15 +335,15 @@ class BcsD(models.Model):
     dis_headr_start_depth = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
     dis_headr_end_depth = models.DecimalField(max_digits=9, decimal_places=3, blank=True, null=True)
     dis_headr_sounding = models.IntegerField(blank=True, null=True)
-    dis_headr_collector_deplmt_id = models.CharField(max_length=50, blank=True, null=True),  # Done, value is null
+    dis_headr_collector_deplmt_id = models.CharField(max_length=50, blank=True, null=True)
+    dis_headr_collector_sample_id = models.CharField(max_length=50, blank=True, null=True)
 
     dis_headr_collector = models.CharField(max_length=50, blank=True, null=True)
-    dis_headr_collector_comment1 = models.CharField(max_length=2000, blank=True,
-                                                    null=True)  # comes from Sample excel file
+    dis_headr_collector_comment1 = models.CharField(max_length=2000, blank=True,null=True)
     dis_headr_data_manager_comment = models.CharField(max_length=2000, blank=True, null=True)
     dis_headr_responsible_group = models.CharField(max_length=50, blank=True, null=True)
 
-    dis_headr_shared_data = models.CharField(max_length=50, blank=True, null=True),  # Done, value is null
+    dis_headr_shared_data = models.CharField(max_length=50, blank=True, null=True)
     created_by = models.CharField(max_length=30)
     created_date = models.DateField()
     data_center_code = models.IntegerField(blank=True, null=True)

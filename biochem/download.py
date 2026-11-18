@@ -1,4 +1,4 @@
-from datetime import timezone, timedelta
+from datetime import datetime, timezone, timedelta
 
 from django.db import IntegrityError
 from django.db.models import QuerySet
@@ -44,6 +44,10 @@ class Notifier:
             listener.notify(message, *args)
 
 
+class DateTimeException(Exception):
+    pass
+
+
 class DatabaseDownloader(Notifier):
 
     def __init__(self, mission_seq):
@@ -54,24 +58,24 @@ class DatabaseDownloader(Notifier):
 
         self.notify("Creating Local Mission DB for " + bio_mission_name)
 
-    def _parse_date_time(self, start_date, start_time, utc_offset: int|None = None):
-        from datetime import datetime
+    def _parse_date_time(self, in_date, in_time, utc_offset: int | None = None):
 
-        # Assuming bio_event.start_date is a DateField and bio_event.start_time is an integer
-        start_date = start_date
+        if in_date is None:
+            return None
 
         # Convert start_time (HHMM) into hours and minutes
-        hours = start_time // 100
-        minutes = start_time % 100
+        hours = in_time // 100
+        minutes = in_time % 100
 
         # Combine start_date with hours and minutes to create a datetime object
-        start_datetime = datetime.combine(start_date, datetime.min.time()).replace(hour=hours, minute=minutes)
+        full_datetime = datetime.combine(in_date, datetime.min.time()).replace(hour=hours, minute=minutes)
 
         # Set the UTC offset as the timezone without adjusting the time
         if utc_offset:
             utc_offset_timedelta = timedelta(hours=utc_offset)
-            start_datetime = start_datetime.astimezone(timezone(utc_offset_timedelta))
-        return start_datetime
+            full_datetime = full_datetime.astimezone(timezone(utc_offset_timedelta))
+
+        return full_datetime
 
     def copy_mission(self):
         bio_mission = self.bio_mission
@@ -154,7 +158,18 @@ class DatabaseDownloader(Notifier):
         bottom.longitude = first_bottle.start_lon
 
         recovered = core_models.Action(event=core_event, type=ActionType.recovered)
-        recovered.date_time = self._parse_date_time(bottle_event.end_date, bottle_event.end_time, bottle_event.utc_offset)
+
+        # Use the Bottle event date time if we have it, else use the date/time from the last bottle fired
+        action_date = bottle_event.end_date if bottle_event.end_date else last_bottle.start_date if last_bottle.start_date else None
+        if action_date is None:
+            raise DateTimeException(f"Could not create recovery event date for {bottle_event}")
+
+        action_time = bottle_event.end_time if bottle_event.end_date else last_bottle.start_time if last_bottle.start_time else None
+        if action_time is None:
+            raise DateTimeException(f"Could not create recovery event time for {bottle_event}")
+
+        recovered.date_time = self._parse_date_time(action_date, action_time, bottle_event.utc_offset)
+
         recovered.data_collector = collector
         recovered.sounding = last_bottle.sounding
         recovered.latitude = bottle_event.max_lat
